@@ -37,7 +37,7 @@ error handling, Javadoc, UI conventions, testing patterns and best practices.
 ## Continuous Integration
 CI pipeline in `.github/workflows/ci.yml`:
 - PR build: `mvn clean install` on pull_request
-- Release build: `mvn clean package -Djpackage.profile=true` on master
+- Release build: `mvn clean package -Djpackage.profile=true` on main
 - Appliance tests: AppImage/MSI/DMG smoke tests
 
 ## Documentation Generation
