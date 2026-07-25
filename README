@@ -4,18 +4,17 @@ software includes the cycles of sale, purchasing, inventory and accounting.
 See file `COPYING' for copying conditions.
 See file `INSTALL' for building and installation instructions.
 
-To run:
-$ java -jar target/bokfri-2.1-SNAPSHOT-jar-with-dependencies.jar
+To run a development build:
+$ java -jar target/bokfri-1.0.0-SNAPSHOT-jar-with-dependencies.jar
 
 The above command must currently be run from the project root directory.
 
 If you already have a working installation of JFS Administration/Bokföring/Fakturering:
 * Firstly do a backup in your current installation.
 * Secondly, either:
-** Run the downloaded all-in-one-jar target/bokfri-2.1-SNAPSHOT.jar and restore the backup.
+** Run the downloaded Bokfri package and restore the backup.
 or
-** Replace the current JFS.jar by moving over the all-in-one-jar
-target/bokfri-2.1-SNAPSHOT.jar as JFS.jar in the original installation directory.
+** Run the all-in-one JAR and restore the backup there.
 
 Direct migration from the much older pre-HSQL `bookkeeper.db` storage format is
 no longer supported in this fork. If you still have that format, first migrate

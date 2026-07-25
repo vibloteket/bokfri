@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-This project is a fork of
+Bokfri starts its own version history at 1.0.0. The project is a fork of
 [JFS Accounting](https://sourceforge.net/projects/jfsaccounting/),
 diverging from upstream version 2.2-SNAPSHOT.
 
@@ -40,6 +40,8 @@ diverging from upstream version 2.2-SNAPSHOT.
   (Phase 3 Step 15) (PR #9).
 
 ### Changed
+- Started Bokfri's independent version history at 1.0.0, separate from the
+  inherited JFS Accounting version sequence.
 - Cleaned up Maven dependency analysis by declaring the activation API used by
   mail attachments, splitting JUnit 5 test API/runtime dependencies, and
   documenting runtime-only analyzer ignores for Logback and the JUnit engine.
