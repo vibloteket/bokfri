@@ -82,11 +82,40 @@ SOURCES = {
 }
 
 PLAN_SPECS = {
-    "ink2": "BAS 2026 - Aktiebolag och ekonomisk förening",
+    "ink2_ab": "BAS 2026 - Aktiebolag",
+    "ink2_ef": "BAS 2026 - Ekonomisk förening",
     "ink3": "BAS 2026 - Ideell förening, stiftelse och trossamfund",
     "ink4": "BAS 2026 - Handelsbolag och kommanditbolag",
     "ne": "BAS 2026 - Enskild firma, ej K1",
     "ne_k1": "BAS 2026 - Enskild firma K1",
+}
+
+PLAN_SRU_SOURCE = {
+    "ink2_ab": "ink2",
+    "ink2_ef": "ink2",
+    "ink3": "ink3",
+    "ink4": "ink4",
+    "ne": "ne",
+}
+
+# BAS deliberately assigns account 2087 two meanings for different legal forms.
+# Keeping it in one combined plan would silently attach the wrong name to one of
+# them. Other plan types omit this organization-specific account.
+ACCOUNT_NAME_VARIANTS = {
+    "ink2_ab": {2087: "Bunden överkursfond"},
+    "ink2_ef": {2087: "Insatsemission"},
+}
+
+# Reviewed decisions for old VAT mappings that conflict between Bokfri plans.
+# Blank means that the modern BAS account is too broad for one automatic VAT
+# treatment. The reduced K1 account 3100 is explicitly named Momsfria intäkter.
+VAT_OVERRIDES = {
+    "ink2_ab": {3100: "", 3630: "", 3910: "", 3920: ""},
+    "ink2_ef": {3100: "", 3630: "", 3910: "", 3920: ""},
+    "ink3": {3100: "", 3630: "", 3910: "", 3920: ""},
+    "ink4": {3100: "", 3630: "", 3910: "", 3920: ""},
+    "ne": {3100: "", 3630: "", 3910: "", 3920: ""},
+    "ne_k1": {3100: "MF"},
 }
 
 
@@ -162,9 +191,9 @@ def account_number(value: object) -> tuple[int, bool] | None:
     return int(match.group(1)), bool(match.group(2))
 
 
-def read_bas_accounts(path: Path, issues: list[Issue]) -> dict[int, Account]:
+def read_bas_account_variants(path: Path, issues: list[Issue]) -> dict[int, list[Account]]:
     sheet = load_workbook(path, data_only=False, read_only=True).active
-    accounts: dict[int, Account] = {}
+    variants: dict[int, list[Account]] = defaultdict(list)
     for row in sheet.iter_rows(values_only=True):
         for number_col, name_col in ((0, 1), (2, 3)):
             parsed = account_number(row[number_col] if len(row) > number_col else None)
@@ -175,16 +204,39 @@ def read_bas_accounts(path: Path, issues: list[Issue]) -> dict[int, Account]:
             if not name:
                 issues.append(Issue("error", "accounts", f"Account {number} has no name"))
                 continue
-            existing = accounts.get(number)
-            if existing and existing.name != name:
-                issues.append(
-                    Issue("error", "duplicate-account", f"Account {number} has conflicting names: {existing.name!r} / {name!r}")
-                )
-                continue
+            existing = next((account for account in variants[number] if account.name == name), None)
             if existing:
                 existing.not_k2 |= not_k2
             else:
-                accounts[number] = Account(number, name, not_k2=not_k2)
+                variants[number].append(Account(number, name, not_k2=not_k2))
+    return variants
+
+
+def select_bas_accounts(
+    variants: dict[int, list[Account]], plan: str, issues: list[Issue]
+) -> dict[int, Account]:
+    accounts: dict[int, Account] = {}
+    plan_variants = ACCOUNT_NAME_VARIANTS.get(plan, {})
+    for number, choices in variants.items():
+        if len(choices) == 1:
+            selected = choices[0]
+        elif number in plan_variants:
+            wanted = plan_variants[number]
+            selected = next((account for account in choices if account.name == wanted), None)
+            if selected is None:
+                issues.append(Issue("error", "account-variant", f"{plan}: missing expected {number} {wanted!r}"))
+                continue
+        else:
+            names = " / ".join(repr(account.name) for account in choices)
+            issues.append(
+                Issue(
+                    "info",
+                    "account-variant",
+                    f"{plan}: omitted organization-specific account {number}: {names}",
+                )
+            )
+            continue
+        accounts[number] = Account(**asdict(selected))
     return accounts
 
 
@@ -257,7 +309,9 @@ def read_sru_candidates(path: Path, valid_accounts: set[int], issues: list[Issue
             continue
         numbers, unknown = expand_expression(expression)
         for token in unknown:
-            issues.append(Issue("warning", "unparsed-sru-expression", f"{path.name}: {field_code}: {token}"))
+            # BAS uses prose/footnotes where a declaration field intentionally
+            # has no account mapping. Preserve this in the report as info.
+            issues.append(Issue("info", "sru-note", f"{path.name}: {field_code}: {token}"))
         for number in numbers & valid_accounts:
             candidates[number].add(field_code)
     return candidates
@@ -295,16 +349,18 @@ def read_old_vat_codes(defaults: Path, issues: list[Issue]) -> tuple[dict[int, s
                 candidates[int(number_text)].add(vat_code)
     consensus = {number: next(iter(codes)) for number, codes in candidates.items() if len(codes) == 1}
     conflicts = {number: sorted(codes) for number, codes in candidates.items() if len(codes) > 1}
-    for number, codes in conflicts.items():
-        issues.append(Issue("warning", "ambiguous-vat", f"Old plans disagree for account {number}: {', '.join(codes)}"))
     return consensus, conflicts
 
 
-def apply_vat_codes(accounts: dict[int, Account], vat_codes: dict[int, str]) -> int:
+def apply_vat_codes(accounts: dict[int, Account], vat_codes: dict[int, str], plan: str) -> int:
     applied = 0
+    overrides = VAT_OVERRIDES.get(plan, {})
     for number, account in accounts.items():
-        if number in vat_codes:
+        if number in overrides:
+            account.vat_code = overrides[number]
+        elif number in vat_codes:
             account.vat_code = vat_codes[number]
+        if account.vat_code:
             applied += 1
     return applied
 
@@ -393,6 +449,7 @@ def write_reports(
         "- The free BAS account workbook has account numbers/names but no VAT or SRU mappings.",
         "- VAT codes are inherited only when all old Bokfri plans agree for an account number; they still require manual review.",
         "- BAS SRU interval files target BAS 2023/2024 while account names come from BAS 2026.",
+        "- Account 2087 has different official meanings for AB and EF, so those are separate plans; other plan types omit it.",
         "- Sign-dependent SRU mappings cannot be represented by Bokfri's current single SRU field and are left blank when ambiguous.",
         "- The K1 plan comes from BAS's reduced NE K1 account table and includes B/R report codes.",
         "",
@@ -440,20 +497,28 @@ def main() -> int:
 
     issues: list[Issue] = []
     source_paths = obtain_sources(cache, args.offline)
-    bas_accounts = read_bas_accounts(source_paths["accounts"], issues)
-    vat_codes, _ = read_old_vat_codes(root / "src/main/resources/account/default", issues)
+    bas_variants = read_bas_account_variants(source_paths["accounts"], issues)
+    vat_codes, vat_conflicts = read_old_vat_codes(root / "src/main/resources/account/default", issues)
+    for number, codes in vat_conflicts.items():
+        issues.append(
+            Issue(
+                "info",
+                "reviewed-vat",
+                f"Account {number}: old plans disagree ({', '.join(codes)}); resolved by explicit per-plan override",
+            )
+        )
 
     plans: dict[str, dict[int, Account]] = {}
     vat_applied: dict[str, int] = {}
-    for key in ("ink2", "ink3", "ink4", "ne"):
-        accounts = {number: Account(**asdict(account)) for number, account in bas_accounts.items()}
-        candidates = read_sru_candidates(source_paths[key], set(accounts), issues)
+    for key, sru_source in PLAN_SRU_SOURCE.items():
+        accounts = select_bas_accounts(bas_variants, key, issues)
+        candidates = read_sru_candidates(source_paths[sru_source], set(accounts), issues)
         apply_sru(accounts, candidates, issues, key)
-        vat_applied[key] = apply_vat_codes(accounts, vat_codes)
+        vat_applied[key] = apply_vat_codes(accounts, vat_codes, key)
         plans[key] = accounts
 
     k1_accounts = read_k1_accounts(source_paths["ne_k1"], issues)
-    vat_applied["ne_k1"] = apply_vat_codes(k1_accounts, vat_codes)
+    vat_applied["ne_k1"] = apply_vat_codes(k1_accounts, vat_codes, "ne_k1")
     plans["ne_k1"] = k1_accounts
 
     generated_files: dict[str, Path] = {}
@@ -477,9 +542,15 @@ def main() -> int:
             shutil.copy2(path, defaults / path.name)
         print(f"Installed {len(generated_files)} account plans in {defaults}")
 
-    counts = {severity: sum(issue.severity == severity for issue in issues) for severity in ("error", "warning")}
+    counts = {
+        severity: sum(issue.severity == severity for issue in issues)
+        for severity in ("error", "warning", "info")
+    }
     print(f"Generated {len(plans)} plans in {output}")
-    print(f"Review: {output / 'review.md'} ({counts['error']} errors, {counts['warning']} warnings)")
+    print(
+        f"Review: {output / 'review.md'} "
+        f"({counts['error']} errors, {counts['warning']} warnings, {counts['info']} info)"
+    )
     return 0
 
 
