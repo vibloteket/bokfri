@@ -10,3 +10,14 @@ Files:
 - `website/assets/icons/windows.svg`
 - `website/assets/icons/macos.svg`
 - `website/assets/icons/linux.svg`
+
+## BAS account plans
+
+The bundled BAS 2026 account plans are derived from the freely downloadable
+account-plan and SRU mapping workbooks published by
+[BAS-intressenternas Förening](https://www.bas.se/kontoplaner/).
+
+The exact source URLs, publication targets, and SHA-256 checksums are recorded
+in `tools/account-plans/generate_account_plans.py`. The generated plans also
+contain reviewed Bokfri-specific VAT mappings inherited from older Bokfri
+account plans.

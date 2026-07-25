@@ -42,6 +42,7 @@ import java.rmi.server.UID;
 import java.sql.*;
 import java.util.*;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import se.swedsoft.bookkeeping.importexport.excel.SSAccountPlanImporter;
 import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 import se.swedsoft.bookkeeping.util.SSUtil;
@@ -347,46 +348,42 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
         }
     }
     
-    /* Create default account plans if no account plan exists in DB */
-    private void checkImportDefaultAccountPlans() {
+    /* Add bundled account plans that are not already present by name. */
+    void checkImportDefaultAccountPlans() {
         try {
             if (iConnection == null || iConnection.isClosed()) {
                 return;
             }
 
-            Statement iStatement = iConnection.createStatement();
-            ResultSet iResultSet = iStatement.executeQuery("SELECT 0 FROM tbl_accountplan");
-            if (iResultSet.next()) {
-                // Have at least one account plan in DB. Dont import defaults
-                iStatement.close();
-                return;
-            }
-            iStatement.close();
+            String[][] defaults = new String[][]{
+                {"BAS 2026 - Aktiebolag", "BAS-2026---Aktiebolag.xls"},
+                {"BAS 2026 - Ekonomisk förening", "BAS-2026---Ekonomisk-forening.xls"},
+                {"BAS 2026 - Enskild firma K1", "BAS-2026---Enskild-firma-K1.xls"},
+                {"BAS 2026 - Enskild firma, ej K1", "BAS-2026---Enskild-firma-ej-K1.xls"},
+                {"BAS 2026 - Handelsbolag och kommanditbolag", "BAS-2026---Handelsbolag-och-kommanditbolag.xls"},
+                {"BAS 2026 - Ideell förening, stiftelse och trossamfund", "BAS-2026---Ideell-forening-stiftelse-och-trossamfund.xls"},};
 
-            LOG.info("Creating default account plans.");  
+            Set<String> existingNames = getAccountPlans().stream()
+                    .map(SSAccountPlan::getName)
+                    .collect(Collectors.toSet());
 
-            String[] defaults = new String[]{
-                "BAS96(07)-AB & EF.xls",
-                "BAS96(07)-Enskild-naringsidkare.xls",
-                "BAS96(07)-HB & KB.xls",
-                "Bas2006(07)-AB & EF.xls",
-                "Bas2006(07)-Enskild-naringsidkare.xls",
-                "Bas2006(07)-HB & KB.xls",
-                "Bas2007(K1)-Enskild-naringsidkare.xls",};
-
-            for (String s : defaults) {
-                LOG.info(s);
-                String path = "account/default/" + s;
-                InputStream is = SSDB.class.getClassLoader().getResourceAsStream(path);
-                if (is == null) {
-                    throw new RuntimeException("Resource not found: " + path);
+            for (String[] accountPlan : defaults) {
+                String name = accountPlan[0];
+                String filename = accountPlan[1];
+                if (existingNames.contains(name)) {
+                    continue;
                 }
-                try {
-                    SSAccountPlanImporter.doImport(is);
-                } catch (IOException ex) {
-                    LOG.error("Unexpected error", ex);
-                } catch (SSImportException ex) {
-                    LOG.error("Unexpected error", ex);
+
+                LOG.info("Adding default account plan: {}", name);
+                String path = "account/default/" + filename;
+                try (InputStream input = SSDB.class.getClassLoader().getResourceAsStream(path)) {
+                    if (input == null) {
+                        throw new RuntimeException("Resource not found: " + path);
+                    }
+                    SSAccountPlanImporter.doImport(input);
+                    existingNames.add(name);
+                } catch (IOException | SSImportException ex) {
+                    LOG.error("Could not import default account plan " + name, ex);
                 }
             }
         } catch (SQLException e) {
