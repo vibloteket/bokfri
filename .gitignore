@@ -5,3 +5,5 @@ dist/
 new_directory/
 .project
 .settings/
+tools/account-plans/cache/
+tools/account-plans/generated/
