@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="website/assets/logo.svg" alt="Bokfri" width="320">
+  <a href="https://bokfri.viblo.se/">
+    <img src="website/assets/logo.svg" alt="Bokfri" width="320">
+  </a>
 </p>
 
 # Bokfri
@@ -7,6 +9,11 @@
 Bokfri är ett fritt och kostnadsfritt bokföringsprogram för svenska föreningar
 och småföretag. Programmet installeras på din egen dator: det kräver inget
 abonnemang eller konto och bokföringsdata lagras inte i någon molntjänst.
+
+**[Webbplats](https://bokfri.viblo.se/) ·
+[Ladda ner](https://bokfri.viblo.se/download/) ·
+[Användarhjälp](https://bokfri.viblo.se/help/) ·
+[Rapportera problem](https://github.com/vibloteket/bokfri/issues)**
 
 Bokfri bygger vidare på Fribok och JFS Accounting, som har använts i över 20 år, 
 men har en egen identitet och versionshistorik med start vid Bokfri 1.0.
