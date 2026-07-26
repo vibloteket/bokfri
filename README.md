@@ -53,7 +53,7 @@ Den senaste publicerade versionen kommer att finnas på
 Innan Bokfri 1.0 har publicerats finns endast utvecklingsbyggen från CI. De är
 avsedda för testning.
 
-## Hjälp och support
+## Hjälp, support och kontakt
 
 - [Användarhjälp](https://bokfri.viblo.se/help/)
 - [Rapportera ett problem eller föreslå en förbättring](https://github.com/vibloteket/bokfri/issues)
@@ -98,7 +98,7 @@ GitHub Actions på respektive operativsystem. Se
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) för den aktuella
 byggprocessen.
 
-## Flytta data från JFS Accounting eller äldre Bokfri
+## Flytta data från JFS Accounting, Fribok eller äldre Bokfri
 
 1. Skapa en fullständig säkerhetskopia i den gamla installationen.
 2. Behåll originalinstallationen och säkerhetskopian tills innehållet har
@@ -109,7 +109,7 @@ byggprocessen.
 
 Direkt migrering från det mycket gamla databasformatet `bookkeeper.db` från
 tiden före HSQLDB stöds inte. Sådana data måste först flyttas med en historisk
-JFS/Bokfri-version som kan läsa formatet och därefter överföras med vanlig
+JFS/Fribok-version som kan läsa formatet och därefter överföras med vanlig
 säkerhetskopiering och återställning.
 
 ## Projektets bakgrund
@@ -122,16 +122,9 @@ versionsserie vid 1.0.0.
 Planerat tekniskt arbete finns i [`MODERNIZATION.md`](MODERNIZATION.md), och
 användarnära förändringar dokumenteras i [`CHANGELOG.md`](CHANGELOG.md).
 
-Mer om mina tankar bakom Bokfri finns på Fribok/JFSAccountings sourceforge, 
+Mer om mina tankar bakom Bokfri finns på Fribok/JFSAccountings SourceForge, 
 i mina inlägg i tråden 
 [Moving to GitHub](https://sourceforge.net/p/jfsaccounting/discussion/874230/thread/8f5a9aa8/).
-
-## Bidra
-
-Felrapporter och avgränsade förbättringsförslag är välkomna i
-[GitHub Issues](https://github.com/vibloteket/bokfri/issues). Ändringar bör ha
-relevanta tester och en uppdatering av changeloggen. Kör minst `mvn clean
-install` innan en pull request skickas.
 
 ## Licens och erkännanden
 
