@@ -12,7 +12,21 @@ diverging from upstream version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Added
-- Bokfri branding, package metadata, and application icons across the app.
+- Bokfri branding, package metadata, application icons, and a portable SVG
+  logo across the app and project website.
+- A responsive Bokfri website at `https://bokfri.viblo.se/` with product
+  information, platform-specific download links, contact information, and
+  GitHub Pages deployment.
+- Browser-based online help with search, section navigation, breadcrumbs, and
+  previous/next links, generated from the application's Swedish help content.
+- Six bundled BAS 2026 account plans for Swedish companies, associations, and
+  sole traders, including a reduced K1 plan with report codes.
+- A checksum-pinned standalone account-plan generator and review reports for
+  reproducible annual BAS, VAT, and SRU updates.
+- Integration tests that import every bundled BAS 2026 plan, verify repeat
+  imports are idempotent, and check selected VAT, SRU, and report mappings.
+- Git commit metadata in the displayed application version to identify the
+  exact development build in support and bug reports.
 - Modernization plan (`MODERNIZATION.md`) documenting a phased approach to
   bring the codebase from Java 5/6-era style to modern Java.
 - `AGENTS.md` with build, test, lint commands and code style guidelines for
@@ -24,10 +38,10 @@ diverging from upstream version 2.2-SNAPSHOT.
 - CI quality gates: Checkstyle and coverage report upload on PRs (Phase 7
   Step 37).
 - GitHub Actions CI/CD workflow (`ci.yml`):
-  - Pull request builds with `mvn clean install` on Ubuntu/JDK 21.
-  - Release builds on push to master for Linux, Windows, and macOS.
-  - Native installer creation via jpackage (AppImage, MSI, DMG).
-  - Smoke tests for all three platform installers.
+  - Pull request builds and tests on Ubuntu, Windows, and macOS with JDK 21.
+  - Development and tagged builds on `main` for Linux, Windows, and macOS.
+  - Native package creation via jpackage (AppImage, MSI, DMG).
+  - Upload of platform packages as workflow artifacts.
 - AppImage build support for Linux distribution.
 - JUnit 5 test foundation with Maven Surefire integration, test infrastructure
   utilities (`TestDBHelper`, `TestLauncher`), and initial core tests for
@@ -42,6 +56,17 @@ diverging from upstream version 2.2-SNAPSHOT.
 ### Changed
 - Started Bokfri's independent version history at 1.0.0, separate from the
   inherited JFS Accounting version sequence.
+- Replaced the legacy bundled account-plan selection with six current BAS 2026
+  plans while retaining reviewed Bokfri VAT mappings where unambiguous.
+- Moved general help from the embedded JavaHelp window to the system browser
+  and linked it to the maintained online documentation.
+- Updated the Help menu, support, release, and About links to the Bokfri
+  website and GitHub project.
+- Reworked the published Swedish help for UTF-8, responsive mobile navigation,
+  clearer section names, corrected SIE labels, and consistent Bokfri styling.
+- Migrated the active CI and Pages deployment from Codeberg/Forgejo to GitHub,
+  with `main` as the development branch and `bokfri.viblo.se` as the custom
+  website domain.
 - Cleaned up Maven dependency analysis by declaring the activation API used by
   mail attachments, splitting JUnit 5 test API/runtime dependencies, and
   documenting runtime-only analyzer ignores for Logback and the JUnit engine.
@@ -200,6 +225,13 @@ diverging from upstream version 2.2-SNAPSHOT.
   reduced `return null` sites from ~419 to ~212 (Phase 4 Step 20).
 
 ### Fixed
+- Fixed online help encoding, image paths, duplicate search entries, stale
+  references, sidebar behavior, breadcrumbs, and previous/next navigation.
+- Fixed the website header on small screens and removed platform font
+  dependency from the SVG logo.
+- Removed the obsolete year 2007 from the VAT report title.
+- Improved startup failure feedback and corrected Help/About window icons and
+  links.
 - Increased the About dialog text area and gave the Help window the normal
   Bokfri application icon set.
 - Fixed packaged report previews using unwritable installation/current-working
@@ -231,6 +263,10 @@ diverging from upstream version 2.2-SNAPSHOT.
   in `SSVoucherMath` and `SSBudget`.
 
 ### Removed
+- The unused contextual-help API and obsolete embedded Help browser code after
+  general help moved online.
+- Obsolete network/server-mode menu and help entries, legacy menu actions, and
+  the unsupported clear-transactions feature.
 - Direct Xerces dependency by migrating XML parsing and serialization code to
   standard JDK XML APIs.
 - Unused Spring dependencies by converting JasperReports custom OCR font
