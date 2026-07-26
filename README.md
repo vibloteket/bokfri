@@ -122,8 +122,8 @@ versionsserie vid 1.0.0.
 Planerat tekniskt arbete finns i [`MODERNIZATION.md`](MODERNIZATION.md), och
 användarnära förändringar dokumenteras i [`CHANGELOG.md`](CHANGELOG.md).
 
-Mer om mina tankar bakom Bokfri finns på Fribok/JFSAccountings SourceForge, 
-i mina inlägg i tråden 
+Mer tankarna bakom Bokfri finns på Fribok/JFSAccountings SourceForge, 
+i mina (Victor "viblo" Blomqvists)inlägg i tråden 
 [Moving to GitHub](https://sourceforge.net/p/jfsaccounting/discussion/874230/thread/8f5a9aa8/).
 
 ## Licens och erkännanden
