@@ -178,6 +178,55 @@ body {
   font-size: 0.95rem;
 }
 
+/* ── About page ── */
+.about-page {
+  max-width: 720px;
+  min-height: calc(100vh - 70px - 77px);
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.about-page h1 {
+  color: #16353b;
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.about-page .lead {
+  color: #5a3a2e;
+  font-size: 1.15rem;
+  margin-bottom: 2.5rem;
+}
+
+.about-page section {
+  margin-bottom: 2rem;
+}
+
+.about-page h2 {
+  color: #c86845;
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.about-page p {
+  margin-bottom: 0.9rem;
+}
+
+.about-page a {
+  color: #c86845;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.about-page a:hover {
+  color: #16353b;
+}
+
+.about-back {
+  padding-top: 1.25rem;
+  border-top: 1px solid #d5ddd2;
+}
+
 /* ── Download page ── */
 .download-page {
   max-width: 960px;
@@ -493,5 +542,6 @@ dd { margin-bottom: 0.75rem; margin-left: 0; color: #16353b; }
   .sidebar.hidden { display: none; }
   
   .landing { padding: 1.5rem 1rem; }
+  .about-page { padding: 2rem 1rem; }
   .download-page { padding: 2rem 1rem; }
 }
