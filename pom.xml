@@ -4,7 +4,7 @@
   <!-- POM Relationships -->
   <groupId>org.fribok</groupId>
   <artifactId>bokfri</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1-SNAPSHOT</version>
   <prerequisites>
     <maven>3.6.3</maven>
   </prerequisites>
