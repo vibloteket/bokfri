@@ -12,6 +12,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-27
+
 ### Added
 - Bokfri branding, package metadata, application icons, and a portable SVG
   logo across the app and project website.
@@ -75,7 +77,7 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   `Hämta senaste version...` better describe the linked GitHub pages.
 - Isolated `Bokfri Dev` packaged builds to a separate `bokfri-dev` user
   data/config directory so dev builds no longer share storage with release builds.
-- Package master-branch Linux AppImage and macOS DMG builds as `Bokfri Dev`,
+- Package main-branch Linux AppImage and macOS DMG builds as `Bokfri Dev`,
   matching the Windows MSI dev-channel naming for side-by-side tester installs.
 - Restored backup create/restore compatibility after the `SSBackup` metadata
   date migration by making serialized `backup.info` and `backup.history`

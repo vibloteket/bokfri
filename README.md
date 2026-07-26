@@ -46,12 +46,9 @@ Färdiga paket byggs för:
 - **macOS** – DMG
 - **Linux** – AppImage
 
-Den senaste publicerade versionen kommer att finnas på
+Den senaste publicerade versionen finns på
 [bokfri.viblo.se/download](https://bokfri.viblo.se/download/) och under
 [GitHub Releases](https://github.com/vibloteket/bokfri/releases).
-
-Innan Bokfri 1.0 har publicerats finns endast utvecklingsbyggen från CI. De är
-avsedda för testning.
 
 ## Hjälp, support och kontakt
 
@@ -78,11 +75,11 @@ mvn clean install
 ```
 
 Det skapar bland annat den körbara allt-i-ett-JAR-filen i `target/`.
-Utvecklingsversionens exakta filnamn följer versionen i `pom.xml`; den kan köras
-från projektroten med:
+JAR-filens exakta namn följer versionen i `pom.xml`; den aktuella releasen kan
+köras från projektroten med:
 
 ```sh
-java -jar target/bokfri-1.0.0-SNAPSHOT-jar-with-dependencies.jar
+java -jar target/bokfri-1.0.0-jar-with-dependencies.jar
 ```
 
 Några andra användbara kommandon:
@@ -122,8 +119,8 @@ versionsserie vid 1.0.0.
 Planerat tekniskt arbete finns i [`MODERNIZATION.md`](MODERNIZATION.md), och
 användarnära förändringar dokumenteras i [`CHANGELOG.md`](CHANGELOG.md).
 
-Mer tankarna bakom Bokfri finns på Fribok/JFSAccountings SourceForge, 
-i mina (Victor "viblo" Blomqvists)inlägg i tråden 
+Fler tankar bakom Bokfri finns i Victor ”viblo” Blomqvists inlägg i
+SourceForge-tråden
 [Moving to GitHub](https://sourceforge.net/p/jfsaccounting/discussion/874230/thread/8f5a9aa8/).
 
 ## Licens och erkännanden

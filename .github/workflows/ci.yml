@@ -9,6 +9,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build_and_test:
     if: github.event_name == 'pull_request'
@@ -58,6 +61,21 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '21'
+
+    - name: Verify release version
+      if: startsWith(github.ref, 'refs/tags/v')
+      shell: bash
+      run: |
+        PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+        TAG_VERSION="${GITHUB_REF_NAME#v}"
+        if [[ "$PROJECT_VERSION" == *-SNAPSHOT ]]; then
+          echo "Tagged releases cannot use a SNAPSHOT version: $PROJECT_VERSION" >&2
+          exit 1
+        fi
+        if [[ "$PROJECT_VERSION" != "$TAG_VERSION" ]]; then
+          echo "Tag $TAG_VERSION does not match pom.xml version $PROJECT_VERSION" >&2
+          exit 1
+        fi
 
     - name: Test
       run: mvn test -Pcoverage
@@ -154,6 +172,11 @@ jobs:
         path: ${{ github.ref == 'refs/heads/main' && 'dist/Bokfri-Dev-x86_64.AppImage' || 'dist/Bokfri-x86_64.AppImage' }}
 
     # --- Windows steps ---
+    - name: Normalize Windows release filename
+      if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
+      shell: bash
+      run: mv dist/*.msi dist/Bokfri.msi
+
     - name: Upload Windows artifact
       if: runner.os == 'Windows'
       uses: actions/upload-artifact@v7
@@ -162,9 +185,60 @@ jobs:
         path: dist/*.msi
 
     # --- macOS steps ---
+    - name: Normalize macOS release filename
+      if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
+      shell: bash
+      run: mv dist/*.dmg dist/Bokfri.dmg
+
     - name: Upload macOS artifact
       if: runner.os == 'macOS'
       uses: actions/upload-artifact@v7
       with:
         name: ${{ github.ref == 'refs/heads/main' && 'bokfri-macos-dev' || 'bokfri-macos' }}
         path: dist/*.dmg
+
+  publish_release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build_and_publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+
+    - name: Download release packages
+      uses: actions/download-artifact@v7
+      with:
+        pattern: bokfri-*
+        path: release
+        merge-multiple: true
+
+    - name: Verify packages and create checksums
+      shell: bash
+      run: |
+        set -euo pipefail
+        expected=(
+          release/Bokfri.msi
+          release/Bokfri.dmg
+          release/Bokfri-x86_64.AppImage
+        )
+        for package in "${expected[@]}"; do
+          test -s "$package" || { echo "Missing release package: $package" >&2; exit 1; }
+        done
+        (cd release && sha256sum Bokfri.msi Bokfri.dmg Bokfri-x86_64.AppImage > SHA256SUMS)
+
+    - name: Publish GitHub Release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: |
+        gh release create "$GITHUB_REF_NAME" \
+          release/Bokfri.msi \
+          release/Bokfri.dmg \
+          release/Bokfri-x86_64.AppImage \
+          release/SHA256SUMS \
+          --verify-tag \
+          --title "Bokfri ${GITHUB_REF_NAME#v}" \
+          --notes-file RELEASE_NOTES.md
