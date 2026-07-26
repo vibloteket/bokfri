@@ -8,13 +8,11 @@ Bokfri är ett fritt och kostnadsfritt bokföringsprogram för svenska förening
 och småföretag. Programmet installeras på din egen dator: det kräver inget
 abonnemang eller konto och bokföringsdata lagras inte i någon molntjänst.
 
-Bokfri bygger vidare på JFS Accounting, som har använts i över 20 år, men har
-en egen identitet och versionshistorik med start vid Bokfri 1.0.
+Bokfri bygger vidare på Fribok och JFS Accounting, som har använts i över 20 år, 
+men har en egen identitet och versionshistorik med start vid Bokfri 1.0.
 
-> [!IMPORTANT]
-> Bokfri 1.0 är under utveckling. Byggen från grenen `main` är testversioner och
-> ska inte användas som enda lagringsplats för viktig bokföring. Säkerhetskopiera
-> alltid dina data före uppgradering och återställning.
+> [!NOTE]
+> Summary in English in the end of the README.
 
 ![Bokfri – skapa en verifikation](website/assets/screenshot.png)
 
@@ -109,14 +107,17 @@ säkerhetskopiering och återställning.
 
 ## Projektets bakgrund
 
-Bokfri är en vidareutveckling av
+Bokfri är en vidareutveckling av [Fribok](https://fribok.org/) och
 [JFS Accounting](https://sourceforge.net/projects/jfsaccounting/). Projektet
-moderniserar den befintliga Java-kodbasen samtidigt som kompatibilitet med
-användarnas bokföringsdata prioriteras. Bokfri börjar sin egen publika
+moderniserar den befintliga Java-kodbasen. Bokfri börjar sin egen publika
 versionsserie vid 1.0.0.
 
 Planerat tekniskt arbete finns i [`MODERNIZATION.md`](MODERNIZATION.md), och
 användarnära förändringar dokumenteras i [`CHANGELOG.md`](CHANGELOG.md).
+
+Mer om mina tankar bakom Bokfri finns på Fribok/JFSAccountings sourceforge, 
+i mina inlägg i tråden 
+[Moving to GitHub](https://sourceforge.net/p/jfsaccounting/discussion/874230/thread/8f5a9aa8/).
 
 ## Bidra
 
@@ -131,8 +132,7 @@ Bokfri är fri programvara under GNU General Public License version 3. Se
 [`COPYING`](COPYING) för fullständiga licensvillkor och [`CREDITS.md`](CREDITS.md)
 för externa resurser och underlag.
 
-## English summary
-
+## English Summary
 Bokfri is a free, open-source desktop accounting application for Swedish
 associations and small businesses. It runs locally on Windows, macOS, and Linux
 and supports vouchers, invoices, Swedish BAS account plans, reports, and
