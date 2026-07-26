@@ -1,0 +1,140 @@
+<p align="center">
+  <img src="website/assets/logo.svg" alt="Bokfri" width="320">
+</p>
+
+# Bokfri
+
+Bokfri är ett fritt och kostnadsfritt bokföringsprogram för svenska föreningar
+och småföretag. Programmet installeras på din egen dator: det kräver inget
+abonnemang eller konto och bokföringsdata lagras inte i någon molntjänst.
+
+Bokfri bygger vidare på JFS Accounting, som har använts i över 20 år, men har
+en egen identitet och versionshistorik med start vid Bokfri 1.0.
+
+> [!IMPORTANT]
+> Bokfri 1.0 är under utveckling. Byggen från grenen `main` är testversioner och
+> ska inte användas som enda lagringsplats för viktig bokföring. Säkerhetskopiera
+> alltid dina data före uppgradering och återställning.
+
+![Bokfri – skapa en verifikation](website/assets/screenshot.png)
+
+## Funktioner
+
+- verifikationer, bokföringsår och automatkonteringar
+- sex medföljande BAS 2026-kontoplaner för olika företags- och föreningsformer
+- import och export av SIE-filer samt import av BGMax
+- fakturor, kreditfakturor, offerter och order
+- kund-, leverantörs- och artikelregister
+- resultat- och balansrapporter, huvudbok och momsredovisning
+- import och export av bland annat kontoplaner, kunder och artiklar
+- lokal säkerhetskopiering och återställning
+
+Bokfri är anpassat för svenska förhållanden. Andra språk i gränssnittet innebär
+inte att programmet är anpassat till andra länders bokförings- eller
+skatteregler.
+
+## Ladda ner
+
+Färdiga paket byggs för:
+
+- **Windows** – MSI
+- **macOS** – DMG
+- **Linux** – AppImage
+
+Den senaste publicerade versionen kommer att finnas på
+[bokfri.viblo.se/download](https://bokfri.viblo.se/download/) och under
+[GitHub Releases](https://github.com/vibloteket/bokfri/releases).
+
+Innan Bokfri 1.0 har publicerats finns endast utvecklingsbyggen från CI. De är
+avsedda för testning.
+
+## Hjälp och support
+
+- [Användarhjälp](https://bokfri.viblo.se/help/)
+- [Rapportera ett problem eller föreslå en förbättring](https://github.com/vibloteket/bokfri/issues)
+- Kontakt: [vb@viblo.se](mailto:vb@viblo.se)
+
+Beskriv operativsystem, Bokfri-version och stegen för att återskapa problemet i
+en felrapport. Utvecklingsbyggen visar även Git-commit i versionsinformationen.
+Publicera aldrig bokföringsdata, personuppgifter eller andra känsliga uppgifter i
+en öppen felrapport.
+
+## Bygga från källkod
+
+### Krav
+
+- JDK 21 eller senare
+- Apache Maven 3.6.3 eller senare
+
+### Bygg och testa
+
+```sh
+mvn clean install
+```
+
+Det skapar bland annat den körbara allt-i-ett-JAR-filen i `target/`.
+Utvecklingsversionens exakta filnamn följer versionen i `pom.xml`; den kan köras
+från projektroten med:
+
+```sh
+java -jar target/bokfri-1.0.0-SNAPSHOT-jar-with-dependencies.jar
+```
+
+Några andra användbara kommandon:
+
+```sh
+mvn test                 # kör enhets- och integrationstester
+mvn checkstyle:check     # kontrollerar kodstil
+mvn spotbugs:check       # kör statisk analys
+```
+
+Plattformspaketen skapas med `jpackage` via Maven-profilerna och byggs normalt av
+GitHub Actions på respektive operativsystem. Se
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) för den aktuella
+byggprocessen.
+
+## Flytta data från JFS Accounting eller äldre Bokfri
+
+1. Skapa en fullständig säkerhetskopia i den gamla installationen.
+2. Behåll originalinstallationen och säkerhetskopian tills innehållet har
+   kontrollerats i Bokfri.
+3. Installera och starta Bokfri.
+4. Återställ säkerhetskopian och kontrollera företag, bokföringsår,
+   verifikationer och rapporter.
+
+Direkt migrering från det mycket gamla databasformatet `bookkeeper.db` från
+tiden före HSQLDB stöds inte. Sådana data måste först flyttas med en historisk
+JFS/Bokfri-version som kan läsa formatet och därefter överföras med vanlig
+säkerhetskopiering och återställning.
+
+## Projektets bakgrund
+
+Bokfri är en vidareutveckling av
+[JFS Accounting](https://sourceforge.net/projects/jfsaccounting/). Projektet
+moderniserar den befintliga Java-kodbasen samtidigt som kompatibilitet med
+användarnas bokföringsdata prioriteras. Bokfri börjar sin egen publika
+versionsserie vid 1.0.0.
+
+Planerat tekniskt arbete finns i [`MODERNIZATION.md`](MODERNIZATION.md), och
+användarnära förändringar dokumenteras i [`CHANGELOG.md`](CHANGELOG.md).
+
+## Bidra
+
+Felrapporter och avgränsade förbättringsförslag är välkomna i
+[GitHub Issues](https://github.com/vibloteket/bokfri/issues). Ändringar bör ha
+relevanta tester och en uppdatering av changeloggen. Kör minst `mvn clean
+install` innan en pull request skickas.
+
+## Licens och erkännanden
+
+Bokfri är fri programvara under GNU General Public License version 3. Se
+[`COPYING`](COPYING) för fullständiga licensvillkor och [`CREDITS.md`](CREDITS.md)
+för externa resurser och underlag.
+
+## English summary
+
+Bokfri is a free, open-source desktop accounting application for Swedish
+associations and small businesses. It runs locally on Windows, macOS, and Linux
+and supports vouchers, invoices, Swedish BAS account plans, reports, and
+SIE/BGMax import and export. The user interface may be translated, but the
+accounting functionality is intended for Sweden.
