@@ -12,6 +12,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Fixed
+- Restored loading of voucher templates created before the `java.time`
+  migration, preventing a `Serialization failure` when opening the new-voucher
+  dialog for companies with legacy templates.
+
 ## [1.0.0] - 2026-07-27
 
 ### Added

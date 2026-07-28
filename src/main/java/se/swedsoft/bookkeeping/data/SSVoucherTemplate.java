@@ -140,6 +140,27 @@ public class SSVoucherTemplate implements Serializable, SSTableSearchable {
         this.iRows = iRows;
     }
 
+    /**
+     * Reads both current templates and legacy templates whose modification date
+     * was stored as {@link java.util.Date}.
+     *
+     * @param in serialized input
+     * @throws IOException if the template cannot be read
+     * @throws ClassNotFoundException if a serialized class is unavailable
+     */
+    @SuppressWarnings("unchecked")
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        ObjectInputStream.GetField fields = in.readFields();
+
+        iDescription = (String) fields.get("iDescription", null);
+        iDate = SSDateUtil.readLocalDateTime(fields.get("iDate", null));
+        iRows = (List<SSVoucherTemplateRow>) fields.get("iRows", null);
+
+        if (iRows == null) {
+            iRows = new LinkedList<>();
+        }
+    }
+
     // //////////////////////////////////////////////////////////////////
 
     public String toString() {
