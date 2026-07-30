@@ -13,6 +13,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Fixed
+- Changed the fallback account for input VAT on supplier invoices from the
+  group account 2640 to the standard posting account 2641. Explicitly selected
+  company defaults remain unchanged.
 - Restored loading of voucher templates created before the `java.time`
   migration, preventing a `Serialization failure` when opening the new-voucher
   dialog for companies with legacy templates.

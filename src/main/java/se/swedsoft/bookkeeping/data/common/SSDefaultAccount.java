@@ -49,7 +49,7 @@ public enum SSDefaultAccount implements Serializable {
     // Ränteintäkt
     InterestProfit(8300),
     // Ingående moms
-    IncommingTax(2640);
+    IncommingTax(2641);
     private static final long serialVersionUID = 6209981489711135940L;
 
     private int iDefaultAccountNumber;
