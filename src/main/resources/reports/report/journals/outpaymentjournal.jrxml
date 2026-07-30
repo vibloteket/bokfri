@@ -11,7 +11,7 @@
     <!-- Declared fields in the report. -->
 
     <field name="outpayment.number"            class="java.lang.Integer"/>
-    <field name="outpayment.date"              class="java.util.Date"/>
+    <field name="outpayment.date"              class="java.lang.String"/>
     <field name="outpayment.text"              class="java.lang.String"/>
     <field name="outpayment.sum"               class="java.math.BigDecimal"/>
     <field name="outpayment.localsum"          class="java.math.BigDecimal"/>
@@ -142,12 +142,12 @@
 
 
             <!-- outpayment date -->
-            <textField pattern="yyyy-MM-dd">
+            <textField>
                 <reportElement x="450" y="0" width="80" height="14"/>
                 <textElement  textAlignment="Right">
                     <font size="8" isBold="true"/>
                 </textElement>
-                <textFieldExpression class="java.util.Date">
+                <textFieldExpression class="java.lang.String">
                     <![CDATA[$F{outpayment.date}]]>
                 </textFieldExpression>
             </textField>
