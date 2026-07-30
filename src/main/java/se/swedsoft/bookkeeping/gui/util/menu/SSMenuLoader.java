@@ -59,7 +59,9 @@ public class SSMenuLoader {    private static final Logger LOG = LoggerFactory.g
         XMLReader iReader;
 
         try {
-            iReader = SAXParserFactory.newInstance().newSAXParser().getXMLReader();
+            SAXParserFactory parserFactory = SAXParserFactory.newInstance();
+            parserFactory.setNamespaceAware(true);
+            iReader = parserFactory.newSAXParser().getXMLReader();
         } catch (ParserConfigurationException | SAXException e) {
             LOG.error("Unexpected error", e);
             return;
