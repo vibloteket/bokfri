@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -191,9 +192,9 @@ public class SSBudget implements Serializable {
         BigDecimal numMonths = new BigDecimal(iMonths.size());
 
         // Make shure we have 2 decimals for the sum, else the accuracy of the divission will be of
-        pValue = pValue.setScale(2, BigDecimal.ROUND_HALF_UP);
+        pValue = pValue.setScale(2, RoundingMode.HALF_UP);
         // Get the sum to be added per month
-        BigDecimal sumPerMonth = pValue.divide(numMonths, BigDecimal.ROUND_FLOOR);
+        BigDecimal sumPerMonth = pValue.divide(numMonths, RoundingMode.FLOOR);
         // Get the last few ören that differs from the total sum
         BigDecimal remainder = pValue.subtract(sumPerMonth.multiply(numMonths));
 

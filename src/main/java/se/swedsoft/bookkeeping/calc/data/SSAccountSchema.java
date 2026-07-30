@@ -6,7 +6,6 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
-import org.xml.sax.helpers.XMLReaderFactory;
 import org.fribok.bookkeeping.app.Path;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 
@@ -15,6 +14,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.util.*;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParserFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,8 +118,8 @@ public class SSAccountSchema implements Serializable {    private static final L
         XMLReader iReader;
 
         try {
-            iReader = XMLReaderFactory.createXMLReader();
-        } catch (SAXException e) {
+            iReader = SAXParserFactory.newInstance().newSAXParser().getXMLReader();
+        } catch (ParserConfigurationException | SAXException e) {
             LOG.error("Unexpected error", e);
             return iSchema;
         }

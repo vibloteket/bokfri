@@ -46,7 +46,7 @@ public class CreateQRCode {    private static final Logger LOG = LoggerFactory.g
         BitMatrix matrix = new MultiFormatWriter().encode(new String(uqrData.getBytes(uqrEncoding), uqrEncoding), BarcodeFormat.QR_CODE, width, height, encodeHintMap);
 
 	try {
-	    MatrixToImageWriter.writeToFile(matrix, "png", iFile);
+	    MatrixToImageWriter.writeToPath(matrix, "png", iFile.toPath());
 	} catch (IOException ioe) {
 
 	}

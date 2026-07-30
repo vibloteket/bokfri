@@ -10,6 +10,7 @@ import se.swedsoft.bookkeeping.gui.util.table.SSTableSearchable;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 
@@ -315,7 +316,7 @@ public class SSProduct implements SSTableSearchable, Serializable {
      * @return
      */
     public BigDecimal getSellingPrice() {
-        iUnitprice = iUnitprice.setScale(2, BigDecimal.ROUND_HALF_UP);
+        iUnitprice = iUnitprice.setScale(2, RoundingMode.HALF_UP);
         return iUnitprice;
     }
 

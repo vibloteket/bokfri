@@ -6,9 +6,10 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
-import org.xml.sax.helpers.XMLReaderFactory;
 
 import javax.swing.*;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParserFactory;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -58,8 +59,8 @@ public class SSMenuLoader {    private static final Logger LOG = LoggerFactory.g
         XMLReader iReader;
 
         try {
-            iReader = XMLReaderFactory.createXMLReader();
-        } catch (SAXException e) {
+            iReader = SAXParserFactory.newInstance().newSAXParser().getXMLReader();
+        } catch (ParserConfigurationException | SAXException e) {
             LOG.error("Unexpected error", e);
             return;
         }

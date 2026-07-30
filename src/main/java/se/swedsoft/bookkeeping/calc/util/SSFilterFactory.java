@@ -45,7 +45,8 @@ public class SSFilterFactory<T> {
      *
      * @param iFilters
      */
-    public void applyFilter(SSFilter<T>... iFilters) {
+    @SafeVarargs
+    public final void applyFilter(SSFilter<T>... iFilters) {
         for (SSFilter<T> iFilter : iFilters) {
             applyFilter(iFilter);
 
