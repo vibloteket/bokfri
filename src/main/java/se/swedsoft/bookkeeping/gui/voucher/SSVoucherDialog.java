@@ -38,6 +38,21 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
 
     private SSVoucherDialog() {}
 
+    private static void storeVoucherTemplate(SSMainFrame iMainFrame, SSVoucher iVoucher) {
+        SSVoucherTemplate template = new SSVoucherTemplate(iVoucher);
+        boolean templateExists = SSDB.getInstance().getVoucherTemplates().stream()
+                .anyMatch(existing -> template.getDescription().equals(existing.getDescription()));
+
+        if (templateExists
+                && SSQueryDialog.showDialog(iMainFrame, SSBundle.getBundle(),
+                "voucherframe.replacetemplate", template.getDescription())
+                != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        SSDB.getInstance().addVoucherTemplate(template);
+    }
+
     /**
      *
      * @param iMainFrame
@@ -69,7 +84,7 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                         SSDB.getInstance().addVoucher(iVoucher, false);
 
                         if (iPanel.isStoreAsTemplate()) {
-                            SSDB.getInstance().addVoucherTemplate(new SSVoucherTemplate(iVoucher));
+                            storeVoucherTemplate(iMainFrame, iVoucher);
                         }
 
                         if (pModel != null) {
@@ -164,7 +179,7 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                         SSDB.getInstance().updateVoucher(iVoucher1);
 
                         if (iPanel.isStoreAsTemplate()) {
-                            SSDB.getInstance().addVoucherTemplate(new SSVoucherTemplate(iVoucher1));
+                            storeVoucherTemplate(iMainFrame, iVoucher1);
                         }
 
                         if (pModel != null) {
@@ -282,7 +297,7 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                         SSDB.getInstance().addVoucher(iVoucher1, false);
 
                         if (iPanel.isStoreAsTemplate()) {
-                            SSDB.getInstance().addVoucherTemplate(new SSVoucherTemplate(iVoucher1));
+                            storeVoucherTemplate(iMainFrame, iVoucher1);
                         }
 
                         iOriginal.setCorrectedBy(iVoucher1);
