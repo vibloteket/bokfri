@@ -1460,14 +1460,24 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
         }
         try {
             PreparedStatement iStatement = iConnection.prepareStatement(
-                    "INSERT INTO tbl_vouchertemplate VALUES(?,?,?)");
+                    "UPDATE tbl_vouchertemplate SET vouchertemplate=? WHERE name=? AND companyid=?");
 
-            iStatement.setObject(1, iVoucherTemplate.getDescription());
-            iStatement.setObject(2, iVoucherTemplate);
+            iStatement.setObject(1, iVoucherTemplate);
+            iStatement.setObject(2, iVoucherTemplate.getDescription());
             iStatement.setObject(3, iCurrentCompany.getId());
-            iStatement.executeUpdate();
-            iConnection.commit();
+            int updatedRows = iStatement.executeUpdate();
             iStatement.close();
+
+            if (updatedRows == 0) {
+                iStatement = iConnection.prepareStatement(
+                        "INSERT INTO tbl_vouchertemplate VALUES(?,?,?)");
+                iStatement.setObject(1, iVoucherTemplate.getDescription());
+                iStatement.setObject(2, iVoucherTemplate);
+                iStatement.setObject(3, iCurrentCompany.getId());
+                iStatement.executeUpdate();
+                iStatement.close();
+            }
+            iConnection.commit();
         } catch (SQLException e) {
             LOG.error("Unexpected error", e);
             try {
