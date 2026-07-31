@@ -12,51 +12,11 @@ Completed work belongs in `CHANGELOG.md` and git history, not here.
 | Tests | JUnit 5 + integration tests in place |
 | Logging | SLF4J + Logback in place |
 | Build tooling | Checkstyle, SpotBugs, JaCoCo, and CI are configured |
-| Date/time migration | `Calendar` and `SimpleDateFormat` are gone; legacy `Date` boundaries remain |
 | Persistence | Still based on Java serialization stored in HSQLDB `OBJECT` columns |
 
 ## Remaining Work
 
-### 1. Finish Date/Time Modernization
-
-Status: partially complete
-
-Current repo state:
-- `java.util.Calendar` usage has been eliminated from production code
-- `SimpleDateFormat` usage has been eliminated from production code
-- production `new Date()` runtime calls have been eliminated
-- core date math/month helpers and focused voucher/invoice tests now prefer `LocalDate`
-- more payment, credit-note, and periodic-invoice calculations now compare `LocalDate` values directly
-- more revenue and report-period printers now use `LocalDate` month boundaries and comparisons directly
-- more stock and inventory-related period filters now compare `LocalDate` values directly
-- more accounting-year and report-setup flows now keep year boundaries as `LocalDate` until legacy UI/report APIs require `Date`
-- more payment, inventory, and periodic-invoice panels now read and write `LocalDate` values directly from date choosers where supported
-- more company and domain aggregate helpers now evaluate monthly membership against `LocalDate` values directly
-- more product pricing, inpayment lookup, and main-book calculations now compare `LocalDate` values directly and bridge back to `Date` only for legacy return types
-- more periodic-invoice generation and pending-invoice flows now keep schedule boundaries and next-invoice calculations as `LocalDate` values internally
-- more invoice due-date table and sales print flows now read `LocalDate`/`LocalDate` due dates directly and only convert to `Date` at Jasper/table boundaries
-- more list, journal, and debt printers now format `LocalDate` values directly and only bridge to `Date` for `DateFormat`-based rendering
-- more import flows now parse incoming dates into `LocalDate` values before handing them to bookkeeping models and vouchers
-- more in- and out-delivery flows now expose `LocalDate` directly in domain objects and keep table, panel, math, and list-printer paths on local dates until display boundaries
-- more order, tender, purchase-order, and inventory report/import paths now use `LocalDate` accessors directly and bridge to `Date` only at XML or Jasper boundaries
-- more payment journal, reminder, main-book, and transaction-cleanup flows now read local dates directly and only bridge to `Date` where report rendering still requires it
-- more supplier-payment export flows now consume `LocalDate` values directly from payment models and only bridge back to `Date` when persisting config values
-- more supplier-payment file-export posts now take `LocalDate` values from application models and only bridge to `Date` at the LB transfer file boundary
-- more Excel export helpers now accept `LocalDate` values directly so voucher exports no longer detour through deprecated `Date` accessors before formatting
-- more app dialogs now expose `LocalDate` values directly where callers immediately convert legacy `Date` values back to local dates for business logic
-- more report dialogs now expose `LocalDate` directly for single-date flows and read local date ranges directly from chooser widgets in list dialogs
-- legacy `Date` imports and bridge methods still remain at Swing, JasperReports, import/export, and persistence boundaries
-
-Remaining tasks:
-- Replace remaining `Date`-based APIs with `java.time` types where practical
-- Remove or isolate deprecated bridge methods that still exist only for legacy callers
-- Re-evaluate whether GUI date widgets can move fully to `java.time` without `Date` adapters
-
-Done when:
-- production code no longer depends on `Calendar`
-- legacy `Date` usage is either removed or clearly constrained to unavoidable framework boundaries
-
-### 2. Replace Serialization-Based Persistence
+### 1. Replace Serialization-Based Persistence
 
 Status: not started
 
@@ -80,7 +40,7 @@ Done when:
 - existing user data can be migrated safely
 - domain model evolution no longer depends on Java serialization compatibility
 
-### 3. Replace or Remove Obsolete Dependencies
+### 2. Replace or Remove Obsolete Dependencies
 
 Status: partially complete
 
@@ -102,7 +62,7 @@ Done when:
 - obsolete libraries are removed from `pom.xml`
 - code paths using them have been migrated and verified
 
-### 4. Add a Headless Developer/Test CLI
+### 3. Add a Headless Developer/Test CLI
 
 Status: not started
 
@@ -149,7 +109,7 @@ Done when:
 - at least one headless report/PDF smoke test runs in CI
 - common diagnostic commands can inspect version, paths, database state, companies, years, and invoices without opening Swing UI
 
-### 5. Tighten Build and Quality Gates
+### 4. Tighten Build and Quality Gates
 
 Status: partially complete
 
@@ -171,7 +131,7 @@ Done when:
 - style and static analysis checks can block regressions in CI
 - coverage policy is explicit and enforced if desired
 
-### 6. Optional API Cleanup After Core Modernization
+### 5. Optional API Cleanup After Core Modernization
 
 Status: partially complete
 
@@ -189,11 +149,10 @@ Done when:
 
 ## Suggested Order
 
-1. Finish the remaining date/time cleanup
-2. Add the first small headless CLI commands (`version`, `paths`, and an invoice sample PDF smoke test) so future modernization work is easier to verify
-3. Tackle library migrations with the smallest blast radius first (`javax.mail`, `jxl`, `javahelp`)
-4. Decide the persistence migration strategy before changing storage-related models
-5. Tighten CI quality gates after the dependency and persistence work stops moving the baseline
+1. Add the first small headless CLI commands (`version`, `paths`, and an invoice sample PDF smoke test) so future modernization work is easier to verify
+2. Tackle library migrations with the smallest blast radius first (`javax.mail`, `jxl`, `javahelp`)
+3. Decide the persistence migration strategy before changing storage-related models
+4. Tighten CI quality gates after the dependency and persistence work stops moving the baseline
 
 ## Out of Scope for This File
 
