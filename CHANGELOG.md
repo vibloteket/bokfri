@@ -13,6 +13,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Fixed
+- Removed stale `java.util.Date` expectations from report headers, payment
+  journals, and reminder rows; report dates are now supplied as formatted
+  strings from `java.time` values.
 - Changed the fallback account for input VAT on supplier invoices from the
   group account 2640 to the standard posting account 2641. Explicitly selected
   company defaults remain unchanged.

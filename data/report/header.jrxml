@@ -9,7 +9,7 @@
     <parameter name="subtitle"    class="java.lang.String"/>
     <parameter name="company"     class="java.lang.String"/>
     <parameter name="lastvoucher" class="java.lang.Integer"/>
-    <parameter name="reportdate"  class="java.util.Date"/>
+    <parameter name="reportdate"  class="java.lang.String"/>
 
     <pageHeader>
         <band isSplitAllowed="false" height="85">
@@ -60,12 +60,12 @@
 
 
             <!-- date of report -->
-            <textField pattern="Short">
+            <textField>
                 <reportElement x="80" y="50" width="450" height="15"/>
                 <textElement textAlignment="Right">
                     <font size="8"></font>
                 </textElement>
-                <textFieldExpression class="java.util.Date">
+                <textFieldExpression class="java.lang.String">
                     <![CDATA[$P{reportdate}]]>
                 </textFieldExpression>
             </textField>

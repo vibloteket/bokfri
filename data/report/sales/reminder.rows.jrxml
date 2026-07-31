@@ -5,8 +5,8 @@
 <jasperReport name="ReminderRows">
 
     <field name="invoice.number"        class="java.lang.String"/>
-    <field name="invoice.date"          class="java.util.Date"/>
-    <field name="invoice.duedate"       class="java.util.Date"/>
+    <field name="invoice.date"          class="java.lang.String"/>
+    <field name="invoice.duedate"       class="java.lang.String"/>
     <field name="invoice.duedays"       class="java.lang.Integer"/>
     <field name="invoice.numreminders"  class="java.lang.Integer"/>
     <field name="invoice.delayinterest" class="java.math.BigDecimal"/>
@@ -160,24 +160,24 @@
             </textField>
 
             <!-- Date -->
-            <textField isBlankWhenNull="true" pattern="yyyy-MM-dd">
+            <textField isBlankWhenNull="true">
                 <reportElement x="80" y="0" width="60" height="12"/>
                 <textElement>
                     <font size="8" isBold="false"/>
                 </textElement>
-                <textFieldExpression class="java.util.Date">
+                <textFieldExpression class="java.lang.String">
                     <![CDATA[$F{invoice.date}]]>
                 </textFieldExpression>
             </textField>
 
 
             <!-- Due date -->
-            <textField isBlankWhenNull="true" pattern="yyyy-MM-dd">
+            <textField isBlankWhenNull="true">
                 <reportElement x="140" y="0" width="60" height="12"/>
                 <textElement>
                     <font size="8" isBold="false"/>
                 </textElement>
-                <textFieldExpression class="java.util.Date">
+                <textFieldExpression class="java.lang.String">
                     <![CDATA[$F{invoice.duedate}]]>
                 </textFieldExpression>
             </textField>

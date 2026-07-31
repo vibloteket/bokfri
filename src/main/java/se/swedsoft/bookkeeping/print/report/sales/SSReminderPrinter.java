@@ -13,6 +13,8 @@ import se.swedsoft.bookkeeping.print.SSPrinter;
 import se.swedsoft.bookkeeping.util.SSDateUtil;
 
 import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.*;
 
 
@@ -185,6 +187,9 @@ public class SSReminderPrinter extends SSPrinter {
         protected SSDefaultTableModel getModel() {
             SSDefaultTableModel<SSInvoice> iModel = new SSDefaultTableModel<>() {
 
+                private final DateTimeFormatter iDateFormat =
+                        DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(iLocale);
+
                 @Override
                 public Class<?> getType() {
                     return SSSaleRow.class;
@@ -205,11 +210,13 @@ public class SSReminderPrinter extends SSPrinter {
                         break;
 
                     case 1:
-                        value = se.swedsoft.bookkeeping.util.SSDateUtil.toDate(iInvoice.getLocalDate());
+                        value = iInvoice.getLocalDate() == null
+                                ? null : iInvoice.getLocalDate().format(iDateFormat);
                         break;
 
                     case 2:
-                        value = se.swedsoft.bookkeeping.util.SSDateUtil.toDate(iInvoice.getLocalDueDate());
+                        value = iInvoice.getLocalDueDate() == null
+                                ? null : iInvoice.getLocalDueDate().format(iDateFormat);
                         break;
 
                     case 3:

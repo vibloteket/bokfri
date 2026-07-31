@@ -5,6 +5,7 @@ import net.sf.jasperreports.engine.JasperPrintManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import se.swedsoft.bookkeeping.data.SSInpayment;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewProject;
 import se.swedsoft.bookkeeping.data.SSOutpayment;
@@ -13,6 +14,7 @@ import se.swedsoft.bookkeeping.data.common.SSCurrency;
 import se.swedsoft.bookkeeping.data.common.SSTaxCode;
 import se.swedsoft.bookkeeping.data.system.SSDBTestFixture;
 import se.swedsoft.bookkeeping.print.report.SSProjectsPrinter;
+import se.swedsoft.bookkeeping.print.report.journals.SSInpaymentjournalPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSOutpaymentjournalPrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSInvoicePrinter;
 
@@ -48,6 +50,19 @@ class ReportRenderingIntegrationTest {
     @Test
     void invoiceReportPreviewImageContainsRenderedContent() throws Exception {
         SSInvoicePrinter printer = new SSInvoicePrinter(invoice(), Locale.forLanguageTag("sv-SE"));
+
+        assertPreviewImageContainsRenderedContent(printer);
+    }
+
+    @Test
+    void inpaymentJournalAcceptsFormattedDateFromItsDataModel() throws Exception {
+        SSInpayment inpayment = new SSInpayment();
+        inpayment.setNumber(1);
+        inpayment.setText("Customer payment");
+        inpayment.setLocalDate(LocalDate.of(2026, 7, 30));
+
+        SSInpaymentjournalPrinter printer = new SSInpaymentjournalPrinter(
+                new ArrayList<>(List.of(inpayment)), 1, LocalDate.of(2026, 7, 31));
 
         assertPreviewImageContainsRenderedContent(printer);
     }

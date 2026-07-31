@@ -46,7 +46,7 @@ public abstract class SSPrinter {
         iReport = new SSReport();
 
         iReport.addParameter("company", SSDB.getInstance().getCurrentCompany().getName());
-        iReport.addParameter("reportdate", SSDateUtil.toDate(SSDateUtil.today()));
+        addParameter("reportdate", SSDateUtil.today());
 
         iReport.addParameter("lastvoucher", SSVoucherMath.getMaxNumber());
 
