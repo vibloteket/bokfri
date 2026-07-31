@@ -80,7 +80,7 @@ public class SSTableSorter extends AbstractTableModel {
 
     private static Directive EMPTY_DIRECTIVE = new Directive(-1, NOT_SORTED);
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static final Comparator<Comparable> COMPARABLE_COMAPRATOR = (o1, o2) -> o1.compareTo(o2);
     public static final Comparator<Object> LEXICAL_COMPARATOR = (o1, o2) -> o1.toString().compareTo(o2.toString());
 

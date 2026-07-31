@@ -15,6 +15,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 public abstract class SSDefaultTableCellRenderer <T extends SSTableSearchable> extends DefaultTableCellRenderer {
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void setValue(Object value) {
         if (value instanceof SSTableSearchable) {
             setValue((T) value);

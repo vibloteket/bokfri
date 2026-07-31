@@ -17,8 +17,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   with their modern Java equivalents.
 - Moved the minimum Maven version check to Maven Enforcer and removed an
   unsupported assembly-plugin option, eliminating build-configuration warnings.
-- Marked safe generic table-model varargs operations explicitly to reduce
-  compiler noise without hiding unrelated unchecked operations.
+- Completed generic typing of the remaining Swing models, renderers, editors,
+  selection listeners, and report data sources so the Java build compiles
+  without unchecked-operation warnings.
+- Marked the few unavoidable type-erasure boundaries explicitly instead of
+  hiding unrelated unchecked operations.
 
 ### Fixed
 - Removed stale `java.util.Date` expectations from report headers, payment

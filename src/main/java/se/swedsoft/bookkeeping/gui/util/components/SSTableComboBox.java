@@ -51,7 +51,7 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
     // The selected value
     private T       iSelected;
 
-    private List<SSSelectionListener> iSelectionListeners;
+    private List<SSSelectionListener<T>> iSelectionListeners;
     // Our current editor
     protected CellEditor iEditor;
 
@@ -543,8 +543,8 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
      *
      * @param pSelected
      */
-    protected void notifySelectionListeners(SSTableSearchable pSelected) {
-        for (SSSelectionListener<SSTableSearchable> iSelectionListener : iSelectionListeners) {
+    protected void notifySelectionListeners(T pSelected) {
+        for (SSSelectionListener<T> iSelectionListener : iSelectionListeners) {
             iSelectionListener.selected(pSelected);
         }
     }
@@ -674,6 +674,7 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
             iComboBox.setModel(pModel);
         }
 
+        @SuppressWarnings("unchecked")
         public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
             iCurrentTable = table;
             iCurrentRow = row;

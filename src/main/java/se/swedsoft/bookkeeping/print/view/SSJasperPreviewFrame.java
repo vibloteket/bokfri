@@ -48,7 +48,7 @@ public class SSJasperPreviewFrame extends SSDefaultTableFrame implements Propert
 
     private JLabel iPageLabel;
 
-    private JComboBox iZoomLevels;
+    private JComboBox<Object> iZoomLevels;
 
     private SSReport iReport;
 
@@ -83,7 +83,7 @@ public class SSJasperPreviewFrame extends SSDefaultTableFrame implements Propert
     public JToolBar getToolBar() {
         JToolBar toolbar = new JToolBar();
 
-        iZoomLevels = new JComboBox(SSZoomLevel.values());
+        iZoomLevels = new JComboBox<>(SSZoomLevel.values());
         iZoomLevels.setEditable(true);
         iZoomLevels.setMaximumSize(new Dimension(75, 20));
         iZoomLevels.setSelectedItem(SSZoomLevel.ZOOM_100);

@@ -32,7 +32,7 @@ public class SSDefaultJasperDataSource implements JRRewindableDataSource {
     // --------------- Instance variables ----------------------------
 
     /** The table model with the data to print. */
-    private SSDefaultTableModel iModel;
+    private SSDefaultTableModel<?> iModel;
 
     /** */
     private int iRow;
@@ -47,7 +47,7 @@ public class SSDefaultJasperDataSource implements JRRewindableDataSource {
      *
      * @param model The table model to use for generating the report.
      */
-    public SSDefaultJasperDataSource(SSDefaultTableModel model) {
+    public SSDefaultJasperDataSource(SSDefaultTableModel<?> model) {
         iModel = model;
         iRow = -1;
 

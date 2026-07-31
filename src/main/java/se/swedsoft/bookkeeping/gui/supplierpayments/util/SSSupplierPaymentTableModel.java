@@ -341,12 +341,13 @@ public class SSSupplierPaymentTableModel extends SSTableModel<SupplierPayment> {
          * Constructs a {@code DefaultCellEditor} that uses a text field.
          *
          */
+        @SuppressWarnings("unchecked")
         public PaymentMethodCellEditor() {
-            super(new JComboBox());
+            super(new JComboBox<PaymentMethod>());
 
-            JComboBox iComboBox = (JComboBox) getComponent();
+            JComboBox<PaymentMethod> iComboBox = (JComboBox<PaymentMethod>) getComponent();
 
-            DefaultComboBoxModel iModel = new DefaultComboBoxModel();
+            DefaultComboBoxModel<PaymentMethod> iModel = new DefaultComboBoxModel<>();
 
             iModel.addElement(PaymentMethod.BANKGIRO);
             iModel.addElement(PaymentMethod.PLUSGIRO);
@@ -357,7 +358,8 @@ public class SSSupplierPaymentTableModel extends SSTableModel<SupplierPayment> {
             iComboBox.setRenderer(
                     new DefaultListCellRenderer() {
                 @Override
-                public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                        boolean isSelected, boolean cellHasFocus) {
                     super.getListCellRendererComponent(list, value, index, isSelected,
                             cellHasFocus);
 

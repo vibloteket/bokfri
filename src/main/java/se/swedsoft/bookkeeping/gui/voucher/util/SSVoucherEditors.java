@@ -86,7 +86,7 @@ public class SSVoucherEditors {
     }
 
     public static DefaultTableCellRenderer createVoucherRowRenderer(SSDefaultTableModel<SSVoucherRow> pModel) {
-        return new SSDefaultVoucherRowRenderer(pModel);
+        return new SSDefaultVoucherRowRenderer<SSTableSearchable>(pModel);
     }
 
     public static DefaultTableCellRenderer createAccountRenderer(SSDefaultTableModel<SSVoucherRow> pModel) {
@@ -121,25 +121,25 @@ public class SSVoucherEditors {
      */
 
     public static DefaultTableCellRenderer createResultUnitRenderer(SSDefaultTableModel<SSVoucherRow> pModel) {
-        return new SSDefaultVoucherRowRenderer(pModel) {
+        return new SSDefaultVoucherRowRenderer<SSNewResultUnit>(pModel) {
             @Override
-            public void setValue(Object value) {
-                setText((value == null) ? "" : ((SSNewResultUnit) value).getNumber());
+            public void setValue(SSNewResultUnit value) {
+                setText((value == null) ? "" : value.getNumber());
             }
         };
     }
 
     public static DefaultTableCellRenderer createProjectRenderer(SSDefaultTableModel<SSVoucherRow> pModel) {
-        return new SSDefaultVoucherRowRenderer(pModel) {
+        return new SSDefaultVoucherRowRenderer<SSNewProject>(pModel) {
             @Override
-            public void setValue(Object value) {
-                setText((value == null) ? "" : ((SSNewProject) value).getNumber());
+            public void setValue(SSNewProject value) {
+                setText((value == null) ? "" : value.getNumber());
             }
         };
     }
 
     public static DefaultTableCellRenderer createBigDecimalRenderer(SSDefaultTableModel<SSVoucherRow> pModel) {
-        DefaultTableCellRenderer iEditor = new SSDefaultVoucherRowRenderer(pModel) {
+        DefaultTableCellRenderer iEditor = new SSDefaultVoucherRowRenderer<SSTableSearchable>(pModel) {
             @Override
             protected void setValue(Object value) {
                 NumberFormat format = NumberFormat.getNumberInstance();

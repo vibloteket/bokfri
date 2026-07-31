@@ -35,7 +35,7 @@ public class SSCompanySettingsDialog extends SSDialog implements ListSelectionLi
 
     private JPanel iContainer;
 
-    private JList iNavigator;
+    private JList<SSCompanyPage> iNavigator;
 
     /**
      *
@@ -64,7 +64,7 @@ public class SSCompanySettingsDialog extends SSDialog implements ListSelectionLi
 
         iContainer.setLayout(new BorderLayout());
 
-        iNavigator.setModel(new DefaultComboBoxModel(iPages.toArray()));
+        iNavigator.setModel(new DefaultComboBoxModel<>(iPages.toArray(SSCompanyPage[]::new)));
         iNavigator.addListSelectionListener(this);
         iNavigator.setFixedCellHeight(24);
 
@@ -120,11 +120,11 @@ public class SSCompanySettingsDialog extends SSDialog implements ListSelectionLi
     /**
      *
      */
-    private class NavigatorCellRenderer extends JLabel implements ListCellRenderer {
+    private class NavigatorCellRenderer extends JLabel implements ListCellRenderer<SSCompanyPage> {
 
-        public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-            String s = Integer.toString(index + 1) + ". "
-                    + ((SSCompanyPage) value).getName();
+        public Component getListCellRendererComponent(JList<? extends SSCompanyPage> list,
+                SSCompanyPage value, int index, boolean isSelected, boolean cellHasFocus) {
+            String s = Integer.toString(index + 1) + ". " + value.getName();
 
             setText(s);
 

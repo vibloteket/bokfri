@@ -347,16 +347,18 @@ public class SSInterestInvoiceTableModel extends SSDefaultTableModel<SSInvoice> 
          * Constructs a {@code DefaultCellEditor} that uses a text field.
          *
          */
+        @SuppressWarnings("unchecked")
         public InterestActionCellEditor() {
-            super(new JComboBox());
+            super(new JComboBox<InterestAction>());
 
-            JComboBox iComboBox = (JComboBox) getComponent();
+            JComboBox<InterestAction> iComboBox = (JComboBox<InterestAction>) getComponent();
 
-            iComboBox.setModel(new DefaultComboBoxModel(InterestAction.values()));
+            iComboBox.setModel(new DefaultComboBoxModel<>(InterestAction.values()));
             iComboBox.setRenderer(
                     new DefaultListCellRenderer() {
                 @Override
-                public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                        boolean isSelected, boolean cellHasFocus) {
                     super.getListCellRendererComponent(list, value, index, isSelected,
                             cellHasFocus);
 

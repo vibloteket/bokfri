@@ -33,7 +33,7 @@ public class SSSaleReportDialog extends SSDialog {
     private JRadioButton iSortAscending;
     private JRadioButton iSortDescending;
 
-    private JComboBox iSort;
+    private JComboBox<SortingMode> iSort;
 
     /**
      *
@@ -56,7 +56,7 @@ public class SSSaleReportDialog extends SSDialog {
 
 	getRootPane().setDefaultButton(iButtonPanel.getOkButton());
 
-        iSort.setModel(new DefaultComboBoxModel(SortingMode.values()));
+        iSort.setModel(new DefaultComboBoxModel<>(SortingMode.values()));
         iSort.setSelectedItem(SortingMode.Product);
 
         ButtonGroup iGroup = new ButtonGroup();
