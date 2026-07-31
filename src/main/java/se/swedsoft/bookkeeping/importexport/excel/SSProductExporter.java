@@ -88,7 +88,7 @@ public class SSProductExporter {    private static final Logger LOG = LoggerFact
     public void doExport()  throws IOException, SSImportException {
         WorkbookSettings iSettings = new WorkbookSettings();
 
-        iSettings.setLocale(new Locale("sv", "SE"));
+        iSettings.setLocale(Locale.of("sv", "SE"));
         iSettings.setEncoding("windows-1252");
         iSettings.setExcelDisplayLanguage("SE");
         iSettings.setExcelRegionalSettings("SE");
@@ -305,7 +305,7 @@ public class SSProductExporter {    private static final Logger LOG = LoggerFact
 
             iSubElement = iXmlDoc.createElementNS(null, "EnProductDescription");
             iElement.appendChild(iSubElement);
-            iNode = iXmlDoc.createTextNode(iProduct.getDescription(new Locale("en")).orElse(null));
+            iNode = iXmlDoc.createTextNode(iProduct.getDescription(Locale.of("en")).orElse(null));
             iSubElement.appendChild(iNode);
 
             Element iRoot2 = iXmlDoc.createElement("Detail");

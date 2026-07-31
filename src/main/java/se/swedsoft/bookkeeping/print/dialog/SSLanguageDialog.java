@@ -70,10 +70,10 @@ public class SSLanguageDialog extends SSDialog {
      */
     public Locale getLanguage() {
         if (iLanguageRadioSwedish.isSelected()) {
-            return new Locale("sv", "", "");
+            return Locale.of("sv");
         }
         if (iLanguageRadioEnglish.isSelected()) {
-            return new Locale("en", "", "");
+            return Locale.of("en");
         }
 
         return Locale.getDefault();

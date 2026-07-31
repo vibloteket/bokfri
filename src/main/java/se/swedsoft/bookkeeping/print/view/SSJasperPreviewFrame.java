@@ -368,7 +368,7 @@ public class SSJasperPreviewFrame extends SSDefaultTableFrame implements Propert
         if (iFileExt.equals(".rtf")
                 || (iFileExt.length() == 0 && pFileFilter instanceof SSFilterRTF)) {
             try {
-                JRRtfSaveContributor iSaver = new JRRtfSaveContributor(new Locale("sv", "SE"), bundle);
+                JRRtfSaveContributor iSaver = new JRRtfSaveContributor(Locale.of("sv", "SE"), bundle);
 
                 iSaver.save(iPrinter, pSelectedFile);
             } catch (JRException ex) {
@@ -381,7 +381,7 @@ public class SSJasperPreviewFrame extends SSDefaultTableFrame implements Propert
                 || (iFileExt.length() == 0 && pFileFilter instanceof SSFilterXLS)) {
 
             try {
-                JRMultipleSheetsXlsSaveContributor iSaver = new JRMultipleSheetsXlsSaveContributor(new Locale("sv", "SE"), bundle);
+                JRMultipleSheetsXlsSaveContributor iSaver = new JRMultipleSheetsXlsSaveContributor(Locale.of("sv", "SE"), bundle);
 
                 iSaver.save(iPrinter, pSelectedFile);
             } catch (JRException ex) {

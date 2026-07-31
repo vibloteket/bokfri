@@ -51,10 +51,10 @@ public class SSOCRInvoiceDialog extends SSDialog {
      */
     public Locale getLanguage() {
         if (iLanguageRadioSwedish.isSelected()) {
-            return new Locale("se", "", "");
+            return Locale.of("se");
         }
         if (iLanguageRadioEnglish.isSelected()) {
-            return new Locale("en", "", "");
+            return Locale.of("en");
         }
 
         return Locale.getDefault();

@@ -12,6 +12,14 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Changed
+- Replaced deprecated `Locale` constructors and string-based process execution
+  with their modern Java equivalents.
+- Moved the minimum Maven version check to Maven Enforcer and removed an
+  unsupported assembly-plugin option, eliminating build-configuration warnings.
+- Marked safe generic table-model varargs operations explicitly to reduce
+  compiler noise without hiding unrelated unchecked operations.
+
 ### Fixed
 - Removed stale `java.util.Date` expectations from report headers, payment
   journals, reminder rows, and VAT report/dialog flows; report dates are now

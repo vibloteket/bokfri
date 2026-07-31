@@ -41,7 +41,7 @@ public class SSMailServerDialog extends SSDialog {    private static final Logge
     private JLabel bccAddressesLabel;
     private JCheckBox authCheckbox;
     private JLabel connectionSecurityLabel;
-    private JComboBox connectionSecurityCombobox;
+    private JComboBox<ConnectionSecurity> connectionSecurityCombobox;
     private JLabel userNameLabel;
     private JTextField usernameText;
     private JPasswordField passwordField;
@@ -121,7 +121,8 @@ public class SSMailServerDialog extends SSDialog {    private static final Logge
         }
 
         return SSMailServer.makeIfValid("NONAME", addressText.getText(), port,
-                bccAddressesText.getText(), authCheckbox.isSelected(), (ConnectionSecurity) connectionSecurityCombobox.getSelectedItem(), usernameText.getText(),
+                bccAddressesText.getText(), authCheckbox.isSelected(),
+                (ConnectionSecurity) connectionSecurityCombobox.getSelectedItem(), usernameText.getText(),
                 SSMail.crypter.encrypt(String.valueOf(passwordField.getPassword())));
     }
 

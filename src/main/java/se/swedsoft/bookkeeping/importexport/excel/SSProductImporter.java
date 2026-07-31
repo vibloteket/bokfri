@@ -69,7 +69,7 @@ public class SSProductImporter {    private static final Logger LOG = LoggerFact
     public void doImport() throws IOException, SSImportException {
         WorkbookSettings iSettings = new WorkbookSettings();
 
-        iSettings.setLocale(new Locale("sv", "SE"));
+        iSettings.setLocale(Locale.of("sv", "SE"));
         iSettings.setEncoding("windows-1252");
         iSettings.setExcelDisplayLanguage("SE");
         iSettings.setExcelRegionalSettings("SE");
@@ -607,7 +607,7 @@ public class SSProductImporter {    private static final Logger LOG = LoggerFact
                         iValue = iTextProductAttList.item(0) == null
                                 ? null
                                 : iTextProductAttList.item(0).getNodeValue().trim();
-                        iProduct.setDescription(new Locale("en"), iValue);
+                        iProduct.setDescription(Locale.of("en"), iValue);
                     }
 
                     iProductAttList = iProductElement.getElementsByTagName("Detail");

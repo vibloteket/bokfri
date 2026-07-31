@@ -19,7 +19,7 @@ import java.util.List;
  */
 public class SSQuarterChooser extends JPanel implements ItemListener {
 
-    private JComboBox iComboBox;
+    private JComboBox<String> iComboBox;
 
     private JPanel iPanel;
 

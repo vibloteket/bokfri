@@ -69,7 +69,7 @@ public class BrowserLaunch {
             }
 
             if (WINDOWS) {
-                Runtime.getRuntime().exec("rundll32 url.dll,FileProtocolHandler " + url);
+                new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", url).start();
             } else { // assume Unix
                 // hone BROWSER variable
                 List<String> browsers = new ArrayList<>(10);

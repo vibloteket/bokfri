@@ -37,6 +37,7 @@ public abstract class SSEditableTableModel<T> extends SSTableModel<T> {
      *
      * @param pObjects The data for the table model.
      */
+    @SafeVarargs
     public SSEditableTableModel(T... pObjects) {
         super(pObjects);
         iEditing = newObject();
@@ -77,6 +78,7 @@ public abstract class SSEditableTableModel<T> extends SSTableModel<T> {
     }
 
     @Override
+    @SuppressWarnings({"unchecked", "varargs"})
     public void setObjects(T... pObjects) {
         super.setObjects(pObjects);
         iEditing = newObject();

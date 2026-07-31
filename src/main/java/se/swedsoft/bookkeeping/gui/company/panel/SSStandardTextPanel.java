@@ -23,7 +23,7 @@ public class SSStandardTextPanel extends JPanel {
 
     private JPanel iPanel;
 
-    private JComboBox iComboBox;
+    private JComboBox<StandardText> iComboBox;
 
     private JTextPane iTextPane;
 
@@ -38,7 +38,7 @@ public class SSStandardTextPanel extends JPanel {
         setLayout(new BorderLayout());
         add(iPanel, BorderLayout.CENTER);
 
-        DefaultComboBoxModel iModel = new DefaultComboBoxModel();
+        DefaultComboBoxModel<StandardText> iModel = new DefaultComboBoxModel<>();
 
         iModel.addElement(
                 new StandardText(bundle.getString("companypanel.standardtext.1"),

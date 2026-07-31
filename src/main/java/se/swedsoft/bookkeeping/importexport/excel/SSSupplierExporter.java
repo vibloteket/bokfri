@@ -79,7 +79,7 @@ public class SSSupplierExporter {
     public void export()  throws IOException, SSExportException {
         WorkbookSettings iSettings = new WorkbookSettings();
 
-        iSettings.setLocale(new Locale("sv", "SE"));
+        iSettings.setLocale(Locale.of("sv", "SE"));
         iSettings.setEncoding("windows-1252");
         iSettings.setExcelDisplayLanguage("SE");
         iSettings.setExcelRegionalSettings("SE");

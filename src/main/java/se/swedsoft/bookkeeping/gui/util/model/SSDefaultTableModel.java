@@ -51,6 +51,7 @@ public abstract class SSDefaultTableModel<T> extends AbstractTableModel {
      *
      * @param pObjects The data for the table model.
      */
+    @SafeVarargs
     public SSDefaultTableModel(T... pObjects) {
         iColumns = new LinkedList<>();
         iObjects = new LinkedList<>();
@@ -92,6 +93,7 @@ public abstract class SSDefaultTableModel<T> extends AbstractTableModel {
      *
      * @param pObjects The objects to display.
      */
+    @SuppressWarnings({"unchecked", "varargs"})
     public void setObjects(T... pObjects) {
         iObjects = new LinkedList<>();
         iObjects.addAll(Arrays.asList(pObjects));

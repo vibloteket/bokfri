@@ -21,7 +21,6 @@ import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.gui.util.model.SSTaxCodeTableModel;
 import se.swedsoft.bookkeeping.gui.util.model.SSUnitTableModel;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
-import se.swedsoft.bookkeeping.gui.util.table.SSTableSearchable;
 import se.swedsoft.bookkeeping.gui.util.table.editors.SSProductCellEditor;
 
 import javax.swing.*;
@@ -155,8 +154,8 @@ public class SSProductPanel {
         iSellingAccount.setModel(SSAccountTableModel.getDropDownModel());
         iSellingAccount.setSearchColumns(0);
         iSellingAccount.addSelectionListener(
-                new SSSelectionListener() {
-            public void selected(SSTableSearchable selected) {
+                new SSSelectionListener<SSAccount>() {
+            public void selected(SSAccount selected) {
                 SSAccount iSelected = iSellingAccount.getSelected();
 
                 iSellingAccountDescription.setText(
@@ -169,8 +168,8 @@ public class SSProductPanel {
         iPurchaseAccount.setModel(SSAccountTableModel.getDropDownModel());
         iPurchaseAccount.setSearchColumns(0);
         iPurchaseAccount.addSelectionListener(
-                new SSSelectionListener() {
-            public void selected(SSTableSearchable selected) {
+                new SSSelectionListener<SSAccount>() {
+            public void selected(SSAccount selected) {
                 SSAccount iSelected = iPurchaseAccount.getSelected();
 
                 iPurchaseAccountDescription.setText(
@@ -183,8 +182,8 @@ public class SSProductPanel {
         iProject.setModel(SSProjectTableModel.getDropDownModel());
         iProject.setSearchColumns(0);
         iProject.addSelectionListener(
-                new SSSelectionListener() {
-            public void selected(SSTableSearchable selected) {
+                new SSSelectionListener<SSNewProject>() {
+            public void selected(SSNewProject selected) {
                 SSNewProject iSelected = iProject.getSelected();
 
                 if (iProject.getText() != null && iProject.getText().length() != 0) {
@@ -210,8 +209,8 @@ public class SSProductPanel {
         iResultUnit.setModel(SSResultUnitTableModel.getDropDownModel());
         iResultUnit.setSearchColumns(0);
         iResultUnit.addSelectionListener(
-                new SSSelectionListener() {
-            public void selected(SSTableSearchable selected) {
+                new SSSelectionListener<SSNewResultUnit>() {
+            public void selected(SSNewResultUnit selected) {
                 SSNewResultUnit iSelected = iResultUnit.getSelected();
 
                 if (iResultUnit.getText() != null && iResultUnit.getText().length() != 0) {
@@ -268,8 +267,8 @@ public class SSProductPanel {
             }
         });
 
-        iDescriptions.addLocale(new Locale("se"), "Svenska:");
-        iDescriptions.addLocale(new Locale("en"), "Engelska:");
+        iDescriptions.addLocale(Locale.of("se"), "Svenska:");
+        iDescriptions.addLocale(Locale.of("en"), "Engelska:");
 
         NumberFormat iFormat = NumberFormat.getNumberInstance();
 

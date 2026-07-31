@@ -56,6 +56,7 @@ public abstract class SSTableModel<T> extends AbstractTableModel {
      *
      * @param pObjects The data for the table model.
      */
+    @SafeVarargs
     public SSTableModel(T... pObjects) {
         this();
 
@@ -83,6 +84,7 @@ public abstract class SSTableModel<T> extends AbstractTableModel {
      *
      * @param pObjects The objects to display.
      */
+    @SuppressWarnings({"unchecked", "varargs"})
     public void setObjects(T... pObjects) {
         iObjects = new LinkedList<>();
         iObjects.addAll(Arrays.asList(pObjects));
