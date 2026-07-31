@@ -3,6 +3,7 @@ package se.swedsoft.bookkeeping.print.report;
 
 import se.swedsoft.bookkeeping.calc.math.SSAccountMath;
 import se.swedsoft.bookkeeping.calc.math.SSVoucherMath;
+import se.swedsoft.bookkeeping.calc.util.SSVATUtil;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSVoucher;
@@ -13,7 +14,6 @@ import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -135,7 +135,6 @@ public class SSVATControl2015Printer extends SSPrinter {    private static final
         iVoucher.setLocalDate(iDateTo);
 
         BigDecimal iSum = new BigDecimal(0);
-        BigDecimal iRoundedSum = new BigDecimal(0);
         SSVoucherRow iRow;
 
         for (SSAccount iAccount : iAccounts) {
@@ -153,13 +152,13 @@ public class SSVATControl2015Printer extends SSPrinter {    private static final
             iVoucher.addVoucherRow(iRow);
 
             iSum = iSum.add(iValue);
-            iRoundedSum = iRoundedSum.add(iValue.setScale(0, RoundingMode.DOWN));
         }
 
         if (iSum.signum() != 0) {
             iRow = new SSVoucherRow();
 
-            // BigDecimal iRounded = iSum.setScale(0, RoundingMode.DOWN);
+            BigDecimal iRoundedSum = SSVATUtil.getRoundedSettlementTotal(
+                    Collections.singletonList(iSum));
 
             if (iRoundedSum.signum() > 0) {
                 iRow.setAccount(iAccountR2);

@@ -24,6 +24,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   hiding unrelated unchecked operations.
 
 ### Fixed
+- Corrected VAT settlement voucher generation so BAS 2026 uses accounts 1650
+  and 2650, a missing account selection cannot silently become account 1010,
+  and VAT balances are summed before whole-krona rounding.
+- Normalized legacy floating-point noise in entered amounts before VAT
+  settlement rounding, preventing false one-krona adjustments.
 - Removed stale `java.util.Date` expectations from report headers, payment
   journals, reminder rows, and VAT report/dialog flows; report dates are now
   supplied and formatted directly from `java.time` values.

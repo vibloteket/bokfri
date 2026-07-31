@@ -87,18 +87,9 @@ public class SSVATReportDialog extends SSDialog {    private static final Logger
             }
         });
 
-        iAccountR1.setSelected(
-                SSAccountMath.getAccountWithVATCode(SSDB.getInstance().getAccounts(), "R1",
-                new SSAccount(1650)).orElse(null),
-                true);
-        iAccountR2.setSelected(
-                SSAccountMath.getAccountWithVATCode(SSDB.getInstance().getAccounts(), "R2",
-                new SSAccount(2650)).orElse(null),
-                true);
-        iAccountA.setSelected(
-                SSAccountMath.getAccountWithVATCode(SSDB.getInstance().getAccounts(), "A",
-                new SSAccount(3740)).orElse(null),
-                true);
+        iAccountR1.setSelected(getSettlementAccount(1650, "R1"), true);
+        iAccountR2.setSelected(getSettlementAccount(2650, "R2"), true);
+        iAccountA.setSelected(getSettlementAccount(3740, "A"), true);
 
         iButtonPanel.addCancelActionListener(e -> setModalResult(JOptionPane.CANCEL_OPTION, true));
         iButtonPanel.addOkActionListener(e -> setModalResult(JOptionPane.OK_OPTION, true));
@@ -120,6 +111,16 @@ public class SSVATReportDialog extends SSDialog {    private static final Logger
                 .with(TemporalAdjusters.lastDayOfMonth());
         iTo.setLocalDate(toDate);
 
+    }
+
+    private SSAccount getSettlementAccount(int accountNumber, String vatCode) {
+        SSAccount standardAccount = SSDB.getInstance().getCurrentYear()
+                .getAccountPlan().getAccount(accountNumber);
+        if (standardAccount != null) {
+            return standardAccount;
+        }
+        return SSAccountMath.getAccountWithVATCode(SSDB.getInstance().getAccounts(), vatCode,
+                null).orElse(null);
     }
 
     /**

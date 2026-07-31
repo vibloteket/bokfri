@@ -70,7 +70,7 @@ public class SSBigDecimalCellEditor extends AbstractCellEditor implements TableC
         if (iValue instanceof Number) {
             Number iNumber = (Number) iValue;
 
-            return new BigDecimal(iNumber.doubleValue());
+            return new BigDecimal(iNumber.toString());
         }
         return null;
     }

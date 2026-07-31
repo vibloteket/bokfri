@@ -109,13 +109,24 @@ ACCOUNT_NAME_VARIANTS = {
 # Reviewed decisions for old VAT mappings that conflict between Bokfri plans.
 # Blank means that the modern BAS account is too broad for one automatic VAT
 # treatment. The reduced K1 account 3100 is explicitly named Momsfria intäkter.
+SETTLEMENT_VAT_OVERRIDES = {
+    # Old BAS plans used 1480/2480 as VAT settlement accounts. Those account
+    # numbers have different meanings in BAS 2026; only the modern settlement
+    # accounts may carry Bokfri's R1/R2 markers.
+    1480: "",
+    1650: "R1",
+    2480: "",
+    2650: "R2",
+    3740: "A",
+}
+
 VAT_OVERRIDES = {
-    "ink2_ab": {3100: "", 3630: "", 3910: "", 3920: ""},
-    "ink2_ef": {3100: "", 3630: "", 3910: "", 3920: ""},
-    "ink3": {3100: "", 3630: "", 3910: "", 3920: ""},
-    "ink4": {3100: "", 3630: "", 3910: "", 3920: ""},
-    "ne": {3100: "", 3630: "", 3910: "", 3920: ""},
-    "ne_k1": {3100: "MF"},
+    "ink2_ab": {**SETTLEMENT_VAT_OVERRIDES, 3100: "", 3630: "", 3910: "", 3920: ""},
+    "ink2_ef": {**SETTLEMENT_VAT_OVERRIDES, 3100: "", 3630: "", 3910: "", 3920: ""},
+    "ink3": {**SETTLEMENT_VAT_OVERRIDES, 3100: "", 3630: "", 3910: "", 3920: ""},
+    "ink4": {**SETTLEMENT_VAT_OVERRIDES, 3100: "", 3630: "", 3910: "", 3920: ""},
+    "ne": {**SETTLEMENT_VAT_OVERRIDES, 3100: "", 3630: "", 3910: "", 3920: ""},
+    "ne_k1": {**SETTLEMENT_VAT_OVERRIDES, 3100: "MF"},
 }
 
 

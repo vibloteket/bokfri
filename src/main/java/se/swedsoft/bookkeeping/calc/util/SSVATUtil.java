@@ -14,6 +14,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +43,17 @@ public class SSVATUtil {
      */
     public static BigDecimal getVatToPayOrRetrieveRounded(Map<SSAccount, BigDecimal> creditMinusDebetSum) {
         return getVatToPayOrRetrieve(creditMinusDebetSum).setScale(0, RoundingMode.DOWN);
+    }
+
+    /**
+     * Sums all VAT-account balances before dropping öre for the declaration.
+     * Rounding each account first can create artificial whole-krona differences.
+     */
+    public static BigDecimal getRoundedSettlementTotal(Collection<BigDecimal> accountBalances) {
+        BigDecimal total = accountBalances.stream()
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        return total.setScale(0, RoundingMode.DOWN);
     }
 
     /**
