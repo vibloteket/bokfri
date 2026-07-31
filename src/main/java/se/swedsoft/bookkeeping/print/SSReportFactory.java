@@ -28,7 +28,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.text.DateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -37,7 +36,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.swedsoft.bookkeeping.util.SSDateUtil;
 
 
 /**
@@ -392,7 +390,7 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
             new SSErrorDialog(iMainFrame, "vatbasis.dialog.morethenoneaccount");
             return;
         }
-        DateFormat format = DateFormat.getDateInstance(DateFormat.SHORT);
+        DateTimeFormatter format = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
 
         // Get the R1, R2 and A accounts
         final SSAccount accountR1 = SSAccountMath.getAccountWithVATCode(iAccounts, "R1",
@@ -403,7 +401,7 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
                 iAccountingYear.getAccountPlan().getAccount(3740)).orElse(null);
 
         String voucherName = String.format(bundle.getString("vatbasis.vouchername"),
-                format.format(SSDateUtil.toDate(localFrom)), format.format(SSDateUtil.toDate(localTo)));
+                localFrom.format(format), localTo.format(format));
 
         final SSVoucher iVoucher = SSVATUtil.generateVATVoucher(voucherName, localFrom,
                 localTo, accountR1, accountR2, accountA);
@@ -437,7 +435,7 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
                             public void internalFrameClosed(InternalFrameEvent e) {
                                 // Ask the user if he wants to generate a vatVoucher
                                 dialogVATVoucher(iMainFrame, iVoucher, iAccountingYear,
-                                        SSDateUtil.toDate(localFrom), SSDateUtil.toDate(localTo));
+                                        localFrom, localTo);
 
                                 // For some reason this event get called over and over, this is a "hack" to avoid it
                                 e.getInternalFrame().removeInternalFrameListener(this);
@@ -500,11 +498,12 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
                         iPrinter.preview(iMainFrame,
                                 e -> {
 
-                                        DateFormat iFormat = DateFormat.getDateInstance(DateFormat.SHORT);
+                                        DateTimeFormatter iFormat =
+                                                DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
                                         SSQueryDialog iDialog1 = new SSQueryDialog(iMainFrame,
                                                 SSBundle.getBundle(), "vatcontrol2007.voucherdialog",
-                                                iFormat.format(SSDateUtil.toDate(iFrom)),
-                                                iFormat.format(SSDateUtil.toDate(iTo)),
+                                                iFrom.format(iFormat),
+                                                iTo.format(iFormat),
                                                 iVoucher.getNumber());
 
                                         int iResponce1 = iDialog1.getResponce();
@@ -576,11 +575,12 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
                         iPrinter.preview(iMainFrame,
                                 e -> {
 
-                                        DateFormat iFormat = DateFormat.getDateInstance(DateFormat.SHORT);
+                                        DateTimeFormatter iFormat =
+                                                DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
                                         SSQueryDialog iDialog1 = new SSQueryDialog(iMainFrame,
                                                 SSBundle.getBundle(), "vatcontrol2015.voucherdialog",
-                                                iFormat.format(SSDateUtil.toDate(iFrom)),
-                                                iFormat.format(SSDateUtil.toDate(iTo)),
+                                                iFrom.format(iFormat),
+                                                iTo.format(iFormat),
                                                 iVoucher.getNumber());
 
                                         int iResponce1 = iDialog1.getResponce();
@@ -635,12 +635,14 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
      * @param pFrom
      * @param pTo
      */
-    public static void dialogVATVoucher(final SSMainFrame iMainFrame, final SSVoucher pVoucher, final SSNewAccountingYear pAccountingYear, final Date pFrom, final Date pTo) {
-        DateFormat format = DateFormat.getDateInstance(DateFormat.SHORT);
+    public static void dialogVATVoucher(final SSMainFrame iMainFrame,
+            final SSVoucher pVoucher, final SSNewAccountingYear pAccountingYear,
+            final LocalDate pFrom, final LocalDate pTo) {
+        DateTimeFormatter format = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
 
         // Manually construct an input popup
         SSQueryDialog iDialog = new SSQueryDialog(iMainFrame, SSBundle.getBundle(),
-                "vatbasis.dialog", format.format(pFrom), format.format(pTo),
+                "vatbasis.dialog", pFrom.format(format), pTo.format(format),
                 pVoucher.getNumber());
         int iResponce = iDialog.getResponce();
 
