@@ -1,1 +1,1157 @@
-[{"name": "Företag", "file": "Company.html", "section": "Administration"}, {"name": "Skapa företag", "file": "CreateCompany.html", "section": "Administration"}, {"name": "Öppna företag", "file": "OpenCompany.html", "section": "Administration"}, {"name": "Ändra företag", "file": "ChangeCompany.html", "section": "Administration"}, {"name": "Radera företag", "file": "DeleteCompany.html", "section": "Administration"}, {"name": "Kontoplaner", "file": "Accounts.html", "section": "Administration"}, {"name": "Skapa kontoplan", "file": "CreateAccounts.html", "section": "Administration"}, {"name": "Ändra kontoplan", "file": "ChangeAccounts.html", "section": "Administration"}, {"name": "Radera kontoplan", "file": "DeleteAccounts.html", "section": "Administration"}, {"name": "Exportera kontoplan", "file": "ExportAccounts.html", "section": "Administration"}, {"name": "Importera kontoplan", "file": "ImportAccounts.html", "section": "Administration"}, {"name": "Importera från SIE-fil", "file": "SIEimport.html", "section": "Administration"}, {"name": "Importera verifikationer", "file": "import.voucher.html", "section": "Administration"}, {"name": "Exportera till SIE-fil", "file": "SIEexport.html", "section": "Administration"}, {"name": "Exportera verifikationer", "file": "SIEexportVer.html", "section": "Administration"}, {"name": "Säkerhetskopiering", "file": "Backup.html", "section": "Administration"}, {"name": "Säkerhetskopiera hela databasen", "file": "BackupAllCompany.html", "section": "Administration"}, {"name": "Återställ från säkerhetskopia", "file": "RestoreBackup.html", "section": "Administration"}, {"name": "Välj bokföringsår", "file": "Year.html", "section": "Register"}, {"name": "Skapa bokföringsår", "file": "CreateYear.html", "section": "Register"}, {"name": "Ändra bokföringsår", "file": "ChangeYear.html", "section": "Register"}, {"name": "Öppna bokföringsår", "file": "OpenYear.html", "section": "Register"}, {"name": "Radera bokföringsår", "file": "DeleteYear.html", "section": "Register"}, {"name": "Ändra kontoplan för aktivt år", "file": "ChangeActiveAccounts.html", "section": "Register"}, {"name": "Projekt", "file": "Project.html", "section": "Register"}, {"name": "Skapa projekt", "file": "CreateProject.html", "section": "Register"}, {"name": "Ändra projekt", "file": "ChangeProject.html", "section": "Register"}, {"name": "Radera projekt", "file": "DeleteProject.html", "section": "Register"}, {"name": "Projektomsättning", "file": "ProjectRevenue.html", "section": "Register"}, {"name": "Resultatenhet", "file": "Profitcenter.html", "section": "Register"}, {"name": "Skapa resultatenhet", "file": "CreateProfitcenter.html", "section": "Register"}, {"name": "Ändra resultatenhet", "file": "ChangeProfitcenter.html", "section": "Register"}, {"name": "Radera resultatenhet", "file": "DeleteProfitcenter.html", "section": "Register"}, {"name": "Resultatenhetsomsättning", "file": "ResultunitRevenue.html", "section": "Register"}, {"name": "Produkter", "file": "Products.html", "section": "Register"}, {"name": "Skapa produkter", "file": "CreateProducts.html", "section": "Register"}, {"name": "Ändra produkter", "file": "ChangeProducts.html", "section": "Register"}, {"name": "Kopiera produkter", "file": "CopyProducts.html", "section": "Register"}, {"name": "Radera produkter", "file": "DeleteProducts.html", "section": "Register"}, {"name": "Produktomsättning", "file": "ProductRevenue.html", "section": "Register"}, {"name": "Kunder", "file": "Customers.html", "section": "Register"}, {"name": "Skapa kunder", "file": "CreateCustomers.html", "section": "Register"}, {"name": "Ändra kunder", "file": "ChangeCustomers.html", "section": "Register"}, {"name": "Kopiera kunder", "file": "CopyCustomers.html", "section": "Register"}, {"name": "Radera kunder", "file": "DeleteCustomers.html", "section": "Register"}, {"name": "Kundomsättning", "file": "CustomerRevenue.html", "section": "Register"}, {"name": "Leverantörer", "file": "Suppliers.html", "section": "Register"}, {"name": "Skapa leverantörer", "file": "CreateSuppliers.html", "section": "Register"}, {"name": "Ändra leverantörer", "file": "ChangeSuppliers.html", "section": "Register"}, {"name": "Kopiera leverantörer", "file": "CopySuppliers.html", "section": "Register"}, {"name": "Radera leverantörer", "file": "DeleteSuppliers.html", "section": "Register"}, {"name": "Importera leverantörer", "file": "ImportSuppliers.html", "section": "Register"}, {"name": "Exportera leverantörer", "file": "ExportSuppliers.html", "section": "Register"}, {"name": "Leverantörsomsättning", "file": "SupplierRevenue.html", "section": "Register"}, {"name": "Konteringsmallar", "file": "AccountingTemplate.html", "section": "Register"}, {"name": "Importera konteringsmallar från Excel-fil", "file": "ImportTemplateExcel.html", "section": "Register"}, {"name": "Exportera konteringsmallar till Excel-fil", "file": "ExportTemplateExcel.html", "section": "Register"}, {"name": "Automatfördelning", "file": "AutomaticDistribution.html", "section": "Register"}, {"name": "Skapa automatfördelning", "file": "CreateAutomaticDist.html", "section": "Register"}, {"name": "Ändra automatfördelning", "file": "ChangeAutomaticDist.html", "section": "Register"}, {"name": "Kopiera automatfördelning", "file": "CopyAutomaticDist.html", "section": "Register"}, {"name": "Radera automatfördelning", "file": "DeleteAutomaticDist.html", "section": "Register"}, {"name": "Importera produkter (Excel)", "file": "ImportProducts.html", "section": "Importera produkter"}, {"name": "Importera produkter (XML)", "file": "ImportProductsXML.html", "section": "Importera produkter"}, {"name": "Exportera produkter (Excel)", "file": "ExportProducts.html", "section": "Exportera produkter"}, {"name": "Exportera produkter (XML)", "file": "ExportProductsXML.html", "section": "Exportera produkter"}, {"name": "Importera kunder (Excel)", "file": "ImportCustomers.html", "section": "Importera kunder"}, {"name": "Importera kunder (XML)", "file": "ImportCustomersXML.html", "section": "Importera kunder"}, {"name": "Importera kunder E-butik", "file": "ImportCustomersEbutik.html", "section": "Importera kunder"}, {"name": "Exportera kunder (Excel)", "file": "ExportCustomers.html", "section": "Exportera kunder"}, {"name": "Exportera kunder (XML)", "file": "ExportCustomersXML.html", "section": "Exportera kunder"}, {"name": "Inbetalningar", "file": "Inpayment.html", "section": "Försäljning"}, {"name": "Skapa inbetalning", "file": "CreateInpayment.html", "section": "Försäljning"}, {"name": "Ändra inbetalning", "file": "ChangeInpayment.html", "section": "Försäljning"}, {"name": "Radera inbetalningar", "file": "DeleteInpayments.html", "section": "Försäljning"}, {"name": "Inbetalningslista", "file": "Inpaymentlist.html", "section": "Försäljning"}, {"name": "Offerter", "file": "Quotation.html", "section": "Försäljning"}, {"name": "Skapa offert", "file": "CreateQuotation.html", "section": "Försäljning"}, {"name": "Ändra offert", "file": "ChangeQuotation.html", "section": "Försäljning"}, {"name": "Kopiera offert", "file": "CopyQuotation.html", "section": "Försäljning"}, {"name": "Skapa order från offert", "file": "AutoOrderFromQuote.html", "section": "Försäljning"}, {"name": "Radera offerter", "file": "DeleteQuotations.html", "section": "Försäljning"}, {"name": "Offert", "file": "QuotationReport.html", "section": "Försäljning"}, {"name": "E-postoffert", "file": "EmailQuotation.html", "section": "Försäljning"}, {"name": "Offertlista", "file": "QuotationList.html", "section": "Försäljning"}, {"name": "Ordrar", "file": "Saleorder.html", "section": "Försäljning"}, {"name": "Skapa order", "file": "CreateOrder.html", "section": "Försäljning"}, {"name": "Ändra order", "file": "ChangeOrder.html", "section": "Försäljning"}, {"name": "Kopiera order", "file": "CopyOrder.html", "section": "Försäljning"}, {"name": "Skapa kundfaktura från ordrar", "file": "AutoInvoiceFromOrder.html", "section": "Försäljning"}, {"name": "Skapa kontantkvitto från ordrar", "file": "AutoCashFromOrder.html", "section": "Försäljning"}, {"name": "Skapa periodfaktura från ordrar", "file": "AutoPeriodicinvoiceFromOrder.html", "section": "Försäljning"}, {"name": "Skapa inköpsorder från ordrar", "file": "AutoPOFromOrder.html", "section": "Försäljning"}, {"name": "Radera ordrar", "file": "DeleteOrders.html", "section": "Försäljning"}, {"name": "Exportera ordrar (XML)", "file": "ExportOrdersXML.html", "section": "Försäljning"}, {"name": "Orderbekräftelse", "file": "OrderReport.html", "section": "Försäljning"}, {"name": "E-postorderbekräftelse", "file": "EmailOrder.html", "section": "Försäljning"}, {"name": "Plocklista", "file": "Pickingslip.html", "section": "Försäljning"}, {"name": "Följesedel", "file": "Deliverynote.html", "section": "Försäljning"}, {"name": "Orderlista", "file": "OrderList.html", "section": "Försäljning"}, {"name": "Kundfakturor", "file": "Invoices.html", "section": "Försäljning"}, {"name": "Skapa kundfaktura", "file": "CreateInvoice.html", "section": "Försäljning"}, {"name": "Ändra kundfaktura", "file": "ChangeInvoice.html", "section": "Försäljning"}, {"name": "Kopiera kundfaktura", "file": "CopyInvoice.html", "section": "Försäljning"}, {"name": "Skapa inbetalning från kundfakturor", "file": "AutoInpayFromInvoice.html", "section": "Försäljning"}, {"name": "Skapa kreditfaktura från kundfaktura", "file": "AutoCreditFromInvoice.html", "section": "Försäljning"}, {"name": "Skapa påminnelser från kundfakturor", "file": "AutoReminderFromInvoice.html", "section": "Försäljning"}, {"name": "Skapa räntefakturor", "file": "CreateInterestinvoice.html", "section": "Försäljning"}, {"name": "Radera kundfakturor", "file": "DeleteInvoices.html", "section": "Försäljning"}, {"name": "Kundfaktura", "file": "InvoiceReport.html", "section": "Försäljning"}, {"name": "E-postfaktura", "file": "EmailInvoice.html", "section": "Försäljning"}, {"name": "OCR-faktura", "file": "OCRInvoice.html", "section": "Försäljning"}, {"name": "Betalningspåminnelse", "file": "Reminder.html", "section": "Försäljning"}, {"name": "Fakturalista", "file": "InvoiceList.html", "section": "Försäljning"}, {"name": "Kreditfakturor", "file": "CreditInvoices.html", "section": "Försäljning"}, {"name": "Skapa kreditfaktura", "file": "CreateCreditinvoice.html", "section": "Försäljning"}, {"name": "Ändra kreditfaktura", "file": "ChangeCreditinvoice.html", "section": "Försäljning"}, {"name": "Kopiera kreditfaktura", "file": "CopyCreditinvoice.html", "section": "Försäljning"}, {"name": "Radera kreditfakturor", "file": "DeleteCreditinvoices.html", "section": "Försäljning"}, {"name": "Kreditfaktura", "file": "CreditinvoiceReport.html", "section": "Försäljning"}, {"name": "E-postkreditfaktura", "file": "EmailCreditInvoice.html", "section": "Försäljning"}, {"name": "Kreditfakturalista", "file": "CreditInvoiceList.html", "section": "Försäljning"}, {"name": "Periodfakturor", "file": "PeriodicInvoices.html", "section": "Försäljning"}, {"name": "Skapa periodfaktura", "file": "CreatePeriodicInvoice.html", "section": "Försäljning"}, {"name": "Ändra periodfaktura", "file": "ChangePeriodicInvoice.html", "section": "Försäljning"}, {"name": "Kopiera periodfaktura", "file": "CopyPeriodicInvoice.html", "section": "Försäljning"}, {"name": "Radera periodfakturor", "file": "DeletePeriodicInvoices.html", "section": "Försäljning"}, {"name": "Lista fakturor för vald periodfaktura", "file": "ListInvoicesForPeriodicInvoices.html", "section": "Försäljning"}, {"name": "Skapa kundfakturor från periodfakturor", "file": "AutoInvoicesFromPeriodic.html", "section": "Försäljning"}, {"name": "Försäljningsrapport", "file": "SaleProfitReport.html", "section": "Försäljning"}, {"name": "Försäljningsvärden", "file": "SaleValues.html", "section": "Försäljning"}, {"name": "Kundfordran", "file": "InvoiceReceivable.html", "section": "Försäljning"}, {"name": "Kundreskontra", "file": "AccountsReceivable.html", "section": "Försäljning"}, {"name": "EU Kvartalsredovisning", "file": "EUQReport.html", "section": "Försäljning"}, {"name": "Importera ordrar (XML)", "file": "ImportOrdersXML.html", "section": "Importera ordrar"}, {"name": "Importera ordrar E-butik", "file": "ImportOrdersEbutik.html", "section": "Importera ordrar"}, {"name": "Inbetalningsjournal", "file": "InpaymentJournal.html", "section": "Rapporter"}, {"name": "Fakturajournal", "file": "InvoiceJournal.html", "section": "Rapporter"}, {"name": "Kreditfakturajournal", "file": "CreditinvoiceJournal.html", "section": "Rapporter"}, {"name": "Utbetalningar", "file": "Outpayment.html", "section": "Inköp"}, {"name": "Skapa utbetalning", "file": "CreateOutpayment.html", "section": "Inköp"}, {"name": "Ändra utbetalning", "file": "ChangeOutpayment.html", "section": "Inköp"}, {"name": "Radera utbetalningar", "file": "DeleteOutpayments.html", "section": "Inköp"}, {"name": "Utbetalningslista", "file": "Outpaymentlist.html", "section": "Inköp"}, {"name": "Inköpsordrar", "file": "Purchaseorders.html", "section": "Inköp"}, {"name": "Skapa inköpsorder", "file": "CreatePurchaseorder.html", "section": "Inköp"}, {"name": "Ändra inköpsorder", "file": "ChangePurchaseorder.html", "section": "Inköp"}, {"name": "Kopiera inköpsorder", "file": "CopyPurchaseorder.html", "section": "Inköp"}, {"name": "Skapa leverantörsfaktura från inköpsordrar", "file": "AutoSuppinvoiceFromPurchorder.html", "section": "Inköp"}, {"name": "Radera inköpsordrar", "file": "DeletePurchaseorders.html", "section": "Inköp"}, {"name": "Inköpsorder", "file": "Purchaseorderreport.html", "section": "Inköp"}, {"name": "E-postinköpsorder", "file": "EmailPO.html", "section": "Inköp"}, {"name": "Förfrågan", "file": "InquiryReport.html", "section": "Inköp"}, {"name": "E-postförfrågan", "file": "EmailInquiry.html", "section": "Inköp"}, {"name": "Inköpsorderlista", "file": "PurchaseorderList.html", "section": "Inköp"}, {"name": "Leverantörsfakturor", "file": "Supplierinvoices.html", "section": "Inköp"}, {"name": "Skapa leverantörsfaktura", "file": "CreateSupplierinvoice.html", "section": "Inköp"}, {"name": "Ändra leverantörsfaktura", "file": "ChangeSupplierinvoice.html", "section": "Inköp"}, {"name": "Kopiera leverantörsfaktura", "file": "CopySupplierinvoice.html", "section": "Inköp"}, {"name": "Skapa leverantörskreditfaktura från leverantörsfaktura", "file": "AutoCsuppinvFromSuppinv.html", "section": "Inköp"}, {"name": "Radera leverantörsfakturor", "file": "DeleteSupplierinvoices.html", "section": "Inköp"}, {"name": "Skapa utbetalning från leverantörsfakturor", "file": "AutoOutpayFromSuppInvoice.html", "section": "Inköp"}, {"name": "Skapa LB-fil för leverantörsbetalning", "file": "CreateLBpayment.html", "section": "Inköp"}, {"name": "Leverantörsfakturalista", "file": "SupplierinvoiceList.html", "section": "Inköp"}, {"name": "Leverantörskreditfakturor", "file": "Suppliercreditinvoices.html", "section": "Inköp"}, {"name": "Skapa leverantörskreditfaktura", "file": "CreateSuppliercreditinvoice.html", "section": "Inköp"}, {"name": "Ändra leverantörskreditfaktura", "file": "ChangeSuppliercreditinvoice.html", "section": "Inköp"}, {"name": "Kopiera leverantörskreditfaktura", "file": "CopySuppliercreditinvoice.html", "section": "Inköp"}, {"name": "Radera leverantörskreditfakturor", "file": "DeleteSuppliercreditinvoices.html", "section": "Inköp"}, {"name": "Leverantörskreditfakturalista", "file": "SuppliercreditInvoiceList.html", "section": "Inköp"}, {"name": "Inköpsvärden", "file": "PurchaseValues.html", "section": "Inköp"}, {"name": "Leverantörsskuld", "file": "SupplierinvoicePayable.html", "section": "Inköp"}, {"name": "Leverantörsreskontra", "file": "AccountsPayable.html", "section": "Inköp"}, {"name": "Utbetalningsjournal", "file": "OutpaymentJournal.html", "section": "Rapporter"}, {"name": "Leverantörsfakturajournal", "file": "SupplierinvoiceJournal.html", "section": "Rapporter"}, {"name": "Leverantörskreditfakturajournal", "file": "SuppliercreditinvoiceJournal.html", "section": "Rapporter"}, {"name": "Importera inbetalningar från BgMax-fil", "file": "ImportBgMax.html", "section": "Bankgiro"}, {"name": "Importera utbetalningar från Lbut-fil", "file": "ImportLbin.html", "section": "Bankgiro"}, {"name": "Inleveranser", "file": "InDelivery.html", "section": "Lager"}, {"name": "Skapa inleverans", "file": "CreateIndelivery.html", "section": "Lager"}, {"name": "Ändra inleverans", "file": "ChangeIndelivery.html", "section": "Lager"}, {"name": "Kopiera inleverans", "file": "CopyIndelivery.html", "section": "Lager"}, {"name": "Radera inleveranser", "file": "DeleteIndelivery.html", "section": "Lager"}, {"name": "Inleveranslista", "file": "InDeliverylist.html", "section": "Lager"}, {"name": "Utleveranser", "file": "OutDelivery.html", "section": "Lager"}, {"name": "Skapa utleverans", "file": "CreateOutdelivery.html", "section": "Lager"}, {"name": "Ändra utleverans", "file": "ChangeOutdelivery.html", "section": "Lager"}, {"name": "Kopiera utleverans", "file": "CopyOutdelivery.html", "section": "Lager"}, {"name": "Radera utleveranser", "file": "DeleteOutdelivery.html", "section": "Lager"}, {"name": "Utleveranslista", "file": "OutDeliverylist.html", "section": "Lager"}, {"name": "Inköpsförslag", "file": "AutoPO.html", "section": "Lager"}, {"name": "Inventeringar", "file": "InventoryCount.html", "section": "Lager"}, {"name": "Skapa inventering", "file": "CreateInventorycount.html", "section": "Lager"}, {"name": "Ändra inventering", "file": "ChangeInventorycount.html", "section": "Lager"}, {"name": "Radera inventeringar", "file": "DeleteInventorycount.html", "section": "Lager"}, {"name": "Inventeringslista", "file": "Inventorycountlist.html", "section": "Lager"}, {"name": "Inventeringsunderlag", "file": "Inventorycountdoc.html", "section": "Lager"}, {"name": "Lagerredovisning", "file": "Instockreport.html", "section": "Lager"}, {"name": "Lagervärde", "file": "Stockvaluereport.html", "section": "Lager"}, {"name": "Ingående balans", "file": "BeginningBalance.html", "section": "Bokföring"}, {"name": "Bokföra", "file": "Verifications.html", "section": "Bokföring"}, {"name": "Skapa verifikationer", "file": "CreateVerifications.html", "section": "Bokföring"}, {"name": "Ändra verifikationer", "file": "ChangeVerifications.html", "section": "Bokföring"}, {"name": "Skapa ändringsverifikation", "file": "CorrectionVerifications.html", "section": "Bokföring"}, {"name": "Exportera verifikationer till Excel-fil", "file": "ExportVerExcel.html", "section": "Bokföring"}, {"name": "Importera verifikationer från Excel-fil", "file": "ImportVerExcel.html", "section": "Bokföring"}, {"name": "Resultatbudget", "file": "ProfitLossBudget.html", "section": "Bokföring"}, {"name": "Verifikationer", "file": "VerificationsReport.html", "section": "Bokföring"}, {"name": "Ingående balans", "file": "BeginningBalanceReport.html", "section": "Bokföring"}, {"name": "Kontoplan", "file": "AccountsReport.html", "section": "Bokföring"}, {"name": "Huvudbok", "file": "GeneralLedgerReport.html", "section": "Bokföring"}, {"name": "Resultatrapport", "file": "ProfitLossReport.html", "section": "Bokföring"}, {"name": "Resultatrapport för projekt", "file": "ProjectReport.html", "section": "Bokföring"}, {"name": "Resultatrapport för resultatenhet", "file": "ProfitcenterReport.html", "section": "Bokföring"}, {"name": "Resultatbudget", "file": "ProfitLossBudgetReport.html", "section": "Bokföring"}, {"name": "Balansrapport", "file": "BalanceReport.html", "section": "Bokföring"}, {"name": "Momsrapport", "file": "SalesTaxReport.html", "section": "Bokföring"}, {"name": "Räkenskapsschema", "file": "AccountingSchemeReport.html", "section": "Bokföring"}, {"name": "Förenklat årsbokslut", "file": "SimpleStatement.html", "section": "Bokföring"}, {"name": "Egna resultatrapporter", "file": "OwnIncomeReport.html", "section": "Bokföring"}, {"name": "Skapa egen resultatrapport", "file": "CreateOwnIncomeReport.html", "section": "Rapporter"}, {"name": "Ändra egen resultatrapport", "file": "ChangeOwnIncomeReport.html", "section": "Rapporter"}, {"name": "Radera egen resultatrapport", "file": "DeleteOwnIncomeReport.html", "section": "Rapporter"}, {"name": "Skriv ut egen resultatrapport", "file": "PrintOwnIncomeReport.html", "section": "Rapporter"}, {"name": "Uppdatering online", "file": "updates.html", "section": "Support & underhåll"}, {"name": "Support online", "file": "support.html", "section": "Support & underhåll"}, {"name": "Komprimera databasen", "file": "CompressDatabase.html", "section": "Support & underhåll"}]
+[
+  {
+    "name": "Bokför en manuell verifikation",
+    "file": "GuideManualVerification.html",
+    "section": "Kom igång"
+  },
+  {
+    "name": "Skapa och bokför en kundfaktura",
+    "file": "GuideCustomerInvoice.html",
+    "section": "Kom igång"
+  },
+  {
+    "name": "Registrera och bokför en leverantörsfaktura",
+    "file": "GuideSupplierInvoice.html",
+    "section": "Kom igång"
+  },
+  {
+    "name": "Skapa och bokför en momsrapport",
+    "file": "GuideVATReport.html",
+    "section": "Kom igång"
+  },
+  {
+    "name": "Företag",
+    "file": "Company.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Skapa företag",
+    "file": "CreateCompany.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Öppna företag",
+    "file": "OpenCompany.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Ändra företag",
+    "file": "ChangeCompany.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Radera företag",
+    "file": "DeleteCompany.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Kontoplaner",
+    "file": "Accounts.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Skapa kontoplan",
+    "file": "CreateAccounts.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Ändra kontoplan",
+    "file": "ChangeAccounts.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Radera kontoplan",
+    "file": "DeleteAccounts.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Exportera kontoplan",
+    "file": "ExportAccounts.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Importera kontoplan",
+    "file": "ImportAccounts.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Importera från SIE-fil",
+    "file": "SIEimport.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Importera verifikationer",
+    "file": "import.voucher.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Exportera till SIE-fil",
+    "file": "SIEexport.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Exportera verifikationer",
+    "file": "SIEexportVer.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Säkerhetskopiering",
+    "file": "Backup.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Säkerhetskopiera hela databasen",
+    "file": "BackupAllCompany.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Återställ från säkerhetskopia",
+    "file": "RestoreBackup.html",
+    "section": "Administration"
+  },
+  {
+    "name": "Välj bokföringsår",
+    "file": "Year.html",
+    "section": "Register"
+  },
+  {
+    "name": "Skapa bokföringsår",
+    "file": "CreateYear.html",
+    "section": "Register"
+  },
+  {
+    "name": "Ändra bokföringsår",
+    "file": "ChangeYear.html",
+    "section": "Register"
+  },
+  {
+    "name": "Öppna bokföringsår",
+    "file": "OpenYear.html",
+    "section": "Register"
+  },
+  {
+    "name": "Radera bokföringsår",
+    "file": "DeleteYear.html",
+    "section": "Register"
+  },
+  {
+    "name": "Ändra kontoplan för aktivt år",
+    "file": "ChangeActiveAccounts.html",
+    "section": "Register"
+  },
+  {
+    "name": "Projekt",
+    "file": "Project.html",
+    "section": "Register"
+  },
+  {
+    "name": "Skapa projekt",
+    "file": "CreateProject.html",
+    "section": "Register"
+  },
+  {
+    "name": "Ändra projekt",
+    "file": "ChangeProject.html",
+    "section": "Register"
+  },
+  {
+    "name": "Radera projekt",
+    "file": "DeleteProject.html",
+    "section": "Register"
+  },
+  {
+    "name": "Projektomsättning",
+    "file": "ProjectRevenue.html",
+    "section": "Register"
+  },
+  {
+    "name": "Resultatenhet",
+    "file": "Profitcenter.html",
+    "section": "Register"
+  },
+  {
+    "name": "Skapa resultatenhet",
+    "file": "CreateProfitcenter.html",
+    "section": "Register"
+  },
+  {
+    "name": "Ändra resultatenhet",
+    "file": "ChangeProfitcenter.html",
+    "section": "Register"
+  },
+  {
+    "name": "Radera resultatenhet",
+    "file": "DeleteProfitcenter.html",
+    "section": "Register"
+  },
+  {
+    "name": "Resultatenhetsomsättning",
+    "file": "ResultunitRevenue.html",
+    "section": "Register"
+  },
+  {
+    "name": "Produkter",
+    "file": "Products.html",
+    "section": "Register"
+  },
+  {
+    "name": "Skapa produkter",
+    "file": "CreateProducts.html",
+    "section": "Register"
+  },
+  {
+    "name": "Ändra produkter",
+    "file": "ChangeProducts.html",
+    "section": "Register"
+  },
+  {
+    "name": "Kopiera produkter",
+    "file": "CopyProducts.html",
+    "section": "Register"
+  },
+  {
+    "name": "Radera produkter",
+    "file": "DeleteProducts.html",
+    "section": "Register"
+  },
+  {
+    "name": "Produktomsättning",
+    "file": "ProductRevenue.html",
+    "section": "Register"
+  },
+  {
+    "name": "Kunder",
+    "file": "Customers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Skapa kunder",
+    "file": "CreateCustomers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Ändra kunder",
+    "file": "ChangeCustomers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Kopiera kunder",
+    "file": "CopyCustomers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Radera kunder",
+    "file": "DeleteCustomers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Kundomsättning",
+    "file": "CustomerRevenue.html",
+    "section": "Register"
+  },
+  {
+    "name": "Leverantörer",
+    "file": "Suppliers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Skapa leverantörer",
+    "file": "CreateSuppliers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Ändra leverantörer",
+    "file": "ChangeSuppliers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Kopiera leverantörer",
+    "file": "CopySuppliers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Radera leverantörer",
+    "file": "DeleteSuppliers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Importera leverantörer",
+    "file": "ImportSuppliers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Exportera leverantörer",
+    "file": "ExportSuppliers.html",
+    "section": "Register"
+  },
+  {
+    "name": "Leverantörsomsättning",
+    "file": "SupplierRevenue.html",
+    "section": "Register"
+  },
+  {
+    "name": "Konteringsmallar",
+    "file": "AccountingTemplate.html",
+    "section": "Register"
+  },
+  {
+    "name": "Importera konteringsmallar från Excel-fil",
+    "file": "ImportTemplateExcel.html",
+    "section": "Register"
+  },
+  {
+    "name": "Exportera konteringsmallar till Excel-fil",
+    "file": "ExportTemplateExcel.html",
+    "section": "Register"
+  },
+  {
+    "name": "Automatfördelning",
+    "file": "AutomaticDistribution.html",
+    "section": "Register"
+  },
+  {
+    "name": "Skapa automatfördelning",
+    "file": "CreateAutomaticDist.html",
+    "section": "Register"
+  },
+  {
+    "name": "Ändra automatfördelning",
+    "file": "ChangeAutomaticDist.html",
+    "section": "Register"
+  },
+  {
+    "name": "Kopiera automatfördelning",
+    "file": "CopyAutomaticDist.html",
+    "section": "Register"
+  },
+  {
+    "name": "Radera automatfördelning",
+    "file": "DeleteAutomaticDist.html",
+    "section": "Register"
+  },
+  {
+    "name": "Importera produkter (Excel)",
+    "file": "ImportProducts.html",
+    "section": "Importera produkter"
+  },
+  {
+    "name": "Importera produkter (XML)",
+    "file": "ImportProductsXML.html",
+    "section": "Importera produkter"
+  },
+  {
+    "name": "Exportera produkter (Excel)",
+    "file": "ExportProducts.html",
+    "section": "Exportera produkter"
+  },
+  {
+    "name": "Exportera produkter (XML)",
+    "file": "ExportProductsXML.html",
+    "section": "Exportera produkter"
+  },
+  {
+    "name": "Importera kunder (Excel)",
+    "file": "ImportCustomers.html",
+    "section": "Importera kunder"
+  },
+  {
+    "name": "Importera kunder (XML)",
+    "file": "ImportCustomersXML.html",
+    "section": "Importera kunder"
+  },
+  {
+    "name": "Importera kunder E-butik",
+    "file": "ImportCustomersEbutik.html",
+    "section": "Importera kunder"
+  },
+  {
+    "name": "Exportera kunder (Excel)",
+    "file": "ExportCustomers.html",
+    "section": "Exportera kunder"
+  },
+  {
+    "name": "Exportera kunder (XML)",
+    "file": "ExportCustomersXML.html",
+    "section": "Exportera kunder"
+  },
+  {
+    "name": "Inbetalningar",
+    "file": "Inpayment.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa inbetalning",
+    "file": "CreateInpayment.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Ändra inbetalning",
+    "file": "ChangeInpayment.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Radera inbetalningar",
+    "file": "DeleteInpayments.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Inbetalningslista",
+    "file": "Inpaymentlist.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Offerter",
+    "file": "Quotation.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa offert",
+    "file": "CreateQuotation.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Ändra offert",
+    "file": "ChangeQuotation.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kopiera offert",
+    "file": "CopyQuotation.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa order från offert",
+    "file": "AutoOrderFromQuote.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Radera offerter",
+    "file": "DeleteQuotations.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Offert",
+    "file": "QuotationReport.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "E-postoffert",
+    "file": "EmailQuotation.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Offertlista",
+    "file": "QuotationList.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Ordrar",
+    "file": "Saleorder.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa order",
+    "file": "CreateOrder.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Ändra order",
+    "file": "ChangeOrder.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kopiera order",
+    "file": "CopyOrder.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa kundfaktura från ordrar",
+    "file": "AutoInvoiceFromOrder.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa kontantkvitto från ordrar",
+    "file": "AutoCashFromOrder.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa periodfaktura från ordrar",
+    "file": "AutoPeriodicinvoiceFromOrder.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa inköpsorder från ordrar",
+    "file": "AutoPOFromOrder.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Radera ordrar",
+    "file": "DeleteOrders.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Exportera ordrar (XML)",
+    "file": "ExportOrdersXML.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Orderbekräftelse",
+    "file": "OrderReport.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "E-postorderbekräftelse",
+    "file": "EmailOrder.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Plocklista",
+    "file": "Pickingslip.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Följesedel",
+    "file": "Deliverynote.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Orderlista",
+    "file": "OrderList.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kundfakturor",
+    "file": "Invoices.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa kundfaktura",
+    "file": "CreateInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Ändra kundfaktura",
+    "file": "ChangeInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kopiera kundfaktura",
+    "file": "CopyInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa inbetalning från kundfakturor",
+    "file": "AutoInpayFromInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa kreditfaktura från kundfaktura",
+    "file": "AutoCreditFromInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa påminnelser från kundfakturor",
+    "file": "AutoReminderFromInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa räntefakturor",
+    "file": "CreateInterestinvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Radera kundfakturor",
+    "file": "DeleteInvoices.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kundfaktura",
+    "file": "InvoiceReport.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "E-postfaktura",
+    "file": "EmailInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "OCR-faktura",
+    "file": "OCRInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Betalningspåminnelse",
+    "file": "Reminder.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Fakturalista",
+    "file": "InvoiceList.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kreditfakturor",
+    "file": "CreditInvoices.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa kreditfaktura",
+    "file": "CreateCreditinvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Ändra kreditfaktura",
+    "file": "ChangeCreditinvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kopiera kreditfaktura",
+    "file": "CopyCreditinvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Radera kreditfakturor",
+    "file": "DeleteCreditinvoices.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kreditfaktura",
+    "file": "CreditinvoiceReport.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "E-postkreditfaktura",
+    "file": "EmailCreditInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kreditfakturalista",
+    "file": "CreditInvoiceList.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Periodfakturor",
+    "file": "PeriodicInvoices.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa periodfaktura",
+    "file": "CreatePeriodicInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Ändra periodfaktura",
+    "file": "ChangePeriodicInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kopiera periodfaktura",
+    "file": "CopyPeriodicInvoice.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Radera periodfakturor",
+    "file": "DeletePeriodicInvoices.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Lista fakturor för vald periodfaktura",
+    "file": "ListInvoicesForPeriodicInvoices.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Skapa kundfakturor från periodfakturor",
+    "file": "AutoInvoicesFromPeriodic.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Försäljningsrapport",
+    "file": "SaleProfitReport.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Försäljningsvärden",
+    "file": "SaleValues.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kundfordran",
+    "file": "InvoiceReceivable.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Kundreskontra",
+    "file": "AccountsReceivable.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "EU Kvartalsredovisning",
+    "file": "EUQReport.html",
+    "section": "Försäljning"
+  },
+  {
+    "name": "Importera ordrar (XML)",
+    "file": "ImportOrdersXML.html",
+    "section": "Importera ordrar"
+  },
+  {
+    "name": "Importera ordrar E-butik",
+    "file": "ImportOrdersEbutik.html",
+    "section": "Importera ordrar"
+  },
+  {
+    "name": "Inbetalningsjournal",
+    "file": "InpaymentJournal.html",
+    "section": "Rapporter"
+  },
+  {
+    "name": "Fakturajournal",
+    "file": "InvoiceJournal.html",
+    "section": "Rapporter"
+  },
+  {
+    "name": "Kreditfakturajournal",
+    "file": "CreditinvoiceJournal.html",
+    "section": "Rapporter"
+  },
+  {
+    "name": "Utbetalningar",
+    "file": "Outpayment.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Skapa utbetalning",
+    "file": "CreateOutpayment.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Ändra utbetalning",
+    "file": "ChangeOutpayment.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Radera utbetalningar",
+    "file": "DeleteOutpayments.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Utbetalningslista",
+    "file": "Outpaymentlist.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Inköpsordrar",
+    "file": "Purchaseorders.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Skapa inköpsorder",
+    "file": "CreatePurchaseorder.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Ändra inköpsorder",
+    "file": "ChangePurchaseorder.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Kopiera inköpsorder",
+    "file": "CopyPurchaseorder.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Skapa leverantörsfaktura från inköpsordrar",
+    "file": "AutoSuppinvoiceFromPurchorder.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Radera inköpsordrar",
+    "file": "DeletePurchaseorders.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Inköpsorder",
+    "file": "Purchaseorderreport.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "E-postinköpsorder",
+    "file": "EmailPO.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Förfrågan",
+    "file": "InquiryReport.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "E-postförfrågan",
+    "file": "EmailInquiry.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Inköpsorderlista",
+    "file": "PurchaseorderList.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Leverantörsfakturor",
+    "file": "Supplierinvoices.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Skapa leverantörsfaktura",
+    "file": "CreateSupplierinvoice.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Ändra leverantörsfaktura",
+    "file": "ChangeSupplierinvoice.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Kopiera leverantörsfaktura",
+    "file": "CopySupplierinvoice.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Skapa leverantörskreditfaktura från leverantörsfaktura",
+    "file": "AutoCsuppinvFromSuppinv.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Radera leverantörsfakturor",
+    "file": "DeleteSupplierinvoices.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Skapa utbetalning från leverantörsfakturor",
+    "file": "AutoOutpayFromSuppInvoice.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Skapa LB-fil för leverantörsbetalning",
+    "file": "CreateLBpayment.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Leverantörsfakturalista",
+    "file": "SupplierinvoiceList.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Leverantörskreditfakturor",
+    "file": "Suppliercreditinvoices.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Skapa leverantörskreditfaktura",
+    "file": "CreateSuppliercreditinvoice.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Ändra leverantörskreditfaktura",
+    "file": "ChangeSuppliercreditinvoice.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Kopiera leverantörskreditfaktura",
+    "file": "CopySuppliercreditinvoice.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Radera leverantörskreditfakturor",
+    "file": "DeleteSuppliercreditinvoices.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Leverantörskreditfakturalista",
+    "file": "SuppliercreditInvoiceList.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Inköpsvärden",
+    "file": "PurchaseValues.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Leverantörsskuld",
+    "file": "SupplierinvoicePayable.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Leverantörsreskontra",
+    "file": "AccountsPayable.html",
+    "section": "Inköp"
+  },
+  {
+    "name": "Utbetalningsjournal",
+    "file": "OutpaymentJournal.html",
+    "section": "Rapporter"
+  },
+  {
+    "name": "Leverantörsfakturajournal",
+    "file": "SupplierinvoiceJournal.html",
+    "section": "Rapporter"
+  },
+  {
+    "name": "Leverantörskreditfakturajournal",
+    "file": "SuppliercreditinvoiceJournal.html",
+    "section": "Rapporter"
+  },
+  {
+    "name": "Importera inbetalningar från BgMax-fil",
+    "file": "ImportBgMax.html",
+    "section": "Bankgiro"
+  },
+  {
+    "name": "Importera utbetalningar från Lbut-fil",
+    "file": "ImportLbin.html",
+    "section": "Bankgiro"
+  },
+  {
+    "name": "Inleveranser",
+    "file": "InDelivery.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Skapa inleverans",
+    "file": "CreateIndelivery.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Ändra inleverans",
+    "file": "ChangeIndelivery.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Kopiera inleverans",
+    "file": "CopyIndelivery.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Radera inleveranser",
+    "file": "DeleteIndelivery.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Inleveranslista",
+    "file": "InDeliverylist.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Utleveranser",
+    "file": "OutDelivery.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Skapa utleverans",
+    "file": "CreateOutdelivery.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Ändra utleverans",
+    "file": "ChangeOutdelivery.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Kopiera utleverans",
+    "file": "CopyOutdelivery.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Radera utleveranser",
+    "file": "DeleteOutdelivery.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Utleveranslista",
+    "file": "OutDeliverylist.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Inköpsförslag",
+    "file": "AutoPO.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Inventeringar",
+    "file": "InventoryCount.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Skapa inventering",
+    "file": "CreateInventorycount.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Ändra inventering",
+    "file": "ChangeInventorycount.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Radera inventeringar",
+    "file": "DeleteInventorycount.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Inventeringslista",
+    "file": "Inventorycountlist.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Inventeringsunderlag",
+    "file": "Inventorycountdoc.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Lagerredovisning",
+    "file": "Instockreport.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Lagervärde",
+    "file": "Stockvaluereport.html",
+    "section": "Lager"
+  },
+  {
+    "name": "Ingående balans",
+    "file": "BeginningBalance.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Bokföra",
+    "file": "Verifications.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Skapa verifikationer",
+    "file": "CreateVerifications.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Ändra verifikationer",
+    "file": "ChangeVerifications.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Skapa ändringsverifikation",
+    "file": "CorrectionVerifications.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Exportera verifikationer till Excel-fil",
+    "file": "ExportVerExcel.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Importera verifikationer från Excel-fil",
+    "file": "ImportVerExcel.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Resultatbudget",
+    "file": "ProfitLossBudget.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Verifikationer",
+    "file": "VerificationsReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Ingående balans",
+    "file": "BeginningBalanceReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Kontoplan",
+    "file": "AccountsReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Huvudbok",
+    "file": "GeneralLedgerReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Resultatrapport",
+    "file": "ProfitLossReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Resultatrapport för projekt",
+    "file": "ProjectReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Resultatrapport för resultatenhet",
+    "file": "ProfitcenterReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Resultatbudget",
+    "file": "ProfitLossBudgetReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Balansrapport",
+    "file": "BalanceReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Momsrapport",
+    "file": "SalesTaxReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Räkenskapsschema",
+    "file": "AccountingSchemeReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Förenklat årsbokslut",
+    "file": "SimpleStatement.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Egna resultatrapporter",
+    "file": "OwnIncomeReport.html",
+    "section": "Bokföring"
+  },
+  {
+    "name": "Skapa egen resultatrapport",
+    "file": "CreateOwnIncomeReport.html",
+    "section": "Rapporter"
+  },
+  {
+    "name": "Ändra egen resultatrapport",
+    "file": "ChangeOwnIncomeReport.html",
+    "section": "Rapporter"
+  },
+  {
+    "name": "Radera egen resultatrapport",
+    "file": "DeleteOwnIncomeReport.html",
+    "section": "Rapporter"
+  },
+  {
+    "name": "Skriv ut egen resultatrapport",
+    "file": "PrintOwnIncomeReport.html",
+    "section": "Rapporter"
+  },
+  {
+    "name": "Uppdatering online",
+    "file": "updates.html",
+    "section": "Support & underhåll"
+  },
+  {
+    "name": "Support online",
+    "file": "support.html",
+    "section": "Support & underhåll"
+  },
+  {
+    "name": "Komprimera databasen",
+    "file": "CompressDatabase.html",
+    "section": "Support & underhåll"
+  }
+]

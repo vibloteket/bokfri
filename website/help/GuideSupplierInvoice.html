@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Utbetalningsjournal</title>
+<title>Registrera och bokför en leverantörsfaktura</title>
 <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -387,69 +387,65 @@
 
 <main class="help-content">
 
-<nav class="breadcrumb"><a href="/help/">Hjälp</a> &rsaquo; Journaler</nav>
-<h1>Utbetalningsjournal</h1>
+<nav class="breadcrumb"><a href="/help/">Hjälp</a> &rsaquo; Kom igång</nav>
+<h1>Registrera och bokför en leverantörsfaktura</h1>
+<p class="guide-lead">Arbetsflödet består av två bokföringstillfällen: först bokförs fakturan som en leverantörsskuld, sedan bokförs betalningen.</p>
 
-<p>Den här rapporten listar utbetalningar mellan två datum och visar hur varje utbetalning kommer att bokföras och hur de bidrar till den totala bokföringsposten i bokföringsunderlaget på sista sidan i den här rapporten.</p>
-<p>När du ska skriva ut utbetalningsjournalen kan du välja startdatum och slutdatum för betalningsdatum för att få med alla icke bokförda utbetalningar under vald period i utbetalningsjournalen. Utbetalningsjournalen används för att bokföra flera utbetalningar under en månad automatiskt i en verifikation.</p>
-<p>I utbetalningsjournalen är det viktigt att kontrollera utbetalningarnas nummerserie, att det inte finns några luckor i nummerserien, så att inte vissa utbetalningar utelämnas i bokföringen. Du bör även kontrollera att rätt kontonummer har använts vid bokföring av utbetalningarna, du kan ändra konteringen för de enskilda utbetalningarna tills utbetalningsjournalen med aktuella utbetalningar har godkänts och bokförts.</p>
-<p>När du har skrivit ut utbetalningsjournalen kommer du få en fråga om ni vill godkänna och bokföra utbetalningsjournalen, om du svarar "Ja" på den här frågan så kommer utbetalningsjournalen bokföras automatiskt enligt bokföringsunderlaget. Bokföringsunderlaget utgör en verifikation för konteringen.</p>
-<p>Följande sidor och fält finns i den här rapporten:</p>
-<p>Utbetalningsjournal</p>
+<div class="guide-flow"><span>Registrera faktura</span><b>&rarr;</b><span>Leverantörsfakturajournal</span><b>&rarr;</b><span>Skapa utbetalning</span><b>&rarr;</b><span>Utbetalningsjournal</span></div>
+<div class="guide-note"><strong>Viktigt:</strong> Att spara leverantörsfakturan är inte samma sak som att bokföra den. Leverantörsfakturajournalen skapar bokföringen. Betalningen bokförs senare genom utbetalningsjournalen.</div>
+
+<h2>1. Registrera fakturan</h2>
+<ol class="guide-steps">
+  <li>Skapa först leverantören i leverantörsregistret om den inte redan finns.</li>
+  <li>Öppna <strong>Inköp &rarr; Leverantörsfakturor</strong> och skapa en ny leverantörsfaktura.</li>
+  <li>Välj leverantör och ange OCR- eller referensnummer, fakturadatum och förfallodag.</li>
+  <li>Ange valuta, fakturabelopp och moms enligt fakturan.</li>
+  <li>Lägg till fakturarader och kontrollera kostnadskonto, belopp samt eventuell projekt- eller resultatenhet.</li>
+  <li>Kontrollera konteringen och spara fakturan.</li>
+</ol>
+
+<h2>2. Bokför fakturan</h2>
+<ol class="guide-steps">
+  <li>Öppna <strong>Rapporter &rarr; Leverantörsfakturajournal</strong>.</li>
+  <li>Välj ett datumintervall som innehåller fakturans fakturadatum. Journalen tar med ej bokförda leverantörsfakturor i perioden.</li>
+  <li>Kontrollera fakturan, nummerserien och konteringen i journalen.</li>
+  <li>Godkänn frågan om att bokföra journalen. Bokfri skapar då en verifikation för bland annat kostnad, ingående moms och leverantörsskuld.</li>
+</ol>
+
+<h2>3. Bokför betalningen</h2>
+<ol class="guide-steps">
+  <li>När fakturan har betalats öppnar du listan över leverantörsfakturor och markerar fakturan.</li>
+  <li>Välj <strong>Skapa utbetalning för valda leverantörsfakturor</strong>.</li>
+  <li>Kontrollera betalningsdatum, belopp och det bankkonto som pengarna betalades från. Spara utbetalningen.</li>
+  <li>Öppna <strong>Rapporter &rarr; Utbetalningsjournal</strong> och välj ett intervall som innehåller betalningsdatumet.</li>
+  <li>Kontrollera och godkänn journalen. Bokfri bokar då betalningen mot bankkontot och tar bort leverantörsskulden.</li>
+</ol>
+
+<h2>Kontrollera resultatet</h2>
+<ul>
+  <li>Kontrollera att fakturan är bokförd och markerad som betald.</li>
+  <li>Kontrollera vid behov <a href="/help/AccountsPayable.html">leverantörsreskontran</a> och <a href="/help/GeneralLedgerReport.html">huvudboken</a>.</li>
+</ul>
+
+<h2>Vanliga problem</h2>
 <dl>
-  <dt>Utbetalnings nr</dt>
-  <dd>Här visas ett unikt nummer för varje registrerad utbetalning.</dd>
-</dl>
-<dl>
-  <dt>Text</dt>
-  <dd>Här visas en beskrivande text för utbetalningen.</dd>
-</dl>
-<dl>
-  <dt>Datum</dt>
-  <dd>Här visas datumet då utbetalningen drogs från ert företagets bank- eller plusgirokonto.</dd>
-</dl>
-<dl>
-  <dt>Konto nr</dt>
-  <dd>Här visas de kontonummer som anges under utbetalningens konteringsflik.</dd>
-</dl>
-<dl>
-  <dt>Beskrivning</dt>
-  <dd>Här visas kontobeskrivningen för framförvarande kontonummer.</dd>
-</dl>
-<dl>
-  <dt>Debet</dt>
-  <dd>Här visas ett monetärt belopp som har registrerats för framförvarande konto i utbetalningen.</dd>
-</dl>
-<dl>
-  <dt>Kredit</dt>
-  <dd>Här visas ett monetärt belopp som har registrerats för framförvarande konto i utbetalningen.</dd>
-</dl>
-<dl>
-  <dt>Summa redovisningsvaluta</dt>
-  <dd>Här visas utbetalningens totala monetära värde angivet i redovisningsvalutan enligt summering av varje enskild leverantörsfakturabetalning som ingår i den totala utbetalningen gånger betalkursen för varje leverantörsfakturabetalning som ingår i den totala utbetalningen. Bokföringsunderlag</dd>
-</dl>
-<dl>
-  <dt>Konto</dt>
-  <dd>Här visas de kontonummer som ska användas vid bokföring av utbetalningsjournalen.</dd>
-</dl>
-<dl>
-  <dt>Beskrivning</dt>
-  <dd>Här visas kontobeskrivningen för framförvarande kontonummer.</dd>
-</dl>
-<dl>
-  <dt>Debet</dt>
-  <dd>Här visas ett monetärt belopp som skall bokföras för framförvarande konto.</dd>
-</dl>
-<dl>
-  <dt>Kredit</dt>
-  <dd>Här visas ett monetärt belopp som skall bokföras för framförvarande konto.</dd>
+  <dt>Journalen är tom</dt>
+  <dd>Kontrollera att datumintervallet innehåller fakturadatumet och att fakturan inte redan har bokförts.</dd>
+  <dt>Betalningen hamnar på fel konto</dt>
+  <dd>Kontrollera bankkontot i utbetalningen innan utbetalningsjournalen godkänns.</dd>
 </dl>
 
-
+<h2>Läs mer</h2>
+<ul>
+  <li><a href="/help/CreateSupplierinvoice.html">Skapa leverantörsfaktura</a></li>
+  <li><a href="/help/SupplierinvoiceJournal.html">Leverantörsfakturajournal</a></li>
+  <li><a href="/help/AutoOutpayFromSuppInvoice.html">Skapa utbetalning från leverantörsfakturor</a></li>
+  <li><a href="/help/OutpaymentJournal.html">Utbetalningsjournal</a></li>
+</ul>
 
 <nav class="page-nav">
-  <a href="/help/AccountsPayable.html" class="prev">Leverantörsreskontra</a>
-  <a href="/help/SupplierinvoiceJournal.html" class="next">Leverantörsfakturajournal</a>
+  <a href="/help/GuideCustomerInvoice.html" class="prev">Skapa och bokför en kundfaktura</a>
+  <a href="/help/GuideVATReport.html" class="next">Skapa och bokför en momsrapport</a>
 </nav>
 
 </main>

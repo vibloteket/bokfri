@@ -417,6 +417,50 @@ body {
   margin-bottom: 0.25rem;
 }
 
+.guide-lead {
+  color: #5a3a2e;
+  font-size: 1.08rem;
+}
+
+.guide-note {
+  margin: 1.25rem 0;
+  padding: 1rem 1.1rem;
+  color: #16353b;
+  background: #f4e9d8;
+  border-left: 4px solid #c86845;
+  border-radius: 6px;
+}
+
+.guide-flow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 1.25rem 0;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.guide-flow span {
+  flex: 1 0 120px;
+  padding: 0.65rem;
+  color: #16353b;
+  background: #fff;
+  border: 1px solid #d5c7b4;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.guide-flow b {
+  color: #c86845;
+}
+
+.guide-steps li {
+  margin-bottom: 0.6rem;
+  padding-left: 0.25rem;
+}
+
 .help-content a {
   color: #c86845;
   text-decoration: underline;
@@ -558,4 +602,51 @@ dd { margin-bottom: 0.75rem; margin-left: 0; color: #16353b; }
   .landing { padding: 1.5rem 1rem; }
   .about-page { padding: 2rem 1rem; }
   .download-page { padding: 2rem 1rem; }
+}
+
+/* Guide index */
+.guide-index {
+  margin-bottom: 2.5rem;
+}
+.guide-index h2, .reference-heading {
+  color: #16353b;
+  font-size: 1.45rem;
+  margin-bottom: 0.35rem;
+}
+.guide-index > p {
+  color: #8a7a6a;
+  margin-bottom: 1rem;
+}
+.guide-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.8rem;
+}
+.guide-card {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem;
+  color: #16353b;
+  background: #f4e9d8;
+  border: 1px solid #e0d5c4;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.guide-card:hover {
+  border-color: #c86845;
+  box-shadow: 0 3px 12px rgba(22,53,59,0.1);
+}
+.guide-card span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 2rem;
+  height: 2rem;
+  color: #fff;
+  background: #c86845;
+  border-radius: 50%;
+  font-weight: 700;
+}
+.reference-heading {
+  margin-bottom: 1rem;
 }

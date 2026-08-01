@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Utbetalningsjournal</title>
+<title>Bokför en manuell verifikation</title>
 <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -387,69 +387,49 @@
 
 <main class="help-content">
 
-<nav class="breadcrumb"><a href="/help/">Hjälp</a> &rsaquo; Journaler</nav>
-<h1>Utbetalningsjournal</h1>
+<nav class="breadcrumb"><a href="/help/">Hjälp</a> &rsaquo; Kom igång</nav>
+<h1>Bokför en manuell verifikation</h1>
+<p class="guide-lead">Använd en manuell verifikation när en affärshändelse inte kommer från Bokfris faktura- eller betalningsflöden.</p>
 
-<p>Den här rapporten listar utbetalningar mellan två datum och visar hur varje utbetalning kommer att bokföras och hur de bidrar till den totala bokföringsposten i bokföringsunderlaget på sista sidan i den här rapporten.</p>
-<p>När du ska skriva ut utbetalningsjournalen kan du välja startdatum och slutdatum för betalningsdatum för att få med alla icke bokförda utbetalningar under vald period i utbetalningsjournalen. Utbetalningsjournalen används för att bokföra flera utbetalningar under en månad automatiskt i en verifikation.</p>
-<p>I utbetalningsjournalen är det viktigt att kontrollera utbetalningarnas nummerserie, att det inte finns några luckor i nummerserien, så att inte vissa utbetalningar utelämnas i bokföringen. Du bör även kontrollera att rätt kontonummer har använts vid bokföring av utbetalningarna, du kan ändra konteringen för de enskilda utbetalningarna tills utbetalningsjournalen med aktuella utbetalningar har godkänts och bokförts.</p>
-<p>När du har skrivit ut utbetalningsjournalen kommer du få en fråga om ni vill godkänna och bokföra utbetalningsjournalen, om du svarar "Ja" på den här frågan så kommer utbetalningsjournalen bokföras automatiskt enligt bokföringsunderlaget. Bokföringsunderlaget utgör en verifikation för konteringen.</p>
-<p>Följande sidor och fält finns i den här rapporten:</p>
-<p>Utbetalningsjournal</p>
+<div class="guide-note"><strong>Innan du börjar:</strong> Ta fram underlaget för affärshändelsen och kontrollera vilka konton, belopp och vilket datum som ska användas. Kontona beror på vad som har hänt.</div>
+
+<h2>Arbetsgång</h2>
+<ol class="guide-steps">
+  <li>Öppna <strong>Bokföring &rarr; Bokföra</strong>.</li>
+  <li>Tryck på <strong>Ny verifikation</strong>.</li>
+  <li>Ange affärshändelsens datum och skriv en tydlig beskrivning.</li>
+  <li>Lägg till en konteringsrad för varje konto och fyll i beloppet i debet eller kredit.</li>
+  <li>Kontrollera att summan i debet är lika stor som summan i kredit. Differensen måste vara noll.</li>
+  <li>Tryck på <strong>Registrera</strong>. Verifikationen får då nästa nummer i årets verifikationsserie.</li>
+</ol>
+
+<h2>När skapas bokföringen?</h2>
+<p>Verifikationen bokförs direkt när du trycker på <strong>Registrera</strong>. Det behövs ingen journal för manuella verifikationer.</p>
+
+<h2>Kontrollera resultatet</h2>
+<ul>
+  <li>Kontrollera att verifikationen visas under <strong>Bokföring &rarr; Bokföra</strong>.</li>
+  <li>Öppna vid behov <a href="/help/GeneralLedgerReport.html">Huvudbok</a> och kontrollera de berörda kontona.</li>
+  <li>Om något blev fel ska en redan bokförd affärshändelse normalt rättas med en <a href="/help/CorrectionVerifications.html">ändringsverifikation</a>, så att ändringen går att följa.</li>
+</ul>
+
+<h2>Vanliga problem</h2>
 <dl>
-  <dt>Utbetalnings nr</dt>
-  <dd>Här visas ett unikt nummer för varje registrerad utbetalning.</dd>
-</dl>
-<dl>
-  <dt>Text</dt>
-  <dd>Här visas en beskrivande text för utbetalningen.</dd>
-</dl>
-<dl>
-  <dt>Datum</dt>
-  <dd>Här visas datumet då utbetalningen drogs från ert företagets bank- eller plusgirokonto.</dd>
-</dl>
-<dl>
-  <dt>Konto nr</dt>
-  <dd>Här visas de kontonummer som anges under utbetalningens konteringsflik.</dd>
-</dl>
-<dl>
-  <dt>Beskrivning</dt>
-  <dd>Här visas kontobeskrivningen för framförvarande kontonummer.</dd>
-</dl>
-<dl>
-  <dt>Debet</dt>
-  <dd>Här visas ett monetärt belopp som har registrerats för framförvarande konto i utbetalningen.</dd>
-</dl>
-<dl>
-  <dt>Kredit</dt>
-  <dd>Här visas ett monetärt belopp som har registrerats för framförvarande konto i utbetalningen.</dd>
-</dl>
-<dl>
-  <dt>Summa redovisningsvaluta</dt>
-  <dd>Här visas utbetalningens totala monetära värde angivet i redovisningsvalutan enligt summering av varje enskild leverantörsfakturabetalning som ingår i den totala utbetalningen gånger betalkursen för varje leverantörsfakturabetalning som ingår i den totala utbetalningen. Bokföringsunderlag</dd>
-</dl>
-<dl>
-  <dt>Konto</dt>
-  <dd>Här visas de kontonummer som ska användas vid bokföring av utbetalningsjournalen.</dd>
-</dl>
-<dl>
-  <dt>Beskrivning</dt>
-  <dd>Här visas kontobeskrivningen för framförvarande kontonummer.</dd>
-</dl>
-<dl>
-  <dt>Debet</dt>
-  <dd>Här visas ett monetärt belopp som skall bokföras för framförvarande konto.</dd>
-</dl>
-<dl>
-  <dt>Kredit</dt>
-  <dd>Här visas ett monetärt belopp som skall bokföras för framförvarande konto.</dd>
+  <dt>Verifikationen går inte att registrera</dt>
+  <dd>Kontrollera att debet och kredit är lika stora och att ett konto har angetts på varje konteringsrad.</dd>
+  <dt>Jag vet inte vilka konton jag ska använda</dt>
+  <dd>Bokfri kan registrera konteringen men avgör inte vilken kontering som är rätt för affärshändelsen. Kontrollera underlaget och kontoplanen eller ta hjälp av en redovisningskunnig person.</dd>
 </dl>
 
-
+<h2>Läs mer</h2>
+<ul>
+  <li><a href="/help/Verifications.html">Bokföra och visa verifikationer</a></li>
+  <li><a href="/help/CreateVerifications.html">Alla fält när du skapar en verifikation</a></li>
+  <li><a href="/help/VerificationsReport.html">Verifikationsrapport</a></li>
+</ul>
 
 <nav class="page-nav">
-  <a href="/help/AccountsPayable.html" class="prev">Leverantörsreskontra</a>
-  <a href="/help/SupplierinvoiceJournal.html" class="next">Leverantörsfakturajournal</a>
+  <a href="/help/GuideCustomerInvoice.html" class="next">Skapa och bokför en kundfaktura</a>
 </nav>
 
 </main>

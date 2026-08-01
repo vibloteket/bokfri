@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Utbetalningsjournal</title>
+<title>Skapa och bokför en momsrapport</title>
 <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -387,69 +387,61 @@
 
 <main class="help-content">
 
-<nav class="breadcrumb"><a href="/help/">Hjälp</a> &rsaquo; Journaler</nav>
-<h1>Utbetalningsjournal</h1>
+<nav class="breadcrumb"><a href="/help/">Hjälp</a> &rsaquo; Kom igång</nav>
+<h1>Skapa och bokför en momsrapport</h1>
+<p class="guide-lead">Momsrapporten sammanställer periodens bokförda moms. Därefter skapar Bokfri en momsverifikation som för över saldot från periodens momskonton till momsredovisningskontot.</p>
 
-<p>Den här rapporten listar utbetalningar mellan två datum och visar hur varje utbetalning kommer att bokföras och hur de bidrar till den totala bokföringsposten i bokföringsunderlaget på sista sidan i den här rapporten.</p>
-<p>När du ska skriva ut utbetalningsjournalen kan du välja startdatum och slutdatum för betalningsdatum för att få med alla icke bokförda utbetalningar under vald period i utbetalningsjournalen. Utbetalningsjournalen används för att bokföra flera utbetalningar under en månad automatiskt i en verifikation.</p>
-<p>I utbetalningsjournalen är det viktigt att kontrollera utbetalningarnas nummerserie, att det inte finns några luckor i nummerserien, så att inte vissa utbetalningar utelämnas i bokföringen. Du bör även kontrollera att rätt kontonummer har använts vid bokföring av utbetalningarna, du kan ändra konteringen för de enskilda utbetalningarna tills utbetalningsjournalen med aktuella utbetalningar har godkänts och bokförts.</p>
-<p>När du har skrivit ut utbetalningsjournalen kommer du få en fråga om ni vill godkänna och bokföra utbetalningsjournalen, om du svarar "Ja" på den här frågan så kommer utbetalningsjournalen bokföras automatiskt enligt bokföringsunderlaget. Bokföringsunderlaget utgör en verifikation för konteringen.</p>
-<p>Följande sidor och fält finns i den här rapporten:</p>
-<p>Utbetalningsjournal</p>
+<div class="guide-flow"><span>Bokför perioden</span><b>&rarr;</b><span>Skapa momsrapport</span><b>&rarr;</b><span>Kontrollera</span><b>&rarr;</b><span>Skapa verifikation</span><b>&rarr;</b><span>Deklarera</span></div>
+<div class="guide-note"><strong>Tre skilda händelser:</strong> Momsrapporten räknar fram beloppen, momsverifikationen bokför periodens redovisning och en senare betalning eller återbetalning bokförs när pengarna faktiskt flyttas.</div>
+
+<h2>Innan du börjar</h2>
+<ul>
+  <li>Kontrollera vilken momsperiod företaget har och vilka datum som ska ingå.</li>
+  <li>Bokför periodens kund- och leverantörsfakturajournaler samt övriga verifikationer först.</li>
+  <li>Rätta kända fel innan momsrapporten skapas.</li>
+</ul>
+
+<h2>Arbetsgång</h2>
+<ol class="guide-steps">
+  <li>Öppna <strong>Bokföring &rarr; Rapporter &rarr; Momsrapport</strong>.</li>
+  <li>Välj periodens första och sista datum. Kontrollera även föreslaget verifikationsnummer och de föreslagna avräkningskontona.</li>
+  <li>Skapa rapporten och kontrollera beloppen mot periodens bokföring.</li>
+  <li>Granska momskontrollen. Undersök avvikelser mellan beräknad och redovisad moms innan du fortsätter.</li>
+  <li>Spara eller skriv ut rapporten som underlag.</li>
+  <li>Kontrollera bokföringsunderlaget och godkänn frågan om att skapa momsverifikationen.</li>
+  <li>För över uppgifterna till Skatteverkets momsdeklaration och lämna in den där. Bokfri skickar inte deklarationen automatiskt.</li>
+</ol>
+
+<h2>När skapas bokföringen?</h2>
+<p>Rapportens förhandsgranskning bokför ingenting. Momsverifikationen skapas först när du godkänner frågan efter rapporten. Verifikationen nollar periodens momskonton mot valt momsredovisningskonto.</p>
+
+<h2>När momsen betalas eller återbetalas</h2>
+<p>Bokför betalningen till Skatteverket eller återbetalningen från Skatteverket när den syns på bankkontot. Det är en separat affärshändelse och kan registreras som en <a href="/help/GuideManualVerification.html">manuell verifikation</a>. Kontrollera vilket konto som ska användas mot bankkontot utifrån momsverifikationen och företagets kontoplan.</p>
+
+<h2>Kontrollera resultatet</h2>
+<ul>
+  <li>Kontrollera att momsverifikationen finns under <strong>Bokföring &rarr; Bokföra</strong>.</li>
+  <li>Kontrollera i <a href="/help/GeneralLedgerReport.html">huvudboken</a> att periodens momskonton har avslutats på avsett sätt.</li>
+  <li>Spara momsrapporten och kvittensen från Skatteverket tillsammans med bokföringsunderlagen.</li>
+</ul>
+
+<h2>Vanliga problem</h2>
 <dl>
-  <dt>Utbetalnings nr</dt>
-  <dd>Här visas ett unikt nummer för varje registrerad utbetalning.</dd>
-</dl>
-<dl>
-  <dt>Text</dt>
-  <dd>Här visas en beskrivande text för utbetalningen.</dd>
-</dl>
-<dl>
-  <dt>Datum</dt>
-  <dd>Här visas datumet då utbetalningen drogs från ert företagets bank- eller plusgirokonto.</dd>
-</dl>
-<dl>
-  <dt>Konto nr</dt>
-  <dd>Här visas de kontonummer som anges under utbetalningens konteringsflik.</dd>
-</dl>
-<dl>
-  <dt>Beskrivning</dt>
-  <dd>Här visas kontobeskrivningen för framförvarande kontonummer.</dd>
-</dl>
-<dl>
-  <dt>Debet</dt>
-  <dd>Här visas ett monetärt belopp som har registrerats för framförvarande konto i utbetalningen.</dd>
-</dl>
-<dl>
-  <dt>Kredit</dt>
-  <dd>Här visas ett monetärt belopp som har registrerats för framförvarande konto i utbetalningen.</dd>
-</dl>
-<dl>
-  <dt>Summa redovisningsvaluta</dt>
-  <dd>Här visas utbetalningens totala monetära värde angivet i redovisningsvalutan enligt summering av varje enskild leverantörsfakturabetalning som ingår i den totala utbetalningen gånger betalkursen för varje leverantörsfakturabetalning som ingår i den totala utbetalningen. Bokföringsunderlag</dd>
-</dl>
-<dl>
-  <dt>Konto</dt>
-  <dd>Här visas de kontonummer som ska användas vid bokföring av utbetalningsjournalen.</dd>
-</dl>
-<dl>
-  <dt>Beskrivning</dt>
-  <dd>Här visas kontobeskrivningen för framförvarande kontonummer.</dd>
-</dl>
-<dl>
-  <dt>Debet</dt>
-  <dd>Här visas ett monetärt belopp som skall bokföras för framförvarande konto.</dd>
-</dl>
-<dl>
-  <dt>Kredit</dt>
-  <dd>Här visas ett monetärt belopp som skall bokföras för framförvarande konto.</dd>
+  <dt>Beloppen verkar för låga eller höga</dt>
+  <dd>Kontrollera datumintervallet och att alla journaler och manuella verifikationer för perioden är bokförda.</dd>
+  <dt>Momskontrollen visar en avvikelse</dt>
+  <dd>Kontrollera momskoder, försäljningskonton och bokförd utgående moms. Skapa inte momsverifikationen förrän avvikelsen är förklarad.</dd>
 </dl>
 
-
+<h2>Läs mer</h2>
+<ul>
+  <li><a href="/help/SalesTaxReport.html">Momsrapportens fält och bokföringsunderlag</a></li>
+  <li><a href="/help/GeneralLedgerReport.html">Huvudbok</a></li>
+  <li><a href="/help/GuideManualVerification.html">Bokför en manuell verifikation</a></li>
+</ul>
 
 <nav class="page-nav">
-  <a href="/help/AccountsPayable.html" class="prev">Leverantörsreskontra</a>
-  <a href="/help/SupplierinvoiceJournal.html" class="next">Leverantörsfakturajournal</a>
+  <a href="/help/GuideSupplierInvoice.html" class="prev">Registrera och bokför en leverantörsfaktura</a>
 </nav>
 
 </main>
