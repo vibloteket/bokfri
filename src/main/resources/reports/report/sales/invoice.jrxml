@@ -496,7 +496,7 @@
 
             <!-- Summary fields -->
             <frame>
-                <reportElement x="40" y="421" width="510" height="25" positionType="FixRelativeToBottom"/>
+                <reportElement x="40" y="421" width="510" height="25" positionType="FixRelativeToTop"/>
 
                 <box border="Thin" borderColor="#000000" topBorder="None" />
 
