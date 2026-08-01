@@ -2,11 +2,15 @@ name: Java CI
 
 on:
   pull_request:
+    paths-ignore:
+      - 'website/**'
   push:
     branches:
       - main
     tags:
       - 'v*'
+    paths-ignore:
+      - 'website/**'
   workflow_dispatch:
 
 permissions:
