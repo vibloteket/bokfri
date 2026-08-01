@@ -12,6 +12,15 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-01
+
+### Added
+- Added practical getting-started guides for choosing an account plan, creating
+  a company and accounting year, entering opening balances, and recording the
+  first voucher.
+- Added invoice rendering tests covering long invoices and OCR payment details.
+- Added this documented release procedure for future Bokfri releases.
+
 ### Changed
 - Replaced deprecated `Locale` constructors and string-based process execution
   with their modern Java equivalents.
@@ -23,7 +32,18 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Marked the few unavoidable type-erasure boundaries explicitly instead of
   hiding unrelated unchecked operations.
 
+- Updated new-company defaults for BAS 2026, including input VAT account 2641,
+  VAT settlement accounts 1650 and 2650, and the standard bank account 1930.
+- Simplified invoice layouts by removing obsolete QR payment fields and keeping
+  totals below all line items, including on multi-page invoices.
+- Improved OCR payment details with clearer Swedish wording and placement.
+
 ### Fixed
+- Restored loading of legacy XML menu definitions.
+- Restored loading of voucher templates created before the `java.time`
+  migration.
+- Replaced an existing voucher template with the same name instead of creating
+  duplicates, with a confirmation prompt before replacement.
 - Corrected VAT settlement voucher generation so BAS 2026 uses accounts 1650
   and 2650, a missing account selection cannot silently become account 1010,
   and VAT balances are summed before whole-krona rounding.
@@ -35,9 +55,6 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Changed the fallback account for input VAT on supplier invoices from the
   group account 2640 to the standard posting account 2641. Explicitly selected
   company defaults remain unchanged.
-- Restored loading of voucher templates created before the `java.time`
-  migration, preventing a `Serialization failure` when opening the new-voucher
-  dialog for companies with legacy templates.
 
 ## [1.0.0] - 2026-07-27
 

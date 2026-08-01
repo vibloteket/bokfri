@@ -75,11 +75,11 @@ mvn clean install
 ```
 
 Det skapar bland annat den körbara allt-i-ett-JAR-filen i `target/`.
-JAR-filens exakta namn följer versionen i `pom.xml`. Den aktuella
-utvecklingsversionen kan köras från projektroten med:
+JAR-filens exakta namn följer versionen i `pom.xml`. Den aktuella versionen kan
+köras från projektroten med:
 
 ```sh
-java -jar target/bokfri-1.0.1-SNAPSHOT-jar-with-dependencies.jar
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar
 ```
 
 Några andra användbara kommandon:

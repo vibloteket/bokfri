@@ -1,22 +1,28 @@
-# Bokfri 1.0.0
+# Bokfri 1.0.1
 
-Bokfri 1.0.0 är den första officiella utgåvan under namnet Bokfri och börjar
-projektets egen versionsserie. Programmet bygger vidare på Fribok och JFS
-Accounting, men har fått en moderniserad plattform, egen distribution och en ny
-visuell identitet.
+Bokfri 1.0.1 är en underhållsrelease med rättningar för momsavräkning,
+verifikationsmallar och fakturautskrifter. Den innehåller också praktiska
+guider som hjälper nya användare från val av kontoplan till den första
+verifikationen.
 
-## Nytt i Bokfri 1.0
+## Viktigaste ändringarna
 
-- sex medföljande BAS 2026-kontoplaner för svenska företag och föreningar
-- paket för Windows, macOS och Linux
-- Java 21 och moderniserat bygg- och testsystem
-- webbaserad svensk användarhjälp
-- förbättrade rapportförhandsvisningar och plattformsoberoende datakataloger
-- fortsatt stöd för verifikationer, fakturor, rapporter, SIE, BGMax samt backup
-  och återställning
+- momsavräkning använder BAS 2026-kontona 1650 och 2650 och avrundar saldon på
+  ett säkrare sätt
+- standardkontot för ingående moms är nu 2641 och standardkontot för bank är
+  1930
+- äldre verifikationsmallar kan åter läsas in; mallar med samma namn ersätts
+  först efter bekräftelse i stället för att dupliceras
+- fakturor med många rader håller rader och summor åtskilda, även över flera
+  sidor
+- föråldrade QR-fält har tagits bort från fakturalayouten och OCR-informationen
+  har fått tydligare svensk text och placering
+- nya steg-för-steg-guider för att skapa företag och bokföringsår, registrera
+  ingående balanser och bokföra den första verifikationen
+- Java 21-bygget har städats från kvarvarande compiler- och konfigurationsvarningar
 
 En fullständig teknisk ändringslista finns i
-[CHANGELOG.md](https://github.com/vibloteket/bokfri/blob/v1.0.0/CHANGELOG.md).
+[CHANGELOG.md](https://github.com/vibloteket/bokfri/blob/v1.0.1/CHANGELOG.md).
 
 ## Viktigt före uppgradering
 
