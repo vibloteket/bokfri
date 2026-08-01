@@ -77,9 +77,6 @@
 
     <parameter name="subreport.report"      class="net.sf.jasperreports.engine.JasperReport"/>
     <parameter name="subreport.datasource"  class="net.sf.jasperreports.engine.JRDataSource"/>
-
-    <parameter name="invoice.qrcode"       class="java.awt.Image"/>
-
     <columnHeader>
         <band isSplitAllowed="false" height="166">
 

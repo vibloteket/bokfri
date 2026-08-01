@@ -12,8 +12,6 @@ import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -155,55 +153,6 @@ public class SSInvoicePrinter extends SSPrinter {
         addParameter("invoice.totalsum", iTotalSum);
 
 
-        // QR-code 
-        DateTimeFormatter iFormat = DateTimeFormatter.ofPattern("yyyyMMdd");
-        final StringBuilder uqrData = new StringBuilder();
-
-        uqrData.append("{\"uqr\": 2, \"tp\": 1, ");
-        uqrData.append("\"nme\": \"");
-        uqrData.append(iCompany.getName());
-        // fixme! - cc: iCompany.getAddress().getCountry() -> CountyCode
-        uqrData.append("\", \"cc\": \"SE\""); 
-        uqrData.append(", \"cid\": \"");
-        uqrData.append(iCompany.getCorporateID());
-        uqrData.append("\", \"iref\": \"");
-        uqrData.append(iInvoice.hasOCRNumber() ? iInvoice.getOCRNumber() : iInvoice.getNumber());
-        uqrData.append("\", \"idt\": \"");
-        uqrData.append(iInvoice.getLocalDate().format(iFormat));
-        uqrData.append("\", \"ddt\": \"");
-        uqrData.append(iInvoice.getLocalDueDate().format(iFormat));
-        uqrData.append("\", \"due\": ");
-        uqrData.append(iTotalSum);
-        uqrData.append(", \"vat\": ");
-        uqrData.append(iTotalSum.subtract(iNetSum).subtract(iRounding).setScale(2, RoundingMode.HALF_UP));
-        uqrData.append(", \"vh\": ");
-        uqrData.append(iTaxSum.get(SSTaxCode.TAXRATE_1).setScale(2, RoundingMode.HALF_UP));
-        uqrData.append(", \"vm\": ");
-        uqrData.append(iTaxSum.get(SSTaxCode.TAXRATE_2).setScale(2, RoundingMode.HALF_UP));
-        uqrData.append(", \"vl\": ");
-        uqrData.append(iTaxSum.get(SSTaxCode.TAXRATE_3).setScale(2, RoundingMode.HALF_UP));
-        uqrData.append(", \"cur\": \"");
-        uqrData.append(iInvoice.getCurrency()); 
-        uqrData.append("\", \"pt\": \"");
-        uqrData.append(SSSalePrinterUtils.getPrimaryPaymentMethod(iCompany));
-        uqrData.append("\", \"acc\": \"");
-        uqrData.append(SSSalePrinterUtils.getPrimaryPaymentAccount(iCompany));
-        uqrData.append("\"");
-        if (SSSalePrinterUtils.getPrimaryPaymentMethod(iCompany).equals("IBAN") || SSSalePrinterUtils.getPrimaryPaymentMethod(iCompany).equals("BBAN")) {
-            if (iCompany.getBIC() != "") {
-                uqrData.append("\", \"bc\": \"");
-                uqrData.append(iCompany.getBIC());
-                uqrData.append("\",");
-            }
-            uqrData.append("\"adr\": \"");
-            uqrData.append(iCompany.getAddress().getZipCode());
-            uqrData.append(" ");
-            uqrData.append(iCompany.getAddress().getCity());
-            uqrData.append("\"");
-        }
-        uqrData.append("}");
-
-        SSSalePrinterUtils.addParameterForQRCode(uqrData.toString(), this);
 
     }
 

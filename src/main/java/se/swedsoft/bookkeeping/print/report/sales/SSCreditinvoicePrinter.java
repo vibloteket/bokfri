@@ -13,8 +13,6 @@ import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -158,46 +156,6 @@ public class SSCreditinvoicePrinter extends SSPrinter {
         addParameter("creditinvoice.rounding", iRounding);
         addParameter("creditinvoice.totalsum", iTotalSum);
 
-        // QR-code 
-        DateTimeFormatter iFormat = DateTimeFormatter.ofPattern("yyyyMMdd");
-        final StringBuilder uqrData = new StringBuilder();
-
-        uqrData.append("{\"uqr\": 2, \"tp\": 2, ");
-        uqrData.append("\"nme\": \"");
-        uqrData.append(iCompany.getName());
-        // fixme! - cc: iCompany.getAddress().getCountry() -> CountyCode
-        uqrData.append("\", \"cc\": \"SE\""); 
-        uqrData.append(", \"cid\": \"");
-        uqrData.append(iCompany.getCorporateID());
-        uqrData.append("\", \"iref\": \"");
-        uqrData.append(iCreditInvoice.hasOCRNumber() ? iCreditInvoice.getOCRNumber() : iCreditInvoice.getNumber());
-        uqrData.append("\", \"cr\": \"");
-        uqrData.append(iCreditInvoice.getCreditingNr());
-        uqrData.append("\", \"idt\": \"");
-        uqrData.append(iCreditInvoice.getLocalDate().format(iFormat));
-        uqrData.append("\", \"ddt\": \"");
-        uqrData.append(iCreditInvoice.getLocalDueDate().format(iFormat));
-        uqrData.append("\", \"due\": ");
-        uqrData.append(iTotalSum.negate());
-        uqrData.append(", \"vat\": ");
-        uqrData.append(iTotalSum.subtract(iNetSum).subtract(iRounding).setScale(2, RoundingMode.HALF_UP).negate());
-        uqrData.append(", \"vh\": ");
-        uqrData.append(iTaxSum.get(SSTaxCode.TAXRATE_1).setScale(2, RoundingMode.HALF_UP).negate());
-        uqrData.append(", \"vm\": ");
-        uqrData.append(iTaxSum.get(SSTaxCode.TAXRATE_2).setScale(2, RoundingMode.HALF_UP).negate());
-        uqrData.append(", \"vl\": ");
-        uqrData.append(iTaxSum.get(SSTaxCode.TAXRATE_3).setScale(2, RoundingMode.HALF_UP).negate());
-        uqrData.append(", \"cur\": \"");
-        uqrData.append(iCreditInvoice.getCurrency()); 
-        uqrData.append("\", ");
-        uqrData.append("\"adr\": \"");
-        uqrData.append(iCompany.getAddress().getZipCode());
-        uqrData.append(" ");
-        uqrData.append(iCompany.getAddress().getCity());
-        uqrData.append("\"");
-        uqrData.append("}");
-
-        SSSalePrinterUtils.addParameterForQRCode(uqrData.toString(), this);
     }
 
     /**

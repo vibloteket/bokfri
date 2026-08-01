@@ -84,8 +84,6 @@
 
     <parameter name="ocrinvoice.coderow"       class="java.lang.String"/>
     <parameter name="ocrinvoice.background" class="java.awt.Image"/>
-    <parameter name="invoice.qrcode"       class="java.awt.Image"/>
-
     <background>
         <band height="842" isSplitAllowed="false">
 
