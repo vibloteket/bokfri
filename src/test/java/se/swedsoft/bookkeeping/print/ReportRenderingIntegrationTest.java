@@ -20,6 +20,7 @@ import se.swedsoft.bookkeeping.print.report.SSProjectsPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSInpaymentjournalPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSOutpaymentjournalPrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSInvoicePrinter;
+import se.swedsoft.bookkeeping.print.report.sales.SSOCRInvoicePrinter;
 
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -60,6 +61,25 @@ class ReportRenderingIntegrationTest {
         assertThat(printedText.stream().map(PrintedText::text))
                 .doesNotContain("Fortsätter")
                 .doesNotContain("invoicereport.continuing");
+
+        PrintedText invoiceRow = findPrintedText(printedText, "Preview row");
+        PrintedText netSum = findPrintedText(printedText, "Nettosumma");
+        assertThat(netSum.y()).isGreaterThanOrEqualTo(invoiceRow.bottom());
+    }
+
+    @Test
+    void swedishOcrInvoiceKeepsInvoiceNumberAndPlacesTotalsAfterRows() throws Exception {
+        SSInvoice invoice = invoice();
+        invoice.setOCRNumber("12346");
+        SSOCRInvoicePrinter printer = new SSOCRInvoicePrinter(
+                invoice, Locale.forLanguageTag("sv-SE"), false);
+
+        assertPreviewImageContainsRenderedContent(printer);
+
+        List<PrintedText> printedText = allPrintedText(printer.getPrinter());
+        assertThat(printedText.stream().map(PrintedText::text))
+                .contains("Fakturanummer", "1234", "Leveransadress")
+                .doesNotContain("Invoice number", "12346");
 
         PrintedText invoiceRow = findPrintedText(printedText, "Preview row");
         PrintedText netSum = findPrintedText(printedText, "Nettosumma");

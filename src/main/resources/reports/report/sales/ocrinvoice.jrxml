@@ -485,7 +485,7 @@
 
 
     <detail>
-        <band isSplitAllowed="true" height="168"> <!-- 180 -->
+        <band isSplitAllowed="true" height="143">
 
             <!-- Subreport for the rows 385-->
             <frame>
@@ -519,9 +519,14 @@
                 </subreport>
             </frame>
 
-            <!-- Summary fields   -->
+        </band>
+    </detail>
+
+    <columnFooter>
+        <band isSplitAllowed="false" height="25">
+            <!-- Summary fields -->
             <frame>
-                <reportElement x="40" y="143" width="510" height="25" positionType="Float" />
+                <reportElement x="40" y="0" width="510" height="25"/>
 
                 <box border="Thin" borderColor="#000000" topBorder="None" />
 
@@ -692,7 +697,7 @@
             </frame>
 
         </band>
-    </detail>
+    </columnFooter>
 
 
     <pageFooter>             <!-- 410 -->

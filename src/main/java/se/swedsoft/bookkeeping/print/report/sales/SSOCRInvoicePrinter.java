@@ -41,6 +41,7 @@ public class SSOCRInvoicePrinter extends SSInvoicePrinter {
         setPageFooter("sales/ocrinvoice.jrxml");
         setDetail("sales/ocrinvoice.jrxml");
         setColumnHeader("sales/ocrinvoice.jrxml");
+        setColumnFooter("sales/ocrinvoice.jrxml");
 
         if (iShowBackground) {
             setBackground("sales/ocrinvoice.jrxml");
@@ -71,7 +72,6 @@ public class SSOCRInvoicePrinter extends SSInvoicePrinter {
     @Override
     protected void addParameters() {
         super.addParameters();
-        addParameter("number", Integer.decode(iInvoice.getOCRNumber()));
 
         addParameter("ocrinvoice.coderow", iCodeRow.toString());
         addParameter("ocrinvoice.background", SSImage.getImage("OCRBackground"));
