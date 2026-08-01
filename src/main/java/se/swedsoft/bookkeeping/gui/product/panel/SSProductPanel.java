@@ -163,7 +163,9 @@ public class SSProductPanel {
             }
         });
         iSellingAccount.setSelected(
-                SSDB.getInstance().getCurrentAccountPlan().getAccount(3041), true);
+                iCompany == null ? null : iCompany.getDefaultAccount(
+                        SSDB.getInstance().getCurrentAccountPlan(),
+                        SSDefaultAccount.Sales).orElse(null), true);
 
         iPurchaseAccount.setModel(SSAccountTableModel.getDropDownModel());
         iPurchaseAccount.setSearchColumns(0);
@@ -177,7 +179,9 @@ public class SSProductPanel {
             }
         });
         iPurchaseAccount.setSelected(
-                SSDB.getInstance().getCurrentAccountPlan().getAccount(4010), true);
+                iCompany == null ? null : iCompany.getDefaultAccount(
+                        SSDB.getInstance().getCurrentAccountPlan(),
+                        SSDefaultAccount.Purchases).orElse(null), true);
 
         iProject.setModel(SSProjectTableModel.getDropDownModel());
         iProject.setSearchColumns(0);

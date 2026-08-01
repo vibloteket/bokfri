@@ -13,9 +13,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SSDefaultAccountTest {
 
     @Test
-    void incomingTaxDefaultsTo2641() {
+    void defaultsUseCurrentBasAccounts() {
         SSNewCompany company = new SSNewCompany();
 
+        assertThat(company.getDefaultAccount(SSDefaultAccount.Sales)).isEqualTo(3001);
+        assertThat(company.getDefaultAccount(SSDefaultAccount.Purchases)).isEqualTo(4010);
+        assertThat(company.getDefaultAccount(SSDefaultAccount.InterestProfit)).isEqualTo(8310);
         assertThat(company.getDefaultAccount(SSDefaultAccount.IncommingTax)).isEqualTo(2641);
     }
 

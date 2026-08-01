@@ -303,13 +303,11 @@ public class SSNewCompany implements Serializable {    private static final Logg
      * @return
      */
     public Optional<SSAccount> getDefaultAccount(SSAccountPlan iAccountPlan, SSDefaultAccount iDefaultAccount) {
-        Integer iAccountNumber = iDefaultAccounts.get(iDefaultAccount);
-
-        if (iAccountNumber == null) {
+        if (iAccountPlan == null) {
             return Optional.empty();
         }
 
-        return Optional.ofNullable(iAccountPlan.getAccount(iAccountNumber));
+        return Optional.ofNullable(iAccountPlan.getAccount(getDefaultAccount(iDefaultAccount)));
     }
 
     /**

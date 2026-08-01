@@ -36,8 +36,8 @@ public enum SSDefaultAccount implements Serializable {
     //ImportTax2(2626),
     // Importmoms 3
     //ImportTax3(2636),
-    // Försäljning
-    Sales(3051),
+    // Försäljning inom Sverige, 25 % moms
+    Sales(3001),
     // Inköp
     Purchases(4010),
     // Valutakursvinst
@@ -46,8 +46,8 @@ public enum SSDefaultAccount implements Serializable {
     CurrencyLoss(7960),
     // Öresavrundning
     Rounding(3740),
-    // Ränteintäkt
-    InterestProfit(8300),
+    // Ränteintäkter från omsättningstillgångar
+    InterestProfit(8310),
     // Ingående moms
     IncommingTax(2641);
     private static final long serialVersionUID = 6209981489711135940L;

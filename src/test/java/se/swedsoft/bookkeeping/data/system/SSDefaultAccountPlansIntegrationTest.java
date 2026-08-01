@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSAccountPlan;
+import se.swedsoft.bookkeeping.data.common.SSDefaultAccount;
 
 import java.util.Map;
 import java.util.function.Function;
@@ -39,6 +40,17 @@ class SSDefaultAccountPlansIntegrationTest {
         assertThat(plans.get("BAS 2026 - Enskild firma, ej K1").getAccounts()).hasSize(1281);
         assertThat(plans.get("BAS 2026 - Handelsbolag och kommanditbolag").getAccounts()).hasSize(1281);
         assertThat(plans.get("BAS 2026 - Ideell förening, stiftelse och trossamfund").getAccounts()).hasSize(1281);
+    }
+
+    @Test
+    void hardCodedDefaultsExistInStandardBas2026Plan() {
+        SSAccountPlan limitedCompany = findPlan("BAS 2026 - Aktiebolag");
+
+        for (SSDefaultAccount defaultAccount : SSDefaultAccount.values()) {
+            assertThat(limitedCompany.getAccount(defaultAccount.getDefaultAccountNumber()))
+                    .as(defaultAccount.name())
+                    .isNotNull();
+        }
     }
 
     @Test
