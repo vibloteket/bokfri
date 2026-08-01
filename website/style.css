@@ -456,6 +456,16 @@ body {
   color: #c86845;
 }
 
+.guide-flow.compact {
+  justify-content: center;
+}
+
+.guide-flow.compact span {
+  flex: 0 1 110px;
+  padding: 0.55rem;
+  font-size: 0.85rem;
+}
+
 .guide-steps li {
   margin-bottom: 0.6rem;
   padding-left: 0.25rem;
