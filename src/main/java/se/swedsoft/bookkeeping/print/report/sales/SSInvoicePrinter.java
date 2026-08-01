@@ -206,8 +206,7 @@ public class SSInvoicePrinter extends SSPrinter {
             setColumnHeader("sales/invoice.rows.jrxml");
             setDetail("sales/invoice.rows.jrxml");
 
-            setPageFooter("sales/invoice.rows.jrxml");
-            setLastPageFooter("sales/invoice.rows.jrxml");
+
 
         }
 

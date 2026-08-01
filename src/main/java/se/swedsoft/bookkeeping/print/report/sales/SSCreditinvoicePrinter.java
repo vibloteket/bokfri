@@ -209,8 +209,7 @@ public class SSCreditinvoicePrinter extends SSPrinter {
             setColumnHeader("sales/creditinvoice.rows.jrxml");
             setDetail("sales/creditinvoice.rows.jrxml");
 
-            setPageFooter("sales/creditinvoice.rows.jrxml");
-            setLastPageFooter("sales/creditinvoice.rows.jrxml");
+
         }
 
         /**

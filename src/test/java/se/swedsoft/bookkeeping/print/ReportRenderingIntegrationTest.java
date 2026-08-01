@@ -1,5 +1,8 @@
 package se.swedsoft.bookkeeping.print;
 
+import net.sf.jasperreports.engine.JRPrintElement;
+import net.sf.jasperreports.engine.JRPrintFrame;
+import net.sf.jasperreports.engine.JRPrintText;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperPrintManager;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,6 +55,15 @@ class ReportRenderingIntegrationTest {
         SSInvoicePrinter printer = new SSInvoicePrinter(invoice(), Locale.forLanguageTag("sv-SE"));
 
         assertPreviewImageContainsRenderedContent(printer);
+
+        List<PrintedText> printedText = allPrintedText(printer.getPrinter());
+        assertThat(printedText.stream().map(PrintedText::text))
+                .doesNotContain("Fortsätter")
+                .doesNotContain("invoicereport.continuing");
+
+        PrintedText invoiceRow = findPrintedText(printedText, "Preview row");
+        PrintedText netSum = findPrintedText(printedText, "Nettosumma");
+        assertThat(netSum.y()).isGreaterThanOrEqualTo(invoiceRow.bottom());
     }
 
     @Test
@@ -88,6 +100,40 @@ class ReportRenderingIntegrationTest {
         BufferedImage bufferedImage = toBufferedImage(image);
 
         assertThat(countNonWhitePixels(bufferedImage)).isGreaterThan(1_000);
+    }
+
+    private static List<PrintedText> allPrintedText(JasperPrint print) {
+        List<PrintedText> text = new ArrayList<>();
+
+        print.getPages().forEach(page -> collectPrintedText(page.getElements(), text, 0, 0));
+        return text;
+    }
+
+    private static void collectPrintedText(
+            List<JRPrintElement> elements, List<PrintedText> text, int offsetX, int offsetY) {
+        for (JRPrintElement element : elements) {
+            int x = offsetX + element.getX();
+            int y = offsetY + element.getY();
+
+            if (element instanceof JRPrintText printText) {
+                text.add(new PrintedText(printText.getFullText(), x, y, element.getHeight()));
+            } else if (element instanceof JRPrintFrame frame) {
+                collectPrintedText(frame.getElements(), text, x, y);
+            }
+        }
+    }
+
+    private static PrintedText findPrintedText(List<PrintedText> printedText, String expected) {
+        return printedText.stream()
+                .filter(text -> expected.equals(text.text()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing printed text: " + expected));
+    }
+
+    private record PrintedText(String text, int x, int y, int height) {
+        int bottom() {
+            return y + height;
+        }
     }
 
     private static SSInvoice invoice() {
