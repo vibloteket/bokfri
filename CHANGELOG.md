@@ -12,6 +12,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Added
+- Added privacy-friendly GoatCounter visitor statistics to the website and help pages.
+
 ## [1.0.1] - 2026-08-01
 
 ### Added
