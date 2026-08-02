@@ -21,6 +21,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Added account and voucher inspection plus JSON-based manual voucher
   validation, dry runs, and creation through a shared UI-independent validation
   and application service.
+- Added read-only customer, product, and customer-invoice list/show commands,
+  including invoice totals, status, and posting source rows in JSON output.
 - Added a cross-platform CI black-box test that launches the assembled fat JAR
   and verifies contexts, JSON contracts, account/year lookup, voucher
   validation, dry runs, creation, list/show round trips, and stable errors.

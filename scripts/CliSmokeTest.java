@@ -29,6 +29,7 @@ public final class CliSmokeTest {
 
         try {
             runReadOnlyAndContextFlow();
+            runReferenceDataFlow();
             runVoucherFlow(temporary);
             runErrorFlow(temporary);
             System.out.println("Bokfri CLI black-box smoke test passed: " + jar.getFileName());
@@ -60,6 +61,42 @@ public final class CliSmokeTest {
         Result current = cli("--format", "json", "context", "current");
         current.success();
         require(current.stdout.contains("\"name\":\"smoke\""), "current context was not selected");
+    }
+
+    private static void runReferenceDataFlow() throws Exception {
+        Result customers = cli("--format", "json", "customer", "list");
+        customers.success();
+        customers.jsonObject();
+        if (!customers.stdout.contains("\"customers\":[]")) {
+            String customerNumber = firstString(customers.stdout, "number");
+            Result customer = cli("--format", "json", "customer", "show", customerNumber);
+            customer.success();
+            require(customer.stdout.contains("\"number\":\"" + customerNumber + "\""),
+                    "customer show returned the wrong customer");
+        }
+
+        Result products = cli("--format", "json", "product", "list");
+        products.success();
+        products.jsonObject();
+        if (!products.stdout.contains("\"products\":[]")) {
+            String productNumber = firstString(products.stdout, "number");
+            Result product = cli("--format", "json", "product", "show", productNumber);
+            product.success();
+            require(product.stdout.contains("\"number\":\"" + productNumber + "\""),
+                    "product show returned the wrong product");
+        }
+
+        Result invoices = cli("--format", "json", "invoice", "list");
+        invoices.success();
+        invoices.jsonObject();
+        if (!invoices.stdout.contains("\"invoices\":[]")) {
+            int invoiceNumber = firstIntAfter(invoices.stdout, "invoices", "number");
+            Result invoice = cli("--format", "json", "invoice", "show", Integer.toString(invoiceNumber));
+            invoice.success();
+            require(firstInt(invoice.stdout, "number") == invoiceNumber,
+                    "invoice show returned the wrong invoice");
+            require(invoice.stdout.contains("\"rows\":"), "invoice show lacks rows");
+        }
     }
 
     private static void runVoucherFlow(Path temporary) throws Exception {
@@ -155,6 +192,12 @@ public final class CliSmokeTest {
         Matcher matcher = Pattern.compile("\\\"" + key + "\\\"\\s*:\\s*(\\d+)").matcher(json);
         require(matcher.find(), "JSON lacks numeric key " + key + ": " + json);
         return Integer.parseInt(matcher.group(1));
+    }
+
+    private static int firstIntAfter(String json, String section, String key) {
+        int sectionStart = json.indexOf("\"" + section + "\"");
+        require(sectionStart >= 0, "JSON lacks section " + section);
+        return firstInt(json.substring(sectionStart), key);
     }
 
     private static List<Integer> allInts(String json, String key) {

@@ -69,8 +69,8 @@ Status: in progress
 Current repo state:
 - Bokfri is primarily a Swing application
 - a headless CLI entry point now exposes version, paths, diagnostics, named
-  company/year contexts, account/company/year inspection, and manual voucher
-  validation, dry runs, and creation
+  company/year contexts, account/company/year/customer/product/invoice
+  inspection, and manual voucher validation, dry runs, and creation
 - text and JSON output, explicit config files, and per-command context overrides
   are available for scripts, CI, and agents
 - the assembled CLI fat JAR is exercised as an external process on Linux,
@@ -108,7 +108,8 @@ Also implemented:
 
 Next command candidates:
 - `db status` — open a configured database and report basic health/counts
-- `invoice list --company-id ... --year-id ...` — inspect invoice IDs and status
+- `invoice validate` and `invoice create --dry-run` — establish a shared
+  invoice validation/application service before allowing invoice writes
 - `invoice print --company-id ... --year-id ... --invoice ... --lang sv --out invoice.pdf` — generate an invoice PDF headlessly
 - `invoice sample-pdf --out target/invoice-sample.pdf` — create a deterministic sample invoice PDF for CI smoke tests
 - `backup create --out backup.zip` — smoke-test backup creation without navigating the UI

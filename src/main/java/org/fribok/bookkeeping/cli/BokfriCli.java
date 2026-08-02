@@ -7,6 +7,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
+import org.fribok.bookkeeping.service.customer.CustomerService;
+import org.fribok.bookkeeping.service.invoice.InvoiceService;
+import org.fribok.bookkeeping.service.product.ProductService;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationIssue;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationResult;
@@ -14,13 +17,19 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import se.swedsoft.bookkeeping.calc.math.SSSaleMath;
 import se.swedsoft.bookkeeping.data.SSAccount;
+import se.swedsoft.bookkeeping.data.SSCustomer;
+import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSNewProject;
 import se.swedsoft.bookkeeping.data.SSNewResultUnit;
+import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
+import se.swedsoft.bookkeeping.data.base.SSSaleRow;
+import se.swedsoft.bookkeeping.data.common.SSDefaultAccount;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -42,6 +51,9 @@ import java.util.concurrent.Callable;
             BokfriCli.CompanyCommand.class,
             BokfriCli.YearCommand.class,
             BokfriCli.AccountCommand.class,
+            BokfriCli.CustomerCommand.class,
+            BokfriCli.ProductCommand.class,
+            BokfriCli.InvoiceCommand.class,
             BokfriCli.VoucherCommand.class
         })
 public class BokfriCli implements Runnable {
@@ -444,6 +456,178 @@ public class BokfriCli implements Runnable {
         }
     }
 
+    @Command(name = "customer", description = "Inspect customers",
+            subcommands = {CustomerList.class, CustomerShow.class})
+    static class CustomerCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "A customer command is required");
+        }
+    }
+
+    @Command(name = "list", description = "List customers")
+    static class CustomerList implements Callable<Integer> {
+        @CommandLine.ParentCommand CustomerCommand command;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                CustomerService service = new CustomerService(runtime.database());
+                List<Map<String, Object>> customers = service.list().stream()
+                        .map(BokfriCli::customerSummary).toList();
+                root.output(Map.of("context", selectedCompanyContext(context, company),
+                                "count", customers.size(), "customers", customers),
+                        customers.stream().map(customer -> customer.get("number") + "\t"
+                                + customer.get("name") + "\t" + customer.get("email"))
+                                .reduce((left, right) -> left + "\n" + right)
+                                .orElse("No customers found"));
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "show", description = "Show one customer by number")
+    static class CustomerShow implements Callable<Integer> {
+        @CommandLine.ParentCommand CustomerCommand command;
+        @Parameters(index = "0") String number;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSCustomer customer = new CustomerService(runtime.database()).find(number)
+                        .orElseThrow(() -> new CliException("CUSTOMER_NOT_FOUND",
+                                "No customer has number " + number));
+                Map<String, Object> result = customerDetails(customer);
+                result.put("context", selectedCompanyContext(context, company));
+                root.output(result, customer.getNumber() + "\t" + customer.getName()
+                        + "\nEmail: " + customer.getEMail() + "\nVAT number: " + customer.getVATNumber());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "product", description = "Inspect products",
+            subcommands = {ProductList.class, ProductShow.class})
+    static class ProductCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "A product command is required");
+        }
+    }
+
+    @Command(name = "list", description = "List products")
+    static class ProductList implements Callable<Integer> {
+        @CommandLine.ParentCommand ProductCommand command;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                ProductService service = new ProductService(runtime.database());
+                List<Map<String, Object>> products = service.list().stream()
+                        .map(BokfriCli::productDetails).toList();
+                root.output(Map.of("context", selectedCompanyContext(context, company),
+                                "count", products.size(), "products", products),
+                        products.stream().map(product -> product.get("number") + "\t"
+                                + product.get("description") + "\t" + product.get("sellingPrice"))
+                                .reduce((left, right) -> left + "\n" + right)
+                                .orElse("No products found"));
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "show", description = "Show one product by number")
+    static class ProductShow implements Callable<Integer> {
+        @CommandLine.ParentCommand ProductCommand command;
+        @Parameters(index = "0") String number;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSProduct product = new ProductService(runtime.database()).find(number)
+                        .orElseThrow(() -> new CliException("PRODUCT_NOT_FOUND",
+                                "No product has number " + number));
+                Map<String, Object> result = productDetails(product);
+                result.put("context", selectedCompanyContext(context, company));
+                root.output(result, product.getNumber() + "\t" + product.getDescription()
+                        + "\nSelling price: " + product.getSellingPrice());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "invoice", description = "Inspect customer invoices",
+            subcommands = {InvoiceList.class, InvoiceShow.class})
+    static class InvoiceCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "An invoice command is required");
+        }
+    }
+
+    @Command(name = "list", description = "List customer invoices")
+    static class InvoiceList implements Callable<Integer> {
+        @CommandLine.ParentCommand InvoiceCommand command;
+        @Option(names = "--from") java.time.LocalDate from;
+        @Option(names = "--to") java.time.LocalDate to;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                runtime.database().init(false);
+                List<Map<String, Object>> invoices = new InvoiceService(runtime.database())
+                        .list(from, to).stream().map(BokfriCli::invoiceSummary).toList();
+                root.output(Map.of("context", selectedCompanyContext(context, company),
+                                "count", invoices.size(), "invoices", invoices),
+                        invoices.stream().map(invoice -> invoice.get("number") + "\t"
+                                + invoice.get("date") + "\t" + invoice.get("customerName")
+                                + "\t" + invoice.get("total"))
+                                .reduce((left, right) -> left + "\n" + right)
+                                .orElse("No invoices found"));
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "show", description = "Show one customer invoice by number")
+    static class InvoiceShow implements Callable<Integer> {
+        @CommandLine.ParentCommand InvoiceCommand command;
+        @Parameters(index = "0") int number;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                runtime.database().init(false);
+                SSInvoice invoice = new InvoiceService(runtime.database()).find(number)
+                        .orElseThrow(() -> new CliException("INVOICE_NOT_FOUND",
+                                "No invoice has number " + number));
+                Map<String, Object> result = invoiceDetails(invoice);
+                result.put("context", selectedCompanyContext(context, company));
+                root.output(result, "Invoice " + invoice.getNumber() + "\nCustomer: "
+                        + invoice.getCustomerName() + "\nTotal: " + SSSaleMath.getTotalSum(invoice));
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
     @Command(name = "voucher", description = "Inspect, validate, and create manual vouchers",
             subcommands = {VoucherList.class, VoucherShow.class,
                     VoucherValidate.class, VoucherCreate.class})
@@ -615,6 +799,98 @@ public class BokfriCli implements Runnable {
             voucher.addVoucherRow(row);
         }
         return voucher;
+    }
+
+    private static Map<String, Object> selectedCompanyContext(ResolvedContext context,
+            SSNewCompany company) {
+        Map<String, Object> selected = context.asMap();
+        selected.put("companyName", company.getName());
+        return selected;
+    }
+
+    private static Map<String, Object> customerSummary(SSCustomer customer) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("number", customer.getNumber());
+        result.put("name", customer.getName());
+        result.put("email", customer.getEMail());
+        result.put("registrationNumber", customer.getRegistrationNumber());
+        result.put("vatNumber", customer.getVATNumber());
+        return result;
+    }
+
+    private static Map<String, Object> customerDetails(SSCustomer customer) {
+        Map<String, Object> result = customerSummary(customer);
+        result.put("phone", customer.getPhone1());
+        result.put("ourContact", customer.getOurContactPerson());
+        result.put("yourContact", customer.getYourContactPerson());
+        result.put("discount", decimal(customer.getDiscount()));
+        result.put("currency", customer.getInvoiceCurrency() == null
+                ? null : customer.getInvoiceCurrency().getName());
+        result.put("comment", customer.getComment());
+        result.put("invoiceAddress", customer.getInvoiceAddress());
+        result.put("deliveryAddress", customer.getDeliveryAddress());
+        return result;
+    }
+
+    private static Map<String, Object> productDetails(SSProduct product) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("number", product.getNumber());
+        result.put("description", product.getDescription());
+        result.put("sellingPrice", decimal(product.getSellingPrice()));
+        result.put("taxCode", product.getTaxCode() == null ? null : product.getTaxCode().name());
+        result.put("taxRate", product.getTaxRate().map(BokfriCli::decimal).orElse(null));
+        result.put("unit", product.getUnit() == null ? null : product.getUnit().getName());
+        result.put("salesAccount", product.getDefaultAccount(SSDefaultAccount.Sales));
+        result.put("project", product.getProjectNr());
+        result.put("resultUnit", product.getResultUnitNr());
+        result.put("expired", product.isExpired());
+        return result;
+    }
+
+    private static Map<String, Object> invoiceSummary(SSInvoice invoice) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("number", invoice.getNumber());
+        result.put("date", invoice.getLocalDate());
+        result.put("dueDate", invoice.getLocalDueDate());
+        result.put("customerNumber", invoice.getCustomerNr());
+        result.put("customerName", invoice.getCustomerName());
+        result.put("currency", invoice.getCurrency() == null ? null : invoice.getCurrency().getName());
+        result.put("type", invoice.getType().name());
+        result.put("entered", invoice.isEntered());
+        result.put("printed", invoice.isPrinted());
+        result.put("net", decimal(SSSaleMath.getNetSum(invoice)));
+        result.put("vat", decimal(SSSaleMath.getTotalTaxSum(invoice)));
+        result.put("total", decimal(SSSaleMath.getTotalSum(invoice)));
+        result.put("rowCount", invoice.getRows().size());
+        return result;
+    }
+
+    private static Map<String, Object> invoiceDetails(SSInvoice invoice) {
+        Map<String, Object> result = invoiceSummary(invoice);
+        List<Map<String, Object>> rows = invoice.getRows().stream()
+                .map(BokfriCli::invoiceRow).toList();
+        result.put("rows", rows);
+        result.put("ocrNumber", invoice.getOCRNumber());
+        result.put("yourOrderNumber", invoice.getYourOrderNumber());
+        result.put("text", invoice.getText());
+        result.put("taxFree", invoice.getTaxFree());
+        result.put("rounding", decimal(SSSaleMath.getRounding(invoice)));
+        return result;
+    }
+
+    private static Map<String, Object> invoiceRow(SSSaleRow row) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("productNumber", row.getProductNr());
+        result.put("description", row.getDescription());
+        result.put("quantity", row.getQuantity());
+        result.put("unitPrice", decimal(row.getUnitprice()));
+        result.put("discount", decimal(row.getDiscount()));
+        result.put("taxCode", row.getTaxCode() == null ? null : row.getTaxCode().name());
+        result.put("account", row.getAccountNr());
+        result.put("project", row.getProjectNr());
+        result.put("resultUnit", row.getResultUnitNr());
+        result.put("sum", row.getSum().map(BokfriCli::decimal).orElse(null));
+        return result;
     }
 
     private static Map<String, Object> voucherSummary(SSVoucher voucher) {

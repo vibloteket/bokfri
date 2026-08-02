@@ -100,6 +100,17 @@ Använd `--format json` för maskinläsbar utdata och `--config FIL` för en
 isolerad config, exempelvis för CI eller en agent. Globala val måste placeras
 före kommandot, till exempel `cli --format json company list`.
 
+Kunder, produkter och kundfakturor kan läsas maskinellt:
+
+```sh
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli customer list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli customer show 1001
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli product list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli product show CONSULTING
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli invoice list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli invoice show 42
+```
+
 Manuella verifikationer kan valideras, förhandsgranskas och skapas från JSON:
 
 ```json
