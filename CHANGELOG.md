@@ -18,8 +18,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   company/year contexts, and read-only company and accounting-year commands.
 - Added text and JSON output plus isolated config and context overrides for
   scripts, CI, and agent-driven automation.
-- Added account listing and JSON-based manual voucher validation, dry runs, and
-  creation through a shared UI-independent validation and application service.
+- Added account and voucher inspection plus JSON-based manual voucher
+  validation, dry runs, and creation through a shared UI-independent validation
+  and application service.
 
 ## [1.0.1] - 2026-08-01
 

@@ -5,11 +5,11 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.fribok.bookkeeping.app.Path;
+import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationIssue;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationResult;
-import org.fribok.bookkeeping.app.Path;
-import org.fribok.bookkeeping.app.Version;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -444,12 +444,81 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(name = "voucher", description = "Validate and create manual vouchers",
-            subcommands = {VoucherValidate.class, VoucherCreate.class})
+    @Command(name = "voucher", description = "Inspect, validate, and create manual vouchers",
+            subcommands = {VoucherList.class, VoucherShow.class,
+                    VoucherValidate.class, VoucherCreate.class})
     static class VoucherCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
             throw new CommandLine.ParameterException(spec.commandLine(), "A voucher command is required");
+        }
+    }
+
+    @Command(name = "list", description = "List vouchers in the selected accounting year")
+    static class VoucherList implements Callable<Integer> {
+        @CommandLine.ParentCommand VoucherCommand command;
+        @Option(names = "--from", description = "Only vouchers on or after this date")
+        java.time.LocalDate from;
+        @Option(names = "--to", description = "Only vouchers on or before this date")
+        java.time.LocalDate to;
+        @Option(names = "--limit", description = "Maximum results; by default all are returned")
+        Integer limit;
+
+        @Override public Integer call() {
+            if (limit != null && limit < 1) {
+                throw new CliException("LIMIT_INVALID", "--limit must be at least 1");
+            }
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                VoucherService service = new VoucherService(runtime.database());
+                java.util.stream.Stream<SSVoucher> filtered = service.list().stream()
+                        .filter(voucher -> from == null || !voucher.getLocalDate().isBefore(from))
+                        .filter(voucher -> to == null || !voucher.getLocalDate().isAfter(to));
+                if (limit != null) {
+                    filtered = filtered.limit(limit);
+                }
+                List<Map<String, Object>> vouchers = filtered.map(BokfriCli::voucherSummary).toList();
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("context", selectedContext(context, company, year));
+                result.put("count", vouchers.size());
+                result.put("vouchers", vouchers);
+                String text = vouchers.stream().map(voucher -> voucher.get("number") + "\t"
+                        + voucher.get("date") + "\t" + voucher.get("description") + "\t"
+                        + voucher.get("debitTotal"))
+                        .reduce((left, right) -> left + "\n" + right).orElse("No vouchers found");
+                root.output(result, text);
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "show", description = "Show one voucher by number")
+    static class VoucherShow implements Callable<Integer> {
+        @CommandLine.ParentCommand VoucherCommand command;
+        @Parameters(index = "0", description = "Voucher number")
+        int number;
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                VoucherService service = new VoucherService(runtime.database());
+                SSVoucher voucher = service.find(number).orElseThrow(() ->
+                        new CliException("VOUCHER_NOT_FOUND", "No voucher has number " + number));
+                Map<String, Object> result = voucherDetails(voucher);
+                result.put("context", selectedContext(context, company, year));
+                root.output(result, voucherDetailsText(voucher));
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
         }
     }
 
@@ -548,13 +617,75 @@ public class BokfriCli implements Runnable {
         return voucher;
     }
 
-    private static Map<String, Object> voucherResult(ResolvedContext context,
-            SSNewCompany company, SSNewAccountingYear year, SSVoucher voucher,
-            VoucherValidationResult validation, boolean persist, int nextNumber) {
+    private static Map<String, Object> voucherSummary(SSVoucher voucher) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("number", voucher.getNumber());
+        result.put("date", voucher.getLocalDate());
+        result.put("description", voucher.getDescription());
+        result.put("debitTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
+                .getDebetSum(voucher).toPlainString());
+        result.put("creditTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
+                .getCreditSum(voucher).toPlainString());
+        result.put("rowCount", voucher.getRows().size());
+        return result;
+    }
+
+    private static Map<String, Object> voucherDetails(SSVoucher voucher) {
+        Map<String, Object> result = voucherSummary(voucher);
+        List<Map<String, Object>> rows = voucher.getRows().stream().map(row -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("account", row.getAccountNr());
+            SSAccount account = row.getAccount();
+            item.put("accountDescription", account == null ? null : account.getDescription());
+            item.put("debit", decimal(row.getDebet()));
+            item.put("credit", decimal(row.getCredit()));
+            item.put("project", row.getProjectNr());
+            item.put("resultUnit", row.getResultUnitNr());
+            item.put("crossed", row.isCrossed());
+            item.put("added", row.isAdded());
+            item.put("editedAt", row.getLocalEditedDate());
+            item.put("editedSignature", row.getEditedSignature());
+            return item;
+        }).toList();
+        result.put("rows", rows);
+        result.put("corrects", voucher.getCorrects() == null ? null : voucher.getCorrects().getNumber());
+        result.put("correctedBy", voucher.getCorrectedBy() == null
+                ? null : voucher.getCorrectedBy().getNumber());
+        return result;
+    }
+
+    private static String decimal(java.math.BigDecimal value) {
+        return value == null ? null : value.toPlainString();
+    }
+
+    private static Map<String, Object> selectedContext(ResolvedContext context,
+            SSNewCompany company, SSNewAccountingYear year) {
         Map<String, Object> selected = context.asMap();
         selected.put("companyName", company.getName());
         selected.put("yearFrom", year.getLocalFrom().toString());
         selected.put("yearTo", year.getLocalTo().toString());
+        return selected;
+    }
+
+    private static String voucherDetailsText(SSVoucher voucher) {
+        StringBuilder text = new StringBuilder();
+        text.append("Voucher ").append(voucher.getNumber()).append('\n');
+        text.append("Date: ").append(voucher.getLocalDate()).append('\n');
+        text.append("Description: ").append(voucher.getDescription()).append('\n');
+        for (SSVoucherRow row : voucher.getRows()) {
+            text.append(row.getAccountNr()).append('\t')
+                    .append(row.getDebet() == null ? "" : row.getDebet().toPlainString())
+                    .append('\t')
+                    .append(row.getCredit() == null ? "" : row.getCredit().toPlainString())
+                    .append('\n');
+        }
+        return text.toString().stripTrailing();
+    }
+
+    private static Map<String, Object> voucherResult(ResolvedContext context,
+            SSNewCompany company, SSNewAccountingYear year, SSVoucher voucher,
+            VoucherValidationResult validation, boolean persist, int nextNumber) {
+        Map<String, Object> selected = selectedContext(context, company, year);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("valid", validation.valid());
         result.put("dryRun", !persist);

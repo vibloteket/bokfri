@@ -102,10 +102,10 @@ Also implemented:
 - `voucher validate` — validate JSON without writing
 - `voucher create --dry-run` — resolve and preview the next number without writing
 - `voucher create` — validate and persist through the shared voucher service
+- `voucher list` and `voucher show` — inspect persisted vouchers and posting rows
 
 Next command candidates:
 - `db status` — open a configured database and report basic health/counts
-- `voucher list` and `voucher show` — inspect persisted vouchers
 - `invoice list --company-id ... --year-id ...` — inspect invoice IDs and status
 - `invoice print --company-id ... --year-id ... --invoice ... --lang sv --out invoice.pdf` — generate an invoice PDF headlessly
 - `invoice sample-pdf --out target/invoice-sample.pdf` — create a deterministic sample invoice PDF for CI smoke tests

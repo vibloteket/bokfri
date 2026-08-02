@@ -117,6 +117,8 @@ Manuella verifikationer kan valideras, förhandsgranskas och skapas från JSON:
 
 ```sh
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli account list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher show 42
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher validate --file voucher.json
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher create --dry-run --file voucher.json
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher create --file voucher.json

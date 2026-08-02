@@ -53,6 +53,24 @@ class VoucherServiceIntegrationTest {
     }
 
     @Test
+    void listIsSortedAndFindReturnsVoucherByNumber() {
+        VoucherService service = new VoucherService(SSDB.getInstance());
+        SSVoucher voucher = validVoucher();
+        service.create(voucher);
+
+        try {
+            SSDBTestFixture.resetCaches();
+            assertThat(service.list()).extracting(SSVoucher::getNumber).isSorted();
+            assertThat(service.find(voucher.getNumber())).isPresent()
+                    .get().extracting(SSVoucher::getDescription)
+                    .isEqualTo("Voucher service integration test");
+            assertThat(service.find(Integer.MAX_VALUE)).isEmpty();
+        } finally {
+            SSDB.getInstance().deleteVoucher(voucher);
+        }
+    }
+
+    @Test
     void invalidVoucherIsNotPersisted() {
         VoucherService service = new VoucherService(SSDB.getInstance());
         int countBefore = SSDB.getInstance().getVouchers().size();
