@@ -75,7 +75,7 @@
           <archive>
             <manifest>
               <addClasspath>true</addClasspath>
-              <mainClass>org.fribok.bookkeeping.Bookkeeping</mainClass>
+              <mainClass>org.fribok.bookkeeping.Launcher</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -91,7 +91,7 @@
           <destination>${project.basedir}/dist</destination>
           <input>${project.build.directory}</input>
           <mainJar>${project.build.finalName}-jar-with-dependencies.jar</mainJar>
-          <mainClass>org.fribok.bookkeeping.Bookkeeping</mainClass>
+          <mainClass>org.fribok.bookkeeping.Launcher</mainClass>
           <icon>${project.basedir}/design/favicons/desktop/app-icon.ico</icon>
           <macPackageIdentifier>${jpackage.macPackageIdentifier}</macPackageIdentifier>
           <javaOptions>
@@ -363,6 +363,32 @@
         <version>3.2-FINAL</version>
         <scope>compile</scope>
         </dependency-->
+    <!-- command-line interface -->
+    <dependency>
+      <groupId>info.picocli</groupId>
+      <artifactId>picocli</artifactId>
+      <version>4.7.7</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>2.18.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.18.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.18.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <version>2.18.2</version>
+    </dependency>
     <!-- logging -->
     <dependency>
       <groupId>org.slf4j</groupId>

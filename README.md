@@ -82,6 +82,24 @@ köras från projektroten med:
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar
 ```
 
+### Kommandoradsgränssnitt
+
+Samma JAR innehåller ett headless kommandoradsgränssnitt. Den första versionen
+kan hantera contexts och läsa företag och räkenskapsår utan att starta Swing:
+
+```sh
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli version
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli context create demo-2026 \
+  --data-dir "$HOME/.local/share/bokfri" --company-id 1 --year-id 17
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli context use demo-2026
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli company list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli year list
+```
+
+Använd `--format json` för maskinläsbar utdata och `--config FIL` för en
+isolerad config, exempelvis för CI eller en agent. Globala val måste placeras
+före kommandot, till exempel `cli --format json company list`.
+
 Några andra användbara kommandon:
 
 ```sh

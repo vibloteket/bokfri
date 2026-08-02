@@ -14,6 +14,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Added
 - Added privacy-friendly GoatCounter visitor statistics to the website and help pages.
+- Added the first headless CLI slice with version, path, diagnostics, named
+  company/year contexts, and read-only company and accounting-year commands.
+- Added text and JSON output plus isolated config and context overrides for
+  scripts, CI, and agent-driven automation.
 
 ## [1.0.1] - 2026-08-01
 

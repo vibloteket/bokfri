@@ -62,15 +62,19 @@ Done when:
 - obsolete libraries are removed from `pom.xml`
 - code paths using them have been migrated and verified
 
-### 3. Add a Headless Developer/Test CLI
+### 3. Expand the Headless Developer/Test CLI
 
-Status: not started
+Status: in progress
 
 Current repo state:
 - Bokfri is primarily a Swing application
-- many important workflows are only easy to exercise through the GUI
-- report and print bugs are difficult to reproduce in CI because preview/print flows assume UI entry points
-- existing code has reusable lower-level pieces (`SSDB`, report printers, backup helpers), but they are not exposed through a stable command-line entry point
+- a headless CLI entry point now exposes version, paths, diagnostics, named
+  company/year contexts, and read-only company/year inspection
+- text and JSON output, explicit config files, and per-command context overrides
+  are available for scripts, CI, and agents
+- many important workflows are still only easy to exercise through the GUI
+- report and print bugs remain difficult to reproduce in CI because preview/print flows assume UI entry points
+- existing lower-level pieces (`SSDB`, report printers, backup helpers) need to be moved behind stable application services before write commands are added
 
 Goal:
 - add a small CLI for automation, diagnostics, and agent/developer testing without creating a second user-facing product
@@ -83,11 +87,15 @@ Suggested CLI shape:
 - avoid creating Swing frames/dialogs from CLI commands
 - support Maven/fat-jar execution first; packaged launchers can come later
 
-Initial command candidates:
+Implemented commands:
 - `version` — print app version/build metadata
 - `paths` — print resolved app/user/config/data paths
-- `db status` — open a configured database and report basic health/counts
+- `doctor` — inspect CLI config, selected context, and data directory
+- `context create/list/show/current/use/delete` — manage named data/company/year selections
 - `company list` and `year list` — inspect available company/year IDs for scripting
+
+Next command candidates:
+- `db status` — open a configured database and report basic health/counts
 - `invoice list --company-id ... --year-id ...` — inspect invoice IDs and status
 - `invoice print --company-id ... --year-id ... --invoice ... --lang sv --out invoice.pdf` — generate an invoice PDF headlessly
 - `invoice sample-pdf --out target/invoice-sample.pdf` — create a deterministic sample invoice PDF for CI smoke tests
@@ -105,9 +113,9 @@ Packaging opportunities:
 - keep official user workflows in Swing unless a CLI command is explicitly promoted to supported user-facing behavior
 
 Done when:
-- a CLI entry point exists and can run from Maven or the assembled jar
 - at least one headless report/PDF smoke test runs in CI
-- common diagnostic commands can inspect version, paths, database state, companies, years, and invoices without opening Swing UI
+- common diagnostic commands can inspect database state and invoices without opening Swing UI
+- write workflows call shared application services used by both Swing and the CLI
 
 ### 4. Tighten Build and Quality Gates
 
