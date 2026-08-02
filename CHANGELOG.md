@@ -21,6 +21,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Added account and voucher inspection plus JSON-based manual voucher
   validation, dry runs, and creation through a shared UI-independent validation
   and application service.
+- Added a cross-platform CI black-box test that launches the assembled fat JAR
+  and verifies contexts, JSON contracts, account/year lookup, voucher
+  validation, dry runs, creation, list/show round trips, and stable errors.
 
 ## [1.0.1] - 2026-08-01
 

@@ -73,6 +73,8 @@ Current repo state:
   validation, dry runs, and creation
 - text and JSON output, explicit config files, and per-command context overrides
   are available for scripts, CI, and agents
+- the assembled CLI fat JAR is exercised as an external process on Linux,
+  Windows, and macOS CI runners through a complete isolated voucher round trip
 - many important workflows are still only easy to exercise through the GUI
 - report and print bugs remain difficult to reproduce in CI because preview/print flows assume UI entry points
 - manual vouchers now use shared UI-independent validation and an application

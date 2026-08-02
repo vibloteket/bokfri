@@ -37,6 +37,13 @@ jobs:
     - name: Build and test
       run: mvn clean install -Pcoverage
 
+    - name: Run assembled CLI black-box test
+      shell: bash
+      run: |
+        CLI_JAR=$(find target -maxdepth 1 -name '*-jar-with-dependencies.jar' -print -quit)
+        test -n "$CLI_JAR"
+        java scripts/CliSmokeTest.java "$CLI_JAR"
+
     - name: Upload coverage report
       if: runner.os == 'Linux'
       uses: actions/upload-artifact@v7
@@ -120,6 +127,13 @@ jobs:
           -Djpackage.appVersion="$VERSION" \
           -Djpackage.appSubdir="$APP_SUBDIR" \
           -Djpackage.macPackageIdentifier="$MAC_PACKAGE_IDENTIFIER"
+
+    - name: Run assembled CLI black-box test
+      shell: bash
+      run: |
+        CLI_JAR=$(find target -maxdepth 1 -name '*-jar-with-dependencies.jar' -print -quit)
+        test -n "$CLI_JAR"
+        java scripts/CliSmokeTest.java "$CLI_JAR"
 
     - name: List dist contents
       shell: bash
