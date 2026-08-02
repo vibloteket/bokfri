@@ -6,6 +6,7 @@ import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 import se.swedsoft.bookkeeping.data.SSVoucherTemplate;
 import se.swedsoft.bookkeeping.data.system.SSDB;
+import org.fribok.bookkeeping.service.voucher.VoucherService;
 
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
@@ -81,7 +82,7 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                             return;
                         }
 
-                        SSDB.getInstance().addVoucher(iVoucher, false);
+                        new VoucherService(SSDB.getInstance()).create(iVoucher);
 
                         if (iPanel.isStoreAsTemplate()) {
                             storeVoucherTemplate(iMainFrame, iVoucher);
@@ -135,7 +136,7 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                 }
                 SSVoucher iVoucher = iPanel.getVoucher();
 
-                SSDB.getInstance().addVoucher(iVoucher, false);
+                new VoucherService(SSDB.getInstance()).create(iVoucher);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();
@@ -294,7 +295,7 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                             return;
                         }
 
-                        SSDB.getInstance().addVoucher(iVoucher1, false);
+                        new VoucherService(SSDB.getInstance()).create(iVoucher1);
 
                         if (iPanel.isStoreAsTemplate()) {
                             storeVoucherTemplate(iMainFrame, iVoucher1);
@@ -350,7 +351,7 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                 }
                 SSVoucher iVoucher = iPanel.getVoucher();
 
-                SSDB.getInstance().addVoucher(iVoucher, false);
+                new VoucherService(SSDB.getInstance()).create(iVoucher);
 
                 iOriginal.setCorrectedBy(iVoucher);
                 SSDB.getInstance().updateVoucher(iVoucher);

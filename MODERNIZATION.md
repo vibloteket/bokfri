@@ -69,12 +69,15 @@ Status: in progress
 Current repo state:
 - Bokfri is primarily a Swing application
 - a headless CLI entry point now exposes version, paths, diagnostics, named
-  company/year contexts, and read-only company/year inspection
+  company/year contexts, account/company/year inspection, and manual voucher
+  validation, dry runs, and creation
 - text and JSON output, explicit config files, and per-command context overrides
   are available for scripts, CI, and agents
 - many important workflows are still only easy to exercise through the GUI
 - report and print bugs remain difficult to reproduce in CI because preview/print flows assume UI entry points
-- existing lower-level pieces (`SSDB`, report printers, backup helpers) need to be moved behind stable application services before write commands are added
+- manual vouchers now use shared UI-independent validation and an application
+  service from both Swing and the CLI; other workflows still call lower-level
+  pieces (`SSDB`, report printers, backup helpers) directly
 
 Goal:
 - add a small CLI for automation, diagnostics, and agent/developer testing without creating a second user-facing product
@@ -94,8 +97,15 @@ Implemented commands:
 - `context create/list/show/current/use/delete` — manage named data/company/year selections
 - `company list` and `year list` — inspect available company/year IDs for scripting
 
+Also implemented:
+- `account list` — list accounts in the selected accounting year
+- `voucher validate` — validate JSON without writing
+- `voucher create --dry-run` — resolve and preview the next number without writing
+- `voucher create` — validate and persist through the shared voucher service
+
 Next command candidates:
 - `db status` — open a configured database and report basic health/counts
+- `voucher list` and `voucher show` — inspect persisted vouchers
 - `invoice list --company-id ... --year-id ...` — inspect invoice IDs and status
 - `invoice print --company-id ... --year-id ... --invoice ... --lang sv --out invoice.pdf` — generate an invoice PDF headlessly
 - `invoice sample-pdf --out target/invoice-sample.pdf` — create a deterministic sample invoice PDF for CI smoke tests

@@ -100,6 +100,32 @@ Använd `--format json` för maskinläsbar utdata och `--config FIL` för en
 isolerad config, exempelvis för CI eller en agent. Globala val måste placeras
 före kommandot, till exempel `cli --format json company list`.
 
+Manuella verifikationer kan valideras, förhandsgranskas och skapas från JSON:
+
+```json
+{
+  "schemaVersion": 1,
+  "date": "2026-08-02",
+  "description": "Webbhotell",
+  "rows": [
+    {"account": 6540, "debit": "199.20"},
+    {"account": 2641, "debit": "49.80"},
+    {"account": 1930, "credit": "249.00"}
+  ]
+}
+```
+
+```sh
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli account list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher validate --file voucher.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher create --dry-run --file voucher.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher create --file voucher.json
+```
+
+`validate` och `--dry-run` skriver aldrig bokföringsdata. `create` tilldelar
+nästa verifikationsnummer först efter att samma validering som GUI:t har
+passerat. Belopp anges som JSON-tal, helst decimalsträngar för exakt precision.
+
 Några andra användbara kommandon:
 
 ```sh

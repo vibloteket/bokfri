@@ -1,15 +1,26 @@
 package org.fribok.bookkeeping.cli;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.fribok.bookkeeping.service.voucher.VoucherService;
+import org.fribok.bookkeeping.service.voucher.VoucherValidationIssue;
+import org.fribok.bookkeeping.service.voucher.VoucherValidationResult;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSNewProject;
+import se.swedsoft.bookkeeping.data.SSNewResultUnit;
+import se.swedsoft.bookkeeping.data.SSVoucher;
+import se.swedsoft.bookkeeping.data.SSVoucherRow;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -29,7 +40,9 @@ import java.util.concurrent.Callable;
             BokfriCli.DoctorCommand.class,
             BokfriCli.ContextCommand.class,
             BokfriCli.CompanyCommand.class,
-            BokfriCli.YearCommand.class
+            BokfriCli.YearCommand.class,
+            BokfriCli.AccountCommand.class,
+            BokfriCli.VoucherCommand.class
         })
 public class BokfriCli implements Runnable {
     enum OutputFormat { text, json }
@@ -103,10 +116,16 @@ public class BokfriCli implements Runnable {
                 selectedCompany, selectedYear);
     }
 
+    static ObjectMapper jsonMapper() {
+        return new ObjectMapper().registerModule(new JavaTimeModule())
+                .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    }
+
     void output(Object value, String text) {
         if (format == OutputFormat.json) {
             try {
-                spec.commandLine().getOut().println(new ObjectMapper().writeValueAsString(value));
+                spec.commandLine().getOut().println(jsonMapper().writeValueAsString(value));
             } catch (JsonProcessingException exception) {
                 throw new CliException("OUTPUT_FAILED", "Could not encode JSON output", exception);
             }
@@ -386,6 +405,187 @@ public class BokfriCli implements Runnable {
         }
     }
 
+    @Command(name = "account", description = "Inspect accounts", subcommands = AccountList.class)
+    static class AccountCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "An account command is required");
+        }
+    }
+
+    @Command(name = "list", description = "List accounts for the selected year")
+    static class AccountList implements Callable<Integer> {
+        @CommandLine.ParentCommand AccountCommand command;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                List<Map<String, Object>> accounts = runtime.database().getAccounts().stream().map(account -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("number", account.getNumber());
+                    item.put("description", account.getDescription());
+                    item.put("active", account.isActive());
+                    return item;
+                }).toList();
+                String text = accounts.stream().map(item -> item.get("number") + "\t"
+                        + item.get("description"))
+                        .reduce((left, right) -> left + "\n" + right).orElse("No accounts found");
+                Map<String, Object> selected = context.asMap();
+                selected.put("companyName", company.getName());
+                selected.put("yearFrom", year.getLocalFrom().toString());
+                selected.put("yearTo", year.getLocalTo().toString());
+                root.output(Map.of("context", selected, "accounts", accounts), text);
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "voucher", description = "Validate and create manual vouchers",
+            subcommands = {VoucherValidate.class, VoucherCreate.class})
+    static class VoucherCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "A voucher command is required");
+        }
+    }
+
+    abstract static class VoucherOperation implements Callable<Integer> {
+        @CommandLine.ParentCommand VoucherCommand command;
+        @Option(names = "--file", required = true, description = "Voucher JSON file, or - for stdin")
+        String file;
+
+        abstract boolean persist();
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            VoucherInput input = readVoucherInput(file);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                SSVoucher voucher = toVoucher(input, runtime);
+                VoucherService service = new VoucherService(runtime.database());
+                VoucherValidationResult validation = service.validate(voucher);
+                Map<String, Object> result = voucherResult(context, company, year, voucher,
+                        validation, persist(), service.nextNumber());
+                if (!validation.valid()) {
+                    throw validationFailure(validation);
+                }
+                if (persist()) {
+                    service.create(voucher);
+                    result.put("number", voucher.getNumber());
+                    result.put("created", true);
+                }
+                root.output(result, voucherText(result, validation));
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "validate", description = "Validate a voucher JSON file without writing")
+    static class VoucherValidate extends VoucherOperation {
+        @Override boolean persist() { return false; }
+    }
+
+    @Command(name = "create", description = "Create a validated manual voucher")
+    static class VoucherCreate extends VoucherOperation {
+        @Option(names = "--dry-run", description = "Validate and preview without writing")
+        boolean dryRun;
+        @Override boolean persist() { return !dryRun; }
+    }
+
+    private static VoucherInput readVoucherInput(String file) {
+        try {
+            VoucherInput input = "-".equals(file)
+                    ? jsonMapper().readValue(System.in, VoucherInput.class)
+                    : jsonMapper().readValue(Paths.get(file).toFile(), VoucherInput.class);
+            if (input.getSchemaVersion() != 1) {
+                throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
+                        "Unsupported voucher schemaVersion: " + input.getSchemaVersion());
+            }
+            return input;
+        } catch (CliException exception) {
+            throw exception;
+        } catch (IOException exception) {
+            throw new CliException("INPUT_INVALID", "Could not read voucher JSON: "
+                    + exception.getMessage(), exception);
+        }
+    }
+
+    private static SSVoucher toVoucher(VoucherInput input, BokfriRuntime runtime) {
+        SSVoucher voucher = new SSVoucher(0);
+        voucher.setLocalDate(input.getDate());
+        voucher.setDescription(input.getDescription());
+        List<SSAccount> accounts = runtime.database().getAccounts();
+        List<SSNewProject> projects = runtime.database().getProjects();
+        List<SSNewResultUnit> resultUnits = runtime.database().getResultUnits();
+        for (VoucherInput.Row inputRow : input.getRows()) {
+            SSVoucherRow row = new SSVoucherRow();
+            row.setAccount(accounts.stream()
+                    .filter(account -> account.getNumber().equals(inputRow.getAccount()))
+                    .findFirst().orElse(null));
+            row.setDebet(inputRow.getDebit());
+            row.setCredit(inputRow.getCredit());
+            if (inputRow.getProject() != null) {
+                row.setProject(projects.stream()
+                        .filter(project -> inputRow.getProject().equals(project.getNumber()))
+                        .findFirst().orElse(null));
+            }
+            if (inputRow.getResultUnit() != null) {
+                row.setResultUnit(resultUnits.stream()
+                        .filter(unit -> inputRow.getResultUnit().equals(unit.getNumber()))
+                        .findFirst().orElse(null));
+            }
+            voucher.addVoucherRow(row);
+        }
+        return voucher;
+    }
+
+    private static Map<String, Object> voucherResult(ResolvedContext context,
+            SSNewCompany company, SSNewAccountingYear year, SSVoucher voucher,
+            VoucherValidationResult validation, boolean persist, int nextNumber) {
+        Map<String, Object> selected = context.asMap();
+        selected.put("companyName", company.getName());
+        selected.put("yearFrom", year.getLocalFrom().toString());
+        selected.put("yearTo", year.getLocalTo().toString());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("valid", validation.valid());
+        result.put("dryRun", !persist);
+        result.put("context", selected);
+        result.put("number", nextNumber);
+        result.put("date", voucher.getLocalDate());
+        result.put("description", voucher.getDescription());
+        result.put("debitTotal", validation.debitTotal().toPlainString());
+        result.put("creditTotal", validation.creditTotal().toPlainString());
+        result.put("issues", validation.issues());
+        return result;
+    }
+
+    private static String voucherText(Map<String, Object> result,
+            VoucherValidationResult validation) {
+        return "Voucher is valid\nNumber: " + result.get("number") + "\nDebit: "
+                + validation.debitTotal().toPlainString() + "\nCredit: "
+                + validation.creditTotal().toPlainString()
+                + (Boolean.TRUE.equals(result.get("created")) ? "\nCreated" : "\nNo changes written");
+    }
+
+    private static CliException validationFailure(VoucherValidationResult validation) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("valid", false);
+        details.put("debitTotal", validation.debitTotal().toPlainString());
+        details.put("creditTotal", validation.creditTotal().toPlainString());
+        details.put("issues", validation.issues());
+        VoucherValidationIssue first = validation.issues().get(0);
+        return new CliException("VOUCHER_INVALID", first.message(), details);
+    }
+
     private static CliException databaseFailure(Exception exception) {
         if (exception instanceof CliException cliException) {
             return cliException;
@@ -408,8 +608,13 @@ public class BokfriCli implements Runnable {
             BokfriCli root = (BokfriCli) command.getCommandSpec().root().userObject();
             if (root.format == OutputFormat.json) {
                 try {
-                    err.println(new ObjectMapper().writeValueAsString(Map.of("error", Map.of(
-                            "code", failure.getCode(), "message", failure.getMessage()))));
+                    Map<String, Object> error = new LinkedHashMap<>();
+                    error.put("code", failure.getCode());
+                    error.put("message", failure.getMessage());
+                    if (failure.getDetails() != null) {
+                        error.put("details", failure.getDetails());
+                    }
+                    err.println(jsonMapper().writeValueAsString(Map.of("error", error)));
                 } catch (JsonProcessingException jsonException) {
                     err.println(failure.getCode() + ": " + failure.getMessage());
                 }
