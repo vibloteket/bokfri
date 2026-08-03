@@ -84,16 +84,17 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar
 
 ### Kommandoradsgränssnitt
 
-Samma JAR innehåller ett headless kommandoradsgränssnitt. Den första versionen
-kan hantera contexts och läsa företag och räkenskapsår utan att starta Swing:
+Samma JAR innehåller ett headless kommandoradsgränssnitt. Utan argument startar
+Bokfri GUI:t; med ett argument som `--help`, `context` eller `voucher` körs CLI:t
+direkt, utan ett extra `cli`-underkommando:
 
 ```sh
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli version
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli context create demo-2026 \
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar version
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar context create demo-2026 \
   --data-dir "$HOME/.local/share/bokfri" --company-id 1 --year-id 17
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli context use demo-2026
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli company list
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli year list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar context use demo-2026
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar company list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar year list
 ```
 
 Använd `--format json` för maskinläsbar utdata och `--config FIL` för en
@@ -103,12 +104,12 @@ före kommandot, till exempel `cli --format json company list`.
 Kunder, produkter och kundfakturor kan läsas maskinellt:
 
 ```sh
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli customer list
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli customer show 1001
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli product list
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli product show CONSULTING
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli invoice list
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli invoice show 42
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar customer list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar customer show 1001
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar product list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar product show CONSULTING
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice show 42
 ```
 
 Manuella verifikationer kan valideras, förhandsgranskas och skapas från JSON:
@@ -127,12 +128,12 @@ Manuella verifikationer kan valideras, förhandsgranskas och skapas från JSON:
 ```
 
 ```sh
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli account list
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher list
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher show 42
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher validate --file voucher.json
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher create --dry-run --file voucher.json
-java -jar target/bokfri-1.0.1-jar-with-dependencies.jar cli voucher create --file voucher.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar account list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar voucher list
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar voucher show 42
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar voucher validate --file voucher.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar voucher create --dry-run --file voucher.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar voucher create --file voucher.json
 ```
 
 `validate` och `--dry-run` skriver aldrig bokföringsdata. `create` tilldelar

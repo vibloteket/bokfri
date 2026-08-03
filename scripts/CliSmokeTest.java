@@ -9,7 +9,8 @@ import java.util.regex.Pattern;
 
 /** Cross-platform black-box smoke test for the assembled Bokfri CLI JAR. */
 public final class CliSmokeTest {
-    private static Path jar;
+    private static Path launcher;
+    private static boolean jarLauncher;
     private static Path config;
     private static Path data;
 
@@ -17,10 +18,13 @@ public final class CliSmokeTest {
 
     public static void main(String[] arguments) throws Exception {
         if (arguments.length != 1) {
-            throw new IllegalArgumentException("Usage: java scripts/CliSmokeTest.java <fat-jar>");
+            throw new IllegalArgumentException(
+                    "Usage: java scripts/CliSmokeTest.java <fat-jar-or-packaged-launcher>");
         }
-        jar = Path.of(arguments[0]).toAbsolutePath().normalize();
-        require(Files.isRegularFile(jar) && Files.size(jar) > 0, "Fat JAR does not exist: " + jar);
+        launcher = Path.of(arguments[0]).toAbsolutePath().normalize();
+        require(Files.isRegularFile(launcher) && Files.size(launcher) > 0,
+                "Launcher does not exist: " + launcher);
+        jarLauncher = launcher.getFileName().toString().endsWith(".jar");
 
         Path temporary = Files.createTempDirectory("bokfri-cli-smoke-");
         config = temporary.resolve("config/cli.yaml");
@@ -32,7 +36,7 @@ public final class CliSmokeTest {
             runReferenceDataFlow();
             runVoucherFlow(temporary);
             runErrorFlow(temporary);
-            System.out.println("Bokfri CLI black-box smoke test passed: " + jar.getFileName());
+            System.out.println("Bokfri CLI black-box smoke test passed: " + launcher.getFileName());
         } finally {
             deleteRecursively(temporary);
         }
@@ -170,10 +174,11 @@ public final class CliSmokeTest {
 
     private static Result cli(String... arguments) throws Exception {
         List<String> command = new ArrayList<>();
-        command.add(Path.of(System.getProperty("java.home"), "bin", executable("java")).toString());
-        command.add("-jar");
-        command.add(jar.toString());
-        command.add("cli");
+        if (jarLauncher) {
+            command.add(Path.of(System.getProperty("java.home"), "bin", executable("java")).toString());
+            command.add("-jar");
+        }
+        command.add(launcher.toString());
         command.add("--config");
         command.add(config.toString());
         command.addAll(List.of(arguments));

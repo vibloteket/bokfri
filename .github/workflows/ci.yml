@@ -117,23 +117,61 @@ jobs:
           VERSION="${MAJOR}.${MINOR}.${GITHUB_RUN_NUMBER}"
         fi
 
+        CLI_NAME="Bokfri-cli"
+        if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+          CLI_NAME="Bokfri-cli-dev"
+        fi
+
         {
           echo "APP_NAME=$APP_NAME"
           echo "APP_BASENAME=$APP_BASENAME"
+          echo "CLI_NAME=$CLI_NAME"
+          echo "PACKAGE_VERSION=$VERSION"
         } >> "$GITHUB_ENV"
 
         mvn clean package -DskipTests -Djpackage.profile=true \
           -Djpackage.name="$APP_NAME" \
           -Djpackage.appVersion="$VERSION" \
           -Djpackage.appSubdir="$APP_SUBDIR" \
-          -Djpackage.macPackageIdentifier="$MAC_PACKAGE_IDENTIFIER"
+          -Djpackage.macPackageIdentifier="$MAC_PACKAGE_IDENTIFIER" \
+          -Djpackage.cliName="$CLI_NAME"
 
-    - name: Run assembled CLI black-box test
+    - name: Run packaged launcher black-box test
       shell: bash
       run: |
-        CLI_JAR=$(find target -maxdepth 1 -name '*-jar-with-dependencies.jar' -print -quit)
-        test -n "$CLI_JAR"
-        java scripts/CliSmokeTest.java "$CLI_JAR"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          CLI_LAUNCHER="dist/$APP_NAME/$CLI_NAME.exe"
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+          CLI_LAUNCHER="dist/$APP_NAME.app/Contents/MacOS/$CLI_NAME"
+        else
+          CLI_LAUNCHER="dist/$APP_NAME/bin/$CLI_NAME"
+        fi
+        test -f "$CLI_LAUNCHER"
+        java scripts/CliSmokeTest.java "$CLI_LAUNCHER"
+
+    - name: Package Windows MSI
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        mvn jpackage:jpackage \
+          -Djpackage.profile=true \
+          -Djpackage.appImage="dist/$APP_NAME" \
+          -Djpackage.type=MSI \
+          -Djpackage.name="$APP_NAME" \
+          -Djpackage.appVersion="$PACKAGE_VERSION" \
+          -Djpackage.cliName="$CLI_NAME"
+
+    - name: Package macOS DMG
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        mvn jpackage:jpackage \
+          -Djpackage.profile=true \
+          -Djpackage.appImage="dist/$APP_NAME.app" \
+          -Djpackage.type=DMG \
+          -Djpackage.name="$APP_NAME" \
+          -Djpackage.appVersion="$PACKAGE_VERSION" \
+          -Djpackage.cliName="$CLI_NAME"
 
     - name: List dist contents
       shell: bash
@@ -181,6 +219,14 @@ jobs:
         wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
         chmod +x appimagetool-x86_64.AppImage
         ARCH=x86_64 ./appimagetool-x86_64.AppImage "$APPDIR" "${APP_BASENAME}-x86_64.AppImage"
+
+    - name: Test AppImage CLI
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        chmod +x "dist/${APP_BASENAME}-x86_64.AppImage"
+        env -u DISPLAY APPIMAGE_EXTRACT_AND_RUN=1 \
+          java scripts/CliSmokeTest.java "dist/${APP_BASENAME}-x86_64.AppImage"
 
     - name: Upload Linux artifact
       if: runner.os == 'Linux'

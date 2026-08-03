@@ -92,6 +92,12 @@
           <input>${project.build.directory}</input>
           <mainJar>${project.build.finalName}-jar-with-dependencies.jar</mainJar>
           <mainClass>org.fribok.bookkeeping.Launcher</mainClass>
+          <launchers>
+            <launcher>
+              <name>${jpackage.cliName}</name>
+              <file>${project.basedir}/packaging/cli-launcher.properties</file>
+            </launcher>
+          </launchers>
           <icon>${project.basedir}/design/favicons/desktop/app-icon.ico</icon>
           <macPackageIdentifier>${jpackage.macPackageIdentifier}</macPackageIdentifier>
           <javaOptions>
@@ -487,6 +493,7 @@
     <jpackage.appVersion>${project.version}</jpackage.appVersion>
     <jpackage.name>Bokfri</jpackage.name>
     <jpackage.appSubdir>bokfri</jpackage.appSubdir>
+    <jpackage.cliName>Bokfri-cli</jpackage.cliName>
     <jpackage.macPackageIdentifier>org.fribok.bookkeeping</jpackage.macPackageIdentifier>
   </properties>
   <profiles>
@@ -572,7 +579,7 @@
                   <goal>jpackage</goal>
                 </goals>
                 <configuration>
-                  <type>MSI</type>
+                  <type>APP_IMAGE</type>
                   <winMenu>true</winMenu>
                   <winShortcut>true</winShortcut>
                   <icon>${project.basedir}/design/favicons/desktop/app-icon.ico</icon>
@@ -606,7 +613,7 @@
                   <goal>jpackage</goal>
                 </goals>
                 <configuration>
-                  <type>DMG</type>
+                  <type>APP_IMAGE</type>
                   <icon>${project.basedir}/design/favicons/desktop/app-icon.icns</icon>
                 </configuration>
               </execution>

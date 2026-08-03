@@ -21,6 +21,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Added account and voucher inspection plus JSON-based manual voucher
   validation, dry runs, and creation through a shared UI-independent validation
   and application service.
+- Added direct CLI routing: launching Bokfri without arguments opens the GUI,
+  while `--help`, `context`, `voucher`, and other arguments invoke the CLI.
+- Added packaged CLI launchers, including a Windows console launcher, and CI
+  coverage for native launchers plus the finished Linux AppImage.
 - Added read-only customer, product, and customer-invoice list/show commands,
   including invoice totals, status, and posting source rows in JSON output.
 - Added a cross-platform CI black-box test that launches the assembled fat JAR
