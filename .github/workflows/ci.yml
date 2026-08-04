@@ -127,6 +127,7 @@ jobs:
           echo "APP_NAME=$APP_NAME"
           echo "APP_BASENAME=$APP_BASENAME"
           echo "CLI_NAME=$CLI_NAME"
+          echo "APP_SUBDIR=$APP_SUBDIR"
           echo "PACKAGE_VERSION=$VERSION"
         } >> "$GITHUB_ENV"
 
@@ -162,6 +163,20 @@ jobs:
           --dest dist \
           --win-menu \
           --win-shortcut
+
+    - name: Test Windows MSI installation
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $msi = Get-ChildItem -Path dist -Filter *.msi | Select-Object -First 1
+        if ($null -eq $msi) {
+          throw "No MSI package was created"
+        }
+        ./scripts/TestWindowsMsi.ps1 `
+          -Msi $msi.FullName `
+          -CliName $env:CLI_NAME `
+          -AppName $env:APP_NAME `
+          -AppSubdir $env:APP_SUBDIR
 
     - name: Package macOS DMG
       if: runner.os == 'macOS'

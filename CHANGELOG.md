@@ -25,6 +25,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   while `--help`, `context`, `voucher`, and other arguments invoke the CLI.
 - Added packaged CLI launchers, including a Windows console launcher, and CI
   coverage for native launchers plus the finished Linux AppImage.
+- Added Windows MSI acceptance coverage that silently installs the package,
+  runs the complete CLI black-box scenario against the installed launcher,
+  uninstalls it, and verifies that program files are removed without deleting
+  Bokfri user data.
 - Added read-only customer, product, and customer-invoice list/show commands,
   including invoice totals, status, and posting source rows in JSON output.
 - Added a cross-platform CI black-box test that launches the assembled fat JAR
