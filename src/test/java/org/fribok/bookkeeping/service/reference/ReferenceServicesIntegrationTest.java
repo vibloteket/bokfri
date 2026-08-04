@@ -15,6 +15,7 @@ import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.data.system.SSDBTestFixture;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Integration coverage for read-only CLI-facing application services. */
 @Tag("integration")
@@ -45,6 +46,25 @@ class ReferenceServicesIntegrationTest {
             assertThat(service.find(customer.getNumber())).contains(customer);
         }
         assertThat(service.find("__missing_customer__")).isEmpty();
+    }
+
+    @Test
+    void customerServiceValidatesAndCreatesCustomer() {
+        CustomerService service = new CustomerService(SSDB.getInstance());
+        SSCustomer customer = new SSCustomer();
+        customer.setNumber("CLI-SERVICE-TEST");
+        customer.setName("CLI service test customer");
+
+        service.create(customer);
+
+        try {
+            SSDBTestFixture.resetCaches();
+            assertThat(service.find(customer.getNumber())).isPresent();
+            assertThatThrownBy(() -> service.create(customer))
+                    .isInstanceOf(org.fribok.bookkeeping.service.customer.CustomerValidationException.class);
+        } finally {
+            SSDB.getInstance().deleteCustomer(customer);
+        }
     }
 
     @Test

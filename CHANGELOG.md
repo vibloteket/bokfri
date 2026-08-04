@@ -29,6 +29,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   runs the complete CLI black-box scenario against the installed launcher,
   uninstalls it, and verifies that program files are removed without deleting
   Bokfri user data.
+- Added JSON-only customer validation, dry runs, and creation with optional
+  schema version, company-derived defaults, structured validation errors, and
+  text output by default with explicit JSON output for automation.
 - Added read-only customer, product, and customer-invoice list/show commands,
   including invoice totals, status, and posting source rows in JSON output.
 - Added a cross-platform CI black-box test that launches the assembled fat JAR

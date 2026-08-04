@@ -8,6 +8,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.service.customer.CustomerService;
+import org.fribok.bookkeeping.service.customer.CustomerValidationIssue;
+import org.fribok.bookkeeping.service.customer.CustomerValidationResult;
 import org.fribok.bookkeeping.service.invoice.InvoiceService;
 import org.fribok.bookkeeping.service.product.ProductService;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
@@ -19,6 +21,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import se.swedsoft.bookkeeping.calc.math.SSSaleMath;
 import se.swedsoft.bookkeeping.data.SSAccount;
+import se.swedsoft.bookkeeping.data.SSAddress;
 import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
@@ -29,7 +32,9 @@ import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
+import se.swedsoft.bookkeeping.data.common.SSCurrency;
 import se.swedsoft.bookkeeping.data.common.SSDefaultAccount;
+import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -456,8 +461,9 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(name = "customer", description = "Inspect customers",
-            subcommands = {CustomerList.class, CustomerShow.class})
+    @Command(name = "customer", description = "Inspect and create customers",
+            subcommands = {CustomerList.class, CustomerShow.class,
+                    CustomerValidate.class, CustomerCreate.class})
     static class CustomerCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -510,6 +516,57 @@ public class BokfriCli implements Runnable {
                 throw databaseFailure(exception);
             }
         }
+    }
+
+    abstract static class CustomerOperation implements Callable<Integer> {
+        @CommandLine.ParentCommand CustomerCommand command;
+        @Option(names = "--file", required = true, description = "Customer JSON file, or - for stdin")
+        String file;
+
+        abstract boolean persist();
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            CustomerInput input = readCustomerInput(file);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSCustomer customer = toCustomer(input, runtime);
+                CustomerService service = new CustomerService(runtime.database());
+                CustomerValidationResult validation = service.validate(customer);
+                if (!validation.valid()) {
+                    throw customerValidationFailure(validation);
+                }
+                if (persist()) {
+                    service.create(customer);
+                }
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("valid", true);
+                result.put("dryRun", !persist());
+                result.put("created", persist());
+                result.put("context", selectedCompanyContext(context, company));
+                result.put("customer", customerDetails(customer));
+                root.output(result, persist()
+                        ? "Created customer " + customer.getNumber() + " - " + customer.getName()
+                        : "Customer is valid; no changes written\n" + customer.getNumber()
+                                + "\t" + customer.getName());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "validate", description = "Validate customer JSON without writing")
+    static class CustomerValidate extends CustomerOperation {
+        @Override boolean persist() { return false; }
+    }
+
+    @Command(name = "create", description = "Create a customer from JSON")
+    static class CustomerCreate extends CustomerOperation {
+        @Option(names = "--dry-run", description = "Validate and preview without writing")
+        boolean dryRun;
+        @Override boolean persist() { return !dryRun; }
     }
 
     @Command(name = "product", description = "Inspect products",
@@ -752,6 +809,90 @@ public class BokfriCli implements Runnable {
         @Option(names = "--dry-run", description = "Validate and preview without writing")
         boolean dryRun;
         @Override boolean persist() { return !dryRun; }
+    }
+
+    private static CustomerInput readCustomerInput(String file) {
+        try {
+            CustomerInput input = "-".equals(file)
+                    ? jsonMapper().readValue(System.in, CustomerInput.class)
+                    : jsonMapper().readValue(Paths.get(file).toFile(), CustomerInput.class);
+            if (input.getSchemaVersion() != 1) {
+                throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
+                        "Unsupported customer schemaVersion: " + input.getSchemaVersion());
+            }
+            return input;
+        } catch (CliException exception) {
+            throw exception;
+        } catch (IOException exception) {
+            throw new CliException("INPUT_INVALID", "Could not read customer JSON: "
+                    + exception.getMessage(), exception);
+        }
+    }
+
+    private static SSCustomer toCustomer(CustomerInput input, BokfriRuntime runtime) {
+        SSCustomer customer = new SSCustomer();
+        customer.setNumber(normalized(input.getNumber()));
+        customer.setName(normalized(input.getName()));
+        customer.setRegistrationNumber(normalized(input.getRegistrationNumber()));
+        customer.setVATNumber(normalized(input.getVatNumber()));
+        customer.setEMail(normalized(input.getEmail()));
+        customer.setPhone1(normalized(input.getPhone()));
+        if (input.getOurContact() != null) {
+            customer.setOurContactPerson(normalized(input.getOurContact()));
+        }
+        customer.setYourContactPerson(normalized(input.getYourContact()));
+        customer.setComment(normalized(input.getComment()));
+        customer.setDiscount(input.getDiscount());
+        customer.setTaxFree(Boolean.TRUE.equals(input.getTaxFree()));
+        if (input.getInvoiceAddress() != null) {
+            customer.setInvoiceAddress(toAddress(input.getInvoiceAddress()));
+        }
+        if (input.getDeliveryAddress() != null) {
+            customer.setDeliveryAddress(toAddress(input.getDeliveryAddress()));
+        }
+        if (input.getCurrency() != null) {
+            SSCurrency currency = runtime.database().getCurrencies().stream()
+                    .filter(item -> input.getCurrency().equalsIgnoreCase(item.getName()))
+                    .findFirst().orElseThrow(() -> new CliException("CUSTOMER_CURRENCY_NOT_FOUND",
+                            "No currency has code " + input.getCurrency()));
+            customer.setInvoiceCurrency(currency);
+        }
+        if (input.getPaymentTerms() != null) {
+            SSPaymentTerm paymentTerm = runtime.database().getPaymentTerms().stream()
+                    .filter(item -> input.getPaymentTerms().equals(item.getName()))
+                    .findFirst().orElseThrow(() -> new CliException("CUSTOMER_PAYMENT_TERMS_NOT_FOUND",
+                            "No payment terms have code " + input.getPaymentTerms()));
+            customer.setPaymentTerm(paymentTerm);
+        }
+        return customer;
+    }
+
+    private static SSAddress toAddress(CustomerInput.Address input) {
+        SSAddress address = new SSAddress();
+        address.setName(orEmpty(input.getName()));
+        address.setAddress1(orEmpty(input.getAddress1()));
+        address.setAddress2(orEmpty(input.getAddress2()));
+        address.setZipCode(orEmpty(input.getPostalCode()));
+        address.setCity(orEmpty(input.getCity()));
+        address.setCountry(orEmpty(input.getCountry()));
+        return address;
+    }
+
+    private static String normalized(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static String orEmpty(String value) {
+        String normalized = normalized(value);
+        return normalized == null ? "" : normalized;
+    }
+
+    private static CliException customerValidationFailure(CustomerValidationResult validation) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("valid", false);
+        details.put("issues", validation.issues());
+        CustomerValidationIssue first = validation.issues().get(0);
+        return new CliException("CUSTOMER_INVALID", first.message(), details);
     }
 
     private static VoucherInput readVoucherInput(String file) {

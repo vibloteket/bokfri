@@ -1,6 +1,8 @@
 package se.swedsoft.bookkeeping.gui.customer;
 
 
+import org.fribok.bookkeeping.service.customer.CustomerValidationException;
+import org.fribok.bookkeeping.service.customer.CustomerService;
 import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
@@ -51,13 +53,13 @@ public class SSCustomerDialog {
 
                 SSCustomer iCustomer = iPanel.getCustomer();
 
-                if (SSDB.getInstance().getCustomers().contains(iCustomer)) {
+                try {
+                    new CustomerService(SSDB.getInstance()).create(iCustomer);
+                } catch (CustomerValidationException exception) {
                     new SSErrorDialog(iMainFrame, "customerframe.duplicate",
                             iCustomer.getNumber());
                     return;
                 }
-
-                SSDB.getInstance().addCustomer(iCustomer);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();
@@ -170,12 +172,13 @@ public class SSCustomerDialog {
 
                 SSCustomer iCustomer1 = iPanel.getCustomer();
 
-                if (SSDB.getInstance().getCustomers().contains(iCustomer1)) {
+                try {
+                    new CustomerService(SSDB.getInstance()).create(iCustomer1);
+                } catch (CustomerValidationException exception) {
                     new SSErrorDialog(iMainFrame, "customerframe.duplicate",
                             iCustomer1.getNumber());
                     return;
                 }
-                SSDB.getInstance().addCustomer(iCustomer1);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();

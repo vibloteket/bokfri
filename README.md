@@ -101,6 +101,24 @@ Använd `--format json` för maskinläsbar utdata och `--config FIL` för en
 isolerad config, exempelvis för CI eller en agent. Globala val måste placeras
 före kommandot, till exempel `cli --format json company list`.
 
+Kunder kan valideras och skapas från JSON. Endast `number` och `name` är
+obligatoriska; `schemaVersion` är frivilligt och tolkas som version 1 när det
+utelämnas. Utdata är text som standard och `--format json` väljer maskinformat:
+
+```json
+{
+  "number": "1001",
+  "name": "Exempel AB",
+  "email": "faktura@exempel.se"
+}
+```
+
+```sh
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar customer validate --file customer.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar customer create --dry-run --file customer.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar customer create --file customer.json
+```
+
 Kunder, produkter och kundfakturor kan läsas maskinellt:
 
 ```sh

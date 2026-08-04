@@ -33,7 +33,7 @@ public final class CliSmokeTest {
 
         try {
             runReadOnlyAndContextFlow();
-            runReferenceDataFlow();
+            runReferenceDataFlow(temporary);
             runVoucherFlow(temporary);
             runErrorFlow(temporary);
             System.out.println("Bokfri CLI black-box smoke test passed: " + launcher.getFileName());
@@ -67,17 +67,45 @@ public final class CliSmokeTest {
         require(current.stdout.contains("\"name\":\"smoke\""), "current context was not selected");
     }
 
-    private static void runReferenceDataFlow() throws Exception {
+    private static void runReferenceDataFlow(Path temporary) throws Exception {
+        Path customerInput = temporary.resolve("customer.json");
+        Files.writeString(customerInput, """
+                {
+                  "number": "CLI-SMOKE-CUSTOMER",
+                  "name": "CLI smoke customer",
+                  "email": "cli-smoke@example.invalid",
+                  "invoiceAddress": {
+                    "address1": "Test street 1",
+                    "postalCode": "123 45",
+                    "city": "Test city"
+                  }
+                }
+                """, StandardCharsets.UTF_8);
+        Result customerValidation = cli("--format", "json", "customer", "validate",
+                "--file", customerInput.toString());
+        customerValidation.success();
+        require(customerValidation.stdout.contains("\"valid\":true"),
+                "customer validation did not succeed");
+        Result customerDryRun = cli("--format", "json", "customer", "create", "--dry-run",
+                "--file", customerInput.toString());
+        customerDryRun.success();
+        require(!customerDryRun.stdout.contains("\"created\":true"),
+                "customer dry run unexpectedly created data");
+        Result customerCreate = cli("--format", "json", "customer", "create",
+                "--file", customerInput.toString());
+        customerCreate.success();
+        require(customerCreate.stdout.contains("\"created\":true"),
+                "customer create lacks created=true");
+
         Result customers = cli("--format", "json", "customer", "list");
         customers.success();
         customers.jsonObject();
-        if (!customers.stdout.contains("\"customers\":[]")) {
-            String customerNumber = firstString(customers.stdout, "number");
-            Result customer = cli("--format", "json", "customer", "show", customerNumber);
-            customer.success();
-            require(customer.stdout.contains("\"number\":\"" + customerNumber + "\""),
-                    "customer show returned the wrong customer");
-        }
+        require(customers.stdout.contains("\"number\":\"CLI-SMOKE-CUSTOMER\""),
+                "created customer is absent from list");
+        Result customer = cli("--format", "json", "customer", "show", "CLI-SMOKE-CUSTOMER");
+        customer.success();
+        require(customer.stdout.contains("\"name\":\"CLI smoke customer\""),
+                "customer show returned the wrong customer");
 
         Result products = cli("--format", "json", "product", "list");
         products.success();

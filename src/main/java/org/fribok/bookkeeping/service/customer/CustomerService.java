@@ -25,4 +25,17 @@ public final class CustomerService {
     public Optional<SSCustomer> find(String number) {
         return list().stream().filter(customer -> number.equals(customer.getNumber())).findFirst();
     }
+
+    public CustomerValidationResult validate(SSCustomer customer) {
+        return CustomerValidator.validate(customer, database.getCustomers());
+    }
+
+    public SSCustomer create(SSCustomer customer) {
+        CustomerValidationResult validation = validate(customer);
+        if (!validation.valid()) {
+            throw new CustomerValidationException(validation);
+        }
+        database.addCustomer(customer);
+        return customer;
+    }
 }
