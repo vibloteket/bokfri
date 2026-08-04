@@ -580,8 +580,6 @@
                 </goals>
                 <configuration>
                   <type>APP_IMAGE</type>
-                  <winMenu>true</winMenu>
-                  <winShortcut>true</winShortcut>
                   <icon>${project.basedir}/design/favicons/desktop/app-icon.ico</icon>
                 </configuration>
               </execution>

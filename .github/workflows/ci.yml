@@ -59,6 +59,7 @@ jobs:
   build_and_publish:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
@@ -153,25 +154,25 @@ jobs:
       if: runner.os == 'Windows'
       shell: bash
       run: |
-        mvn jpackage:jpackage \
-          -Djpackage.profile=true \
-          -Djpackage.appImage="dist/$APP_NAME" \
-          -Djpackage.type=MSI \
-          -Djpackage.name="$APP_NAME" \
-          -Djpackage.appVersion="$PACKAGE_VERSION" \
-          -Djpackage.cliName="$CLI_NAME"
+        jpackage \
+          --type msi \
+          --name "$APP_NAME" \
+          --app-version "$PACKAGE_VERSION" \
+          --app-image "dist/$APP_NAME" \
+          --dest dist \
+          --win-menu \
+          --win-shortcut
 
     - name: Package macOS DMG
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        mvn jpackage:jpackage \
-          -Djpackage.profile=true \
-          -Djpackage.appImage="dist/$APP_NAME.app" \
-          -Djpackage.type=DMG \
-          -Djpackage.name="$APP_NAME" \
-          -Djpackage.appVersion="$PACKAGE_VERSION" \
-          -Djpackage.cliName="$CLI_NAME"
+        jpackage \
+          --type dmg \
+          --name "$APP_NAME" \
+          --app-version "$PACKAGE_VERSION" \
+          --app-image "dist/$APP_NAME.app" \
+          --dest dist
 
     - name: List dist contents
       shell: bash
