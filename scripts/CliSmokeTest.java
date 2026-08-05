@@ -207,6 +207,21 @@ public final class CliSmokeTest {
         show.success();
         require(show.stdout.contains("\"customerNumber\":\"CLI-SMOKE-CUSTOMER\""),
                 "invoice show returned the wrong customer");
+
+        Path pdf = temporary.resolve("invoice-" + expectedNumber + ".pdf");
+        Result pdfResult = cli("--format", "json", "invoice", "pdf",
+                Integer.toString(expectedNumber), "--output", pdf.toString());
+        pdfResult.success();
+        require(Files.size(pdf) > 1_000, "invoice PDF is unexpectedly small");
+        byte[] signature = Files.readAllBytes(pdf);
+        require(signature.length >= 5 && signature[0] == '%' && signature[1] == 'P'
+                        && signature[2] == 'D' && signature[3] == 'F' && signature[4] == '-',
+                "invoice output does not have a PDF signature");
+        Result duplicate = cli("--format", "json", "invoice", "pdf",
+                Integer.toString(expectedNumber), "--output", pdf.toString());
+        require(duplicate.exitCode != 0, "invoice PDF unexpectedly overwrote an existing file");
+        require(duplicate.stderr.contains("\"code\":\"OUTPUT_EXISTS\""),
+                "duplicate PDF output lacks stable error code");
     }
 
     private static void runVoucherFlow(Path temporary) throws Exception {

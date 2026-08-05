@@ -19,6 +19,8 @@ import se.swedsoft.bookkeeping.data.system.SSDBTestFixture;
 import se.swedsoft.bookkeeping.print.report.SSProjectsPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSInpaymentjournalPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSOutpaymentjournalPrinter;
+import org.fribok.bookkeeping.service.invoice.InvoiceService;
+import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.print.report.sales.SSInvoicePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSOCRInvoicePrinter;
 
@@ -29,6 +31,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,6 +69,23 @@ class ReportRenderingIntegrationTest {
         PrintedText invoiceRow = findPrintedText(printedText, "Preview row");
         PrintedText netSum = findPrintedText(printedText, "Nettosumma");
         assertThat(netSum.y()).isGreaterThanOrEqualTo(invoiceRow.bottom());
+    }
+
+    @Test
+    void invoiceServiceExportsHeadlessPdf() throws Exception {
+        Path output = Files.createTempFile("bokfri-invoice-", ".pdf");
+        Files.delete(output);
+
+        new InvoiceService(SSDB.getInstance()).exportPdf(
+                invoice(), output, Locale.forLanguageTag("sv-SE"), false);
+
+        try {
+            assertThat(Files.size(output)).isGreaterThan(1_000);
+            assertThat(Files.readAllBytes(output)).startsWith((byte) '%', (byte) 'P',
+                    (byte) 'D', (byte) 'F', (byte) '-');
+        } finally {
+            Files.deleteIfExists(output);
+        }
     }
 
     @Test

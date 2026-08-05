@@ -159,8 +159,17 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice create --dry-run
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice create --file invoice.json
 ```
 
-Skapandet sparar en obokförd och oskickad faktura. Bokföring, PDF och utskick
-är separata framtida kommandon.
+Skapandet sparar en obokförd och oskickad faktura. En befintlig faktura kan
+renderas headless till PDF utan att dess status ändras:
+
+```sh
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice pdf 42 \
+  --output faktura-42.pdf
+```
+
+Befintliga filer skrivs inte över utan `--overwrite`. `--language sv-SE` är
+standard och kan anges explicit. Bokföring och utskick är separata framtida
+kommandon.
 
 Kunder, produkter och kundfakturor kan läsas maskinellt:
 

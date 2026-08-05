@@ -1,11 +1,18 @@
 package org.fribok.bookkeeping.service.invoice;
 
 import se.swedsoft.bookkeeping.data.SSInvoice;
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JasperExportManager;
 import se.swedsoft.bookkeeping.data.system.SSDB;
+import se.swedsoft.bookkeeping.print.report.sales.SSInvoicePrinter;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 /** Read operations for customer invoices, independent of the user interface. */
@@ -44,6 +51,21 @@ public final class InvoiceService {
         }
         database.addInvoice(invoice);
         return invoice;
+    }
+
+    public Path exportPdf(SSInvoice invoice, Path output, Locale locale, boolean overwrite)
+            throws IOException, JRException {
+        Path resolved = output.toAbsolutePath().normalize();
+        if (Files.exists(resolved) && !overwrite) {
+            throw new java.nio.file.FileAlreadyExistsException(resolved.toString());
+        }
+        if (resolved.getParent() != null) {
+            Files.createDirectories(resolved.getParent());
+        }
+        SSInvoicePrinter printer = new SSInvoicePrinter(invoice, locale);
+        printer.generateReport();
+        JasperExportManager.exportReportToPdfFile(printer.getPrinter(), resolved.toString());
+        return resolved;
     }
 
     public int nextNumber() {

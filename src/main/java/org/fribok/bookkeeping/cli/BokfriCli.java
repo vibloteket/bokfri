@@ -683,7 +683,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(name = "invoice", description = "Inspect and create customer invoices",
-            subcommands = {InvoiceList.class, InvoiceShow.class,
+            subcommands = {InvoiceList.class, InvoiceShow.class, InvoicePdf.class,
                     InvoiceValidate.class, InvoiceCreate.class})
     static class InvoiceCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
@@ -737,6 +737,45 @@ public class BokfriCli implements Runnable {
                 root.output(result, "Invoice " + invoice.getNumber() + "\nCustomer: "
                         + invoice.getCustomerName() + "\nTotal: " + SSSaleMath.getTotalSum(invoice));
                 return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "pdf", description = "Generate a PDF for an existing invoice")
+    static class InvoicePdf implements Callable<Integer> {
+        @CommandLine.ParentCommand InvoiceCommand command;
+        @Parameters(index = "0", description = "Invoice number") int number;
+        @Option(names = "--output", required = true, description = "Destination PDF file")
+        java.nio.file.Path output;
+        @Option(names = "--language", defaultValue = "sv-SE", description = "Invoice language")
+        String language;
+        @Option(names = "--overwrite", description = "Replace an existing output file")
+        boolean overwrite;
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                runtime.database().init(false);
+                InvoiceService service = new InvoiceService(runtime.database());
+                SSInvoice invoice = service.find(number).orElseThrow(() ->
+                        new CliException("INVOICE_NOT_FOUND", "No invoice has number " + number));
+                java.nio.file.Path pdf = service.exportPdf(invoice, output,
+                        java.util.Locale.forLanguageTag(language), overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("invoiceNumber", number);
+                result.put("output", pdf.toString());
+                result.put("bytes", Files.size(pdf));
+                result.put("language", language);
+                result.put("context", selectedCompanyContext(context, company));
+                root.output(result, "Created invoice PDF " + pdf + " (" + Files.size(pdf) + " bytes)");
+                return 0;
+            } catch (java.nio.file.FileAlreadyExistsException exception) {
+                throw new CliException("OUTPUT_EXISTS",
+                        "Output file already exists: " + exception.getFile(), exception);
             } catch (Exception exception) {
                 throw databaseFailure(exception);
             }
