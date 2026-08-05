@@ -36,6 +36,7 @@ public final class CliSmokeTest {
             runReferenceDataFlow(temporary);
             runProductFlow(temporary);
             runInvoiceFlow(temporary);
+            runInpaymentFlow(temporary);
             runVoucherFlow(temporary);
             runErrorFlow(temporary);
             System.out.println("Bokfri CLI black-box smoke test passed: " + launcher.getFileName());
@@ -248,6 +249,48 @@ public final class CliSmokeTest {
                 "journal voucher was not persisted");
     }
 
+    private static void runInpaymentFlow(Path temporary) throws Exception {
+        Result invoices = cli("--format", "json", "invoice", "list");
+        invoices.success();
+        int invoiceNumber = invoiceNumberForCustomer(invoices.stdout, "CLI-SMOKE-CUSTOMER");
+        Result invoice = cli("--format", "json", "invoice", "show", Integer.toString(invoiceNumber));
+        invoice.success();
+        String date = firstString(invoice.stdout, "date");
+        String balance = firstString(invoice.stdout, "balance");
+        Path input = temporary.resolve("inpayment.json");
+        Files.writeString(input, """
+                {
+                  "date": "%s",
+                  "text": "CLI smoke inpayment",
+                  "rows": [{"invoiceNumber": %d, "amount": "%s"}]
+                }
+                """.formatted(date, invoiceNumber, balance), StandardCharsets.UTF_8);
+        cli("--format", "json", "inpayment", "validate", "--file", input.toString()).success();
+        Result dryRun = cli("--format", "json", "inpayment", "create", "--dry-run",
+                "--file", input.toString());
+        dryRun.success();
+        int expectedNumber = firstInt(dryRun.stdout, "number");
+        Result create = cli("--format", "json", "inpayment", "create", "--file", input.toString());
+        create.success();
+        require(firstInt(create.stdout, "number") == expectedNumber,
+                "created inpayment number differs from dry run");
+        cli("--format", "json", "inpayment", "show", Integer.toString(expectedNumber)).success();
+        Result preview = cli("--format", "json", "inpayment", "journal",
+                "--from", date, "--to", date);
+        preview.success();
+        require(preview.stdout.contains("\"committed\":false"),
+                "inpayment journal preview unexpectedly committed");
+        Result commit = cli("--format", "json", "inpayment", "journal",
+                "--from", date, "--to", date, "--commit");
+        commit.success();
+        require(commit.stdout.contains("\"committed\":true"),
+                "inpayment journal did not commit");
+        Result paidInvoice = cli("--format", "json", "invoice", "show", Integer.toString(invoiceNumber));
+        paidInvoice.success();
+        require(paidInvoice.stdout.contains("\"balance\":\"0"),
+                "paid invoice balance is not zero");
+    }
+
     private static void runVoucherFlow(Path temporary) throws Exception {
         Result years = cli("--format", "json", "year", "list");
         years.success();
@@ -341,6 +384,13 @@ public final class CliSmokeTest {
     private static int firstInt(String json, String key) {
         Matcher matcher = Pattern.compile("\\\"" + key + "\\\"\\s*:\\s*(\\d+)").matcher(json);
         require(matcher.find(), "JSON lacks numeric key " + key + ": " + json);
+        return Integer.parseInt(matcher.group(1));
+    }
+
+    private static int invoiceNumberForCustomer(String json, String customerNumber) {
+        Matcher matcher = Pattern.compile("\\{\\\"number\\\":(\\d+).*?\\\"customerNumber\\\":\\\""
+                + Pattern.quote(customerNumber) + "\\\"").matcher(json);
+        require(matcher.find(), "Invoice list lacks customer " + customerNumber);
         return Integer.parseInt(matcher.group(1));
     }
 

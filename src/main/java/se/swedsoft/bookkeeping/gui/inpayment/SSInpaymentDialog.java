@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.gui.inpayment;
 
 
+import org.fribok.bookkeeping.service.inpayment.InpaymentService;
 import se.swedsoft.bookkeeping.data.SSInpayment;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
@@ -106,7 +107,7 @@ public class SSInpaymentDialog {
 
                 SSInpayment iInpayment1 = iPanel.getInpayment();
 
-                SSDB.getInstance().addInpayment(iInpayment1);
+                new InpaymentService(SSDB.getInstance()).create(iInpayment1);
                 SSInvoiceFrame.fireTableDataChanged();
 
                 if (pModel != null) {
@@ -169,7 +170,7 @@ public class SSInpaymentDialog {
 
                 SSInpayment iInpayment1 = iPanel.getInpayment();
 
-                SSDB.getInstance().addInpayment(iInpayment1);
+                new InpaymentService(SSDB.getInstance()).create(iInpayment1);
 
                 SSInvoiceFrame.fireTableDataChanged();
 

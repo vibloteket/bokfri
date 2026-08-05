@@ -182,8 +182,29 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice journal \
 ```
 
 Vid commit markeras periodens obokförda kundfakturor som bokförda,
-journalnumret räknas upp och en gemensam verifikation sparas. Utskick är ett
-separat framtida kommando.
+journalnumret räknas upp och en gemensam verifikation sparas.
+
+Kundinbetalningar registreras mot bokförda fakturor och journalförs på samma
+sätt:
+
+```json
+{
+  "date": "2026-08-20",
+  "text": "Bankinbetalningar 2026-08-20",
+  "rows": [{"invoiceNumber": 42, "amount": "15000.00"}]
+}
+```
+
+```sh
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar inpayment create --file inpayment.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar inpayment journal \
+  --from 2026-08-01 --to 2026-08-31
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar inpayment journal \
+  --from 2026-08-01 --to 2026-08-31 --commit
+```
+
+Delbetalningar stöds; beloppet får inte överstiga fakturans återstående saldo.
+Utskick är ett separat framtida kommando.
 
 Kunder, produkter och kundfakturor kan läsas maskinellt:
 
