@@ -81,6 +81,27 @@ class ReferenceServicesIntegrationTest {
     }
 
     @Test
+    void productServiceValidatesAndCreatesProduct() {
+        ProductService service = new ProductService(SSDB.getInstance());
+        SSProduct product = new SSProduct();
+        product.setNumber("CLI-SERVICE-PRODUCT");
+        product.setDescription("CLI service product");
+        product.setSellingPrice(java.math.BigDecimal.ZERO);
+        product.setTaxCode(se.swedsoft.bookkeeping.data.common.SSTaxCode.TAXRATE_1);
+        product.setDefaultAccount(se.swedsoft.bookkeeping.data.common.SSDefaultAccount.Sales,
+                SSDB.getInstance().getAccounts().get(0).getNumber());
+
+        service.create(product);
+
+        try {
+            SSDBTestFixture.resetCaches();
+            assertThat(service.find(product.getNumber())).isPresent();
+        } finally {
+            SSDB.getInstance().deleteProduct(product);
+        }
+    }
+
+    @Test
     void invoiceServiceValidatesCreatesAndFindsInvoice() {
         InvoiceService service = new InvoiceService(SSDB.getInstance());
         SSCustomer customer = new SSCustomer();

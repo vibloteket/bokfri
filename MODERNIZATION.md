@@ -103,6 +103,8 @@ Also implemented:
 - `account list` — list accounts in the selected accounting year
 - `customer validate` and `customer create [--dry-run]` — validate and create
   customers from JSON through a service shared with Swing
+- `product validate` and `product create [--dry-run]` — validate and create
+  products from JSON through a service shared with Swing
 - `voucher validate` — validate JSON without writing
 - `voucher create --dry-run` — resolve and preview the next number without writing
 - `voucher create` — validate and persist through the shared voucher service

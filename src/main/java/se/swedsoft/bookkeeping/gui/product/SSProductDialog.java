@@ -1,6 +1,8 @@
 package se.swedsoft.bookkeeping.gui.product;
 
 
+import org.fribok.bookkeeping.service.product.ProductService;
+import org.fribok.bookkeeping.service.product.ProductValidationException;
 import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
@@ -17,7 +19,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.util.List;
 import java.util.ResourceBundle;
 
 
@@ -52,17 +53,13 @@ public class SSProductDialog {
 
                 SSProduct iProduct = iPanel.getProduct();
 
-                List<SSProduct> iProducts = SSDB.getInstance().getProducts();
-
-                for (SSProduct pProduct : iProducts) {
-                    if (iProduct.getNumber().equals(pProduct.getNumber())) {
-                        new SSErrorDialog(iMainFrame, "productframe.duplicate",
-                                iProduct.getNumber());
-                        return;
-                    }
+                try {
+                    new ProductService(SSDB.getInstance()).create(iProduct);
+                } catch (ProductValidationException exception) {
+                    new SSErrorDialog(iMainFrame, "productframe.duplicate",
+                            iProduct.getNumber());
+                    return;
                 }
-
-                SSDB.getInstance().addProduct(iProduct);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();
@@ -176,17 +173,13 @@ public class SSProductDialog {
 
                 SSProduct iProduct1 = iPanel.getProduct();
 
-                List<SSProduct> iProducts = SSDB.getInstance().getProducts();
-
-                for (SSProduct pProduct : iProducts) {
-                    if (iProduct1.getNumber().equals(pProduct.getNumber())) {
-                        new SSErrorDialog(iMainFrame, "productframe.duplicate",
-                                iProduct1.getNumber());
-                        return;
-                    }
+                try {
+                    new ProductService(SSDB.getInstance()).create(iProduct1);
+                } catch (ProductValidationException exception) {
+                    new SSErrorDialog(iMainFrame, "productframe.duplicate",
+                            iProduct1.getNumber());
+                    return;
                 }
-
-                SSDB.getInstance().addProduct(iProduct1);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();

@@ -119,6 +119,26 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar customer create --dry-ru
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar customer create --file customer.json
 ```
 
+Produkter kan valideras och skapas från JSON. Produktnummer och beskrivning är
+obligatoriska; pris, momssats, enhet och konton ärvs från företagets befintliga
+produktstandarder när de utelämnas:
+
+```json
+{
+  "number": "CONSULTING",
+  "description": "Konsultarbete",
+  "sellingPrice": "1200.00",
+  "vatRate": "25",
+  "salesAccount": 3001
+}
+```
+
+```sh
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar product validate --file product.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar product create --dry-run --file product.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar product create --file product.json
+```
+
 Kundfakturor kan på motsvarande sätt valideras, förhandsgranskas och skapas
 från JSON. Kunden måste finnas och varje rad kan referera till en befintlig
 produkt; produktens pris, momskod, konto och enhet ärvs när de utelämnas:

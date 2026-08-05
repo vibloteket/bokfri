@@ -25,4 +25,17 @@ public final class ProductService {
     public Optional<SSProduct> find(String number) {
         return list().stream().filter(product -> number.equals(product.getNumber())).findFirst();
     }
+
+    public ProductValidationResult validate(SSProduct product) {
+        return ProductValidator.validate(product, database.getProducts());
+    }
+
+    public SSProduct create(SSProduct product) {
+        ProductValidationResult validation = validate(product);
+        if (!validation.valid()) {
+            throw new ProductValidationException(validation);
+        }
+        database.addProduct(product);
+        return product;
+    }
 }

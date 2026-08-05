@@ -29,6 +29,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   runs the complete CLI black-box scenario against the installed launcher,
   uninstalls it, and verifies that program files are removed without deleting
   Bokfri user data.
+- Added JSON-only product validation, dry runs, and creation with company
+  defaults, explicit VAT/account references, and shared service validation for
+  Swing and CLI.
 - Added JSON-only customer-invoice validation, dry runs, and creation with
   existing customer/product references, inherited defaults, posting previews,
   and shared service validation for Swing and CLI.

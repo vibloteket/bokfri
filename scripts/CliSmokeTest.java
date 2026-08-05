@@ -34,6 +34,7 @@ public final class CliSmokeTest {
         try {
             runReadOnlyAndContextFlow();
             runReferenceDataFlow(temporary);
+            runProductFlow(temporary);
             runInvoiceFlow(temporary);
             runVoucherFlow(temporary);
             runErrorFlow(temporary);
@@ -132,12 +133,38 @@ public final class CliSmokeTest {
         }
     }
 
+    private static void runProductFlow(Path temporary) throws Exception {
+        Result accounts = cli("--format", "json", "account", "list");
+        accounts.success();
+        int salesAccount = firstInt(accounts.stdout, "number");
+        Path productInput = temporary.resolve("product.json");
+        Files.writeString(productInput, """
+                {
+                  "number": "CLI-SMOKE-PRODUCT",
+                  "description": "CLI smoke product",
+                  "sellingPrice": "100.00",
+                  "vatRate": "25",
+                  "salesAccount": %d
+                }
+                """.formatted(salesAccount), StandardCharsets.UTF_8);
+        cli("--format", "json", "product", "validate", "--file", productInput.toString()).success();
+        Result dryRun = cli("--format", "json", "product", "create", "--dry-run",
+                "--file", productInput.toString());
+        dryRun.success();
+        require(!dryRun.stdout.contains("\"created\":true"),
+                "product dry run unexpectedly created data");
+        Result create = cli("--format", "json", "product", "create",
+                "--file", productInput.toString());
+        create.success();
+        require(create.stdout.contains("\"created\":true"), "product create lacks created=true");
+        Result show = cli("--format", "json", "product", "show", "CLI-SMOKE-PRODUCT");
+        show.success();
+        require(show.stdout.contains("\"description\":\"CLI smoke product\""),
+                "product show returned the wrong product");
+    }
+
     private static void runInvoiceFlow(Path temporary) throws Exception {
-        Result products = cli("--format", "json", "product", "list");
-        products.success();
-        require(!products.stdout.contains("\"products\":[]"),
-                "invoice smoke test requires at least one product");
-        String productNumber = firstString(products.stdout, "number");
+        String productNumber = "CLI-SMOKE-PRODUCT";
 
         Result years = cli("--format", "json", "year", "list");
         years.success();

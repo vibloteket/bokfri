@@ -14,6 +14,8 @@ import org.fribok.bookkeeping.service.invoice.InvoiceService;
 import org.fribok.bookkeeping.service.invoice.InvoiceValidationIssue;
 import org.fribok.bookkeeping.service.invoice.InvoiceValidationResult;
 import org.fribok.bookkeeping.service.product.ProductService;
+import org.fribok.bookkeeping.service.product.ProductValidationIssue;
+import org.fribok.bookkeeping.service.product.ProductValidationResult;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationIssue;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationResult;
@@ -571,8 +573,9 @@ public class BokfriCli implements Runnable {
         @Override boolean persist() { return !dryRun; }
     }
 
-    @Command(name = "product", description = "Inspect products",
-            subcommands = {ProductList.class, ProductShow.class})
+    @Command(name = "product", description = "Inspect and create products",
+            subcommands = {ProductList.class, ProductShow.class,
+                    ProductValidate.class, ProductCreate.class})
     static class ProductCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -625,6 +628,58 @@ public class BokfriCli implements Runnable {
                 throw databaseFailure(exception);
             }
         }
+    }
+
+    abstract static class ProductOperation implements Callable<Integer> {
+        @CommandLine.ParentCommand ProductCommand command;
+        @Option(names = "--file", required = true, description = "Product JSON file, or - for stdin")
+        String file;
+
+        abstract boolean persist();
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            ProductInput input = readProductInput(file);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                SSProduct product = toProduct(input, runtime);
+                ProductService service = new ProductService(runtime.database());
+                ProductValidationResult validation = service.validate(product);
+                if (!validation.valid()) {
+                    throw productValidationFailure(validation);
+                }
+                if (persist()) {
+                    service.create(product);
+                }
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("valid", true);
+                result.put("dryRun", !persist());
+                result.put("created", persist());
+                result.put("context", selectedContext(context, company, year));
+                result.put("product", productDetails(product));
+                root.output(result, persist()
+                        ? "Created product " + product.getNumber() + " - " + product.getDescription()
+                        : "Product is valid; no changes written\n" + product.getNumber()
+                                + "\t" + product.getDescription());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "validate", description = "Validate product JSON without writing")
+    static class ProductValidate extends ProductOperation {
+        @Override boolean persist() { return false; }
+    }
+
+    @Command(name = "create", description = "Create a product from JSON")
+    static class ProductCreate extends ProductOperation {
+        @Option(names = "--dry-run", description = "Validate and preview without writing")
+        boolean dryRun;
+        @Override boolean persist() { return !dryRun; }
     }
 
     @Command(name = "invoice", description = "Inspect and create customer invoices",
@@ -864,6 +919,76 @@ public class BokfriCli implements Runnable {
         @Option(names = "--dry-run", description = "Validate and preview without writing")
         boolean dryRun;
         @Override boolean persist() { return !dryRun; }
+    }
+
+    private static ProductInput readProductInput(String file) {
+        try {
+            ProductInput input = "-".equals(file)
+                    ? jsonMapper().readValue(System.in, ProductInput.class)
+                    : jsonMapper().readValue(Paths.get(file).toFile(), ProductInput.class);
+            if (input.getSchemaVersion() != 1) {
+                throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
+                        "Unsupported product schemaVersion: " + input.getSchemaVersion());
+            }
+            return input;
+        } catch (CliException exception) {
+            throw exception;
+        } catch (IOException exception) {
+            throw new CliException("INPUT_INVALID", "Could not read product JSON: "
+                    + exception.getMessage(), exception);
+        }
+    }
+
+    private static SSProduct toProduct(ProductInput input, BokfriRuntime runtime) {
+        SSProduct product = new SSProduct();
+        product.setNumber(normalized(input.getNumber()));
+        product.setDescription(normalized(input.getDescription()));
+        if (input.getSellingPrice() != null) {
+            product.setSellingPrice(input.getSellingPrice());
+        }
+        if (input.getVatRate() != null) {
+            product.setTaxCode(taxCode(input.getVatRate(), runtime.database().getCurrentCompany()));
+        }
+        if (input.getUnit() != null) {
+            product.setUnit(runtime.database().getUnits().stream()
+                    .filter(item -> input.getUnit().equals(item.getName()))
+                    .findFirst().orElseThrow(() -> new CliException("PRODUCT_UNIT_NOT_FOUND",
+                            "No unit has code " + input.getUnit())));
+        }
+        if (input.getSalesAccount() != null) {
+            SSAccount account = runtime.database().getAccounts().stream()
+                    .filter(item -> input.getSalesAccount().equals(item.getNumber()))
+                    .findFirst().orElseThrow(() -> new CliException("PRODUCT_ACCOUNT_NOT_FOUND",
+                            "No account has number " + input.getSalesAccount()));
+            product.setDefaultAccount(SSDefaultAccount.Sales, account);
+        }
+        if (input.getProject() != null) {
+            product.setProject(runtime.database().getProjects().stream()
+                    .filter(item -> input.getProject().equals(item.getNumber()))
+                    .findFirst().orElseThrow(() -> new CliException("PRODUCT_PROJECT_NOT_FOUND",
+                            "No project has number " + input.getProject())));
+        }
+        if (input.getResultUnit() != null) {
+            product.setResultUnit(runtime.database().getResultUnits().stream()
+                    .filter(item -> input.getResultUnit().equals(item.getNumber()))
+                    .findFirst().orElseThrow(() -> new CliException("PRODUCT_RESULT_UNIT_NOT_FOUND",
+                            "No result unit has number " + input.getResultUnit())));
+        }
+        if (input.getStockProduct() != null) {
+            product.setStockProduct(input.getStockProduct());
+        }
+        if (input.getExpired() != null) {
+            product.setExpired(input.getExpired());
+        }
+        return product;
+    }
+
+    private static CliException productValidationFailure(ProductValidationResult validation) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("valid", false);
+        details.put("issues", validation.issues());
+        ProductValidationIssue first = validation.issues().get(0);
+        return new CliException("PRODUCT_INVALID", first.message(), details);
     }
 
     private static InvoiceInput readInvoiceInput(String file) {
