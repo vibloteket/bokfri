@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.gui.invoice;
 
 
+import org.fribok.bookkeeping.service.invoice.InvoiceService;
 import se.swedsoft.bookkeeping.calc.math.SSInvoiceMath;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSOrder;
@@ -58,7 +59,7 @@ public class SSInvoiceDialog {
 
                 SSInvoice iInvoice = iPanel.getInvoice();
 
-                SSDB.getInstance().addInvoice(iInvoice);
+                new InvoiceService(SSDB.getInstance()).create(iInvoice);
 
                 if (iPanel.doSaveCustomerAndProducts()) {
                     SSInvoiceMath.addCustomerAndProducts(iInvoice);
@@ -195,7 +196,7 @@ public class SSInvoiceDialog {
 
                 SSInvoice iInvoice1 = iPanel.getInvoice();
 
-                SSDB.getInstance().addInvoice(iInvoice1);
+                new InvoiceService(SSDB.getInstance()).create(iInvoice1);
 
                 if (iPanel.doSaveCustomerAndProducts()) {
                     SSInvoiceMath.addCustomerAndProducts(iInvoice1);
@@ -272,7 +273,7 @@ public class SSInvoiceDialog {
 
                 SSInvoice iInvoice1 = iPanel.getInvoice();
 
-                SSDB.getInstance().addInvoice(iInvoice1);
+                new InvoiceService(SSDB.getInstance()).create(iInvoice1);
 
                 for (SSOrder iOrder : iOrders) {
                     // Set the invoice for the order

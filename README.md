@@ -119,6 +119,29 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar customer create --dry-ru
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar customer create --file customer.json
 ```
 
+Kundfakturor kan på motsvarande sätt valideras, förhandsgranskas och skapas
+från JSON. Kunden måste finnas och varje rad kan referera till en befintlig
+produkt; produktens pris, momskod, konto och enhet ärvs när de utelämnas:
+
+```json
+{
+  "customerNumber": "1001",
+  "date": "2026-08-05",
+  "rows": [
+    {"productNumber": "CONSULTING", "quantity": 10}
+  ]
+}
+```
+
+```sh
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice validate --file invoice.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice create --dry-run --file invoice.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice create --file invoice.json
+```
+
+Skapandet sparar en obokförd och oskickad faktura. Bokföring, PDF och utskick
+är separata framtida kommandon.
+
 Kunder, produkter och kundfakturor kan läsas maskinellt:
 
 ```sh

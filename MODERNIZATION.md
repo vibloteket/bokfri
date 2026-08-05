@@ -110,8 +110,8 @@ Also implemented:
 
 Next command candidates:
 - `db status` — open a configured database and report basic health/counts
-- `invoice validate` and `invoice create --dry-run` — establish a shared
-  invoice validation/application service before allowing invoice writes
+- `invoice validate` and `invoice create [--dry-run]` — validate and create
+  unbooked customer invoices through a service shared with Swing
 - `invoice print --company-id ... --year-id ... --invoice ... --lang sv --out invoice.pdf` — generate an invoice PDF headlessly
 - `invoice sample-pdf --out target/invoice-sample.pdf` — create a deterministic sample invoice PDF for CI smoke tests
 - `backup create --out backup.zip` — smoke-test backup creation without navigating the UI

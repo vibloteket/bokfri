@@ -11,6 +11,8 @@ import org.fribok.bookkeeping.service.customer.CustomerService;
 import org.fribok.bookkeeping.service.customer.CustomerValidationIssue;
 import org.fribok.bookkeeping.service.customer.CustomerValidationResult;
 import org.fribok.bookkeeping.service.invoice.InvoiceService;
+import org.fribok.bookkeeping.service.invoice.InvoiceValidationIssue;
+import org.fribok.bookkeeping.service.invoice.InvoiceValidationResult;
 import org.fribok.bookkeeping.service.product.ProductService;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationIssue;
@@ -625,8 +627,9 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(name = "invoice", description = "Inspect customer invoices",
-            subcommands = {InvoiceList.class, InvoiceShow.class})
+    @Command(name = "invoice", description = "Inspect and create customer invoices",
+            subcommands = {InvoiceList.class, InvoiceShow.class,
+                    InvoiceValidate.class, InvoiceCreate.class})
     static class InvoiceCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -683,6 +686,58 @@ public class BokfriCli implements Runnable {
                 throw databaseFailure(exception);
             }
         }
+    }
+
+    abstract static class InvoiceOperation implements Callable<Integer> {
+        @CommandLine.ParentCommand InvoiceCommand command;
+        @Option(names = "--file", required = true, description = "Invoice JSON file, or - for stdin")
+        String file;
+
+        abstract boolean persist();
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            InvoiceInput input = readInvoiceInput(file);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                runtime.database().init(false);
+                SSInvoice invoice = toInvoice(input, runtime);
+                InvoiceService service = new InvoiceService(runtime.database());
+                InvoiceValidationResult validation = service.validate(invoice);
+                if (!validation.valid()) {
+                    throw invoiceValidationFailure(validation);
+                }
+                Map<String, Object> result = invoiceDetails(invoice);
+                result.put("dryRun", !persist());
+                result.put("created", persist());
+                result.put("number", service.nextNumber());
+                result.put("context", selectedCompanyContext(context, company));
+                if (persist()) {
+                    service.create(invoice);
+                    result.put("number", invoice.getNumber());
+                }
+                root.output(result, persist()
+                        ? "Created invoice " + invoice.getNumber() + " for " + invoice.getCustomerName()
+                        : "Invoice is valid; no changes written\nNumber: " + result.get("number")
+                                + "\nTotal: " + result.get("total"));
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "validate", description = "Validate invoice JSON without writing")
+    static class InvoiceValidate extends InvoiceOperation {
+        @Override boolean persist() { return false; }
+    }
+
+    @Command(name = "create", description = "Create an unbooked customer invoice from JSON")
+    static class InvoiceCreate extends InvoiceOperation {
+        @Option(names = "--dry-run", description = "Validate and preview without writing")
+        boolean dryRun;
+        @Override boolean persist() { return !dryRun; }
     }
 
     @Command(name = "voucher", description = "Inspect, validate, and create manual vouchers",
@@ -809,6 +864,138 @@ public class BokfriCli implements Runnable {
         @Option(names = "--dry-run", description = "Validate and preview without writing")
         boolean dryRun;
         @Override boolean persist() { return !dryRun; }
+    }
+
+    private static InvoiceInput readInvoiceInput(String file) {
+        try {
+            InvoiceInput input = "-".equals(file)
+                    ? jsonMapper().readValue(System.in, InvoiceInput.class)
+                    : jsonMapper().readValue(Paths.get(file).toFile(), InvoiceInput.class);
+            if (input.getSchemaVersion() != 1) {
+                throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
+                        "Unsupported invoice schemaVersion: " + input.getSchemaVersion());
+            }
+            return input;
+        } catch (CliException exception) {
+            throw exception;
+        } catch (IOException exception) {
+            throw new CliException("INPUT_INVALID", "Could not read invoice JSON: "
+                    + exception.getMessage(), exception);
+        }
+    }
+
+    private static SSInvoice toInvoice(InvoiceInput input, BokfriRuntime runtime) {
+        SSInvoice invoice = new SSInvoice(se.swedsoft.bookkeeping.data.common.SSInvoiceType.NORMAL);
+        SSCustomer customer = runtime.database().getCustomer(input.getCustomerNumber())
+                .orElseThrow(() -> new CliException("INVOICE_CUSTOMER_NOT_FOUND",
+                        "No customer has number " + input.getCustomerNumber()));
+        invoice.setCustomer(customer);
+        invoice.setLocalDate(input.getDate());
+        if (input.getDueDate() != null) {
+            invoice.setLocalDueDate(input.getDueDate());
+        } else if (input.getDate() != null) {
+            invoice.setDueDate();
+        }
+        invoice.setYourOrderNumber(normalized(input.getYourOrderNumber()));
+        if (input.getText() != null) {
+            invoice.setText(normalized(input.getText()));
+        }
+        invoice.setCurrencyRate(invoice.getCurrency() == null
+                ? java.math.BigDecimal.ONE : invoice.getCurrency().getExchangeRate());
+        List<SSSaleRow> rows = new java.util.ArrayList<>();
+        for (int index = 0; index < input.getRows().size(); index++) {
+            rows.add(toInvoiceRow(input.getRows().get(index), index + 1, runtime));
+        }
+        invoice.setRows(rows);
+        invoice.generateVoucher();
+        return invoice;
+    }
+
+    private static SSSaleRow toInvoiceRow(InvoiceInput.Row input, int rowNumber,
+            BokfriRuntime runtime) {
+        SSSaleRow row = new SSSaleRow();
+        if (input.getProductNumber() != null) {
+            SSProduct product = runtime.database().getProduct(input.getProductNumber())
+                    .orElseThrow(() -> new CliException("INVOICE_PRODUCT_NOT_FOUND",
+                            "No product has number " + input.getProductNumber()));
+            row.setProduct(product);
+        }
+        if (input.getDescription() != null) {
+            row.setDescription(normalized(input.getDescription()));
+        }
+        if (input.getQuantity() != null) {
+            row.setQuantity(input.getQuantity());
+        } else if (row.getQuantity() == null) {
+            row.setQuantity(1);
+        }
+        if (input.getUnitPrice() != null) {
+            row.setUnitprice(input.getUnitPrice());
+        }
+        if (input.getDiscount() != null) {
+            row.setDiscount(input.getDiscount());
+        }
+        if (input.getSalesAccount() != null) {
+            SSAccount account = runtime.database().getAccounts().stream()
+                    .filter(item -> input.getSalesAccount().equals(item.getNumber()))
+                    .findFirst().orElseThrow(() -> new CliException("INVOICE_ACCOUNT_NOT_FOUND",
+                            "No account has number " + input.getSalesAccount()));
+            row.setAccount(account);
+        }
+        if (input.getVatRate() != null) {
+            row.setTaxCode(taxCode(input.getVatRate(), runtime.database().getCurrentCompany()));
+        }
+        if (input.getUnit() != null) {
+            se.swedsoft.bookkeeping.data.common.SSUnit unit = runtime.database().getUnits().stream()
+                    .filter(item -> input.getUnit().equals(item.getName()))
+                    .findFirst().orElseThrow(() -> new CliException("INVOICE_UNIT_NOT_FOUND",
+                            "No unit has code " + input.getUnit()));
+            row.setUnit(unit);
+        }
+        if (input.getProject() != null) {
+            SSNewProject project = runtime.database().getProjects().stream()
+                    .filter(item -> input.getProject().equals(item.getNumber()))
+                    .findFirst().orElseThrow(() -> new CliException("INVOICE_PROJECT_NOT_FOUND",
+                            "No project has number " + input.getProject()));
+            row.setProject(project);
+        }
+        if (input.getResultUnit() != null) {
+            SSNewResultUnit resultUnit = runtime.database().getResultUnits().stream()
+                    .filter(item -> input.getResultUnit().equals(item.getNumber()))
+                    .findFirst().orElseThrow(() -> new CliException("INVOICE_RESULT_UNIT_NOT_FOUND",
+                            "No result unit has number " + input.getResultUnit()));
+            row.setResultUnit(resultUnit);
+        }
+        if (row.getDescription() == null && input.getProductNumber() == null) {
+            throw new CliException("INVOICE_ROW_INVALID",
+                    "Invoice row " + rowNumber + " needs productNumber or description");
+        }
+        return row;
+    }
+
+    private static se.swedsoft.bookkeeping.data.common.SSTaxCode taxCode(
+            java.math.BigDecimal rate, SSNewCompany company) {
+        if (rate.compareTo(java.math.BigDecimal.ZERO) == 0) {
+            return se.swedsoft.bookkeeping.data.common.SSTaxCode.TAXRATE_0;
+        }
+        if (rate.compareTo(company.getTaxRate1()) == 0) {
+            return se.swedsoft.bookkeeping.data.common.SSTaxCode.TAXRATE_1;
+        }
+        if (rate.compareTo(company.getTaxRate2()) == 0) {
+            return se.swedsoft.bookkeeping.data.common.SSTaxCode.TAXRATE_2;
+        }
+        if (rate.compareTo(company.getTaxRate3()) == 0) {
+            return se.swedsoft.bookkeeping.data.common.SSTaxCode.TAXRATE_3;
+        }
+        throw new CliException("INVOICE_VAT_RATE_NOT_FOUND",
+                "Company has no VAT rate " + rate.toPlainString());
+    }
+
+    private static CliException invoiceValidationFailure(InvoiceValidationResult validation) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("valid", false);
+        details.put("issues", validation.issues());
+        InvoiceValidationIssue first = validation.issues().get(0);
+        return new CliException("INVOICE_INVALID", first.message(), details);
     }
 
     private static CustomerInput readCustomerInput(String file) {

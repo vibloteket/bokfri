@@ -32,4 +32,25 @@ public final class InvoiceService {
                 .filter(invoice -> invoice.getNumber() != null && invoice.getNumber() == number)
                 .findFirst();
     }
+
+    public InvoiceValidationResult validate(SSInvoice invoice) {
+        return InvoiceValidator.validate(invoice);
+    }
+
+    public SSInvoice create(SSInvoice invoice) {
+        InvoiceValidationResult validation = validate(invoice);
+        if (!validation.valid()) {
+            throw new InvoiceValidationException(validation);
+        }
+        database.addInvoice(invoice);
+        return invoice;
+    }
+
+    public int nextNumber() {
+        return database.getInvoices().stream()
+                .map(SSInvoice::getNumber)
+                .filter(java.util.Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(database.getCurrentCompany().getAutoIncrement().getNumber("invoice")) + 1;
+    }
 }

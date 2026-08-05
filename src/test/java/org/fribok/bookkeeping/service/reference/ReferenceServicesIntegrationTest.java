@@ -81,6 +81,36 @@ class ReferenceServicesIntegrationTest {
     }
 
     @Test
+    void invoiceServiceValidatesCreatesAndFindsInvoice() {
+        InvoiceService service = new InvoiceService(SSDB.getInstance());
+        SSCustomer customer = new SSCustomer();
+        customer.setNumber("INVOICE-SERVICE-CUSTOMER");
+        customer.setName("Invoice service customer");
+        SSDB.getInstance().addCustomer(customer);
+        se.swedsoft.bookkeeping.data.SSInvoice invoice = new se.swedsoft.bookkeeping.data.SSInvoice();
+        invoice.setCustomer(customer);
+        invoice.setLocalDate(java.time.LocalDate.now());
+        invoice.setLocalDueDate(java.time.LocalDate.now().plusDays(30));
+        se.swedsoft.bookkeeping.data.base.SSSaleRow row = new se.swedsoft.bookkeeping.data.base.SSSaleRow();
+        row.setDescription("Integration test row");
+        row.setQuantity(1);
+        row.setUnitprice(new java.math.BigDecimal("100"));
+        row.setAccountNr(3001);
+        row.setTaxCode(se.swedsoft.bookkeeping.data.common.SSTaxCode.TAXRATE_1);
+        invoice.setRows(java.util.List.of(row));
+
+        service.create(invoice);
+
+        try {
+            SSDBTestFixture.resetCaches();
+            assertThat(service.find(invoice.getNumber())).isPresent();
+        } finally {
+            SSDB.getInstance().deleteInvoice(invoice);
+            SSDB.getInstance().deleteCustomer(customer);
+        }
+    }
+
+    @Test
     void invoiceServiceListsAndFindsInvoices() {
         InvoiceService service = new InvoiceService(SSDB.getInstance());
 

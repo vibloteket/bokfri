@@ -34,6 +34,7 @@ public final class CliSmokeTest {
         try {
             runReadOnlyAndContextFlow();
             runReferenceDataFlow(temporary);
+            runInvoiceFlow(temporary);
             runVoucherFlow(temporary);
             runErrorFlow(temporary);
             System.out.println("Bokfri CLI black-box smoke test passed: " + launcher.getFileName());
@@ -129,6 +130,56 @@ public final class CliSmokeTest {
                     "invoice show returned the wrong invoice");
             require(invoice.stdout.contains("\"rows\":"), "invoice show lacks rows");
         }
+    }
+
+    private static void runInvoiceFlow(Path temporary) throws Exception {
+        Result products = cli("--format", "json", "product", "list");
+        products.success();
+        require(!products.stdout.contains("\"products\":[]"),
+                "invoice smoke test requires at least one product");
+        String productNumber = firstString(products.stdout, "number");
+
+        Result years = cli("--format", "json", "year", "list");
+        years.success();
+        String date = firstString(years.stdout, "from");
+
+        Path invoiceInput = temporary.resolve("invoice.json");
+        Files.writeString(invoiceInput, """
+                {
+                  "customerNumber": "CLI-SMOKE-CUSTOMER",
+                  "date": "%s",
+                  "rows": [
+                    {"productNumber": "%s", "quantity": 2}
+                  ]
+                }
+                """.formatted(date, productNumber), StandardCharsets.UTF_8);
+
+        Result validation = cli("--format", "json", "invoice", "validate",
+                "--file", invoiceInput.toString());
+        validation.success();
+        Result dryRun = cli("--format", "json", "invoice", "create", "--dry-run",
+                "--file", invoiceInput.toString());
+        dryRun.success();
+        int expectedNumber = firstInt(dryRun.stdout, "number");
+        require(!dryRun.stdout.contains("\"created\":true"),
+                "invoice dry run unexpectedly created data");
+
+        Result create = cli("--format", "json", "invoice", "create",
+                "--file", invoiceInput.toString());
+        create.success();
+        require(firstInt(create.stdout, "number") == expectedNumber,
+                "created invoice number differs from dry run");
+        require(create.stdout.contains("\"created\":true"),
+                "invoice create lacks created=true");
+
+        Result list = cli("--format", "json", "invoice", "list");
+        list.success();
+        require(list.stdout.contains("\"number\":" + expectedNumber),
+                "created invoice is absent from list");
+        Result show = cli("--format", "json", "invoice", "show", Integer.toString(expectedNumber));
+        show.success();
+        require(show.stdout.contains("\"customerNumber\":\"CLI-SMOKE-CUSTOMER\""),
+                "invoice show returned the wrong customer");
     }
 
     private static void runVoucherFlow(Path temporary) throws Exception {
