@@ -10,6 +10,8 @@ import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.service.customer.CustomerService;
 import org.fribok.bookkeeping.service.customer.CustomerValidationIssue;
 import org.fribok.bookkeeping.service.customer.CustomerValidationResult;
+import org.fribok.bookkeeping.service.invoice.InvoiceJournalPlan;
+import org.fribok.bookkeeping.service.invoice.InvoiceJournalResult;
 import org.fribok.bookkeeping.service.invoice.InvoiceService;
 import org.fribok.bookkeeping.service.invoice.InvoiceValidationIssue;
 import org.fribok.bookkeeping.service.invoice.InvoiceValidationResult;
@@ -684,7 +686,7 @@ public class BokfriCli implements Runnable {
 
     @Command(name = "invoice", description = "Inspect and create customer invoices",
             subcommands = {InvoiceList.class, InvoiceShow.class, InvoicePdf.class,
-                    InvoiceValidate.class, InvoiceCreate.class})
+                    InvoiceJournal.class, InvoiceValidate.class, InvoiceCreate.class})
     static class InvoiceCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -737,6 +739,53 @@ public class BokfriCli implements Runnable {
                 root.output(result, "Invoice " + invoice.getNumber() + "\nCustomer: "
                         + invoice.getCustomerName() + "\nTotal: " + SSSaleMath.getTotalSum(invoice));
                 return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "journal", description = "Preview or commit an invoice journal for a period")
+    static class InvoiceJournal implements Callable<Integer> {
+        @CommandLine.ParentCommand InvoiceCommand command;
+        @Option(names = "--from", required = true) java.time.LocalDate from;
+        @Option(names = "--to", required = true) java.time.LocalDate to;
+        @Option(names = "--commit", description = "Persist the voucher and mark invoices entered")
+        boolean commit;
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                InvoiceService service = new InvoiceService(runtime.database());
+                InvoiceJournalPlan plan = service.planJournal(from, to);
+                if (plan.invoices().isEmpty()) {
+                    throw new CliException("INVOICE_JOURNAL_EMPTY",
+                            "No unbooked invoices exist in the selected period");
+                }
+                Map<String, Object> result = invoiceJournalDetails(plan);
+                result.put("committed", commit);
+                result.put("context", selectedContext(context, company, year));
+                if (commit) {
+                    InvoiceJournalResult committed = service.commitJournal(plan);
+                    result.put("voucherNumber", committed.voucherNumber());
+                }
+                root.output(result, commit
+                        ? "Committed invoice journal " + plan.journalNumber() + " with voucher "
+                                + result.get("voucherNumber") + " for " + plan.invoices().size() + " invoices"
+                        : "Invoice journal " + plan.journalNumber() + " preview\nInvoices: "
+                                + plan.invoices().size() + "\nDebit: "
+                                + se.swedsoft.bookkeeping.calc.math.SSVoucherMath
+                                        .getDebetSum(plan.voucher()).toPlainString()
+                                + "\nCredit: " + se.swedsoft.bookkeeping.calc.math.SSVoucherMath
+                                        .getCreditSum(plan.voucher()).toPlainString()
+                                + "\nNo changes written");
+                return 0;
+            } catch (IllegalArgumentException exception) {
+                throw new CliException("INVOICE_JOURNAL_INVALID", exception.getMessage(), exception);
             } catch (Exception exception) {
                 throw databaseFailure(exception);
             }
@@ -1336,6 +1385,29 @@ public class BokfriCli implements Runnable {
         result.put("project", product.getProjectNr());
         result.put("resultUnit", product.getResultUnitNr());
         result.put("expired", product.isExpired());
+        return result;
+    }
+
+    private static Map<String, Object> invoiceJournalDetails(InvoiceJournalPlan plan) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("journalNumber", plan.journalNumber());
+        result.put("from", plan.from());
+        result.put("to", plan.to());
+        result.put("invoiceNumbers", plan.invoices().stream().map(SSInvoice::getNumber).toList());
+        result.put("invoiceCount", plan.invoices().size());
+        result.put("debitTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
+                .getDebetSum(plan.voucher()).toPlainString());
+        result.put("creditTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
+                .getCreditSum(plan.voucher()).toPlainString());
+        result.put("voucherRows", plan.voucher().getRows().stream().map(row -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("account", row.getAccountNr());
+            item.put("debit", decimal(row.getDebet()));
+            item.put("credit", decimal(row.getCredit()));
+            item.put("project", row.getProjectNr());
+            item.put("resultUnit", row.getResultUnitNr());
+            return item;
+        }).toList());
         return result;
     }
 

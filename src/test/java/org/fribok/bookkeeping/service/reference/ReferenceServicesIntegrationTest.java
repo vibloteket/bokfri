@@ -132,6 +132,47 @@ class ReferenceServicesIntegrationTest {
     }
 
     @Test
+    void invoiceServicePlansAndCommitsJournal() {
+        InvoiceService service = new InvoiceService(SSDB.getInstance());
+        SSCustomer customer = new SSCustomer();
+        customer.setNumber("JOURNAL-SERVICE-CUSTOMER");
+        customer.setName("Journal service customer");
+        SSDB.getInstance().addCustomer(customer);
+        SSInvoice invoice = new SSInvoice();
+        invoice.setCustomerNr(customer.getNumber());
+        invoice.setCustomerName(customer.getName());
+        invoice.setLocalDate(SSDB.getInstance().getCurrentYear().getLocalFrom());
+        invoice.setLocalDueDate(invoice.getLocalDate().plusDays(30));
+        se.swedsoft.bookkeeping.data.base.SSSaleRow row = new se.swedsoft.bookkeeping.data.base.SSSaleRow();
+        row.setDescription("Journal integration row");
+        row.setQuantity(1);
+        row.setUnitprice(new java.math.BigDecimal("100"));
+        row.setAccountNr(SSDB.getInstance().getAccounts().get(0).getNumber());
+        row.setTaxCode(se.swedsoft.bookkeeping.data.common.SSTaxCode.TAXRATE_0);
+        invoice.setTaxFree(true);
+        invoice.setDefaultAccounts(SSDB.getInstance().getCurrentCompany().getDefaultAccounts());
+        invoice.setRows(java.util.List.of(row));
+        service.create(invoice);
+
+        org.fribok.bookkeeping.service.invoice.InvoiceJournalPlan plan = service.planJournal(
+                invoice.getLocalDate(), invoice.getLocalDate());
+        int voucherNumber;
+        try {
+            assertThat(plan.invoices()).extracting(SSInvoice::getNumber).contains(invoice.getNumber());
+            voucherNumber = service.commitJournal(plan).voucherNumber();
+            SSDBTestFixture.resetCaches();
+            assertThat(service.find(invoice.getNumber())).get()
+                    .extracting(SSInvoice::isEntered).isEqualTo(true);
+            assertThat(SSDB.getInstance().getVouchers()).extracting(
+                    se.swedsoft.bookkeeping.data.SSVoucher::getNumber).contains(voucherNumber);
+        } finally {
+            SSDB.getInstance().deleteVoucher(plan.voucher());
+            SSDB.getInstance().deleteInvoice(invoice);
+            SSDB.getInstance().deleteCustomer(customer);
+        }
+    }
+
+    @Test
     void invoiceServiceListsAndFindsInvoices() {
         InvoiceService service = new InvoiceService(SSDB.getInstance());
 

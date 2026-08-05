@@ -168,8 +168,22 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice pdf 42 \
 ```
 
 Befintliga filer skrivs inte över utan `--overwrite`. `--language sv-SE` är
-standard och kan anges explicit. Bokföring och utskick är separata framtida
-kommandon.
+standard och kan anges explicit.
+
+Bokföring följer Bokfris befintliga periodbaserade fakturajournal, inte ett
+separat bokföringskommando per faktura. Utan `--commit` visas bara journalen och
+den komprimerade verifikationen:
+
+```sh
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice journal \
+  --from 2026-08-01 --to 2026-08-31
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice journal \
+  --from 2026-08-01 --to 2026-08-31 --commit
+```
+
+Vid commit markeras periodens obokförda kundfakturor som bokförda,
+journalnumret räknas upp och en gemensam verifikation sparas. Utskick är ett
+separat framtida kommando.
 
 Kunder, produkter och kundfakturor kan läsas maskinellt:
 

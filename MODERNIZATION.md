@@ -114,6 +114,8 @@ Next command candidates:
 - `db status` — open a configured database and report basic health/counts
 - `invoice validate` and `invoice create [--dry-run]` — validate and create
   unbooked customer invoices through a service shared with Swing
+- `invoice journal --from DATE --to DATE [--commit]` — preview or commit the
+  existing period-based invoice journal and its compressed voucher
 - `invoice pdf NUMBER --output invoice.pdf` — generate an invoice PDF headlessly
   without changing invoice status, with artifact checks in the CLI smoke test
 - `invoice sample-pdf --out target/invoice-sample.pdf` — create a deterministic sample invoice PDF for CI smoke tests

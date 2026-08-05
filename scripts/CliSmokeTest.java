@@ -222,6 +222,30 @@ public final class CliSmokeTest {
         require(duplicate.exitCode != 0, "invoice PDF unexpectedly overwrote an existing file");
         require(duplicate.stderr.contains("\"code\":\"OUTPUT_EXISTS\""),
                 "duplicate PDF output lacks stable error code");
+
+        Result journalPreview = cli("--format", "json", "invoice", "journal",
+                "--from", date, "--to", date);
+        journalPreview.success();
+        require(journalPreview.stdout.contains("\"invoiceNumbers\":[" + expectedNumber + "]"),
+                "invoice journal preview lacks the created invoice");
+        require(journalPreview.stdout.contains("\"committed\":false"),
+                "invoice journal preview unexpectedly committed");
+
+        Result journalCommit = cli("--format", "json", "invoice", "journal",
+                "--from", date, "--to", date, "--commit");
+        journalCommit.success();
+        int voucherNumber = firstInt(journalCommit.stdout, "voucherNumber");
+        require(journalCommit.stdout.contains("\"committed\":true"),
+                "invoice journal commit lacks committed=true");
+        Result bookedInvoice = cli("--format", "json", "invoice", "show",
+                Integer.toString(expectedNumber));
+        bookedInvoice.success();
+        require(bookedInvoice.stdout.contains("\"entered\":true"),
+                "journal did not mark invoice as entered");
+        Result voucher = cli("--format", "json", "voucher", "show", Integer.toString(voucherNumber));
+        voucher.success();
+        require(voucher.stdout.contains("Fakturajournal"),
+                "journal voucher was not persisted");
     }
 
     private static void runVoucherFlow(Path temporary) throws Exception {
