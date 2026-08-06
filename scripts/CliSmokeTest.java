@@ -36,6 +36,7 @@ public final class CliSmokeTest {
             runReferenceDataFlow(temporary);
             runProductFlow(temporary);
             runSupplierFlow(temporary);
+            runSupplierInvoiceFlow(temporary);
             runInvoiceFlow(temporary);
             runInpaymentFlow(temporary);
             runVoucherFlow(temporary);
@@ -192,6 +193,21 @@ public final class CliSmokeTest {
         show.success();
         require(show.stdout.contains("\"name\":\"CLI smoke supplier\""),
                 "supplier show returned the wrong supplier");
+    }
+
+    private static void runSupplierInvoiceFlow(Path temporary) throws Exception {
+        Result accounts=cli("--format","json","account","list");accounts.success();int account=firstInt(accounts.stdout,"number");
+        Result years=cli("--format","json","year","list");years.success();String date=firstString(years.stdout,"from");
+        Path input=temporary.resolve("supplier-invoice.json");Files.writeString(input,"""
+                {"supplierNumber":"CLI-SMOKE-SUPPLIER","date":"%s","vat":"0","rows":[{"description":"CLI smoke purchase","quantity":1,"unitPrice":"50.00","account":%d}]}
+                """.formatted(date,account),StandardCharsets.UTF_8);
+        cli("--format","json","supplier-invoice","validate","--file",input.toString()).success();
+        Result dry=cli("--format","json","supplier-invoice","create","--dry-run","--file",input.toString());dry.success();int number=firstInt(dry.stdout,"number");
+        Result create=cli("--format","json","supplier-invoice","create","--file",input.toString());create.success();require(firstInt(create.stdout,"number")==number,"supplier invoice number differs from dry run");
+        cli("--format","json","supplier-invoice","show",Integer.toString(number)).success();
+        Result preview=cli("--format","json","supplier-invoice","journal","--from",date,"--to",date);preview.success();require(preview.stdout.contains("\"committed\":false"),"supplier invoice journal preview committed");
+        Result commit=cli("--format","json","supplier-invoice","journal","--from",date,"--to",date,"--commit");commit.success();require(commit.stdout.contains("\"committed\":true"),"supplier invoice journal did not commit");
+        Result shown=cli("--format","json","supplier-invoice","show",Integer.toString(number));shown.success();require(shown.stdout.contains("\"entered\":true"),"supplier invoice was not marked entered");
     }
 
     private static void runInvoiceFlow(Path temporary) throws Exception {

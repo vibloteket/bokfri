@@ -88,9 +88,10 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
         iEntered = false;
         iStockInfluencing = true;
         iDefaultAccounts = new HashMap<>();
-        iDefaultAccounts.putAll(
-                SSDB.getInstance().getCurrentCompany().getDefaultAccounts());
         SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
+        if (iCompany != null) {
+            iDefaultAccounts.putAll(iCompany.getDefaultAccounts());
+        }
 
         if (iCompany != null) {
             iCurrency = iCompany.getCurrency();

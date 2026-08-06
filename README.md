@@ -204,6 +204,17 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar supplier create --file s
 Utbetalningsnumret tilldelas automatiskt när det utelämnas. Valuta,
 betalningsvillkor, leveransvillkor och kontaktperson ärvs från företaget.
 
+Leverantörsfakturor skapas mot en befintlig leverantör och bokförs sedan med
+periodens leverantörsfakturajournal:
+
+```sh
+bokfri supplier-invoice validate --file supplier-invoice.json
+bokfri supplier-invoice create --dry-run --file supplier-invoice.json
+bokfri supplier-invoice create --file supplier-invoice.json
+bokfri supplier-invoice journal --from 2026-08-01 --to 2026-08-31
+bokfri supplier-invoice journal --from 2026-08-01 --to 2026-08-31 --commit
+```
+
 Kundinbetalningar registreras mot bokförda fakturor och journalförs på samma
 sätt:
 

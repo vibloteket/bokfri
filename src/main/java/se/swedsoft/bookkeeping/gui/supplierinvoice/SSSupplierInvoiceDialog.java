@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.gui.supplierinvoice;
 
 
+import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceService;
 import se.swedsoft.bookkeeping.data.*;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 
@@ -55,7 +56,7 @@ public class SSSupplierInvoiceDialog {
 
                 SSSupplierInvoice iSupplierInvoice1 = iPanel.getSupplierInvoice();
 
-                SSDB.getInstance().addSupplierInvoice(iSupplierInvoice1);
+                new SupplierInvoiceService(SSDB.getInstance()).create(iSupplierInvoice1);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();
@@ -189,7 +190,7 @@ public class SSSupplierInvoiceDialog {
 
                 SSSupplierInvoice iSupplierInvoice = iPanel.getSupplierInvoice();
 
-                SSDB.getInstance().addSupplierInvoice(iSupplierInvoice);
+                new SupplierInvoiceService(SSDB.getInstance()).create(iSupplierInvoice);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();
@@ -270,7 +271,7 @@ public class SSSupplierInvoiceDialog {
 
                 SSSupplierInvoice iSupplierInvoice1 = iPanel.getSupplierInvoice();
 
-                SSDB.getInstance().addSupplierInvoice(iSupplierInvoice1);
+                new SupplierInvoiceService(SSDB.getInstance()).create(iSupplierInvoice1);
 
                 for (SSPurchaseOrder iPurchaseOrder : iOrders) {
                     // Set the sales for the selected order to the new one

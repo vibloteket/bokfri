@@ -24,6 +24,10 @@ import org.fribok.bookkeeping.service.product.ProductService;
 import org.fribok.bookkeeping.service.supplier.SupplierService;
 import org.fribok.bookkeeping.service.supplier.SupplierValidationIssue;
 import org.fribok.bookkeeping.service.supplier.SupplierValidationResult;
+import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceJournalPlan;
+import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceService;
+import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationIssue;
+import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationResult;
 import org.fribok.bookkeeping.service.product.ProductValidationIssue;
 import org.fribok.bookkeeping.service.product.ProductValidationResult;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
@@ -46,6 +50,8 @@ import se.swedsoft.bookkeeping.data.SSNewProject;
 import se.swedsoft.bookkeeping.data.SSNewResultUnit;
 import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSSupplier;
+import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
+import se.swedsoft.bookkeeping.data.SSSupplierInvoiceRow;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
@@ -76,6 +82,7 @@ import java.util.concurrent.Callable;
             BokfriCli.CustomerCommand.class,
             BokfriCli.ProductCommand.class,
             BokfriCli.SupplierCommand.class,
+            BokfriCli.SupplierInvoiceCommand.class,
             BokfriCli.InvoiceCommand.class,
             BokfriCli.InpaymentCommand.class,
             BokfriCli.VoucherCommand.class
@@ -791,6 +798,15 @@ public class BokfriCli implements Runnable {
         @Override boolean persist() { return !dryRun; }
     }
 
+    @Command(name="supplier-invoice",description="Inspect, create, and book supplier invoices",subcommands={SupplierInvoiceList.class,SupplierInvoiceShow.class,SupplierInvoiceJournal.class,SupplierInvoiceValidate.class,SupplierInvoiceCreate.class})
+    static class SupplierInvoiceCommand extends CliCommand implements Runnable {@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"A supplier-invoice command is required");}}
+    @Command(name="list") static class SupplierInvoiceList implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> x=new SupplierInvoiceService(r.database()).list().stream().map(BokfriCli::supplierInvoiceDetails).toList();root.output(Map.of("context",selectedCompanyContext(c,co),"count",x.size(),"supplierInvoices",x),x.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(name="show") static class SupplierInvoiceShow implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Parameters(index="0")int number;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierInvoice i=new SupplierInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+number));Map<String,Object>x=supplierInvoiceDetails(i);x.put("context",selectedCompanyContext(c,co));root.output(x,"Supplier invoice "+number+"\nSupplier: "+i.getSupplierName()+"\nTotal: "+x.get("total"));return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    abstract static class SupplierInvoiceOperation implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierInvoiceInput input=readSupplierInvoiceInput(file);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SSSupplierInvoice i=toSupplierInvoice(input,r);SupplierInvoiceService s=new SupplierInvoiceService(r.database());var v=s.validate(i);if(!v.valid())throw supplierInvoiceValidationFailure(v);Map<String,Object>x=supplierInvoiceDetails(i);x.put("number",s.nextNumber());x.put("dryRun",!persist());x.put("created",persist());x.put("context",selectedContext(c,co,y));if(persist()){s.create(i);x.put("number",i.getNumber());}root.output(x,persist()?"Created supplier invoice "+i.getNumber():"Supplier invoice is valid; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(name="validate") static class SupplierInvoiceValidate extends SupplierInvoiceOperation{boolean persist(){return false;}}
+    @Command(name="create") static class SupplierInvoiceCreate extends SupplierInvoiceOperation{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
+    @Command(name="journal") static class SupplierInvoiceJournal implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierInvoiceService s=new SupplierInvoiceService(r.database());SupplierInvoiceJournalPlan p=s.planJournal(from,to);if(p.invoices().isEmpty())throw new CliException("SUPPLIER_INVOICE_JOURNAL_EMPTY","No unbooked supplier invoices exist in the selected period");Map<String,Object>x=supplierInvoiceJournalDetails(p);x.put("committed",commit);x.put("context",selectedContext(c,co,y));if(commit)x.put("voucherNumber",s.commitJournal(p).voucherNumber());root.output(x,commit?"Committed supplier invoice journal "+p.journalNumber():"Supplier invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
+
     @Command(name = "invoice", description = "Inspect and create customer invoices",
             subcommands = {InvoiceList.class, InvoiceShow.class, InvoicePdf.class,
                     InvoiceJournal.class, InvoiceValidate.class, InvoiceCreate.class})
@@ -1255,6 +1271,10 @@ public class BokfriCli implements Runnable {
         boolean dryRun;
         @Override boolean persist() { return !dryRun; }
     }
+
+    private static SupplierInvoiceInput readSupplierInvoiceInput(String file){try{SupplierInvoiceInput i="-".equals(file)?jsonMapper().readValue(System.in,SupplierInvoiceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),SupplierInvoiceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported supplier invoice schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read supplier invoice JSON: "+e.getMessage(),e);}}
+    private static SSSupplierInvoice toSupplierInvoice(SupplierInvoiceInput in,BokfriRuntime r){SSSupplierInvoice i=new SSSupplierInvoice();SSSupplier s=new SupplierService(r.database()).find(in.getSupplierNumber()).orElseThrow(()->new CliException("SUPPLIER_INVOICE_SUPPLIER_NOT_FOUND","No supplier has number "+in.getSupplierNumber()));i.setSupplier(s);i.setPaymentTerm(s.getPaymentTerm());i.setLocalDate(in.getDate());if(in.getDueDate()!=null)i.setLocalDueDate(in.getDueDate());else i.setDueDate();i.setReferencenumber(normalized(in.getReference()));i.setTaxSum(in.getVat()==null?java.math.BigDecimal.ZERO:in.getVat());i.setRoundingSum(in.getRounding()==null?java.math.BigDecimal.ZERO:in.getRounding());i.setCurrencyRate(i.getCurrency()==null?java.math.BigDecimal.ONE:i.getCurrency().getExchangeRate());List<SSSupplierInvoiceRow> rows=new java.util.ArrayList<>();for(var x:in.getRows()){SSSupplierInvoiceRow row=new SSSupplierInvoiceRow();if(x.getProductNumber()!=null)row.setProduct(r.database().getProduct(x.getProductNumber()).orElseThrow(()->new CliException("SUPPLIER_INVOICE_PRODUCT_NOT_FOUND","No product has number "+x.getProductNumber())));if(x.getDescription()!=null)row.setDescription(normalized(x.getDescription()));if(x.getQuantity()!=null)row.setQuantity(x.getQuantity());else if(row.getQuantity()==null)row.setQuantity(1);if(x.getUnitPrice()!=null)row.setUnitprice(x.getUnitPrice());if(x.getFreight()!=null)row.setUnitFreight(x.getFreight());if(x.getAccount()!=null)row.setAccount(r.database().getAccounts().stream().filter(a->x.getAccount().equals(a.getNumber())).findFirst().orElseThrow(()->new CliException("SUPPLIER_INVOICE_ACCOUNT_NOT_FOUND","No account has number "+x.getAccount())));rows.add(row);}i.setRows(rows);i.generateVoucher();return i;}
+    private static CliException supplierInvoiceValidationFailure(SupplierInvoiceValidationResult v){Map<String,Object>d=new LinkedHashMap<>();d.put("valid",false);d.put("issues",v.issues());SupplierInvoiceValidationIssue f=v.issues().get(0);return new CliException("SUPPLIER_INVOICE_INVALID",f.message(),d);}
 
     private static SupplierInput readSupplierInput(String file) {
         try {
@@ -1742,6 +1762,9 @@ public class BokfriCli implements Runnable {
         result.put("expired", product.isExpired());
         return result;
     }
+
+    private static Map<String,Object> supplierInvoiceDetails(SSSupplierInvoice i){Map<String,Object>x=new LinkedHashMap<>();x.put("number",i.getNumber());x.put("date",i.getLocalDate());x.put("dueDate",i.getLocalDueDate());x.put("supplierNumber",i.getSupplierNr());x.put("supplierName",i.getSupplierName());x.put("reference",i.getReferencenumber());x.put("entered",i.isEntered());x.put("net",decimal(se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.getNetSum(i)));x.put("vat",decimal(i.getTaxSum()));x.put("total",decimal(se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.getTotalSum(i)));x.put("rows",i.getRows().stream().map(r->Map.of("description",r.getDescription(),"quantity",r.getQuantity(),"unitPrice",decimal(r.getUnitprice()),"account",r.getAccountNr())).toList());return x;}
+    private static Map<String,Object> supplierInvoiceJournalDetails(SupplierInvoiceJournalPlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("invoiceNumbers",p.invoices().stream().map(SSSupplierInvoice::getNumber).toList());x.put("debitTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(p.voucher()).toPlainString());x.put("creditTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(p.voucher()).toPlainString());return x;}
 
     private static Map<String, Object> supplierDetails(SSSupplier supplier) {
         Map<String, Object> result = new LinkedHashMap<>();
