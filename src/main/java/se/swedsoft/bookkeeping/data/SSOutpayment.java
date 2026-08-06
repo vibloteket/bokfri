@@ -57,8 +57,10 @@ public class SSOutpayment implements SSTableSearchable, Serializable {
         iDifference = new SSVoucher();
         iEntered = false;
         iDefaultAccounts = new HashMap<>();
-        iDefaultAccounts.putAll(
-                SSDB.getInstance().getCurrentCompany().getDefaultAccounts());
+        SSNewCompany company = SSDB.getInstance().getCurrentCompany();
+        if (company != null) {
+            iDefaultAccounts.putAll(company.getDefaultAccounts());
+        }
 
     }
 

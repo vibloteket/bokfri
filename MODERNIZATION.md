@@ -114,6 +114,8 @@ Next command candidates:
 - `db status` — open a configured database and report basic health/counts
 - `invoice validate` and `invoice create [--dry-run]` — validate and create
   unbooked customer invoices through a service shared with Swing
+- `outpayment list/show/validate/create` and journal — pay booked supplier
+  invoices and commit the period journal
 - `supplier-invoice list/show/validate/create` and journal — register and book
   supplier invoices through the existing period journal model
 - `supplier list/show/validate/create` — inspect and create suppliers before

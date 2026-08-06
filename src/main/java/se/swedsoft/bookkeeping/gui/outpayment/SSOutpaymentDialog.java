@@ -1,6 +1,8 @@
 package se.swedsoft.bookkeeping.gui.outpayment;
 
 
+import org.fribok.bookkeeping.service.outpayment.OutpaymentService;
+import org.fribok.bookkeeping.service.outpayment.OutpaymentService;
 import se.swedsoft.bookkeeping.data.SSOutpayment;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
@@ -51,7 +53,7 @@ public class SSOutpaymentDialog {
 
                 SSOutpayment iOutpayment1 = iPanel.getOutpayment();
 
-                SSDB.getInstance().addOutpayment(iOutpayment1);
+                new OutpaymentService(SSDB.getInstance()).create(iOutpayment1);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();
@@ -112,7 +114,7 @@ public class SSOutpaymentDialog {
 
                 SSOutpayment iOutpayment1 = iPanel.getOutpayment();
 
-                SSDB.getInstance().addOutpayment(iOutpayment1);
+                new OutpaymentService(SSDB.getInstance()).create(iOutpayment1);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();

@@ -37,6 +37,7 @@ public final class CliSmokeTest {
             runProductFlow(temporary);
             runSupplierFlow(temporary);
             runSupplierInvoiceFlow(temporary);
+            runOutpaymentFlow(temporary);
             runInvoiceFlow(temporary);
             runInpaymentFlow(temporary);
             runVoucherFlow(temporary);
@@ -208,6 +209,19 @@ public final class CliSmokeTest {
         Result preview=cli("--format","json","supplier-invoice","journal","--from",date,"--to",date);preview.success();require(preview.stdout.contains("\"committed\":false"),"supplier invoice journal preview committed");
         Result commit=cli("--format","json","supplier-invoice","journal","--from",date,"--to",date,"--commit");commit.success();require(commit.stdout.contains("\"committed\":true"),"supplier invoice journal did not commit");
         Result shown=cli("--format","json","supplier-invoice","show",Integer.toString(number));shown.success();require(shown.stdout.contains("\"entered\":true"),"supplier invoice was not marked entered");
+        Files.writeString(temporary.resolve("supplier-invoice-number.txt"),Integer.toString(number));
+    }
+
+    private static void runOutpaymentFlow(Path temporary) throws Exception {
+        int invoice=Integer.parseInt(Files.readString(temporary.resolve("supplier-invoice-number.txt")));
+        Result shown=cli("--format","json","supplier-invoice","show",Integer.toString(invoice));shown.success();String date=firstString(shown.stdout,"date");String balance=firstString(shown.stdout,"balance");
+        Path input=temporary.resolve("outpayment.json");Files.writeString(input,"""
+                {"date":"%s","text":"CLI smoke outpayment","rows":[{"invoiceNumber":%d,"amount":"%s"}]}
+                """.formatted(date,invoice,balance),StandardCharsets.UTF_8);
+        cli("--format","json","outpayment","validate","--file",input.toString()).success();Result dry=cli("--format","json","outpayment","create","--dry-run","--file",input.toString());dry.success();int number=firstInt(dry.stdout,"number");
+        Result create=cli("--format","json","outpayment","create","--file",input.toString());create.success();require(firstInt(create.stdout,"number")==number,"outpayment number differs from dry run");
+        cli("--format","json","outpayment","show",Integer.toString(number)).success();cli("--format","json","outpayment","journal","--from",date,"--to",date).success();Result commit=cli("--format","json","outpayment","journal","--from",date,"--to",date,"--commit");commit.success();
+        shown=cli("--format","json","supplier-invoice","show",Integer.toString(invoice));shown.success();require(shown.stdout.contains("\"balance\":\"0"),"supplier invoice balance is not zero");
     }
 
     private static void runInvoiceFlow(Path temporary) throws Exception {
@@ -430,6 +444,13 @@ public final class CliSmokeTest {
     private static int firstInt(String json, String key) {
         Matcher matcher = Pattern.compile("\\\"" + key + "\\\"\\s*:\\s*(\\d+)").matcher(json);
         require(matcher.find(), "JSON lacks numeric key " + key + ": " + json);
+        return Integer.parseInt(matcher.group(1));
+    }
+
+    private static int supplierInvoiceNumberForSupplier(String json, String supplierNumber) {
+        Matcher matcher = Pattern.compile("\\{\\\"number\\\":(\\d+).*?\\\"supplierNumber\\\":\\\""
+                + Pattern.quote(supplierNumber) + "\\\"").matcher(json);
+        require(matcher.find(), "Supplier invoice list lacks supplier " + supplierNumber);
         return Integer.parseInt(matcher.group(1));
     }
 

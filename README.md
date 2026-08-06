@@ -215,6 +215,15 @@ bokfri supplier-invoice journal --from 2026-08-01 --to 2026-08-31
 bokfri supplier-invoice journal --from 2026-08-01 --to 2026-08-31 --commit
 ```
 
+Bokförda leverantörsfakturor kan betalas och journalföras med `outpayment`:
+
+```sh
+bokfri outpayment validate --file outpayment.json
+bokfri outpayment create --dry-run --file outpayment.json
+bokfri outpayment create --file outpayment.json
+bokfri outpayment journal --from 2026-08-01 --to 2026-08-31 --commit
+```
+
 Kundinbetalningar registreras mot bokförda fakturor och journalförs på samma
 sätt:
 
