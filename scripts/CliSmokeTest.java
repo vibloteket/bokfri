@@ -35,6 +35,7 @@ public final class CliSmokeTest {
             runReadOnlyAndContextFlow();
             runReferenceDataFlow(temporary);
             runProductFlow(temporary);
+            runSupplierFlow(temporary);
             runInvoiceFlow(temporary);
             runInpaymentFlow(temporary);
             runVoucherFlow(temporary);
@@ -162,6 +163,35 @@ public final class CliSmokeTest {
         show.success();
         require(show.stdout.contains("\"description\":\"CLI smoke product\""),
                 "product show returned the wrong product");
+    }
+
+    private static void runSupplierFlow(Path temporary) throws Exception {
+        Path input = temporary.resolve("supplier.json");
+        Files.writeString(input, """
+                {
+                  "number": "CLI-SMOKE-SUPPLIER",
+                  "name": "CLI smoke supplier",
+                  "email": "supplier@example.invalid",
+                  "address": {"city": "Test city"}
+                }
+                """, StandardCharsets.UTF_8);
+        cli("--format", "json", "supplier", "validate", "--file", input.toString()).success();
+        Result dryRun = cli("--format", "json", "supplier", "create", "--dry-run",
+                "--file", input.toString());
+        dryRun.success();
+        require(!dryRun.stdout.contains("\"created\":true"),
+                "supplier dry run unexpectedly created data");
+        Result create = cli("--format", "json", "supplier", "create", "--file", input.toString());
+        create.success();
+        require(create.stdout.contains("\"created\":true"), "supplier create lacks created=true");
+        Result list = cli("--format", "json", "supplier", "list");
+        list.success();
+        require(list.stdout.contains("\"number\":\"CLI-SMOKE-SUPPLIER\""),
+                "created supplier is absent from list");
+        Result show = cli("--format", "json", "supplier", "show", "CLI-SMOKE-SUPPLIER");
+        show.success();
+        require(show.stdout.contains("\"name\":\"CLI smoke supplier\""),
+                "supplier show returned the wrong supplier");
     }
 
     private static void runInvoiceFlow(Path temporary) throws Exception {

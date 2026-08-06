@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.gui.supplier;
 
 
+import org.fribok.bookkeeping.service.supplier.SupplierService;
 import se.swedsoft.bookkeeping.calc.math.SSSupplierMath;
 import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -75,7 +76,7 @@ public class SSSupplierDialog {
                     }
                 }
 
-                SSDB.getInstance().addSupplier(iSupplier1);
+                new SupplierService(SSDB.getInstance()).create(iSupplier1);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();
@@ -231,7 +232,7 @@ public class SSSupplierDialog {
                     }
                 }
 
-                SSDB.getInstance().addSupplier(iSupplier1);
+                new SupplierService(SSDB.getInstance()).create(iSupplier1);
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();

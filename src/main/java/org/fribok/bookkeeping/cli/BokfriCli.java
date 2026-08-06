@@ -21,6 +21,9 @@ import org.fribok.bookkeeping.service.invoice.InvoiceService;
 import org.fribok.bookkeeping.service.invoice.InvoiceValidationIssue;
 import org.fribok.bookkeeping.service.invoice.InvoiceValidationResult;
 import org.fribok.bookkeeping.service.product.ProductService;
+import org.fribok.bookkeeping.service.supplier.SupplierService;
+import org.fribok.bookkeeping.service.supplier.SupplierValidationIssue;
+import org.fribok.bookkeeping.service.supplier.SupplierValidationResult;
 import org.fribok.bookkeeping.service.product.ProductValidationIssue;
 import org.fribok.bookkeeping.service.product.ProductValidationResult;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
@@ -42,6 +45,7 @@ import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSNewProject;
 import se.swedsoft.bookkeeping.data.SSNewResultUnit;
 import se.swedsoft.bookkeeping.data.SSProduct;
+import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
@@ -71,6 +75,7 @@ import java.util.concurrent.Callable;
             BokfriCli.AccountCommand.class,
             BokfriCli.CustomerCommand.class,
             BokfriCli.ProductCommand.class,
+            BokfriCli.SupplierCommand.class,
             BokfriCli.InvoiceCommand.class,
             BokfriCli.InpaymentCommand.class,
             BokfriCli.VoucherCommand.class
@@ -692,6 +697,100 @@ public class BokfriCli implements Runnable {
         @Override boolean persist() { return !dryRun; }
     }
 
+    @Command(name = "supplier", description = "Inspect and create suppliers",
+            subcommands = {SupplierList.class, SupplierShow.class,
+                    SupplierValidate.class, SupplierCreate.class})
+    static class SupplierCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "A supplier command is required");
+        }
+    }
+
+    @Command(name = "list", description = "List suppliers")
+    static class SupplierList implements Callable<Integer> {
+        @CommandLine.ParentCommand SupplierCommand command;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                List<Map<String, Object>> suppliers = new SupplierService(runtime.database()).list()
+                        .stream().map(BokfriCli::supplierDetails).toList();
+                root.output(Map.of("context", selectedCompanyContext(context, company),
+                                "count", suppliers.size(), "suppliers", suppliers),
+                        suppliers.stream().map(item -> item.get("number") + "\t" + item.get("name")
+                                + "\t" + item.get("email"))
+                                .reduce((left, right) -> left + "\n" + right)
+                                .orElse("No suppliers found"));
+                return 0;
+            } catch (Exception exception) { throw databaseFailure(exception); }
+        }
+    }
+
+    @Command(name = "show", description = "Show one supplier by number")
+    static class SupplierShow implements Callable<Integer> {
+        @CommandLine.ParentCommand SupplierCommand command;
+        @Parameters(index = "0") String number;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSSupplier supplier = new SupplierService(runtime.database()).find(number)
+                        .orElseThrow(() -> new CliException("SUPPLIER_NOT_FOUND",
+                                "No supplier has number " + number));
+                Map<String, Object> result = supplierDetails(supplier);
+                result.put("context", selectedCompanyContext(context, company));
+                root.output(result, supplier.getNumber() + "\t" + supplier.getName()
+                        + "\nEmail: " + supplier.getEMail());
+                return 0;
+            } catch (Exception exception) { throw databaseFailure(exception); }
+        }
+    }
+
+    abstract static class SupplierOperation implements Callable<Integer> {
+        @CommandLine.ParentCommand SupplierCommand command;
+        @Option(names = "--file", required = true, description = "Supplier JSON file, or - for stdin")
+        String file;
+        abstract boolean persist();
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            SupplierInput input = readSupplierInput(file);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SupplierService service = new SupplierService(runtime.database());
+                SSSupplier supplier = toSupplier(input, runtime, service);
+                SupplierValidationResult validation = service.validate(supplier);
+                if (!validation.valid()) { throw supplierValidationFailure(validation); }
+                if (persist()) { service.create(supplier); }
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("valid", true);
+                result.put("dryRun", !persist());
+                result.put("created", persist());
+                result.put("supplier", supplierDetails(supplier));
+                result.put("context", selectedCompanyContext(context, company));
+                root.output(result, persist()
+                        ? "Created supplier " + supplier.getNumber() + " - " + supplier.getName()
+                        : "Supplier is valid; no changes written\n" + supplier.getNumber()
+                                + "\t" + supplier.getName());
+                return 0;
+            } catch (Exception exception) { throw databaseFailure(exception); }
+        }
+    }
+
+    @Command(name = "validate", description = "Validate supplier JSON without writing")
+    static class SupplierValidate extends SupplierOperation {
+        @Override boolean persist() { return false; }
+    }
+
+    @Command(name = "create", description = "Create a supplier from JSON")
+    static class SupplierCreate extends SupplierOperation {
+        @Option(names = "--dry-run") boolean dryRun;
+        @Override boolean persist() { return !dryRun; }
+    }
+
     @Command(name = "invoice", description = "Inspect and create customer invoices",
             subcommands = {InvoiceList.class, InvoiceShow.class, InvoicePdf.class,
                     InvoiceJournal.class, InvoiceValidate.class, InvoiceCreate.class})
@@ -1157,6 +1256,68 @@ public class BokfriCli implements Runnable {
         @Override boolean persist() { return !dryRun; }
     }
 
+    private static SupplierInput readSupplierInput(String file) {
+        try {
+            SupplierInput input = "-".equals(file)
+                    ? jsonMapper().readValue(System.in, SupplierInput.class)
+                    : jsonMapper().readValue(Paths.get(file).toFile(), SupplierInput.class);
+            if (input.getSchemaVersion() != 1) {
+                throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
+                        "Unsupported supplier schemaVersion: " + input.getSchemaVersion());
+            }
+            return input;
+        } catch (CliException exception) { throw exception; }
+        catch (IOException exception) {
+            throw new CliException("INPUT_INVALID", "Could not read supplier JSON: "
+                    + exception.getMessage(), exception);
+        }
+    }
+
+    private static SSSupplier toSupplier(SupplierInput input, BokfriRuntime runtime,
+            SupplierService service) {
+        SSSupplier supplier = new SSSupplier();
+        supplier.setNumber(normalized(input.getNumber()));
+        supplier.setName(normalized(input.getName()));
+        supplier.setRegistrationNumber(normalized(input.getRegistrationNumber()));
+        supplier.setEMail(normalized(input.getEmail()));
+        supplier.setPhone1(normalized(input.getPhone()));
+        supplier.setHomepage(normalized(input.getHomepage()));
+        if (input.getOurContact() != null) { supplier.setOurContact(normalized(input.getOurContact())); }
+        supplier.setYourContact(normalized(input.getYourContact()));
+        supplier.setOurCustomerNr(normalized(input.getOurCustomerNumber()));
+        supplier.setBankGiro(normalized(input.getBankgiro()));
+        supplier.setPlusGiro(normalized(input.getPlusgiro()));
+        supplier.setComment(normalized(input.getComment()));
+        supplier.setOutpaymentNumber(input.getOutpaymentNumber() == null
+                ? service.nextOutpaymentNumber() : input.getOutpaymentNumber());
+        if (input.getAddress() != null) {
+            SSAddress address = toAddress(input.getAddress());
+            if (address.getName().isBlank()) { address.setName(orEmpty(input.getName())); }
+            supplier.setAddress(address);
+        }
+        if (input.getCurrency() != null) {
+            supplier.setCurrency(runtime.database().getCurrencies().stream()
+                    .filter(item -> input.getCurrency().equalsIgnoreCase(item.getName()))
+                    .findFirst().orElseThrow(() -> new CliException("SUPPLIER_CURRENCY_NOT_FOUND",
+                            "No currency has code " + input.getCurrency())));
+        }
+        if (input.getPaymentTerms() != null) {
+            supplier.setPaymentTerm(runtime.database().getPaymentTerms().stream()
+                    .filter(item -> input.getPaymentTerms().equals(item.getName()))
+                    .findFirst().orElseThrow(() -> new CliException("SUPPLIER_PAYMENT_TERMS_NOT_FOUND",
+                            "No payment terms have code " + input.getPaymentTerms())));
+        }
+        return supplier;
+    }
+
+    private static CliException supplierValidationFailure(SupplierValidationResult validation) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("valid", false);
+        details.put("issues", validation.issues());
+        SupplierValidationIssue first = validation.issues().get(0);
+        return new CliException("SUPPLIER_INVALID", first.message(), details);
+    }
+
     private static InpaymentInput readInpaymentInput(String file) {
         try {
             InpaymentInput input = "-".equals(file)
@@ -1579,6 +1740,28 @@ public class BokfriCli implements Runnable {
         result.put("project", product.getProjectNr());
         result.put("resultUnit", product.getResultUnitNr());
         result.put("expired", product.isExpired());
+        return result;
+    }
+
+    private static Map<String, Object> supplierDetails(SSSupplier supplier) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("number", supplier.getNumber());
+        result.put("name", supplier.getName());
+        result.put("registrationNumber", supplier.getRegistrationNumber());
+        result.put("email", supplier.getEMail());
+        result.put("phone", supplier.getPhone1());
+        result.put("homepage", supplier.getHomepage());
+        result.put("ourContact", supplier.getOurContact());
+        result.put("yourContact", supplier.getYourContact());
+        result.put("ourCustomerNumber", supplier.getOurCustomerNr());
+        result.put("bankgiro", supplier.getBankgiro());
+        result.put("plusgiro", supplier.getPlusgiro());
+        result.put("outpaymentNumber", supplier.getOutpaymentNumber());
+        result.put("currency", supplier.getCurrency() == null ? null : supplier.getCurrency().getName());
+        result.put("paymentTerms", supplier.getPaymentTerm() == null
+                ? null : supplier.getPaymentTerm().getName());
+        result.put("comment", supplier.getComment());
+        result.put("address", supplier.getAddress());
         return result;
     }
 

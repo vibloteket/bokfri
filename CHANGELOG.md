@@ -29,6 +29,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   runs the complete CLI black-box scenario against the installed launcher,
   uninstalls it, and verifies that program files are removed without deleting
   Bokfri user data.
+- Added supplier list/show and JSON validation, dry runs, and creation with
+  company defaults and automatic unique outpayment numbering.
 - Added customer inpayment list/show, JSON validation and creation, and
   period-based inpayment journal preview/commit with invoice balance checks.
 - Added preview and commit support for period-based customer-invoice journals,

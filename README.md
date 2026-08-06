@@ -184,6 +184,26 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar invoice journal \
 Vid commit markeras periodens obokförda kundfakturor som bokförda,
 journalnumret räknas upp och en gemensam verifikation sparas.
 
+Leverantörer kan valideras och skapas före leverantörsfakturorna:
+
+```json
+{
+  "number": "S100",
+  "name": "Leverantör AB",
+  "email": "faktura@leverantor.se",
+  "bankgiro": "555-1234"
+}
+```
+
+```sh
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar supplier validate --file supplier.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar supplier create --dry-run --file supplier.json
+java -jar target/bokfri-1.0.1-jar-with-dependencies.jar supplier create --file supplier.json
+```
+
+Utbetalningsnumret tilldelas automatiskt när det utelämnas. Valuta,
+betalningsvillkor, leveransvillkor och kontaktperson ärvs från företaget.
+
 Kundinbetalningar registreras mot bokförda fakturor och journalförs på samma
 sätt:
 
