@@ -7,6 +7,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
+import org.fribok.bookkeeping.service.backup.BackupDetails;
+import org.fribok.bookkeeping.service.backup.BackupService;
+import org.fribok.bookkeeping.service.backup.BackupVerification;
 import org.fribok.bookkeeping.service.company.CompanyService;
 import org.fribok.bookkeeping.service.customer.CustomerService;
 import org.fribok.bookkeeping.service.customer.CustomerValidationIssue;
@@ -29,6 +32,7 @@ import org.fribok.bookkeeping.service.outpayment.OutpaymentService;
 import org.fribok.bookkeeping.service.outpayment.OutpaymentValidationIssue;
 import org.fribok.bookkeeping.service.outpayment.OutpaymentValidationResult;
 import org.fribok.bookkeeping.service.product.ProductService;
+import org.fribok.bookkeeping.service.sie.SieExportService;
 import org.fribok.bookkeeping.service.supplier.SupplierService;
 import org.fribok.bookkeeping.service.supplier.SupplierValidationIssue;
 import org.fribok.bookkeeping.service.supplier.SupplierValidationResult;
@@ -72,6 +76,7 @@ import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.common.SSCurrency;
 import se.swedsoft.bookkeeping.data.common.SSDefaultAccount;
 import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
+import se.swedsoft.bookkeeping.importexport.sie.util.SIEType;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -95,6 +100,8 @@ import java.util.concurrent.Callable;
             BokfriCli.YearCommand.class,
             BokfriCli.AccountCommand.class,
             BokfriCli.OpeningBalanceCommand.class,
+            BokfriCli.BackupCommand.class,
+            BokfriCli.SieCommand.class,
             BokfriCli.CustomerCommand.class,
             BokfriCli.ProductCommand.class,
             BokfriCli.SupplierCommand.class,
@@ -522,6 +529,123 @@ public class BokfriCli implements Runnable {
     @Command(name="validate") static class OpeningBalanceValidate extends OpeningBalanceFileCommand{boolean persist(){return false;}}
     @Command(name="set") static class OpeningBalanceSet extends OpeningBalanceFileCommand{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
     @Command(name="carry-forward") static class OpeningBalanceCarryForward implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--from-year-id",required=true)int fromYearId;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear to=r.selectYear(co,c.yearId());SSNewAccountingYear from=r.database().getYearsForCompany(co).stream().filter(y->y.getId()==fromYearId).findFirst().orElseThrow(()->new CliException("YEAR_NOT_FOUND","No source year has id "+fromYearId));OpeningBalancePlan p=new OpeningBalanceService(r.database()).carryForward(from,to,commit);Map<String,Object>x=openingBalanceDetails(p);x.put("fromYearId",fromYearId);x.put("toYearId",to.getId());x.put("committed",commit);x.put("context",selectedContext(c,co,to));root.output(x,commit?"Opening balances carried forward":"Carry-forward preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
+
+    @Command(name = "backup", description = "Create, list, and verify full backups",
+            subcommands = {BackupCreate.class, BackupList.class, BackupVerify.class})
+    static class BackupCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "A backup command is required");
+        }
+    }
+
+    @Command(name = "create", description = "Create a full backup archive")
+    static class BackupCreate implements Callable<Integer> {
+        @CommandLine.ParentCommand BackupCommand command;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite", description = "Replace an existing output file") boolean overwrite;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(false, false);
+            try {
+                try (BokfriRuntime ignored = BokfriRuntime.open(context.dataDir())) {
+                    // A clean shutdown makes the on-disk HSQLDB snapshot self-contained.
+                }
+                BackupDetails backup = new BackupService(context.dataDir()).create(output, overwrite);
+                root.output(backupDetails(backup), "Created backup " + backup.path()
+                        + " (" + backup.size() + " bytes)");
+                return 0;
+            } catch (java.nio.file.FileAlreadyExistsException exception) {
+                throw new CliException("OUTPUT_EXISTS",
+                        "Output file already exists: " + exception.getFile(), exception);
+            } catch (Exception exception) {
+                throw new CliException("BACKUP_CREATE_FAILED", exception.getMessage(), exception);
+            }
+        }
+    }
+
+    @Command(name = "list", description = "List backups created by this data directory")
+    static class BackupList implements Callable<Integer> {
+        @CommandLine.ParentCommand BackupCommand command;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(false, false);
+            try {
+                List<BackupDetails> backups = new BackupService(context.dataDir()).list();
+                List<Map<String, Object>> rows = backups.stream().map(BokfriCli::backupDetails).toList();
+                String text = rows.stream().map(row -> row.get("createdAt") + "\t" + row.get("size")
+                        + "\t" + row.get("exists") + "\t" + row.get("path"))
+                        .reduce((left, right) -> left + "\n" + right).orElse("No backups found");
+                root.output(Map.of("backups", rows, "count", rows.size()), text);
+                return 0;
+            } catch (Exception exception) {
+                throw new CliException("BACKUP_LIST_FAILED", exception.getMessage(), exception);
+            }
+        }
+    }
+
+    @Command(name = "verify", description = "Verify a full backup archive")
+    static class BackupVerify implements Callable<Integer> {
+        @CommandLine.ParentCommand BackupCommand command;
+        @Option(names = "--file", required = true) java.nio.file.Path file;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(false, false);
+            try {
+                BackupVerification verification = new BackupService(context.dataDir()).verify(file);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("valid", true);
+                result.put("path", verification.path().toString());
+                result.put("createdAt", verification.createdAt());
+                result.put("size", verification.size());
+                result.put("entries", verification.entries());
+                root.output(result, "Backup is valid: " + verification.path());
+                return 0;
+            } catch (Exception exception) {
+                throw new CliException("BACKUP_INVALID", exception.getMessage(), exception);
+            }
+        }
+    }
+
+    @Command(name = "sie", description = "Export Swedish SIE files", subcommands = SieExport.class)
+    static class SieCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "A SIE command is required");
+        }
+    }
+
+    @Command(name = "export", description = "Export the selected accounting year")
+    static class SieExport implements Callable<Integer> {
+        @CommandLine.ParentCommand SieCommand command;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--type", defaultValue = "4E", description = "SIE type: 1, 2, 3, or 4E")
+        String type;
+        @Option(names = "--comment", description = "Optional SIE comment") String comment;
+        @Option(names = "--overwrite", description = "Replace an existing output file") boolean overwrite;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            SIEType sieType = parseSieType(type);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                java.nio.file.Path file = new SieExportService().export(output, sieType, comment, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("output", file.toString());
+                result.put("size", Files.size(file));
+                result.put("type", type.toUpperCase(java.util.Locale.ROOT));
+                result.put("context", selectedContext(context, company, year));
+                root.output(result, "Created SIE export " + file + " (" + Files.size(file) + " bytes)");
+                return 0;
+            } catch (java.nio.file.FileAlreadyExistsException exception) {
+                throw new CliException("OUTPUT_EXISTS",
+                        "Output file already exists: " + exception.getFile(), exception);
+            } catch (Exception exception) {
+                throw new CliException("SIE_EXPORT_FAILED", exception.getMessage(), exception);
+            }
+        }
+    }
 
     @Command(name = "customer", description = "Inspect and create customers",
             subcommands = {CustomerList.class, CustomerShow.class,
@@ -1529,6 +1653,25 @@ public class BokfriCli implements Runnable {
         result.put("creditTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
                 .getCreditSum(plan.voucher()).toPlainString());
         return result;
+    }
+
+    private static Map<String, Object> backupDetails(BackupDetails backup) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("path", backup.path().toString());
+        result.put("createdAt", backup.createdAt());
+        result.put("size", backup.size());
+        result.put("exists", backup.exists());
+        return result;
+    }
+
+    private static SIEType parseSieType(String value) {
+        return switch (value.toUpperCase(java.util.Locale.ROOT)) {
+            case "1" -> SIEType.SIE_1;
+            case "2" -> SIEType.SIE_2;
+            case "3" -> SIEType.SIE_3;
+            case "4E", "4" -> SIEType.SIE_4E;
+            default -> throw new CliException("SIE_TYPE_INVALID", "SIE type must be 1, 2, 3, or 4E");
+        };
     }
 
     private static OpeningBalanceInput readOpeningBalanceInput(String file){try{OpeningBalanceInput i="-".equals(file)?jsonMapper().readValue(System.in,OpeningBalanceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),OpeningBalanceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported opening balance schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read opening balance JSON: "+e.getMessage(),e);}}

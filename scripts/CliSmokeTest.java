@@ -45,6 +45,8 @@ public final class CliSmokeTest {
             runVatFlow(temporary);
             runVoucherFlow(temporary);
             runNextYearFlow(temporary);
+            runSieExportFlow(temporary);
+            runBackupFlow(temporary);
             runErrorFlow(temporary);
             System.out.println("Bokfri CLI black-box smoke test passed: " + launcher.getFileName());
         } finally {
@@ -509,6 +511,42 @@ public final class CliSmokeTest {
                 "2027 opening balance is not balanced");
         require(!show.stdout.contains("\"balances\":[]"),
                 "2027 opening balance was not persisted");
+    }
+
+    private static void runSieExportFlow(Path temporary) throws Exception {
+        Path output = temporary.resolve("company-2027.se");
+        Result export = cli("--format", "json", "sie", "export", "--output", output.toString());
+        export.success();
+        require(Files.size(output) > 100, "SIE export is unexpectedly small");
+        String content = Files.readString(output, java.nio.charset.Charset.forName("IBM-437"));
+        require(content.contains("#SIETYP 4"), "SIE export lacks type declaration");
+        require(content.contains("#FNAMN"), "SIE export lacks company name");
+        require(content.contains("#RAR"), "SIE export lacks accounting year");
+        Result duplicate = cli("--format", "json", "sie", "export", "--output", output.toString());
+        require(duplicate.exitCode != 0, "SIE export unexpectedly overwrote an existing file");
+        require(duplicate.stderr.contains("\"code\":\"OUTPUT_EXISTS\""),
+                "duplicate SIE output lacks stable error code");
+    }
+
+    private static void runBackupFlow(Path temporary) throws Exception {
+        Path output = temporary.resolve("bokfri-backup.zip");
+        Result create = cli("--format", "json", "backup", "create", "--output", output.toString());
+        create.success();
+        require(Files.size(output) > 1_000, "backup archive is unexpectedly small");
+        Result verify = cli("--format", "json", "backup", "verify", "--file", output.toString());
+        verify.success();
+        require(verify.stdout.contains("\"valid\":true"), "backup verification did not succeed");
+        require(verify.stdout.contains("JFSDB.properties"), "backup lacks database properties");
+        require(verify.stdout.contains("JFSDB.script"), "backup lacks database script");
+        require(verify.stdout.contains("backup.info"), "backup lacks metadata");
+        Result list = cli("--format", "json", "backup", "list");
+        list.success();
+        require(list.stdout.contains(output.toAbsolutePath().toString().replace("\\", "\\\\")),
+                "created backup is absent from backup list");
+        Result duplicate = cli("--format", "json", "backup", "create", "--output", output.toString());
+        require(duplicate.exitCode != 0, "backup unexpectedly overwrote an existing file");
+        require(duplicate.stderr.contains("\"code\":\"OUTPUT_EXISTS\""),
+                "duplicate backup output lacks stable error code");
     }
 
     private static void runErrorFlow(Path temporary) throws Exception {
