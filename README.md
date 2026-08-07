@@ -101,6 +101,27 @@ Använd `--format json` för maskinläsbar utdata och `--config FIL` för en
 isolerad config, exempelvis för CI eller en agent. Globala val måste placeras
 före kommandot, till exempel `cli --format json company list`.
 
+Företag och räkenskapsår kan skapas från JSON efter att en tillgänglig
+kontoplan har valts:
+
+```sh
+bokfri account-plan list
+bokfri company create --file company.json
+bokfri --company-id 42 year create --file year.json
+```
+
+```json
+{"name": "Exempel AB"}
+```
+
+```json
+{
+  "from": "2026-01-01",
+  "to": "2026-12-31",
+  "accountPlanId": 7
+}
+```
+
 Kunder kan valideras och skapas från JSON. Endast `number` och `name` är
 obligatoriska; `schemaVersion` är frivilligt och tolkas som version 1 när det
 utelämnas. Utdata är text som standard och `--format json` väljer maskinformat:

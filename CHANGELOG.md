@@ -29,6 +29,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   runs the complete CLI black-box scenario against the installed launcher,
   uninstalls it, and verifies that program files are removed without deleting
   Bokfri user data.
+- Added company creation, account-plan discovery, and accounting-year creation
+  commands so automated scenarios can bootstrap their own bookkeeping context.
 - Added headless VAT report calculation and explicit VAT settlement
   preview/commit using Bokfri's existing VAT codes and settlement accounts.
 - Added supplier outpayment list/show, JSON validation and creation, and

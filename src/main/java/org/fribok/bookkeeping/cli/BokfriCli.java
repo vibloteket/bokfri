@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
+import org.fribok.bookkeeping.service.company.CompanyService;
 import org.fribok.bookkeeping.service.customer.CustomerService;
 import org.fribok.bookkeeping.service.customer.CustomerValidationIssue;
 import org.fribok.bookkeeping.service.customer.CustomerValidationResult;
@@ -38,6 +39,7 @@ import org.fribok.bookkeeping.service.product.ProductValidationResult;
 import org.fribok.bookkeeping.service.vat.VatService;
 import org.fribok.bookkeeping.service.vat.VatSettlementPlan;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
+import org.fribok.bookkeeping.service.year.AccountingYearService;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationIssue;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationResult;
 import picocli.CommandLine;
@@ -46,6 +48,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import se.swedsoft.bookkeeping.calc.math.SSSaleMath;
 import se.swedsoft.bookkeeping.data.SSAccount;
+import se.swedsoft.bookkeeping.data.SSAccountPlan;
 import se.swedsoft.bookkeeping.data.SSAddress;
 import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInpayment;
@@ -86,6 +89,7 @@ import java.util.concurrent.Callable;
             BokfriCli.DoctorCommand.class,
             BokfriCli.ContextCommand.class,
             BokfriCli.CompanyCommand.class,
+            BokfriCli.AccountPlanCommand.class,
             BokfriCli.YearCommand.class,
             BokfriCli.AccountCommand.class,
             BokfriCli.CustomerCommand.class,
@@ -390,13 +394,15 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(name = "company", description = "Inspect companies", subcommands = CompanyList.class)
+    @Command(name = "company", description = "Inspect and create companies", subcommands = {CompanyList.class,CompanyCreate.class})
     static class CompanyCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
             throw new CommandLine.ParameterException(spec.commandLine(), "A company command is required");
         }
     }
+
+    @Command(name="create",description="Create a company from JSON") static class CompanyCreate implements Callable<Integer>{@CommandLine.ParentCommand CompanyCommand command;@Option(names="--file",required=true)String file;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);CompanyInput in=readCompanyInput(file);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=new SSNewCompany();co.setName(normalized(in.getName()));co.setCorporateID(normalized(in.getCorporateId()));co.setVATNumber(normalized(in.getVatNumber()));co.setEMail(normalized(in.getEmail()));co.setPhone(normalized(in.getPhone()));co.setContactPerson(normalized(in.getContactPerson()));co.setVatPeriod(in.getVatPeriod());co.setCurrency(java.util.stream.Stream.concat(r.database().getCurrencies().stream(),se.swedsoft.bookkeeping.data.common.SSCurrency.getDefaultCurrencies().stream()).filter(x->in.getCurrency().equalsIgnoreCase(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_CURRENCY_NOT_FOUND","No currency has code "+in.getCurrency())));co.setPaymentTerm(java.util.stream.Stream.concat(r.database().getPaymentTerms().stream(),se.swedsoft.bookkeeping.data.common.SSPaymentTerm.getDefaultPaymentTerms().stream()).filter(x->in.getPaymentTerms().equals(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_PAYMENT_TERMS_NOT_FOUND","No payment terms have code "+in.getPaymentTerms())));co.setStandardUnit(java.util.stream.Stream.concat(r.database().getUnits().stream(),se.swedsoft.bookkeeping.data.common.SSUnit.getDefaultUnits().stream()).filter(x->in.getStandardUnit().equals(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_UNIT_NOT_FOUND","No unit has code "+in.getStandardUnit())));new CompanyService(r.database()).create(co);root.output(Map.of("id",co.getId(),"name",co.getName()),"Created company "+co.getId()+" - "+co.getName());return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(name = "list", description = "List companies")
     static class CompanyList implements Callable<Integer> {
@@ -423,13 +429,19 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(name = "year", description = "Inspect accounting years", subcommands = YearList.class)
+    @Command(name="account-plan",description="Inspect available account plans",subcommands=AccountPlanList.class)
+    static class AccountPlanCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An account-plan command is required");}}
+    @Command(name="list") static class AccountPlanList implements Callable<Integer>{@CommandLine.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),plans.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+
+    @Command(name = "year", description = "Inspect accounting years", subcommands = {YearList.class,YearCreate.class})
     static class YearCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
             throw new CommandLine.ParameterException(spec.commandLine(), "A year command is required");
         }
     }
+
+    @Command(name="create",description="Create an accounting year from JSON") static class YearCreate implements Callable<Integer>{@CommandLine.ParentCommand YearCommand command;@Option(names="--file",required=true)String file;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);AccountingYearInput in=readAccountingYearInput(file);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());AccountingYearService s=new AccountingYearService(r.database());List<SSAccountPlan> matches=s.accountPlans().stream().filter(p->in.getAccountPlanId()!=null&&in.getAccountPlanId().equals(p.getId())||in.getAccountPlanName()!=null&&in.getAccountPlanName().equals(p.getName())).toList();if(matches.size()!=1)throw new CliException("ACCOUNT_PLAN_NOT_FOUND","Account plan must match exactly one plan");SSNewAccountingYear y=s.create(in.getFrom(),in.getTo(),matches.get(0));Map<String,Object>x=new LinkedHashMap<>();x.put("id",y.getId());x.put("from",y.getLocalFrom());x.put("to",y.getLocalTo());x.put("accountPlan",y.getAccountPlan().getName());x.put("companyId",co.getId());root.output(x,"Created accounting year "+y.toRenderString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(name = "list", description = "List accounting years for the selected company")
     static class YearList implements Callable<Integer> {
@@ -1505,6 +1517,9 @@ public class BokfriCli implements Runnable {
                 .getCreditSum(plan.voucher()).toPlainString());
         return result;
     }
+
+    private static CompanyInput readCompanyInput(String file){try{CompanyInput i="-".equals(file)?jsonMapper().readValue(System.in,CompanyInput.class):jsonMapper().readValue(Paths.get(file).toFile(),CompanyInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported company schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read company JSON: "+e.getMessage(),e);}}
+    private static AccountingYearInput readAccountingYearInput(String file){try{AccountingYearInput i="-".equals(file)?jsonMapper().readValue(System.in,AccountingYearInput.class):jsonMapper().readValue(Paths.get(file).toFile(),AccountingYearInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported accounting year schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read accounting year JSON: "+e.getMessage(),e);}}
 
     private static SupplierInvoiceInput readSupplierInvoiceInput(String file){try{SupplierInvoiceInput i="-".equals(file)?jsonMapper().readValue(System.in,SupplierInvoiceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),SupplierInvoiceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported supplier invoice schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read supplier invoice JSON: "+e.getMessage(),e);}}
     private static SSSupplierInvoice toSupplierInvoice(SupplierInvoiceInput in,BokfriRuntime r){SSSupplierInvoice i=new SSSupplierInvoice();SSSupplier s=new SupplierService(r.database()).find(in.getSupplierNumber()).orElseThrow(()->new CliException("SUPPLIER_INVOICE_SUPPLIER_NOT_FOUND","No supplier has number "+in.getSupplierNumber()));i.setSupplier(s);i.setPaymentTerm(s.getPaymentTerm());i.setLocalDate(in.getDate());if(in.getDueDate()!=null)i.setLocalDueDate(in.getDueDate());else i.setDueDate();i.setReferencenumber(normalized(in.getReference()));i.setTaxSum(in.getVat()==null?java.math.BigDecimal.ZERO:in.getVat());i.setRoundingSum(in.getRounding()==null?java.math.BigDecimal.ZERO:in.getRounding());i.setCurrencyRate(i.getCurrency()==null?java.math.BigDecimal.ONE:i.getCurrency().getExchangeRate());List<SSSupplierInvoiceRow> rows=new java.util.ArrayList<>();for(var x:in.getRows()){SSSupplierInvoiceRow row=new SSSupplierInvoiceRow();if(x.getProductNumber()!=null)row.setProduct(r.database().getProduct(x.getProductNumber()).orElseThrow(()->new CliException("SUPPLIER_INVOICE_PRODUCT_NOT_FOUND","No product has number "+x.getProductNumber())));if(x.getDescription()!=null)row.setDescription(normalized(x.getDescription()));if(x.getQuantity()!=null)row.setQuantity(x.getQuantity());else if(row.getQuantity()==null)row.setQuantity(1);if(x.getUnitPrice()!=null)row.setUnitprice(x.getUnitPrice());if(x.getFreight()!=null)row.setUnitFreight(x.getFreight());if(x.getAccount()!=null)row.setAccount(r.database().getAccounts().stream().filter(a->x.getAccount().equals(a.getNumber())).findFirst().orElseThrow(()->new CliException("SUPPLIER_INVOICE_ACCOUNT_NOT_FOUND","No account has number "+x.getAccount())));rows.add(row);}i.setRows(rows);i.generateVoucher();return i;}

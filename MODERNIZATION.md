@@ -100,6 +100,8 @@ Implemented commands:
 - `company list` and `year list` — inspect available company/year IDs for scripting
 
 Also implemented:
+- `account-plan list`, `company create`, and `year create` — bootstrap an
+  isolated company and accounting year for automation scenarios
 - `account list` — list accounts in the selected accounting year
 - `customer validate` and `customer create [--dry-run]` — validate and create
   customers from JSON through a service shared with Swing

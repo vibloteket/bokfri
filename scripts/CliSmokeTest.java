@@ -33,6 +33,7 @@ public final class CliSmokeTest {
 
         try {
             runReadOnlyAndContextFlow();
+            runCompanyAndYearCreationFlow(temporary);
             runReferenceDataFlow(temporary);
             runProductFlow(temporary);
             runSupplierFlow(temporary);
@@ -72,6 +73,12 @@ public final class CliSmokeTest {
         Result current = cli("--format", "json", "context", "current");
         current.success();
         require(current.stdout.contains("\"name\":\"smoke\""), "current context was not selected");
+    }
+
+    private static void runCompanyAndYearCreationFlow(Path temporary) throws Exception {
+        Result plans=cli("--format","json","account-plan","list");plans.success();int planId=firstInt(plans.stdout,"id");
+        Path company=temporary.resolve("company.json");Files.writeString(company,"{\"name\":\"CLI smoke company\"}",StandardCharsets.UTF_8);Result created=cli("--format","json","company","create","--file",company.toString());created.success();int companyId=firstInt(created.stdout,"id");
+        Path year=temporary.resolve("year.json");Files.writeString(year,"{\"from\":\"2026-01-01\",\"to\":\"2026-12-31\",\"accountPlanId\":"+planId+"}",StandardCharsets.UTF_8);Result createdYear=cli("--company-id",Integer.toString(companyId),"--format","json","year","create","--file",year.toString());createdYear.success();require(createdYear.stdout.contains("\"from\":\"2026-01-01\""),"accounting year was not created");
     }
 
     private static void runReferenceDataFlow(Path temporary) throws Exception {
