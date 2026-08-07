@@ -39,6 +39,7 @@ public final class CliSmokeTest {
             runSupplierInvoiceFlow(temporary);
             runOutpaymentFlow(temporary);
             runInvoiceFlow(temporary);
+            runVatFlow(temporary);
             runInpaymentFlow(temporary);
             runVoucherFlow(temporary);
             runErrorFlow(temporary);
@@ -349,6 +350,13 @@ public final class CliSmokeTest {
         paidInvoice.success();
         require(paidInvoice.stdout.contains("\"balance\":\"0"),
                 "paid invoice balance is not zero");
+    }
+
+    private static void runVatFlow(Path temporary) throws Exception {
+        Result years=cli("--format","json","year","list");years.success();String from=firstString(years.stdout,"from");String to=firstString(years.stdout,"to");
+        Result report=cli("--format","json","vat","report","--from",from,"--to",to);report.success();require(report.stdout.contains("\"boxes\":"),"VAT report lacks boxes");
+        Result preview=cli("--format","json","vat","settle","--from",from,"--to",to);preview.success();require(preview.stdout.contains("\"committed\":false"),"VAT preview committed");
+        Result commit=cli("--format","json","vat","settle","--from",from,"--to",to,"--commit");commit.success();require(commit.stdout.contains("\"committed\":true"),"VAT settlement did not commit");int voucher=firstInt(commit.stdout,"voucherNumber");cli("--format","json","voucher","show",Integer.toString(voucher)).success();
     }
 
     private static void runVoucherFlow(Path temporary) throws Exception {

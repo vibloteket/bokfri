@@ -35,6 +35,8 @@ import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationI
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationResult;
 import org.fribok.bookkeeping.service.product.ProductValidationIssue;
 import org.fribok.bookkeeping.service.product.ProductValidationResult;
+import org.fribok.bookkeeping.service.vat.VatService;
+import org.fribok.bookkeeping.service.vat.VatSettlementPlan;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationIssue;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationResult;
@@ -93,6 +95,7 @@ import java.util.concurrent.Callable;
             BokfriCli.InvoiceCommand.class,
             BokfriCli.InpaymentCommand.class,
             BokfriCli.OutpaymentCommand.class,
+            BokfriCli.VatCommand.class,
             BokfriCli.VoucherCommand.class
         })
 public class BokfriCli implements Runnable {
@@ -1294,6 +1297,12 @@ public class BokfriCli implements Runnable {
         }
     }
 
+    @Command(name="vat",description="Calculate and settle VAT",subcommands={VatReportCommand.class,VatSettle.class})
+    static class VatCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"A VAT command is required");}}
+    abstract static class VatPeriodCommand implements Callable<Integer>{@CommandLine.ParentCommand VatCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;BokfriCli root(){return command.parent;}}
+    @Command(name="report") static class VatReportCommand extends VatPeriodCommand{public Integer call(){BokfriCli root=root();ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);var report=new VatService(r.database()).report(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("boxes",report.boxes());x.put("vatToPayOrRefund",decimal(report.vatToPayOrRefund()));x.put("context",selectedContext(c,co,y));root.output(x,"VAT report "+from+" – "+to+"\nVAT to pay/refund: "+report.vatToPayOrRefund());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(name="settle") static class VatSettle extends VatPeriodCommand{@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=root();ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);VatService s=new VatService(r.database());VatSettlementPlan p=s.plan(from,to);Map<String,Object>x=vatSettlementDetails(p);x.put("committed",commit);x.put("context",selectedContext(c,co,y));if(commit)x.put("voucherNumber",s.commit(p).voucherNumber());root.output(x,commit?"Committed VAT settlement voucher "+x.get("voucherNumber"):"VAT settlement preview; no changes written");return 0;}catch(IllegalArgumentException|IllegalStateException e){throw new CliException("VAT_SETTLEMENT_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
+
     @Command(name = "voucher", description = "Inspect, validate, and create manual vouchers",
             subcommands = {VoucherList.class, VoucherShow.class,
                     VoucherValidate.class, VoucherCreate.class})
@@ -2114,6 +2123,8 @@ public class BokfriCli implements Runnable {
         result.put("sum", row.getSum().map(BokfriCli::decimal).orElse(null));
         return result;
     }
+
+    private static Map<String,Object> vatSettlementDetails(VatSettlementPlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("from",p.report().from());x.put("to",p.report().to());x.put("boxes",p.report().boxes());x.put("vatToPayOrRefund",decimal(p.report().vatToPayOrRefund()));x.put("debitTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(p.voucher()).toPlainString());x.put("creditTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(p.voucher()).toPlainString());x.put("voucherRows",p.voucher().getRows().stream().map(r->{Map<String,Object> v=new LinkedHashMap<>();v.put("account",r.getAccountNr());v.put("debit",decimal(r.getDebet()));v.put("credit",decimal(r.getCredit()));return v;}).toList());return x;}
 
     private static Map<String, Object> voucherSummary(SSVoucher voucher) {
         Map<String, Object> result = new LinkedHashMap<>();

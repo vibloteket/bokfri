@@ -244,6 +244,16 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar inpayment journal \
 ```
 
 Delbetalningar stöds; beloppet får inte överstiga fakturans återstående saldo.
+
+Momsrapport och momsavräkning kan beräknas från periodens bokförda
+verifikationer. Avräkningen är endast en preview tills `--commit` anges:
+
+```sh
+bokfri vat report --from 2026-07-01 --to 2026-09-30
+bokfri vat settle --from 2026-07-01 --to 2026-09-30
+bokfri vat settle --from 2026-07-01 --to 2026-09-30 --commit
+```
+
 Utskick är ett separat framtida kommando.
 
 Kunder, produkter och kundfakturor kan läsas maskinellt:
