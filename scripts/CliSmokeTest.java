@@ -37,13 +37,14 @@ public final class CliSmokeTest {
             runOpeningBalanceFlow(temporary);
             runReferenceDataFlow(temporary);
             runProductFlow(temporary);
+            runInvoiceFlow(temporary);
+            runInpaymentFlow(temporary);
             runSupplierFlow(temporary);
             runSupplierInvoiceFlow(temporary);
             runOutpaymentFlow(temporary);
-            runInvoiceFlow(temporary);
             runVatFlow(temporary);
-            runInpaymentFlow(temporary);
             runVoucherFlow(temporary);
+            runNextYearFlow(temporary);
             runErrorFlow(temporary);
             System.out.println("Bokfri CLI black-box smoke test passed: " + launcher.getFileName());
         } finally {
@@ -77,18 +78,60 @@ public final class CliSmokeTest {
     }
 
     private static void runCompanyAndYearCreationFlow(Path temporary) throws Exception {
-        Result plans=cli("--format","json","account-plan","list");plans.success();int planId=firstInt(plans.stdout,"id");
-        Path company=temporary.resolve("company.json");Files.writeString(company,"{\"name\":\"CLI smoke company\"}",StandardCharsets.UTF_8);Result created=cli("--format","json","company","create","--file",company.toString());created.success();int companyId=firstInt(created.stdout,"id");
-        Path year=temporary.resolve("year.json");Files.writeString(year,"{\"from\":\"2026-01-01\",\"to\":\"2026-12-31\",\"accountPlanId\":"+planId+"}",StandardCharsets.UTF_8);Result createdYear=cli("--company-id",Integer.toString(companyId),"--format","json","year","create","--file",year.toString());createdYear.success();require(createdYear.stdout.contains("\"from\":\"2026-01-01\""),"accounting year was not created");
-        Files.writeString(temporary.resolve("created-company.txt"),Integer.toString(companyId));Files.writeString(temporary.resolve("created-year.txt"),Integer.toString(firstInt(createdYear.stdout,"id")));
+        Result plans = cli("--format", "json", "account-plan", "list");
+        plans.success();
+        int planId = firstInt(plans.stdout, "id");
+        Path company = temporary.resolve("company.json");
+        Files.writeString(company, "{\"name\":\"CLI isolated full-year company\"}", StandardCharsets.UTF_8);
+        Result created = cli("--format", "json", "company", "create", "--file", company.toString());
+        created.success();
+        int companyId = firstInt(created.stdout, "id");
+        Path year = temporary.resolve("year-2026.json");
+        Files.writeString(year, "{\"from\":\"2026-01-01\",\"to\":\"2026-12-31\",\"accountPlanId\":"
+                + planId + "}", StandardCharsets.UTF_8);
+        Result createdYear = cli("--company-id", Integer.toString(companyId), "--format", "json",
+                "year", "create", "--file", year.toString());
+        createdYear.success();
+        int yearId = firstInt(createdYear.stdout, "id");
+        require(createdYear.stdout.contains("\"from\":\"2026-01-01\""),
+                "accounting year was not created");
+
+        cli("context", "create", "isolated-full-year", "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(yearId)).success();
+        cli("context", "use", "isolated-full-year").success();
+        Result current = cli("--format", "json", "context", "current");
+        current.success();
+        require(current.stdout.contains("\"companyId\":" + companyId),
+                "isolated context did not select the created company");
+        require(current.stdout.contains("\"yearId\":" + yearId),
+                "isolated context did not select the created year");
+
+        Files.writeString(temporary.resolve("created-company.txt"), Integer.toString(companyId));
+        Files.writeString(temporary.resolve("created-year.txt"), Integer.toString(yearId));
+        Files.writeString(temporary.resolve("account-plan.txt"), Integer.toString(planId));
     }
 
     private static void runOpeningBalanceFlow(Path temporary) throws Exception {
-        int company=Integer.parseInt(Files.readString(temporary.resolve("created-company.txt")));int year=Integer.parseInt(Files.readString(temporary.resolve("created-year.txt")));
-        Result accounts=cli("--company-id",Integer.toString(company),"--year-id",Integer.toString(year),"--format","json","account","list");accounts.success();List<Integer> numbers=accountNumbersByFlag(accounts.stdout,"balanceAccount",true);require(numbers.size()>=2,"new year lacks balance accounts");
-        Path input=temporary.resolve("opening-balance.json");Files.writeString(input,"{\"balances\":[{\"account\":"+numbers.get(0)+",\"amount\":\"100.00\"},{\"account\":"+numbers.get(1)+",\"amount\":\"-100.00\"}]}",StandardCharsets.UTF_8);
-        Result validate=cli("--company-id",Integer.toString(company),"--year-id",Integer.toString(year),"--format","json","opening-balance","validate","--file",input.toString());
-        if(validate.exitCode==0){cli("--company-id",Integer.toString(company),"--year-id",Integer.toString(year),"--format","json","opening-balance","set","--file",input.toString()).success();cli("--company-id",Integer.toString(company),"--year-id",Integer.toString(year),"--format","json","opening-balance","show").success();}
+        Result accounts = cli("--format", "json", "account", "list");
+        accounts.success();
+        List<Integer> numbers = accountNumbersByFlag(accounts.stdout, "balanceAccount", true);
+        require(numbers.size() >= 2, "new year lacks balance accounts");
+        Path input = temporary.resolve("opening-balance.json");
+        Files.writeString(input, "{\"balances\":[{\"account\":" + numbers.get(0)
+                + ",\"amount\":\"100.00\"},{\"account\":" + numbers.get(1)
+                + ",\"amount\":\"-100.00\"}]}", StandardCharsets.UTF_8);
+        Result validate = cli("--format", "json", "opening-balance", "validate",
+                "--file", input.toString());
+        validate.success();
+        require(validate.stdout.contains("\"difference\":\"0.00\""),
+                "opening balance validation is not balanced");
+        Result set = cli("--format", "json", "opening-balance", "set", "--file", input.toString());
+        set.success();
+        require(set.stdout.contains("\"written\":true"), "opening balance was not written");
+        Result show = cli("--format", "json", "opening-balance", "show");
+        show.success();
+        require(show.stdout.contains("\"debitTotal\":\"100.00\""),
+                "opening balance was not persisted in the isolated year");
     }
 
     private static void runReferenceDataFlow(Path temporary) throws Exception {
@@ -158,7 +201,9 @@ public final class CliSmokeTest {
     private static void runProductFlow(Path temporary) throws Exception {
         Result accounts = cli("--format", "json", "account", "list");
         accounts.success();
-        int salesAccount = firstInt(accounts.stdout, "number");
+        List<Integer> resultAccounts = accountNumbersByFlag(accounts.stdout, "balanceAccount", false);
+        require(!resultAccounts.isEmpty(), "new year lacks result accounts");
+        int salesAccount = resultAccounts.get(0);
         Path productInput = temporary.resolve("product.json");
         Files.writeString(productInput, """
                 {
@@ -215,10 +260,10 @@ public final class CliSmokeTest {
     }
 
     private static void runSupplierInvoiceFlow(Path temporary) throws Exception {
-        Result accounts=cli("--format","json","account","list");accounts.success();int account=firstInt(accounts.stdout,"number");
+        Result accounts=cli("--format","json","account","list");accounts.success();List<Integer> resultAccounts=accountNumbersByFlag(accounts.stdout,"balanceAccount",false);require(!resultAccounts.isEmpty(),"new year lacks purchase accounts");int account=resultAccounts.get(0);
         Result years=cli("--format","json","year","list");years.success();String date=firstString(years.stdout,"from");
         Path input=temporary.resolve("supplier-invoice.json");Files.writeString(input,"""
-                {"supplierNumber":"CLI-SMOKE-SUPPLIER","date":"%s","vat":"0","rows":[{"description":"CLI smoke purchase","quantity":1,"unitPrice":"50.00","account":%d}]}
+                {"supplierNumber":"CLI-SMOKE-SUPPLIER","date":"%s","vat":"0","rows":[{"description":"CLI smoke purchase","quantity":1,"unitPrice":"200.00","account":%d}]}
                 """.formatted(date,account),StandardCharsets.UTF_8);
         cli("--format","json","supplier-invoice","validate","--file",input.toString()).success();
         Result dry=cli("--format","json","supplier-invoice","create","--dry-run","--file",input.toString());dry.success();int number=firstInt(dry.stdout,"number");
@@ -425,6 +470,45 @@ public final class CliSmokeTest {
         require(show.stdout.contains("\"description\":\"" + description + "\""),
                 "show returned the wrong voucher");
         require(count(show.stdout, "\"account\":") == 2, "show did not return two posting rows");
+    }
+
+    private static void runNextYearFlow(Path temporary) throws Exception {
+        int companyId = Integer.parseInt(Files.readString(temporary.resolve("created-company.txt")));
+        int fromYearId = Integer.parseInt(Files.readString(temporary.resolve("created-year.txt")));
+        int planId = Integer.parseInt(Files.readString(temporary.resolve("account-plan.txt")));
+        Path year = temporary.resolve("year-2027.json");
+        Files.writeString(year, "{\"from\":\"2027-01-01\",\"to\":\"2027-12-31\",\"accountPlanId\":"
+                + planId + "}", StandardCharsets.UTF_8);
+        Result created = cli("--company-id", Integer.toString(companyId), "--format", "json",
+                "year", "create", "--file", year.toString());
+        created.success();
+        int toYearId = firstInt(created.stdout, "id");
+
+        cli("context", "create", "isolated-next-year", "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(toYearId)).success();
+        cli("context", "use", "isolated-next-year").success();
+        Result current = cli("--format", "json", "context", "current");
+        current.success();
+        require(current.stdout.contains("\"yearId\":" + toYearId),
+                "next-year context did not select 2027");
+
+        Result preview = cli("--format", "json", "opening-balance", "carry-forward",
+                "--from-year-id", Integer.toString(fromYearId));
+        preview.success();
+        require(preview.stdout.contains("\"committed\":false"),
+                "carry-forward preview unexpectedly committed");
+        require(!preview.stdout.contains("\"balances\":[]"),
+                "carry-forward preview contains no balances");
+        Result commit = cli("--format", "json", "opening-balance", "carry-forward",
+                "--from-year-id", Integer.toString(fromYearId), "--commit");
+        commit.success();
+        require(commit.stdout.contains("\"committed\":true"), "carry-forward did not commit");
+        Result show = cli("--format", "json", "opening-balance", "show");
+        show.success();
+        require(show.stdout.contains("\"difference\":\"0.00\""),
+                "2027 opening balance is not balanced");
+        require(!show.stdout.contains("\"balances\":[]"),
+                "2027 opening balance was not persisted");
     }
 
     private static void runErrorFlow(Path temporary) throws Exception {

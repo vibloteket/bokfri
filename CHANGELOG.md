@@ -62,6 +62,14 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Added a cross-platform CI black-box test that launches the assembled fat JAR
   and verifies contexts, JSON contracts, account/year lookup, voucher
   validation, dry runs, creation, list/show round trips, and stable errors.
+- Expanded the black-box scenario into an isolated full accounting year: it now
+  creates its own company and 2026 year, runs opening balances, sales,
+  purchases, payments, VAT and manual vouchers there, then creates 2027 and
+  verifies carry-forward into its opening balance.
+
+### Fixed
+- Initialized standard accounts for companies created through the CLI, matching
+  GUI-created companies so journals, payments and VAT work without demo data.
 
 ## [1.0.1] - 2026-08-01
 
