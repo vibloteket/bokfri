@@ -100,6 +100,8 @@ Implemented commands:
 - `company list` and `year list` — inspect available company/year IDs for scripting
 
 Also implemented:
+- `opening-balance show/validate/set/carry-forward` — manage balanced opening
+  values and transfer only balance-account closing values to a new year
 - `account-plan list`, `company create`, and `year create` — bootstrap an
   isolated company and accounting year for automation scenarios
 - `account list` — list accounts in the selected accounting year

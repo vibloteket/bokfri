@@ -29,6 +29,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   runs the complete CLI black-box scenario against the installed launcher,
   uninstalls it, and verifies that program files are removed without deleting
   Bokfri user data.
+- Added opening-balance show/validate/set and balance-only carry-forward between
+  accounting years, with preview by default and explicit commit.
 - Added company creation, account-plan discovery, and accounting-year creation
   commands so automated scenarios can bootstrap their own bookkeeping context.
 - Added headless VAT report calculation and explicit VAT settlement

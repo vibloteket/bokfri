@@ -122,6 +122,30 @@ bokfri --company-id 42 year create --file year.json
 }
 ```
 
+Ingående balans använder positiva belopp för debet och negativa för kredit:
+
+```json
+{"balances":[
+  {"account":1930,"amount":"100000.00"},
+  {"account":2081,"amount":"-100000.00"}
+]}
+```
+
+```sh
+bokfri opening-balance validate --file opening-balance.json
+bokfri opening-balance set --dry-run --file opening-balance.json
+bokfri opening-balance set --file opening-balance.json
+bokfri opening-balance show
+```
+
+Utgående balans från ett tidigare år kan förhandsgranskas och föras över till
+ett nytt år; endast balanskonton överförs:
+
+```sh
+bokfri opening-balance carry-forward --from-year-id 17
+bokfri opening-balance carry-forward --from-year-id 17 --commit
+```
+
 Kunder kan valideras och skapas från JSON. Endast `number` och `name` är
 obligatoriska; `schemaVersion` är frivilligt och tolkas som version 1 när det
 utelämnas. Utdata är text som standard och `--format json` väljer maskinformat:

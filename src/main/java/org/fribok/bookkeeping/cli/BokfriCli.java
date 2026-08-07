@@ -21,6 +21,8 @@ import org.fribok.bookkeeping.service.invoice.InvoiceJournalResult;
 import org.fribok.bookkeeping.service.invoice.InvoiceService;
 import org.fribok.bookkeeping.service.invoice.InvoiceValidationIssue;
 import org.fribok.bookkeeping.service.invoice.InvoiceValidationResult;
+import org.fribok.bookkeeping.service.openingbalance.OpeningBalancePlan;
+import org.fribok.bookkeeping.service.openingbalance.OpeningBalanceService;
 import org.fribok.bookkeeping.service.outpayment.OutpaymentJournalPlan;
 import org.fribok.bookkeeping.service.outpayment.OutpaymentJournalResult;
 import org.fribok.bookkeeping.service.outpayment.OutpaymentService;
@@ -92,6 +94,7 @@ import java.util.concurrent.Callable;
             BokfriCli.AccountPlanCommand.class,
             BokfriCli.YearCommand.class,
             BokfriCli.AccountCommand.class,
+            BokfriCli.OpeningBalanceCommand.class,
             BokfriCli.CustomerCommand.class,
             BokfriCli.ProductCommand.class,
             BokfriCli.SupplierCommand.class,
@@ -493,6 +496,8 @@ public class BokfriCli implements Runnable {
                     item.put("number", account.getNumber());
                     item.put("description", account.getDescription());
                     item.put("active", account.isActive());
+                    item.put("balanceAccount", se.swedsoft.bookkeeping.calc.math.SSAccountMath
+                            .isBalanceAccount(account, year));
                     return item;
                 }).toList();
                 String text = accounts.stream().map(item -> item.get("number") + "\t"
@@ -509,6 +514,14 @@ public class BokfriCli implements Runnable {
             }
         }
     }
+
+    @Command(name="opening-balance",description="Inspect and manage opening balances",subcommands={OpeningBalanceShow.class,OpeningBalanceValidate.class,OpeningBalanceSet.class,OpeningBalanceCarryForward.class})
+    static class OpeningBalanceCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An opening-balance command is required");}}
+    @Command(name="show") static class OpeningBalanceShow implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());OpeningBalancePlan p=new OpeningBalanceService(r.database()).current(y);Map<String,Object>x=openingBalanceDetails(p);x.put("context",selectedContext(c,co,y));root.output(x,"Opening balance\nDebit: "+p.debitTotal()+"\nCredit: "+p.creditTotal());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    abstract static class OpeningBalanceFileCommand implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);OpeningBalanceInput in=readOpeningBalanceInput(file);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());Map<Integer,java.math.BigDecimal> values=new LinkedHashMap<>();for(var row:in.getBalances()){if(values.put(row.getAccount(),row.getAmount())!=null)throw new CliException("OPENING_BALANCE_INVALID","Duplicate account: "+row.getAccount());}OpeningBalanceService s=new OpeningBalanceService(r.database());OpeningBalancePlan p=persist()?s.replace(y,values):s.validate(y,values);Map<String,Object>x=openingBalanceDetails(p);x.put("written",persist());x.put("context",selectedContext(c,co,y));root.output(x,persist()?"Opening balance updated":"Opening balance is valid; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(name="validate") static class OpeningBalanceValidate extends OpeningBalanceFileCommand{boolean persist(){return false;}}
+    @Command(name="set") static class OpeningBalanceSet extends OpeningBalanceFileCommand{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
+    @Command(name="carry-forward") static class OpeningBalanceCarryForward implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--from-year-id",required=true)int fromYearId;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear to=r.selectYear(co,c.yearId());SSNewAccountingYear from=r.database().getYearsForCompany(co).stream().filter(y->y.getId()==fromYearId).findFirst().orElseThrow(()->new CliException("YEAR_NOT_FOUND","No source year has id "+fromYearId));OpeningBalancePlan p=new OpeningBalanceService(r.database()).carryForward(from,to,commit);Map<String,Object>x=openingBalanceDetails(p);x.put("fromYearId",fromYearId);x.put("toYearId",to.getId());x.put("committed",commit);x.put("context",selectedContext(c,co,to));root.output(x,commit?"Opening balances carried forward":"Carry-forward preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(name = "customer", description = "Inspect and create customers",
             subcommands = {CustomerList.class, CustomerShow.class,
@@ -1517,6 +1530,9 @@ public class BokfriCli implements Runnable {
                 .getCreditSum(plan.voucher()).toPlainString());
         return result;
     }
+
+    private static OpeningBalanceInput readOpeningBalanceInput(String file){try{OpeningBalanceInput i="-".equals(file)?jsonMapper().readValue(System.in,OpeningBalanceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),OpeningBalanceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported opening balance schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read opening balance JSON: "+e.getMessage(),e);}}
+    private static Map<String,Object> openingBalanceDetails(OpeningBalancePlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("balances",p.balances());x.put("debitTotal",p.debitTotal().toPlainString());x.put("creditTotal",p.creditTotal().toPlainString());x.put("difference",p.difference().toPlainString());return x;}
 
     private static CompanyInput readCompanyInput(String file){try{CompanyInput i="-".equals(file)?jsonMapper().readValue(System.in,CompanyInput.class):jsonMapper().readValue(Paths.get(file).toFile(),CompanyInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported company schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read company JSON: "+e.getMessage(),e);}}
     private static AccountingYearInput readAccountingYearInput(String file){try{AccountingYearInput i="-".equals(file)?jsonMapper().readValue(System.in,AccountingYearInput.class):jsonMapper().readValue(Paths.get(file).toFile(),AccountingYearInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported accounting year schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read accounting year JSON: "+e.getMessage(),e);}}
