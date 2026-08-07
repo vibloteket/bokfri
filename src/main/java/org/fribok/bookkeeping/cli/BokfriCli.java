@@ -33,6 +33,8 @@ import org.fribok.bookkeeping.service.outpayment.OutpaymentValidationIssue;
 import org.fribok.bookkeeping.service.outpayment.OutpaymentValidationResult;
 import org.fribok.bookkeeping.service.product.ProductService;
 import org.fribok.bookkeeping.service.sie.SieExportService;
+import org.fribok.bookkeeping.service.sie.SieImportPlan;
+import org.fribok.bookkeeping.service.sie.SieImportService;
 import org.fribok.bookkeeping.service.supplier.SupplierService;
 import org.fribok.bookkeeping.service.supplier.SupplierValidationIssue;
 import org.fribok.bookkeeping.service.supplier.SupplierValidationResult;
@@ -607,7 +609,8 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(name = "sie", description = "Export Swedish SIE files", subcommands = SieExport.class)
+    @Command(name = "sie", description = "Import and export Swedish SIE files",
+            subcommands = {SieExport.class, SieImport.class})
     static class SieCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -643,6 +646,49 @@ public class BokfriCli implements Runnable {
                         "Output file already exists: " + exception.getFile(), exception);
             } catch (Exception exception) {
                 throw new CliException("SIE_EXPORT_FAILED", exception.getMessage(), exception);
+            }
+        }
+    }
+
+    @Command(name = "import", description = "Preview or import into the selected accounting year")
+    static class SieImport implements Callable<Integer> {
+        @CommandLine.ParentCommand SieCommand command;
+        @Option(names = "--file", required = true) java.nio.file.Path file;
+        @Option(names = "--commit", description = "Apply the import; preview is the default") boolean commit;
+        @Option(names = "--vouchers-only", description = "Import only SIE type 4 vouchers")
+        boolean vouchersOnly;
+        @Option(names = "--allow-already-imported",
+                description = "Allow a file marked with #FLAGGA 1") boolean allowAlreadyImported;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                SieImportService service = new SieImportService();
+                SieImportPlan plan = service.inspect(file, vouchersOnly);
+                if (plan.alreadyImported() && !allowAlreadyImported) {
+                    throw new CliException("SIE_ALREADY_IMPORTED",
+                            "SIE file is marked as already imported (#FLAGGA 1)");
+                }
+                if (commit) {
+                    plan = service.importFile(file, vouchersOnly, allowAlreadyImported);
+                }
+                Map<String, Object> result = sieImportDetails(plan);
+                result.put("committed", commit);
+                result.put("context", selectedContext(context, company, year));
+                if (commit) {
+                    result.put("voucherCountAfter", runtime.database().getVouchers().size());
+                    result.put("accountCountAfter", year.getAccountPlan().getAccounts().size());
+                }
+                root.output(result, commit ? "SIE import completed" : "SIE import preview; no changes written");
+                return 0;
+            } catch (CliException exception) {
+                throw exception;
+            } catch (Exception exception) {
+                String message = exception.getMessage() == null
+                        ? exception.getClass().getSimpleName() : exception.getMessage();
+                throw new CliException("SIE_IMPORT_FAILED", message, exception);
             }
         }
     }
@@ -1661,6 +1707,18 @@ public class BokfriCli implements Runnable {
         result.put("createdAt", backup.createdAt());
         result.put("size", backup.size());
         result.put("exists", backup.exists());
+        return result;
+    }
+
+    private static Map<String, Object> sieImportDetails(SieImportPlan plan) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("file", plan.file().toString());
+        result.put("type", plan.type());
+        result.put("alreadyImported", plan.alreadyImported());
+        result.put("accounts", plan.accounts());
+        result.put("vouchers", plan.vouchers());
+        result.put("transactions", plan.transactions());
+        result.put("vouchersOnly", plan.vouchersOnly());
         return result;
     }
 

@@ -58,6 +58,14 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
      */
     public void doImport() throws SSImportException {
         SSDB.getInstance().dropTriggers();
+        try {
+            doImportWithTriggersDisabled();
+        } finally {
+            SSDB.getInstance().createTriggers();
+        }
+    }
+
+    private void doImportWithTriggersDisabled() throws SSImportException {
         SSNewAccountingYear iAccountingYear = SSDB.getInstance().getCurrentYear();
 
         // Read the contents of the file
@@ -118,8 +126,6 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
 
         SSFrameManager.getInstance().close();
         SSDB.getInstance().initYear(true);
-
-        SSDB.getInstance().createTriggers();
     }
 
     /**

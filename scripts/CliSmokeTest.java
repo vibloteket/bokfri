@@ -46,6 +46,7 @@ public final class CliSmokeTest {
             runVoucherFlow(temporary);
             runNextYearFlow(temporary);
             runSieExportFlow(temporary);
+            runSieImportFlow(temporary);
             runBackupFlow(temporary);
             runErrorFlow(temporary);
             System.out.println("Bokfri CLI black-box smoke test passed: " + launcher.getFileName());
@@ -514,7 +515,8 @@ public final class CliSmokeTest {
     }
 
     private static void runSieExportFlow(Path temporary) throws Exception {
-        Path output = temporary.resolve("company-2027.se");
+        cli("context", "use", "isolated-full-year").success();
+        Path output = temporary.resolve("company-2026.se");
         Result export = cli("--format", "json", "sie", "export", "--output", output.toString());
         export.success();
         require(Files.size(output) > 100, "SIE export is unexpectedly small");
@@ -526,6 +528,34 @@ public final class CliSmokeTest {
         require(duplicate.exitCode != 0, "SIE export unexpectedly overwrote an existing file");
         require(duplicate.stderr.contains("\"code\":\"OUTPUT_EXISTS\""),
                 "duplicate SIE output lacks stable error code");
+    }
+
+    private static void runSieImportFlow(Path temporary) throws Exception {
+        Path source = temporary.resolve("company-2026.se");
+        Path imported = temporary.resolve("company-2026-import.se");
+        String content = Files.readString(source, java.nio.charset.Charset.forName("IBM-437"));
+        Files.writeString(imported, content, java.nio.charset.Charset.forName("IBM-437"));
+
+        Result preview = cli("--format", "json", "sie", "import", "--file", imported.toString(),
+                "--vouchers-only");
+        preview.success();
+        require(preview.stdout.contains("\"committed\":false"),
+                "SIE import preview unexpectedly committed");
+        require(preview.stdout.contains("\"type\":\"4\""), "SIE import preview lacks type");
+        require(preview.stdout.contains("\"vouchers\":"), "SIE import preview lacks voucher count");
+
+        Result commit = cli("--format", "json", "sie", "import", "--file", imported.toString(),
+                "--vouchers-only", "--commit");
+        commit.success();
+        require(commit.stdout.contains("\"committed\":true"), "SIE import did not commit");
+        require(Files.readString(imported, java.nio.charset.Charset.forName("IBM-437"))
+                        .startsWith("#FLAGGA 1"),
+                "committed SIE import did not mark the source file as imported");
+        Result repeated = cli("--format", "json", "sie", "import", "--file", imported.toString(),
+                "--vouchers-only", "--commit");
+        require(repeated.exitCode != 0, "already imported SIE file unexpectedly succeeded");
+        require(repeated.stderr.contains("\"code\":\"SIE_ALREADY_IMPORTED\""),
+                "already imported SIE file lacks stable error code");
     }
 
     private static void runBackupFlow(Path temporary) throws Exception {

@@ -70,6 +70,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   safe output handling and compatibility metadata.
 - Added headless SIE export for the selected company and accounting year in SIE
   types 1, 2, 3, and 4E, with IBM-437 encoding and safe output handling.
+- Added CLI SIE import with non-mutating preview by default, explicit commit,
+  full-year or voucher-only modes, and protection against importing files marked
+  as already processed.
 
 ### Fixed
 - Initialized standard accounts for companies created through the CLI, matching
