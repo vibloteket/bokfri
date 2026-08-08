@@ -3088,13 +3088,14 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                 iInvoices.add(iIndex, iInvoice);
                 SSInvoiceMath.iSaldoMap.put(iInvoice.getNumber(),
                         SSInvoiceMath.getSaldo(iInvoice));
-                iIndex = SSCustomerMath.iInvoicesForCustomers.get(iInvoice.getCustomerNr()).indexOf(
-                        iInvoice);
-                if (iIndex != -1) {
-                    SSCustomerMath.iInvoicesForCustomers.get(iInvoice.getCustomerNr()).remove(
-                            iIndex);
-                    SSCustomerMath.iInvoicesForCustomers.get(iInvoice.getCustomerNr()).add(
-                            iIndex, iInvoice);
+                List<SSInvoice> customerInvoices =
+                        SSCustomerMath.iInvoicesForCustomers.get(iInvoice.getCustomerNr());
+                if (customerInvoices != null) {
+                    iIndex = customerInvoices.indexOf(iInvoice);
+                    if (iIndex != -1) {
+                        customerInvoices.remove(iIndex);
+                        customerInvoices.add(iIndex, iInvoice);
+                    }
                 }
                 iInvoice = null;
                 if (SSOrderFrame.getInstance() != null) {
