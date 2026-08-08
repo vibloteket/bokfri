@@ -11,6 +11,9 @@ import org.fribok.bookkeeping.service.backup.BackupDetails;
 import org.fribok.bookkeeping.service.backup.BackupService;
 import org.fribok.bookkeeping.service.backup.BackupVerification;
 import org.fribok.bookkeeping.service.company.CompanyService;
+import org.fribok.bookkeeping.service.creditinvoice.CreditInvoiceJournalPlan;
+import org.fribok.bookkeeping.service.creditinvoice.CreditInvoiceJournalResult;
+import org.fribok.bookkeeping.service.creditinvoice.CreditInvoiceService;
 import org.fribok.bookkeeping.service.customer.CustomerService;
 import org.fribok.bookkeeping.service.customer.CustomerValidationIssue;
 import org.fribok.bookkeeping.service.customer.CustomerValidationResult;
@@ -58,6 +61,7 @@ import se.swedsoft.bookkeeping.calc.math.SSSaleMath;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSAccountPlan;
 import se.swedsoft.bookkeeping.data.SSAddress;
+import se.swedsoft.bookkeeping.data.SSCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInpayment;
 import se.swedsoft.bookkeeping.data.SSInpaymentRow;
@@ -109,6 +113,7 @@ import java.util.concurrent.Callable;
             BokfriCli.SupplierCommand.class,
             BokfriCli.SupplierInvoiceCommand.class,
             BokfriCli.InvoiceCommand.class,
+            BokfriCli.CreditInvoiceCommand.class,
             BokfriCli.InpaymentCommand.class,
             BokfriCli.OutpaymentCommand.class,
             BokfriCli.VatCommand.class,
@@ -1212,6 +1217,36 @@ public class BokfriCli implements Runnable {
         @Override boolean persist() { return !dryRun; }
     }
 
+    @Command(name = "credit-invoice", description = "Credit booked customer invoices",
+            subcommands = {CreditInvoiceList.class, CreditInvoiceShow.class,
+                    CreditInvoiceValidate.class, CreditInvoiceCreate.class, CreditInvoiceJournal.class})
+    static class CreditInvoiceCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() { throw new CommandLine.ParameterException(spec.commandLine(), "A credit-invoice command is required"); }
+    }
+
+    @Command(name = "list") static class CreditInvoiceList implements Callable<Integer> {
+        @CommandLine.ParentCommand CreditInvoiceCommand command;
+        public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new CreditInvoiceService(r.database()).list().stream().map(BokfriCli::creditInvoiceDetails).toList();root.output(Map.of("context",selectedCompanyContext(c,co),"creditInvoices",rows,"count",rows.size()),rows.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}
+    }
+
+    @Command(name = "show") static class CreditInvoiceShow implements Callable<Integer> {
+        @CommandLine.ParentCommand CreditInvoiceCommand command; @Parameters(index="0") int number;
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSCreditInvoice i=new CreditInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("CREDIT_INVOICE_NOT_FOUND","No credit invoice has number "+number));Map<String,Object>x=creditInvoiceDetails(i);x.put("context",selectedCompanyContext(c,co));root.output(x,"Credit invoice "+number+" for invoice "+i.getCreditingNr());return 0;}catch(CliException e){throw e;}catch(Exception e){throw databaseFailure(e);}}
+    }
+
+    abstract static class CreditInvoiceOperation implements Callable<Integer> {
+        @CommandLine.ParentCommand CreditInvoiceCommand command; @Option(names="--file",required=true) String file; abstract boolean persist();
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);CreditInvoiceInput input=readCreditInvoiceInput(file);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());SSInvoice original=new InvoiceService(r.database()).find(input.getInvoiceNumber()).orElseThrow(()->new CliException("INVOICE_NOT_FOUND","No invoice has number "+input.getInvoiceNumber()));SSCreditInvoice credit=persist()?s.create(original,input.getDate(),input.getAmount()):s.preview(original,input.getDate(),input.getAmount());Map<String,Object>x=creditInvoiceDetails(credit);x.put("created",persist());x.put("dryRun",!persist());x.put("context",selectedContext(c,co,y));root.output(x,persist()?"Created credit invoice "+credit.getNumber():"Credit invoice is valid; no changes written");return 0;}catch(CliException e){throw e;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
+    }
+    @Command(name="validate") static class CreditInvoiceValidate extends CreditInvoiceOperation {boolean persist(){return false;}}
+    @Command(name="create") static class CreditInvoiceCreate extends CreditInvoiceOperation {@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
+
+    @Command(name="journal") static class CreditInvoiceJournal implements Callable<Integer> {
+        @CommandLine.ParentCommand CreditInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());CreditInvoiceJournalPlan p=s.planJournal(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("from",from);x.put("to",to);x.put("creditInvoiceNumbers",p.invoices().stream().map(SSCreditInvoice::getNumber).toList());x.put("invoiceCount",p.invoices().size());x.put("rows",voucherRows(p.voucher()));x.put("debitTotal",voucherDebit(p.voucher()).toPlainString());x.put("creditTotal",voucherCredit(p.voucher()).toPlainString());x.put("committed",commit);if(commit){CreditInvoiceJournalResult done=s.commitJournal(p);x.put("voucherNumber",done.voucherNumber());}x.put("context",selectedContext(c,co,y));root.output(x,commit?"Credit invoice journal committed":"Credit invoice journal preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_JOURNAL_EMPTY",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
+    }
+
     @Command(name = "inpayment", description = "Inspect, create, and book customer inpayments",
             subcommands = {InpaymentList.class, InpaymentShow.class, InpaymentJournal.class,
                     InpaymentValidate.class, InpaymentCreate.class})
@@ -1922,6 +1957,26 @@ public class BokfriCli implements Runnable {
         return new CliException("PRODUCT_INVALID", first.message(), details);
     }
 
+    private static CreditInvoiceInput readCreditInvoiceInput(String file) {
+        try {
+            CreditInvoiceInput input = "-".equals(file)
+                    ? jsonMapper().readValue(System.in, CreditInvoiceInput.class)
+                    : jsonMapper().readValue(Paths.get(file).toFile(), CreditInvoiceInput.class);
+            if (input.getSchemaVersion() != 1) {
+                throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
+                        "Unsupported credit invoice schemaVersion: " + input.getSchemaVersion());
+            }
+            if (input.getInvoiceNumber() == null) {
+                throw new CliException("CREDIT_INVOICE_INVALID", "invoiceNumber is required");
+            }
+            return input;
+        } catch (CliException exception) {
+            throw exception;
+        } catch (IOException exception) {
+            throw new CliException("INPUT_INVALID", exception.getMessage(), exception);
+        }
+    }
+
     private static InvoiceInput readInvoiceInput(String file) {
         try {
             InvoiceInput input = "-".equals(file)
@@ -2328,6 +2383,33 @@ public class BokfriCli implements Runnable {
                 ? null : decimal(se.swedsoft.bookkeeping.calc.math.SSInvoiceMath.getSaldo(invoice)));
         result.put("rowCount", invoice.getRows().size());
         return result;
+    }
+
+    private static Map<String, Object> creditInvoiceDetails(SSCreditInvoice invoice) {
+        Map<String, Object> result = invoiceDetails(invoice);
+        result.put("creditingInvoiceNumber", invoice.getCreditingNr());
+        result.put("voucher", voucherRows(invoice.getVoucher()));
+        return result;
+    }
+
+    private static List<Map<String, Object>> voucherRows(SSVoucher voucher) {
+        return voucher.getRows().stream().map(row -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("account", row.getAccountNr());
+            item.put("debit", decimal(row.getDebet()));
+            item.put("credit", decimal(row.getCredit()));
+            item.put("project", row.getProjectNr());
+            item.put("resultUnit", row.getResultUnitNr());
+            return item;
+        }).toList();
+    }
+
+    private static java.math.BigDecimal voucherDebit(SSVoucher voucher) {
+        return se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher);
+    }
+
+    private static java.math.BigDecimal voucherCredit(SSVoucher voucher) {
+        return se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher);
     }
 
     private static Map<String, Object> invoiceDetails(SSInvoice invoice) {

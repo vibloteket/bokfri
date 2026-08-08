@@ -38,6 +38,7 @@ public final class CliSmokeTest {
             runReferenceDataFlow(temporary);
             runProductFlow(temporary);
             runInvoiceFlow(temporary);
+            runCreditInvoiceFlow(temporary);
             runInpaymentFlow(temporary);
             runSupplierFlow(temporary);
             runSupplierInvoiceFlow(temporary);
@@ -375,6 +376,43 @@ public final class CliSmokeTest {
                 "journal voucher was not persisted");
     }
 
+    private static void runCreditInvoiceFlow(Path temporary) throws Exception {
+        Result invoices = cli("--format", "json", "invoice", "list");
+        invoices.success();
+        int invoiceNumber = invoiceNumberForCustomer(invoices.stdout, "CLI-SMOKE-CUSTOMER");
+        Result shown = cli("--format", "json", "invoice", "show", Integer.toString(invoiceNumber));
+        shown.success();
+        String date = firstString(shown.stdout, "date");
+        Path input = temporary.resolve("credit-invoice.json");
+        Files.writeString(input, "{\"invoiceNumber\":" + invoiceNumber + ",\"date\":\"" + date
+                + "\",\"amount\":\"50.00\"}", StandardCharsets.UTF_8);
+        cli("--format", "json", "credit-invoice", "validate", "--file", input.toString()).success();
+        Result dry = cli("--format", "json", "credit-invoice", "create", "--dry-run",
+                "--file", input.toString());
+        dry.success();
+        require(dry.stdout.contains("\"created\":false"), "credit invoice dry run created data");
+        int number = firstInt(dry.stdout, "number");
+        Result create = cli("--format", "json", "credit-invoice", "create", "--file",
+                input.toString());
+        create.success();
+        require(firstInt(create.stdout, "number") == number,
+                "credit invoice number differs from dry run");
+        Result show = cli("--format", "json", "credit-invoice", "show", Integer.toString(number));
+        show.success();
+        require(show.stdout.contains("\"creditingInvoiceNumber\":" + invoiceNumber),
+                "credit invoice lacks original invoice reference");
+        Result preview = cli("--format", "json", "credit-invoice", "journal", "--from", date,
+                "--to", date);
+        preview.success();
+        require(preview.stdout.contains("\"committed\":false"),
+                "credit invoice journal preview committed");
+        Result commit = cli("--format", "json", "credit-invoice", "journal", "--from", date,
+                "--to", date, "--commit");
+        commit.success();
+        require(commit.stdout.contains("\"committed\":true"),
+                "credit invoice journal did not commit");
+    }
+
     private static void runInpaymentFlow(Path temporary) throws Exception {
         Result invoices = cli("--format", "json", "invoice", "list");
         invoices.success();
@@ -508,8 +546,8 @@ public final class CliSmokeTest {
         require(commit.stdout.contains("\"committed\":true"), "carry-forward did not commit");
         Result show = cli("--format", "json", "opening-balance", "show");
         show.success();
-        require(show.stdout.contains("\"difference\":\"0.00\""),
-                "2027 opening balance is not balanced");
+        require(new java.math.BigDecimal(firstString(show.stdout, "difference")).signum() == 0,
+                "2027 opening balance is not balanced: " + show.stdout);
         require(!show.stdout.contains("\"balances\":[]"),
                 "2027 opening balance was not persisted");
     }
