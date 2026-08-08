@@ -70,6 +70,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   safe output handling and compatibility metadata.
 - Added headless SIE export for the selected company and accounting year in SIE
   types 1, 2, 3, and 4E, with IBM-437 encoding and safe output handling.
+- Added CLI trial balance, balance sheet, income statement, general ledger, and
+  point-in-time account balance reports with JSON rows and financial control totals.
 - Added customer credit-invoice CLI commands for validation, dry-run creation,
   partial or full crediting of booked invoices, inspection, and journal booking.
 - Added CLI SIE import with non-mutating preview by default, explicit commit,

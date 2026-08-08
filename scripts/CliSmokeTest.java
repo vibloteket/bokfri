@@ -45,6 +45,7 @@ public final class CliSmokeTest {
             runOutpaymentFlow(temporary);
             runVatFlow(temporary);
             runVoucherFlow(temporary);
+            runFinancialReportFlow();
             runNextYearFlow(temporary);
             runSieExportFlow(temporary);
             runSieImportFlow(temporary);
@@ -511,6 +512,43 @@ public final class CliSmokeTest {
         require(show.stdout.contains("\"description\":\"" + description + "\""),
                 "show returned the wrong voucher");
         require(count(show.stdout, "\"account\":") == 2, "show did not return two posting rows");
+    }
+
+    private static void runFinancialReportFlow() throws Exception {
+        Result years = cli("--format", "json", "year", "list");
+        years.success();
+        String from = firstString(years.stdout, "from");
+        String to = firstString(years.stdout, "to");
+
+        Result trial = cli("--format", "json", "trial-balance", "--from", from, "--to", to);
+        trial.success();
+        require(new java.math.BigDecimal(firstString(trial.stdout, "difference")).signum() == 0,
+                "trial balance debit and credit differ");
+        require(trial.stdout.contains("\"rows\":["), "trial balance lacks rows");
+
+        Result balance = cli("--format", "json", "balance-sheet", "--date", to);
+        balance.success();
+        require(new java.math.BigDecimal(firstString(balance.stdout, "difference")).signum() == 0,
+                "balance sheet does not balance");
+        require(balance.stdout.contains("\"currentResult\":"),
+                "balance sheet lacks current result");
+
+        Result income = cli("--format", "json", "income-statement", "--from", from, "--to", to);
+        income.success();
+        require(income.stdout.contains("\"result\":"), "income statement lacks result");
+
+        Result accounts = cli("--format", "json", "account", "list");
+        accounts.success();
+        int account = firstInt(accounts.stdout, "number");
+        Result ledger = cli("--format", "json", "general-ledger", "--account",
+                Integer.toString(account), "--from", from, "--to", to);
+        ledger.success();
+        require(ledger.stdout.contains("\"opening\":"), "general ledger lacks opening balance");
+        require(ledger.stdout.contains("\"closing\":"), "general ledger lacks closing balance");
+        Result accountBalance = cli("--format", "json", "account", "balance",
+                Integer.toString(account), "--date", to);
+        accountBalance.success();
+        require(accountBalance.stdout.contains("\"balance\":"), "account balance lacks balance");
     }
 
     private static void runNextYearFlow(Path temporary) throws Exception {
