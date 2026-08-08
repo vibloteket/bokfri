@@ -533,8 +533,8 @@ public final class CliSmokeTest {
     private static void runSieImportFlow(Path temporary) throws Exception {
         Path source = temporary.resolve("company-2026.se");
         Path imported = temporary.resolve("company-2026-import.se");
-        String content = Files.readString(source, java.nio.charset.Charset.forName("IBM-437"));
-        Files.writeString(imported, content, java.nio.charset.Charset.forName("IBM-437"));
+        byte[] content = Files.readAllBytes(source);
+        Files.write(imported, content);
 
         Result preview = cli("--format", "json", "sie", "import", "--file", imported.toString(),
                 "--vouchers-only");
@@ -543,14 +543,23 @@ public final class CliSmokeTest {
                 "SIE import preview unexpectedly committed");
         require(preview.stdout.contains("\"type\":\"4\""), "SIE import preview lacks type");
         require(preview.stdout.contains("\"vouchers\":"), "SIE import preview lacks voucher count");
+        require(preview.stdout.contains("\"sourceMarkedImported\":false"),
+                "fresh SIE source is unexpectedly marked imported");
+        require(preview.stdout.contains("\"previouslyImported\":false"),
+                "fresh SIE content unexpectedly exists in import history");
+        require(preview.stdout.contains("\"sha256\":"), "SIE import preview lacks SHA-256");
 
         Result commit = cli("--format", "json", "sie", "import", "--file", imported.toString(),
                 "--vouchers-only", "--commit");
         commit.success();
         require(commit.stdout.contains("\"committed\":true"), "SIE import did not commit");
-        require(Files.readString(imported, java.nio.charset.Charset.forName("IBM-437"))
-                        .startsWith("#FLAGGA 1"),
-                "committed SIE import did not mark the source file as imported");
+        require(java.util.Arrays.equals(content, Files.readAllBytes(imported)),
+                "committed SIE import modified the source file");
+        Result importedPreview = cli("--format", "json", "sie", "import", "--file",
+                imported.toString(), "--vouchers-only", "--allow-already-imported");
+        importedPreview.success();
+        require(importedPreview.stdout.contains("\"previouslyImported\":true"),
+                "committed SIE content is absent from import history");
         Result repeated = cli("--format", "json", "sie", "import", "--file", imported.toString(),
                 "--vouchers-only", "--commit");
         require(repeated.exitCode != 0, "already imported SIE file unexpectedly succeeded");

@@ -40,12 +40,26 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
 
     private File iFile;
 
+    private boolean iMarkAsRead;
+
     /**
+     * Creates an importer with legacy behavior that marks the source file as read.
      *
-     * @param iFile
+     * @param iFile source SIE file
      */
     public SSSIEImporter(File iFile) {
+        this(iFile, true);
+    }
+
+    /**
+     * Creates an importer with explicit source-file mutation behavior.
+     *
+     * @param iFile source SIE file
+     * @param markAsRead whether to replace {@code #FLAGGA} in the source after import
+     */
+    public SSSIEImporter(File iFile, boolean markAsRead) {
         this.iFile = iFile;
+        iMarkAsRead = markAsRead;
 
         iLines = new LinkedList<>();
         iDimensions = SIEDimension.getDefaultDimensions();
@@ -122,7 +136,9 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
         SSDB.getInstance().updateAccountingYear(iAccountingYear);
         SSDB.getInstance().notifyListeners("YEAR", SSDB.getInstance().getCurrentYear(),
                 null);
-        setReaded(iFile);
+        if (iMarkAsRead) {
+            setReaded(iFile);
+        }
 
         SSFrameManager.getInstance().close();
         SSDB.getInstance().initYear(true);
@@ -155,7 +171,9 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
                 iEntry.importEntry(this, iReader, iYear);
             }
         }
-        setReaded(iFile);
+        if (iMarkAsRead) {
+            setReaded(iFile);
+        }
     }
 
     /**

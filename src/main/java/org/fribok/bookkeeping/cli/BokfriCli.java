@@ -665,11 +665,11 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                SieImportService service = new SieImportService();
+                SieImportService service = new SieImportService(context.dataDir());
                 SieImportPlan plan = service.inspect(file, vouchersOnly);
-                if (plan.alreadyImported() && !allowAlreadyImported) {
+                if (plan.previouslyImported() && !allowAlreadyImported) {
                     throw new CliException("SIE_ALREADY_IMPORTED",
-                            "SIE file is marked as already imported (#FLAGGA 1)");
+                            "Identical SIE content was already imported (SHA-256 " + plan.sha256() + ")");
                 }
                 if (commit) {
                     plan = service.importFile(file, vouchersOnly, allowAlreadyImported);
@@ -1714,7 +1714,9 @@ public class BokfriCli implements Runnable {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("file", plan.file().toString());
         result.put("type", plan.type());
-        result.put("alreadyImported", plan.alreadyImported());
+        result.put("sourceMarkedImported", plan.sourceMarkedImported());
+        result.put("previouslyImported", plan.previouslyImported());
+        result.put("sha256", plan.sha256());
         result.put("accounts", plan.accounts());
         result.put("vouchers", plan.vouchers());
         result.put("transactions", plan.transactions());
