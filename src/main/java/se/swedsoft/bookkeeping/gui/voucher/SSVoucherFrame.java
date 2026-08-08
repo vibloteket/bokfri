@@ -1,7 +1,9 @@
 package se.swedsoft.bookkeeping.gui.voucher;
 
 
+import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
+import org.fribok.bookkeeping.service.sie.SieImportService;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 
@@ -18,7 +20,6 @@ import se.swedsoft.bookkeeping.gui.util.table.SSTable;
 import se.swedsoft.bookkeeping.gui.voucher.util.SSVoucherTableModel;
 import se.swedsoft.bookkeeping.importexport.excel.SSVoucherExporter;
 import se.swedsoft.bookkeeping.importexport.excel.SSVoucherImporter;
-import se.swedsoft.bookkeeping.importexport.sie.SSSIEImporter;
 import se.swedsoft.bookkeeping.importexport.util.SSExportException;
 import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 import se.swedsoft.bookkeeping.print.report.SSVoucherListPrinter;
@@ -265,12 +266,11 @@ public class SSVoucherFrame extends SSDefaultTableFrame {
                         int iResponce = iFileChooser.showOpenDialog(getMainFrame());
 
                         if (iResponce == JFileChooser.APPROVE_OPTION) {
-                            SSSIEImporter iImporter = new SSSIEImporter(
-                                    iFileChooser.getSelectedFile());
-
                             try {
-                                iImporter.doImportVouchers();
-                            } catch (SSImportException ex) {
+                                SieImportService iImporter = new SieImportService(
+                                        Path.get(Path.USER_DATA).toPath());
+                                iImporter.importFile(iFileChooser.getSelectedFile().toPath(), true, false);
+                            } catch (SSImportException | IOException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
                             }

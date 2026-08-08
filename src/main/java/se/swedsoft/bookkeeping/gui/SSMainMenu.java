@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.gui;
 
 import org.fribok.bookkeeping.app.Path;
+import org.fribok.bookkeeping.service.sie.SieImportService;
 import se.swedsoft.bookkeeping.data.*;
 import se.swedsoft.bookkeeping.data.backup.SSBackupDatabase;
 import se.swedsoft.bookkeeping.data.system.*;
@@ -53,7 +54,6 @@ import se.swedsoft.bookkeeping.gui.vouchertemplate.SSVoucherTemplateFrame;
 import se.swedsoft.bookkeeping.importexport.bgmax.SSBgMaxImporter;
 import se.swedsoft.bookkeeping.importexport.bgmax.data.BgMaxFile;
 import se.swedsoft.bookkeeping.importexport.sie.SSSIEExporter;
-import se.swedsoft.bookkeeping.importexport.sie.SSSIEImporter;
 import se.swedsoft.bookkeeping.importexport.sie.util.SIEType;
 import se.swedsoft.bookkeeping.importexport.supplierpayments.SSSupplierPaymentImporter;
 import se.swedsoft.bookkeeping.importexport.util.SSExportException;
@@ -184,11 +184,12 @@ public class SSMainMenu {    private static final Logger LOG = LoggerFactory.get
                 boolean iShowDialog = false;
                 if(iResponce == JFileChooser.APPROVE_OPTION ){
                     iShowDialog = true;
-                    SSSIEImporter iImporter = new SSSIEImporter(iFileChooser.getSelectedFile());
                     try {
-                        iImporter.doImport(   );
+                        SieImportService iImporter = new SieImportService(
+                                Path.get(Path.USER_DATA).toPath());
+                        iImporter.importFile(iFileChooser.getSelectedFile().toPath(), false, false);
 
-                    } catch (SSImportException ex) {
+                    } catch (SSImportException | IOException ex) {
                         iShowDialog = false;
                         new SSErrorDialog(iMainFrame, "importexceptiondialog", ex.getMessage());
                     } catch (RuntimeException ex) {
@@ -207,11 +208,11 @@ public class SSMainMenu {    private static final Logger LOG = LoggerFactory.get
 
                 SSSIEFileChooser iFileChooser = SSSIEFileChooser.getInstance();
                 if (iFileChooser.showOpenDialog(iMainFrame) == JFileChooser.APPROVE_OPTION) {
-                    SSSIEImporter iImporter = new SSSIEImporter(iFileChooser.getSelectedFile());
-
                     try {
-                        iImporter.doImportVouchers();
-                    } catch (SSImportException ex) {
+                        SieImportService iImporter = new SieImportService(
+                                Path.get(Path.USER_DATA).toPath());
+                        iImporter.importFile(iFileChooser.getSelectedFile().toPath(), true, false);
+                    } catch (SSImportException | IOException ex) {
                         new SSErrorDialog(iMainFrame, "importexceptiondialog", ex.getMessage());
                     }
                     if (SSVoucherFrame.getInstance() != null) {

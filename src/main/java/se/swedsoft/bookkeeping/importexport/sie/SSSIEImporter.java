@@ -43,12 +43,12 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
     private boolean iMarkAsRead;
 
     /**
-     * Creates an importer with legacy behavior that marks the source file as read.
+     * Creates an importer that treats the source file as immutable.
      *
      * @param iFile source SIE file
      */
     public SSSIEImporter(File iFile) {
-        this(iFile, true);
+        this(iFile, false);
     }
 
     /**
