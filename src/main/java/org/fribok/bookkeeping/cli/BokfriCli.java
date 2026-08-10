@@ -1215,10 +1215,11 @@ public class BokfriCli implements Runnable {
 
         @Override public Integer call() {
             BokfriCli root = command.parent;
-            ResolvedContext context = root.resolveContext(true, false);
+            ResolvedContext context = root.resolveContext(true, true);
             InvoiceInput input = readInvoiceInput(file);
             try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
+                runtime.selectYear(company, context.yearId());
                 runtime.database().init(false);
                 SSInvoice invoice = toInvoice(input, runtime);
                 InvoiceService service = new InvoiceService(runtime.database());
