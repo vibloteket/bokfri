@@ -42,6 +42,7 @@ public final class CliSmokeTest {
             runInpaymentFlow(temporary);
             runSupplierFlow(temporary);
             runSupplierInvoiceFlow(temporary);
+            runSupplierCreditInvoiceFlow(temporary);
             runOutpaymentFlow(temporary);
             runVatFlow(temporary);
             runVoucherFlow(temporary);
@@ -279,6 +280,65 @@ public final class CliSmokeTest {
         Result commit=cli("--format","json","supplier-invoice","journal","--from",date,"--to",date,"--commit");commit.success();require(commit.stdout.contains("\"committed\":true"),"supplier invoice journal did not commit");
         Result shown=cli("--format","json","supplier-invoice","show",Integer.toString(number));shown.success();require(shown.stdout.contains("\"entered\":true"),"supplier invoice was not marked entered");
         Files.writeString(temporary.resolve("supplier-invoice-number.txt"),Integer.toString(number));
+    }
+
+    private static void runSupplierCreditInvoiceFlow(Path temporary) throws Exception {
+        int invoice = Integer.parseInt(Files.readString(
+                temporary.resolve("supplier-invoice-number.txt")));
+        Result original = cli("--format", "json", "supplier-invoice", "show",
+                Integer.toString(invoice));
+        original.success();
+        String date = firstString(original.stdout, "date");
+
+        Path excessive = temporary.resolve("supplier-credit-excessive.json");
+        Files.writeString(excessive, "{\"supplierInvoiceNumber\":" + invoice
+                + ",\"date\":\"" + date + "\",\"amount\":\"999999.00\"}",
+                StandardCharsets.UTF_8);
+        Result rejected = cli("--format", "json", "supplier-credit-invoice", "create",
+                "--file", excessive.toString());
+        require(rejected.exitCode != 0, "excessive supplier credit unexpectedly succeeded");
+        require(rejected.stderr.contains("\"code\":\"SUPPLIER_CREDIT_INVOICE_INVALID\""),
+                "excessive supplier credit lacks stable error code");
+
+        Path input = temporary.resolve("supplier-credit-invoice.json");
+        Files.writeString(input, "{\"supplierInvoiceNumber\":" + invoice
+                + ",\"date\":\"" + date + "\",\"amount\":\"50.00\"}",
+                StandardCharsets.UTF_8);
+        cli("--format", "json", "supplier-credit-invoice", "validate", "--file",
+                input.toString()).success();
+        Result dryRun = cli("--format", "json", "supplier-credit-invoice", "create",
+                "--dry-run", "--file", input.toString());
+        dryRun.success();
+        int number = firstInt(dryRun.stdout, "number");
+        Result afterDryRun = cli("--format", "json", "supplier-credit-invoice", "list");
+        afterDryRun.success();
+        require(afterDryRun.stdout.contains("\"supplierCreditInvoices\":[]"),
+                "supplier credit dry run persisted data");
+        Result create = cli("--format", "json", "supplier-credit-invoice", "create",
+                "--file", input.toString());
+        create.success();
+        require(firstInt(create.stdout, "number") == number,
+                "supplier credit number differs from dry run");
+        Result show = cli("--format", "json", "supplier-credit-invoice", "show",
+                Integer.toString(number));
+        show.success();
+        require(show.stdout.contains("\"creditingSupplierInvoiceNumber\":" + invoice),
+                "supplier credit lacks original invoice reference");
+        Result preview = cli("--format", "json", "supplier-credit-invoice", "journal",
+                "--from", date, "--to", date);
+        preview.success();
+        require(preview.stdout.contains("\"committed\":false"),
+                "supplier credit journal preview committed");
+        Result afterPreview = cli("--format", "json", "supplier-credit-invoice", "show",
+                Integer.toString(number));
+        afterPreview.success();
+        require(afterPreview.stdout.contains("\"entered\":false"),
+                "supplier credit journal preview changed the invoice");
+        Result commit = cli("--format", "json", "supplier-credit-invoice", "journal",
+                "--from", date, "--to", date, "--commit");
+        commit.success();
+        require(commit.stdout.contains("\"committed\":true"),
+                "supplier credit journal did not commit");
     }
 
     private static void runOutpaymentFlow(Path temporary) throws Exception {
