@@ -291,6 +291,20 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar inpayment journal \
 
 Delbetalningar stöds; beloppet får inte överstiga fakturans återstående saldo.
 
+Finansiella rapporter använder det valda räkenskapsåret som standard. Periodrapporter
+omfattar hela året, medan balansräkning och kontosaldo använder årets sista dag:
+
+```sh
+bokfri trial-balance
+bokfri income-statement
+bokfri general-ledger --account 1930
+bokfri balance-sheet
+bokfri account balance 1930
+```
+
+Ange både `--from` och `--to` för en annan period, eller `--date` för ett annat
+datum. Värdena måste ligga inom valt räkenskapsår.
+
 Momsrapport och momsavräkning kan beräknas från periodens bokförda
 verifikationer. Utan datum omfattar rapporten hela det valda räkenskapsåret;
 för en delperiod måste både `--from` och `--to` anges. Avräkningen kräver alltid

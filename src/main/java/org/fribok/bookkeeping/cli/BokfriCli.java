@@ -552,37 +552,146 @@ public class BokfriCli implements Runnable {
     @Command(name = "trial-balance", description = "Show account opening, movement, and closing balances")
     static class TrialBalanceCommand implements Callable<Integer> {
         @CommandLine.ParentCommand BokfriCli root;
-        @Option(names="--from",required=true) java.time.LocalDate from;
-        @Option(names="--to",required=true) java.time.LocalDate to;
-        public Integer call(){return withReport(root,(service,context)->{var report=service.trialBalance(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("rows",report.rows());x.put("openingTotal",decimal(report.openingTotal()));x.put("debitTotal",decimal(report.debitTotal()));x.put("creditTotal",decimal(report.creditTotal()));x.put("closingTotal",decimal(report.closingTotal()));x.put("difference",decimal(report.debitTotal().subtract(report.creditTotal())));x.put("context",context);return x;},"Trial balance");}
+        @Option(names = "--from") java.time.LocalDate from;
+        @Option(names = "--to") java.time.LocalDate to;
+        public Integer call() {
+            return withReport(root, (service, context, year) -> {
+                ReportPeriod period = reportPeriod(year, from, to);
+                var report = service.trialBalance(period.from(), period.to());
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("from", period.from());
+                result.put("to", period.to());
+                result.put("rows", report.rows());
+                result.put("openingTotal", decimal(report.openingTotal()));
+                result.put("debitTotal", decimal(report.debitTotal()));
+                result.put("creditTotal", decimal(report.creditTotal()));
+                result.put("closingTotal", decimal(report.closingTotal()));
+                result.put("difference", decimal(report.debitTotal().subtract(report.creditTotal())));
+                result.put("context", context);
+                return result;
+            }, "Trial balance");
+        }
     }
 
     @Command(name = "balance-sheet", description = "Show balance accounts and current result at a date")
     static class BalanceSheetCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;@Option(names="--date",required=true)java.time.LocalDate date;
-        public Integer call(){return withReport(root,(service,context)->{var report=service.balanceSheet(date);Map<String,Object>x=new LinkedHashMap<>();x.put("date",date);x.put("rows",report.rows());x.put("assets",decimal(report.assets()));x.put("liabilitiesAndEquity",decimal(report.liabilitiesAndEquity()));x.put("currentResult",decimal(report.currentResult()));x.put("difference",decimal(report.difference()));x.put("context",context);return x;},"Balance sheet");}
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names = "--date") java.time.LocalDate date;
+        public Integer call() {
+            return withReport(root, (service, context, year) -> {
+                java.time.LocalDate selectedDate = date == null ? year.getLocalTo() : date;
+                var report = service.balanceSheet(selectedDate);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("date", selectedDate);
+                result.put("rows", report.rows());
+                result.put("assets", decimal(report.assets()));
+                result.put("liabilitiesAndEquity", decimal(report.liabilitiesAndEquity()));
+                result.put("currentResult", decimal(report.currentResult()));
+                result.put("difference", decimal(report.difference()));
+                result.put("context", context);
+                return result;
+            }, "Balance sheet");
+        }
     }
 
     @Command(name = "income-statement", description = "Show income, expenses, and result for a period")
     static class IncomeStatementCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;
-        public Integer call(){return withReport(root,(service,context)->{var report=service.incomeStatement(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("rows",report.rows());x.put("result",decimal(report.result()));x.put("context",context);return x;},"Income statement");}
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names = "--from") java.time.LocalDate from;
+        @Option(names = "--to") java.time.LocalDate to;
+        public Integer call() {
+            return withReport(root, (service, context, year) -> {
+                ReportPeriod period = reportPeriod(year, from, to);
+                var report = service.incomeStatement(period.from(), period.to());
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("from", period.from());
+                result.put("to", period.to());
+                result.put("rows", report.rows());
+                result.put("result", decimal(report.result()));
+                result.put("context", context);
+                return result;
+            }, "Income statement");
+        }
     }
 
     @Command(name = "general-ledger", description = "Show transactions and running balance for an account")
     static class GeneralLedgerCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;@Option(names="--account",required=true)int account;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;
-        public Integer call(){return withReport(root,(service,context)->{var report=service.accountLedger(account,from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("account",account);x.put("description",report.description());x.put("from",from);x.put("to",to);x.put("opening",decimal(report.opening()));x.put("rows",report.rows());x.put("closing",decimal(report.closing()));x.put("context",context);return x;},"General ledger");}
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names = "--account", required = true) int account;
+        @Option(names = "--from") java.time.LocalDate from;
+        @Option(names = "--to") java.time.LocalDate to;
+        public Integer call() {
+            return withReport(root, (service, context, year) -> {
+                ReportPeriod period = reportPeriod(year, from, to);
+                var report = service.accountLedger(account, period.from(), period.to());
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("account", account);
+                result.put("description", report.description());
+                result.put("from", period.from());
+                result.put("to", period.to());
+                result.put("opening", decimal(report.opening()));
+                result.put("rows", report.rows());
+                result.put("closing", decimal(report.closing()));
+                result.put("context", context);
+                return result;
+            }, "General ledger");
+        }
     }
 
     @Command(name = "balance", description = "Show an account balance at a date")
     static class AccountBalanceCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand AccountCommand command;@Parameters(index="0")int account;@Option(names="--date",required=true)java.time.LocalDate date;
-        public Integer call(){BokfriCli root=command.parent;return withReport(root,(service,context)->{var report=service.accountBalance(account,date);Map<String,Object>x=new LinkedHashMap<>();x.put("account",account);x.put("description",report.description());x.put("date",date);x.put("balance",decimal(report.balance()));x.put("context",context);return x;},"Account balance");}
+        @CommandLine.ParentCommand AccountCommand command;
+        @Parameters(index = "0") int account;
+        @Option(names = "--date") java.time.LocalDate date;
+        public Integer call() {
+            BokfriCli root = command.parent;
+            return withReport(root, (service, context, year) -> {
+                java.time.LocalDate selectedDate = date == null ? year.getLocalTo() : date;
+                var report = service.accountBalance(account, selectedDate);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("account", account);
+                result.put("description", report.description());
+                result.put("date", selectedDate);
+                result.put("balance", decimal(report.balance()));
+                result.put("context", context);
+                return result;
+            }, "Account balance");
+        }
     }
 
-    @FunctionalInterface interface ReportOperation {Map<String,Object> run(FinancialReportService service,Map<String,Object> context);}
-    private static int withReport(BokfriCli root,ReportOperation operation,String title){ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime runtime=BokfriRuntime.open(c.dataDir())){SSNewCompany company=runtime.selectCompany(c.companyId());SSNewAccountingYear year=runtime.selectYear(company,c.yearId());Map<String,Object> result=operation.run(new FinancialReportService(year),selectedContext(c,company,year));root.output(result,title+" generated");return 0;}catch(IllegalArgumentException e){throw new CliException("REPORT_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
+    record ReportPeriod(java.time.LocalDate from, java.time.LocalDate to) {}
+
+    private static ReportPeriod reportPeriod(SSNewAccountingYear year, java.time.LocalDate from,
+            java.time.LocalDate to) {
+        if ((from == null) != (to == null)) {
+            throw new IllegalArgumentException(
+                    "Provide both --from and --to, or omit both to report the full accounting year");
+        }
+        return from == null ? new ReportPeriod(year.getLocalFrom(), year.getLocalTo())
+                : new ReportPeriod(from, to);
+    }
+
+    @FunctionalInterface
+    interface ReportOperation {
+        Map<String, Object> run(FinancialReportService service, Map<String, Object> context,
+                SSNewAccountingYear year);
+    }
+
+    private static int withReport(BokfriCli root, ReportOperation operation, String title) {
+        ResolvedContext context = root.resolveContext(true, true);
+        try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+            SSNewCompany company = runtime.selectCompany(context.companyId());
+            SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+            Map<String, Object> result = operation.run(new FinancialReportService(year),
+                    selectedContext(context, company, year), year);
+            root.output(result, title + " generated");
+            return 0;
+        } catch (IllegalArgumentException exception) {
+            throw new CliException("REPORT_INVALID", exception.getMessage(), exception);
+        } catch (Exception exception) {
+            throw databaseFailure(exception);
+        }
+    }
 
     @Command(name="opening-balance",description="Inspect and manage opening balances",subcommands={OpeningBalanceShow.class,OpeningBalanceValidate.class,OpeningBalanceSet.class,OpeningBalanceCarryForward.class})
     static class OpeningBalanceCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An opening-balance command is required");}}

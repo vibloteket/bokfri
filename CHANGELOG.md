@@ -13,8 +13,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
-- Global CLI options now work before or after nested commands, and `vat report`
-  defaults to the full selected accounting year when no period is provided.
+- Global CLI options now work before or after nested commands. VAT, trial balance,
+  income statement, and general-ledger reports default to the full selected
+  accounting year; balance sheet and account balance default to its final day.
 
 ### Added
 - Added privacy-friendly GoatCounter visitor statistics to the website and help pages.

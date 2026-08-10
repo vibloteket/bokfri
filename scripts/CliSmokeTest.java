@@ -666,35 +666,56 @@ public final class CliSmokeTest {
         String from = firstString(years.stdout, "from");
         String to = firstString(years.stdout, "to");
 
-        Result trial = cli("--format", "json", "trial-balance", "--from", from, "--to", to);
+        Result trial = cli("--format", "json", "trial-balance");
         trial.success();
+        require(trial.stdout.contains("\"from\":\"" + from + "\""),
+                "trial balance does not default from to accounting year");
+        require(trial.stdout.contains("\"to\":\"" + to + "\""),
+                "trial balance does not default to accounting year");
         require(new java.math.BigDecimal(firstString(trial.stdout, "difference")).signum() == 0,
                 "trial balance debit and credit differ");
         require(trial.stdout.contains("\"rows\":["), "trial balance lacks rows");
 
-        Result balance = cli("--format", "json", "balance-sheet", "--date", to);
+        Result balance = cli("--format", "json", "balance-sheet");
         balance.success();
+        require(balance.stdout.contains("\"date\":\"" + to + "\""),
+                "balance sheet does not default to accounting-year end");
         require(new java.math.BigDecimal(firstString(balance.stdout, "difference")).signum() == 0,
                 "balance sheet does not balance");
         require(balance.stdout.contains("\"currentResult\":"),
                 "balance sheet lacks current result");
 
-        Result income = cli("--format", "json", "income-statement", "--from", from, "--to", to);
+        Result income = cli("--format", "json", "income-statement");
         income.success();
+        require(income.stdout.contains("\"from\":\"" + from + "\""),
+                "income statement does not default from to accounting year");
+        require(income.stdout.contains("\"to\":\"" + to + "\""),
+                "income statement does not default to accounting year");
         require(income.stdout.contains("\"result\":"), "income statement lacks result");
 
         Result accounts = cli("--format", "json", "account", "list");
         accounts.success();
         int account = firstInt(accounts.stdout, "number");
         Result ledger = cli("--format", "json", "general-ledger", "--account",
-                Integer.toString(account), "--from", from, "--to", to);
+                Integer.toString(account));
         ledger.success();
+        require(ledger.stdout.contains("\"from\":\"" + from + "\""),
+                "general ledger does not default from to accounting year");
+        require(ledger.stdout.contains("\"to\":\"" + to + "\""),
+                "general ledger does not default to accounting year");
         require(ledger.stdout.contains("\"opening\":"), "general ledger lacks opening balance");
         require(ledger.stdout.contains("\"closing\":"), "general ledger lacks closing balance");
         Result accountBalance = cli("--format", "json", "account", "balance",
-                Integer.toString(account), "--date", to);
+                Integer.toString(account));
         accountBalance.success();
+        require(accountBalance.stdout.contains("\"date\":\"" + to + "\""),
+                "account balance does not default to accounting-year end");
         require(accountBalance.stdout.contains("\"balance\":"), "account balance lacks balance");
+
+        Result incomplete = cli("--format", "json", "income-statement", "--from", from);
+        require(incomplete.exitCode != 0, "incomplete report period unexpectedly succeeded");
+        require(incomplete.stderr.contains("REPORT_INVALID"),
+                "incomplete report period lacks stable error code");
     }
 
     private static void runNextYearFlow(Path temporary) throws Exception {
