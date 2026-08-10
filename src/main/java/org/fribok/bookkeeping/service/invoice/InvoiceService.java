@@ -45,7 +45,7 @@ public final class InvoiceService {
     }
 
     public InvoiceValidationResult validate(SSInvoice invoice) {
-        return InvoiceValidator.validate(invoice);
+        return InvoiceValidator.validate(invoice, database.getAccounts());
     }
 
     public SSInvoice create(SSInvoice invoice) {
@@ -54,6 +54,15 @@ public final class InvoiceService {
             throw new InvoiceValidationException(validation);
         }
         database.addInvoice(invoice);
+        return invoice;
+    }
+
+    public SSInvoice update(SSInvoice invoice) {
+        InvoiceValidationResult validation = validate(invoice);
+        if (!validation.valid()) {
+            throw new InvoiceValidationException(validation);
+        }
+        database.updateInvoice(invoice);
         return invoice;
     }
 

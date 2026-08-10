@@ -80,6 +80,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   behavior and shared import history.
 
 ### Fixed
+- Prevented customer invoices from being created or edited without a valid sales
+  account from the selected accounting year, in both Swing and the CLI.
 - Initialized standard accounts for companies created through the CLI, matching
   GUI-created companies so journals, payments and VAT work without demo data.
 

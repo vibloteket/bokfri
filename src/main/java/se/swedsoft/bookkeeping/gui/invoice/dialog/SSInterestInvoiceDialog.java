@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.gui.invoice.dialog;
 
 
+import org.fribok.bookkeeping.service.invoice.InvoiceService;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
@@ -56,7 +57,7 @@ public class SSInterestInvoiceDialog {
                 List<SSInvoice> iInterestInvoices = iPanel.getInterestInvoices();
 
                 for (SSInvoice iInvoice : iInterestInvoices) {
-                    SSDB.getInstance().addInvoice(iInvoice);
+                    new InvoiceService(SSDB.getInstance()).create(iInvoice);
                 }
 
                 if (pModel != null) {

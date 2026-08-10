@@ -1,5 +1,6 @@
 package org.fribok.bookkeeping.service.invoice;
 
+import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 
@@ -12,6 +13,10 @@ public final class InvoiceValidator {
     private InvoiceValidator() {}
 
     public static InvoiceValidationResult validate(SSInvoice invoice) {
+        return validate(invoice, null);
+    }
+
+    public static InvoiceValidationResult validate(SSInvoice invoice, List<SSAccount> accounts) {
         List<InvoiceValidationIssue> issues = new ArrayList<>();
         if (invoice == null) {
             issues.add(issue("INVOICE_REQUIRED", null, null, "Fakturan saknas."));
@@ -58,6 +63,10 @@ public final class InvoiceValidator {
             if (row == null || row.getAccountNr() == null || row.getAccountNr() <= 0) {
                 issues.add(issue("INVOICE_ROW_ACCOUNT_REQUIRED", "salesAccount", rowNumber,
                         "Fakturaraden saknar försäljningskonto."));
+            } else if (accounts != null && accounts.stream()
+                    .noneMatch(account -> row.getAccountNr().equals(account.getNumber()))) {
+                issues.add(issue("INVOICE_ROW_ACCOUNT_NOT_FOUND", "salesAccount", rowNumber,
+                        "Fakturaradens försäljningskonto finns inte i valt räkenskapsår."));
             }
             if (row == null || row.getTaxCode() == null) {
                 issues.add(issue("INVOICE_ROW_VAT_REQUIRED", "vatRate", rowNumber,

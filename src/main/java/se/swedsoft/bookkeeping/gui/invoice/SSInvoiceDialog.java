@@ -124,7 +124,7 @@ public class SSInvoiceDialog {
 
                 SSInvoice iInvoice1 = iPanel.getInvoice();
 
-                SSDB.getInstance().updateInvoice(iInvoice1);
+                new InvoiceService(SSDB.getInstance()).update(iInvoice1);
                 if (iPanel.doSaveCustomerAndProducts()) {
                     SSInvoiceMath.addCustomerAndProducts(iInvoice1);
                 }

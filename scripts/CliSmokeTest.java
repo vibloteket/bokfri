@@ -313,6 +313,33 @@ public final class CliSmokeTest {
         Result validation = cli("--format", "json", "invoice", "validate",
                 "--file", invoiceInput.toString());
         validation.success();
+
+        Path missingAccountInput = temporary.resolve("invoice-without-account.json");
+        Files.writeString(missingAccountInput, """
+                {
+                  "customerNumber": "CLI-SMOKE-CUSTOMER",
+                  "date": "%s",
+                  "rows": [
+                    {"description": "Missing account", "quantity": 1,
+                     "unitPrice": "100.00", "vatRate": "25"}
+                  ]
+                }
+                """.formatted(date), StandardCharsets.UTF_8);
+        Result missingAccount = cli("--format", "json", "invoice", "create",
+                "--file", missingAccountInput.toString());
+        require(missingAccount.exitCode != 0,
+                "invoice without a sales account unexpectedly succeeded");
+        missingAccount.stderrJsonObject();
+        require(missingAccount.stderr.contains("\"code\":\"INVOICE_INVALID\""),
+                "invoice without a sales account lacks stable error code");
+        require(missingAccount.stderr.contains("\"code\":\"INVOICE_ROW_ACCOUNT_REQUIRED\""),
+                "invoice without a sales account lacks row validation issue");
+
+        Result invoicesAfterFailure = cli("--format", "json", "invoice", "list");
+        invoicesAfterFailure.success();
+        require(invoicesAfterFailure.stdout.contains("\"invoices\":[]"),
+                "rejected invoice was persisted");
+
         Result dryRun = cli("--format", "json", "invoice", "create", "--dry-run",
                 "--file", invoiceInput.toString());
         dryRun.success();

@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.gui.periodicinvoice;
 
 
+import org.fribok.bookkeeping.service.invoice.InvoiceService;
 import se.swedsoft.bookkeeping.calc.math.SSInvoiceMath;
 import se.swedsoft.bookkeeping.calc.math.SSPeriodicInvoiceMath;
 import se.swedsoft.bookkeeping.data.SSInvoice;
@@ -360,7 +361,7 @@ public class SSPeriodicInvoiceDialog {
                 iInvoice.setLocalDate(SSDateUtil.today());
                 iInvoice.setDueDate();
 
-                SSDB.getInstance().addInvoice(iInvoice);
+                new InvoiceService(SSDB.getInstance()).create(iInvoice);
             }
         }
 
