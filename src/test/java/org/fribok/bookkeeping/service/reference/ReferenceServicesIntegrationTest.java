@@ -116,7 +116,7 @@ class ReferenceServicesIntegrationTest {
         row.setDescription("Integration test row");
         row.setQuantity(1);
         row.setUnitprice(new java.math.BigDecimal("100"));
-        row.setAccountNr(3001);
+        row.setAccountNr(SSDB.getInstance().getAccounts().get(0).getNumber());
         row.setTaxCode(se.swedsoft.bookkeeping.data.common.SSTaxCode.TAXRATE_1);
         invoice.setRows(java.util.List.of(row));
 
