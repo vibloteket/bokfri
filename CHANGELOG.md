@@ -12,6 +12,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Changed
+- Global CLI options now work before or after nested commands, and `vat report`
+  defaults to the full selected accounting year when no period is provided.
+
 ### Added
 - Added privacy-friendly GoatCounter visitor statistics to the website and help pages.
 - Added the first headless CLI slice with version, path, diagnostics, named

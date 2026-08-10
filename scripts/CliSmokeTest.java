@@ -595,7 +595,10 @@ public final class CliSmokeTest {
 
     private static void runVatFlow(Path temporary) throws Exception {
         Result years=cli("--format","json","year","list");years.success();String from=firstString(years.stdout,"from");String to=firstString(years.stdout,"to");
-        Result report=cli("--format","json","vat","report","--from",from,"--to",to);report.success();require(report.stdout.contains("\"boxes\":"),"VAT report lacks boxes");
+        int companyId = Integer.parseInt(Files.readString(temporary.resolve("created-company.txt")));
+        int yearId = Integer.parseInt(Files.readString(temporary.resolve("created-year.txt")));
+        Result report=cli("vat","report","--company-id="+companyId,"--year-id="+yearId,"--format=json");report.success();require(report.stdout.contains("\"boxes\":"),"VAT report lacks boxes");require(report.stdout.contains("\"from\":\""+from+"\""),"VAT report does not default from to accounting year");require(report.stdout.contains("\"to\":\""+to+"\""),"VAT report does not default to accounting year");
+        Result explicitReport=cli("--format","json","vat","report","--from",from,"--to",to);explicitReport.success();require(explicitReport.stdout.contains("\"boxes\":"),"explicit VAT report lacks boxes");
         Result vouchersBefore=cli("--format","json","voucher","list");vouchersBefore.success();
         Result preview=cli("--format","json","vat","settle","--from",from,"--to",to);preview.success();require(preview.stdout.contains("\"committed\":false"),"VAT preview committed");
         Result vouchersAfter=cli("--format","json","voucher","list");vouchersAfter.success();require(vouchersAfter.stdout.equals(vouchersBefore.stdout),"VAT settlement preview changed vouchers");

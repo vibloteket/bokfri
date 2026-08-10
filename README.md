@@ -98,8 +98,9 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar year list
 ```
 
 Använd `--format json` för maskinläsbar utdata och `--config FIL` för en
-isolerad config, exempelvis för CI eller en agent. Globala val måste placeras
-före kommandot, till exempel `cli --format json company list`.
+isolerad config, exempelvis för CI eller en agent. Globala val kan placeras
+före eller efter kommandot, till exempel både `bokfri --format json company list`
+och `bokfri company list --format json`.
 
 Företag och räkenskapsår kan skapas från JSON efter att en tillgänglig
 kontoplan har valts:
@@ -291,9 +292,12 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar inpayment journal \
 Delbetalningar stöds; beloppet får inte överstiga fakturans återstående saldo.
 
 Momsrapport och momsavräkning kan beräknas från periodens bokförda
-verifikationer. Avräkningen är endast en preview tills `--commit` anges:
+verifikationer. Utan datum omfattar rapporten hela det valda räkenskapsåret;
+för en delperiod måste både `--from` och `--to` anges. Avräkningen kräver alltid
+en explicit period och är endast en preview tills `--commit` anges:
 
 ```sh
+bokfri vat report
 bokfri vat report --from 2026-07-01 --to 2026-09-30
 bokfri vat settle --from 2026-07-01 --to 2026-09-30
 bokfri vat settle --from 2026-07-01 --to 2026-09-30 --commit

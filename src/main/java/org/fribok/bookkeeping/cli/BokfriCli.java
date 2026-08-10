@@ -132,22 +132,28 @@ import java.util.concurrent.Callable;
 public class BokfriCli implements Runnable {
     enum OutputFormat { text, json }
 
-    @Option(names = "--config", description = "CLI config file")
+    @Option(names = "--config", scope = CommandLine.ScopeType.INHERIT,
+            description = "CLI config file")
     java.nio.file.Path configPath;
 
-    @Option(names = "--context", description = "Context to use for this command")
+    @Option(names = "--context", scope = CommandLine.ScopeType.INHERIT,
+            description = "Context to use for this command")
     String contextName;
 
-    @Option(names = "--data-dir", description = "Override the Bokfri data directory")
+    @Option(names = "--data-dir", scope = CommandLine.ScopeType.INHERIT,
+            description = "Override the Bokfri data directory")
     java.nio.file.Path dataDir;
 
-    @Option(names = "--company-id", description = "Override the company id")
+    @Option(names = "--company-id", scope = CommandLine.ScopeType.INHERIT,
+            description = "Override the company id")
     Integer companyId;
 
-    @Option(names = "--year-id", description = "Override the accounting year id")
+    @Option(names = "--year-id", scope = CommandLine.ScopeType.INHERIT,
+            description = "Override the accounting year id")
     Integer yearId;
 
-    @Option(names = "--format", defaultValue = "text", description = "Output format: ${COMPLETION-CANDIDATES}")
+    @Option(names = "--format", scope = CommandLine.ScopeType.INHERIT, defaultValue = "text",
+            description = "Output format: ${COMPLETION-CANDIDATES}")
     OutputFormat format;
 
     @Override
@@ -368,15 +374,18 @@ public class BokfriCli implements Runnable {
     @Command(name = "create", description = "Create or replace a context")
     static class ContextCreate extends ContextSubcommand implements Callable<Integer> {
         @Parameters(index = "0") String name;
-        @Option(names = "--data-dir", required = true) java.nio.file.Path dataDir;
-        @Option(names = "--company-id", required = true) Integer companyId;
-        @Option(names = "--year-id", required = true) Integer yearId;
 
         @Override public Integer call() {
-            CliConfig config = root().loadConfig();
-            config.getContexts().put(name, new CliContext(dataDir, companyId, yearId));
-            save(root(), config);
-            return showContext(root(), config, name);
+            BokfriCli root = root();
+            if (root.dataDir == null || root.companyId == null || root.yearId == null) {
+                throw new CliException("CONTEXT_VALUES_REQUIRED",
+                        "Provide --data-dir, --company-id, and --year-id");
+            }
+            CliConfig config = root.loadConfig();
+            config.getContexts().put(name,
+                    new CliContext(root.dataDir, root.companyId, root.yearId));
+            save(root, config);
+            return showContext(root, config, name);
         }
     }
 
@@ -1648,11 +1657,92 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(name="vat",description="Calculate and settle VAT",subcommands={VatReportCommand.class,VatSettle.class})
-    static class VatCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"A VAT command is required");}}
-    abstract static class VatPeriodCommand implements Callable<Integer>{@CommandLine.ParentCommand VatCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;BokfriCli root(){return command.parent;}}
-    @Command(name="report") static class VatReportCommand extends VatPeriodCommand{public Integer call(){BokfriCli root=root();ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);var report=new VatService(r.database()).report(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("boxes",report.boxes());x.put("vatToPayOrRefund",decimal(report.vatToPayOrRefund()));x.put("context",selectedContext(c,co,y));root.output(x,"VAT report "+from+" – "+to+"\nVAT to pay/refund: "+report.vatToPayOrRefund());return 0;}catch(Exception e){throw databaseFailure(e);}}}
-    @Command(name="settle") static class VatSettle extends VatPeriodCommand{@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=root();ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);VatService s=new VatService(r.database());VatSettlementPlan p=s.plan(from,to);Map<String,Object>x=vatSettlementDetails(p);x.put("committed",commit);x.put("context",selectedContext(c,co,y));if(commit)x.put("voucherNumber",s.commit(p).voucherNumber());root.output(x,commit?"Committed VAT settlement voucher "+x.get("voucherNumber"):"VAT settlement preview; no changes written");return 0;}catch(IllegalArgumentException|IllegalStateException e){throw new CliException("VAT_SETTLEMENT_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(name = "vat", description = "Calculate and settle VAT",
+            subcommands = {VatReportCommand.class, VatSettle.class})
+    static class VatCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "A VAT command is required");
+        }
+    }
+
+    abstract static class VatPeriodCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand VatCommand command;
+        @Option(names = "--from", required = true) java.time.LocalDate from;
+        @Option(names = "--to", required = true) java.time.LocalDate to;
+        BokfriCli root() { return command.parent; }
+    }
+
+    @Command(name = "report", description = "Calculate VAT for a period or the selected accounting year")
+    static class VatReportCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand VatCommand command;
+        @Option(names = "--from") java.time.LocalDate from;
+        @Option(names = "--to") java.time.LocalDate to;
+
+        public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            if ((from == null) != (to == null)) {
+                throw new CliException("VAT_REPORT_PERIOD_INVALID",
+                        "Provide both --from and --to, or omit both to report the full accounting year");
+            }
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                java.time.LocalDate selectedFrom = from == null ? year.getLocalFrom() : from;
+                java.time.LocalDate selectedTo = to == null ? year.getLocalTo() : to;
+                if (selectedFrom.isBefore(year.getLocalFrom()) || selectedTo.isAfter(year.getLocalTo())) {
+                    throw new CliException("VAT_REPORT_PERIOD_INVALID",
+                            "VAT report period must be within the selected accounting year "
+                                    + year.getLocalFrom() + " – " + year.getLocalTo());
+                }
+                runtime.database().init(false);
+                var report = new VatService(runtime.database()).report(selectedFrom, selectedTo);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("from", selectedFrom);
+                result.put("to", selectedTo);
+                result.put("boxes", report.boxes());
+                result.put("vatToPayOrRefund", decimal(report.vatToPayOrRefund()));
+                result.put("context", selectedContext(context, company, year));
+                root.output(result, "VAT report " + selectedFrom + " – " + selectedTo
+                        + "\nVAT to pay/refund: " + report.vatToPayOrRefund());
+                return 0;
+            } catch (CliException exception) {
+                throw exception;
+            } catch (IllegalArgumentException exception) {
+                throw new CliException("VAT_REPORT_PERIOD_INVALID", exception.getMessage(), exception);
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "settle")
+    static class VatSettle extends VatPeriodCommand {
+        @Option(names = "--commit") boolean commit;
+        public Integer call() {
+            BokfriCli root = root();
+            ResolvedContext c = root.resolveContext(true, true);
+            try (BokfriRuntime r = BokfriRuntime.open(c.dataDir())) {
+                SSNewCompany co = r.selectCompany(c.companyId());
+                SSNewAccountingYear y = r.selectYear(co, c.yearId());
+                r.database().init(false);
+                VatService s = new VatService(r.database());
+                VatSettlementPlan p = s.plan(from, to);
+                Map<String, Object> x = vatSettlementDetails(p);
+                x.put("committed", commit);
+                x.put("context", selectedContext(c, co, y));
+                if (commit) x.put("voucherNumber", s.commit(p).voucherNumber());
+                root.output(x, commit ? "Committed VAT settlement voucher " + x.get("voucherNumber")
+                        : "VAT settlement preview; no changes written");
+                return 0;
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                throw new CliException("VAT_SETTLEMENT_INVALID", e.getMessage(), e);
+            } catch (Exception e) {
+                throw databaseFailure(e);
+            }
+        }
+    }
 
     @Command(name = "voucher", description = "Inspect, validate, and create manual vouchers",
             subcommands = {VoucherList.class, VoucherShow.class,

@@ -69,6 +69,27 @@ class BokfriCliTest {
     }
 
     @Test
+    void acceptsGlobalOptionsAfterNestedCommands() throws Exception {
+        Path config = temporaryDirectory.resolve("cli.yaml");
+        Path storedData = temporaryDirectory.resolve("stored");
+        Path overriddenData = temporaryDirectory.resolve("overridden");
+        Result create = execute("--config", config.toString(), "context", "create", "selected",
+                "--data-dir", storedData.toString(), "--company-id", "1", "--year-id", "2");
+
+        Result doctor = execute("doctor", "--config=" + config, "--context=selected",
+                "--data-dir=" + overriddenData, "--company-id=37", "--year-id=38", "--format=json");
+
+        assertThat(create.exitCode()).isZero();
+        assertThat(doctor.exitCode()).isZero();
+        assertThat(doctor.stderr()).isEmpty();
+        JsonNode result = new ObjectMapper().readTree(doctor.stdout());
+        assertThat(result.at("/context/name").asText()).isEqualTo("selected");
+        assertThat(result.at("/context/dataDir").asText()).isEqualTo(overriddenData.toString());
+        assertThat(result.at("/context/companyId").asInt()).isEqualTo(37);
+        assertThat(result.at("/context/yearId").asInt()).isEqualTo(38);
+    }
+
+    @Test
     void reportsStableJsonErrorForUnknownContext() throws Exception {
         Path config = temporaryDirectory.resolve("cli.yaml");
 
