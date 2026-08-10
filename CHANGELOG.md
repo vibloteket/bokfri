@@ -66,8 +66,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   creates its own company and 2026 year, runs opening balances, sales,
   purchases, payments, VAT and manual vouchers there, then creates 2027 and
   verifies carry-forward into its opening balance.
-- Added CLI full-backup creation, history listing, and archive verification with
-  safe output handling and compatibility metadata.
+- Added CLI full-backup creation, history listing, archive verification, and
+  preview-first restore to a selected data directory with protected replacement.
 - Added headless SIE export for the selected company and accounting year in SIE
   types 1, 2, 3, and 4E, with IBM-437 encoding and safe output handling.
 - Added CLI trial balance, balance sheet, income statement, general ledger, and

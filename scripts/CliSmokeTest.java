@@ -814,6 +814,43 @@ public final class CliSmokeTest {
         require(duplicate.exitCode != 0, "backup unexpectedly overwrote an existing file");
         require(duplicate.stderr.contains("\"code\":\"OUTPUT_EXISTS\""),
                 "duplicate backup output lacks stable error code");
+
+        Path restored = temporary.resolve("restored-data");
+        Result preview = cli("--format", "json", "backup", "restore", "--file",
+                output.toString(), "--target-data-dir", restored.toString());
+        preview.success();
+        require(preview.stdout.contains("\"committed\":false"),
+                "backup restore preview unexpectedly committed");
+        require(!Files.exists(restored), "backup restore preview created the target directory");
+
+        Result restore = cli("--format", "json", "backup", "restore", "--file",
+                output.toString(), "--target-data-dir", restored.toString(), "--commit");
+        restore.success();
+        require(restore.stdout.contains("\"committed\":true"), "backup restore did not commit");
+        require(Files.isRegularFile(restored.resolve("db/JFSDB.properties")),
+                "restored database lacks properties");
+        require(Files.isRegularFile(restored.resolve("db/JFSDB.script")),
+                "restored database lacks script");
+        Result restoredCompanies = cli("--data-dir", restored.toString(), "--format", "json",
+                "company", "list");
+        restoredCompanies.success();
+        require(restoredCompanies.stdout.contains("CLI isolated full-year company"),
+                "restored database cannot be read through the CLI");
+
+        Result protectedRestore = cli("--format", "json", "backup", "restore", "--file",
+                output.toString(), "--target-data-dir", restored.toString(), "--commit");
+        require(protectedRestore.exitCode != 0,
+                "backup restore unexpectedly replaced an existing database");
+        require(protectedRestore.stderr.contains(
+                        "\"code\":\"BACKUP_RESTORE_TARGET_EXISTS\""),
+                "protected restore lacks stable error code");
+
+        Result overwriteRestore = cli("--format", "json", "backup", "restore", "--file",
+                output.toString(), "--target-data-dir", restored.toString(), "--overwrite",
+                "--commit");
+        overwriteRestore.success();
+        require(overwriteRestore.stdout.contains("\"replacesExistingDatabase\":true"),
+                "overwrite restore did not report replacement");
     }
 
     private static void runErrorFlow(Path temporary) throws Exception {

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.service.backup.BackupDetails;
+import org.fribok.bookkeeping.service.backup.BackupRestorePlan;
 import org.fribok.bookkeeping.service.backup.BackupService;
 import org.fribok.bookkeeping.service.backup.BackupVerification;
 import org.fribok.bookkeeping.service.company.CompanyService;
@@ -582,8 +583,9 @@ public class BokfriCli implements Runnable {
     @Command(name="set") static class OpeningBalanceSet extends OpeningBalanceFileCommand{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
     @Command(name="carry-forward") static class OpeningBalanceCarryForward implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--from-year-id",required=true)int fromYearId;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=BokfriRuntime.open(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear to=r.selectYear(co,c.yearId());SSNewAccountingYear from=r.database().getYearsForCompany(co).stream().filter(y->y.getId()==fromYearId).findFirst().orElseThrow(()->new CliException("YEAR_NOT_FOUND","No source year has id "+fromYearId));OpeningBalancePlan p=new OpeningBalanceService(r.database()).carryForward(from,to,commit);Map<String,Object>x=openingBalanceDetails(p);x.put("fromYearId",fromYearId);x.put("toYearId",to.getId());x.put("committed",commit);x.put("context",selectedContext(c,co,to));root.output(x,commit?"Opening balances carried forward":"Carry-forward preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
 
-    @Command(name = "backup", description = "Create, list, and verify full backups",
-            subcommands = {BackupCreate.class, BackupList.class, BackupVerify.class})
+    @Command(name = "backup", description = "Create, list, verify, and restore full backups",
+            subcommands = {BackupCreate.class, BackupList.class, BackupVerify.class,
+                    BackupRestore.class})
     static class BackupCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -655,6 +657,38 @@ public class BokfriCli implements Runnable {
                 return 0;
             } catch (Exception exception) {
                 throw new CliException("BACKUP_INVALID", exception.getMessage(), exception);
+            }
+        }
+    }
+
+    @Command(name = "restore", description = "Preview or restore a full backup to a data directory")
+    static class BackupRestore implements Callable<Integer> {
+        @CommandLine.ParentCommand BackupCommand command;
+        @Option(names = "--file", required = true) java.nio.file.Path file;
+        @Option(names = "--target-data-dir", required = true) java.nio.file.Path targetDataDirectory;
+        @Option(names = "--overwrite", description = "Replace an existing target database") boolean overwrite;
+        @Option(names = "--commit", description = "Perform the restore") boolean commit;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(false, false);
+            try {
+                BackupRestorePlan plan = new BackupService(context.dataDir()).restore(file,
+                        targetDataDirectory, overwrite, commit);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("archive", plan.archive().toString());
+                result.put("targetDataDirectory", plan.targetDataDirectory().toString());
+                result.put("createdAt", plan.createdAt());
+                result.put("databaseFiles", plan.databaseFiles());
+                result.put("replacesExistingDatabase", plan.replacesExistingDatabase());
+                result.put("committed", plan.committed());
+                root.output(result, commit ? "Backup restored to " + plan.targetDataDirectory()
+                        : "Backup restore preview; no changes written");
+                return 0;
+            } catch (java.nio.file.FileAlreadyExistsException exception) {
+                throw new CliException("BACKUP_RESTORE_TARGET_EXISTS",
+                        "Target database already exists; use --overwrite to replace it", exception);
+            } catch (Exception exception) {
+                throw new CliException("BACKUP_RESTORE_FAILED", exception.getMessage(), exception);
             }
         }
     }

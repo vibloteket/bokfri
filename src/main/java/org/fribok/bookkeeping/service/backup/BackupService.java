@@ -102,6 +102,48 @@ public final class BackupService {
                 entries.stream().sorted().toList());
     }
 
+    public BackupRestorePlan restore(Path input, Path targetDataDirectory,
+            boolean overwrite, boolean commit) throws IOException {
+        BackupVerification verification = verify(input);
+        Path target = targetDataDirectory.toAbsolutePath().normalize();
+        Path databaseDirectory = target.resolve("db");
+        List<String> databaseFiles = verification.entries().stream()
+                .filter(entry -> entry.startsWith("JFSDB.")).sorted().toList();
+        boolean replacesExisting = databaseFiles.stream()
+                .map(databaseDirectory::resolve).anyMatch(Files::exists);
+        if (replacesExisting && !overwrite) {
+            throw new FileAlreadyExistsException(databaseDirectory.resolve("JFSDB.*").toString());
+        }
+        BackupRestorePlan plan = new BackupRestorePlan(verification.path(), target,
+                verification.createdAt(), databaseFiles, replacesExisting, commit);
+        if (!commit) {
+            return plan;
+        }
+
+        Files.createDirectories(target);
+        Path staging = Files.createTempDirectory(target, ".bokfri-restore-");
+        try {
+            extractDatabaseFiles(verification.path(), staging, databaseFiles);
+            Files.createDirectories(databaseDirectory);
+            for (String name : databaseFiles) {
+                moveIntoPlace(staging.resolve(name), databaseDirectory.resolve(name), overwrite);
+            }
+        } finally {
+            try (var paths = Files.walk(staging)) {
+                paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+                    try {
+                        Files.deleteIfExists(path);
+                    } catch (IOException exception) {
+                        throw new java.io.UncheckedIOException(exception);
+                    }
+                });
+            } catch (java.io.UncheckedIOException exception) {
+                throw exception.getCause();
+            }
+        }
+        return plan;
+    }
+
     public List<BackupDetails> list() throws IOException {
         Path history = dataDirectory.resolve(HISTORY_FILE);
         if (!Files.exists(history)) {
@@ -151,6 +193,25 @@ public final class BackupService {
             }
         } finally {
             Files.deleteIfExists(info);
+        }
+    }
+
+    private static void extractDatabaseFiles(Path archive, Path staging, List<String> names)
+            throws IOException {
+        try (ZipFile zip = new ZipFile(archive.toFile())) {
+            for (String name : names) {
+                ZipEntry entry = zip.getEntry(name);
+                if (entry == null || entry.isDirectory() || name.contains("/") || name.contains("\\")) {
+                    throw new IOException("Invalid backup database entry: " + name);
+                }
+                Path output = staging.resolve(name).normalize();
+                if (!output.getParent().equals(staging)) {
+                    throw new IOException("Backup entry escapes restore directory: " + name);
+                }
+                try (InputStream stream = zip.getInputStream(entry)) {
+                    Files.copy(stream, output);
+                }
+            }
         }
     }
 
