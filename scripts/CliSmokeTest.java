@@ -275,6 +275,7 @@ public final class CliSmokeTest {
         Result create=cli("--format","json","supplier-invoice","create","--file",input.toString());create.success();require(firstInt(create.stdout,"number")==number,"supplier invoice number differs from dry run");
         cli("--format","json","supplier-invoice","show",Integer.toString(number)).success();
         Result preview=cli("--format","json","supplier-invoice","journal","--from",date,"--to",date);preview.success();require(preview.stdout.contains("\"committed\":false"),"supplier invoice journal preview committed");
+        Result afterPreview=cli("--format","json","supplier-invoice","show",Integer.toString(number));afterPreview.success();require(afterPreview.stdout.contains("\"entered\":false"),"supplier invoice journal preview changed the invoice");
         Result commit=cli("--format","json","supplier-invoice","journal","--from",date,"--to",date,"--commit");commit.success();require(commit.stdout.contains("\"committed\":true"),"supplier invoice journal did not commit");
         Result shown=cli("--format","json","supplier-invoice","show",Integer.toString(number));shown.success();require(shown.stdout.contains("\"entered\":true"),"supplier invoice was not marked entered");
         Files.writeString(temporary.resolve("supplier-invoice-number.txt"),Integer.toString(number));
@@ -288,7 +289,10 @@ public final class CliSmokeTest {
                 """.formatted(date,invoice,balance),StandardCharsets.UTF_8);
         cli("--format","json","outpayment","validate","--file",input.toString()).success();Result dry=cli("--format","json","outpayment","create","--dry-run","--file",input.toString());dry.success();int number=firstInt(dry.stdout,"number");
         Result create=cli("--format","json","outpayment","create","--file",input.toString());create.success();require(firstInt(create.stdout,"number")==number,"outpayment number differs from dry run");
-        cli("--format","json","outpayment","show",Integer.toString(number)).success();cli("--format","json","outpayment","journal","--from",date,"--to",date).success();Result commit=cli("--format","json","outpayment","journal","--from",date,"--to",date,"--commit");commit.success();
+        cli("--format","json","outpayment","show",Integer.toString(number)).success();Result invoiceBeforePreview=cli("--format","json","supplier-invoice","show",Integer.toString(invoice));invoiceBeforePreview.success();String balanceBeforePreview=firstString(invoiceBeforePreview.stdout,"balance");
+        Result preview=cli("--format","json","outpayment","journal","--from",date,"--to",date);preview.success();require(preview.stdout.contains("\"committed\":false"),"outpayment journal preview committed");
+        Result invoiceAfterPreview=cli("--format","json","supplier-invoice","show",Integer.toString(invoice));invoiceAfterPreview.success();require(firstString(invoiceAfterPreview.stdout,"balance").equals(balanceBeforePreview),"outpayment preview changed supplier invoice balance");
+        Result commit=cli("--format","json","outpayment","journal","--from",date,"--to",date,"--commit");commit.success();
         shown=cli("--format","json","supplier-invoice","show",Integer.toString(invoice));shown.success();require(shown.stdout.contains("\"balance\":\"0"),"supplier invoice balance is not zero");
     }
 
@@ -386,6 +390,11 @@ public final class CliSmokeTest {
                 "invoice journal preview lacks the created invoice");
         require(journalPreview.stdout.contains("\"committed\":false"),
                 "invoice journal preview unexpectedly committed");
+        Result invoiceAfterPreview = cli("--format", "json", "invoice", "show",
+                Integer.toString(expectedNumber));
+        invoiceAfterPreview.success();
+        require(invoiceAfterPreview.stdout.contains("\"entered\":false"),
+                "invoice journal preview changed the invoice");
 
         Result journalCommit = cli("--format", "json", "invoice", "journal",
                 "--from", date, "--to", date, "--commit");
@@ -411,6 +420,20 @@ public final class CliSmokeTest {
         Result shown = cli("--format", "json", "invoice", "show", Integer.toString(invoiceNumber));
         shown.success();
         String date = firstString(shown.stdout, "date");
+        Path excessive = temporary.resolve("credit-invoice-excessive.json");
+        Files.writeString(excessive, "{\"invoiceNumber\":" + invoiceNumber + ",\"date\":\""
+                + date + "\",\"amount\":\"999999.00\"}", StandardCharsets.UTF_8);
+        Result excessiveCredit = cli("--format", "json", "credit-invoice", "create", "--file",
+                excessive.toString());
+        require(excessiveCredit.exitCode != 0, "excessive credit unexpectedly succeeded");
+        excessiveCredit.stderrJsonObject();
+        require(excessiveCredit.stderr.contains("\"code\":\"CREDIT_INVOICE_INVALID\""),
+                "excessive credit lacks stable error code");
+        Result creditsAfterFailure = cli("--format", "json", "credit-invoice", "list");
+        creditsAfterFailure.success();
+        require(creditsAfterFailure.stdout.contains("\"creditInvoices\":[]"),
+                "rejected credit invoice was persisted");
+
         Path input = temporary.resolve("credit-invoice.json");
         Files.writeString(input, "{\"invoiceNumber\":" + invoiceNumber + ",\"date\":\"" + date
                 + "\",\"amount\":\"50.00\"}", StandardCharsets.UTF_8);
@@ -419,6 +442,10 @@ public final class CliSmokeTest {
                 "--file", input.toString());
         dry.success();
         require(dry.stdout.contains("\"created\":false"), "credit invoice dry run created data");
+        Result creditsAfterDryRun = cli("--format", "json", "credit-invoice", "list");
+        creditsAfterDryRun.success();
+        require(creditsAfterDryRun.stdout.contains("\"creditInvoices\":[]"),
+                "credit invoice dry run persisted data");
         int number = firstInt(dry.stdout, "number");
         Result create = cli("--format", "json", "credit-invoice", "create", "--file",
                 input.toString());
@@ -434,6 +461,11 @@ public final class CliSmokeTest {
         preview.success();
         require(preview.stdout.contains("\"committed\":false"),
                 "credit invoice journal preview committed");
+        Result creditAfterPreview = cli("--format", "json", "credit-invoice", "show",
+                Integer.toString(number));
+        creditAfterPreview.success();
+        require(creditAfterPreview.stdout.contains("\"entered\":false"),
+                "credit invoice journal preview changed the credit invoice");
         Result commit = cli("--format", "json", "credit-invoice", "journal", "--from", date,
                 "--to", date, "--commit");
         commit.success();
@@ -467,11 +499,20 @@ public final class CliSmokeTest {
         require(firstInt(create.stdout, "number") == expectedNumber,
                 "created inpayment number differs from dry run");
         cli("--format", "json", "inpayment", "show", Integer.toString(expectedNumber)).success();
+        Result invoiceBeforePreview = cli("--format", "json", "invoice", "show",
+                Integer.toString(invoiceNumber));
+        invoiceBeforePreview.success();
+        String balanceBeforePreview = firstString(invoiceBeforePreview.stdout, "balance");
         Result preview = cli("--format", "json", "inpayment", "journal",
                 "--from", date, "--to", date);
         preview.success();
         require(preview.stdout.contains("\"committed\":false"),
                 "inpayment journal preview unexpectedly committed");
+        Result invoiceAfterPreview = cli("--format", "json", "invoice", "show",
+                Integer.toString(invoiceNumber));
+        invoiceAfterPreview.success();
+        require(firstString(invoiceAfterPreview.stdout, "balance").equals(balanceBeforePreview),
+                "inpayment preview changed invoice balance");
         Result commit = cli("--format", "json", "inpayment", "journal",
                 "--from", date, "--to", date, "--commit");
         commit.success();
@@ -481,12 +522,23 @@ public final class CliSmokeTest {
         paidInvoice.success();
         require(paidInvoice.stdout.contains("\"balance\":\"0"),
                 "paid invoice balance is not zero");
+        Path duplicateCredit = temporary.resolve("credit-paid-invoice.json");
+        Files.writeString(duplicateCredit, "{\"invoiceNumber\":" + invoiceNumber
+                + ",\"date\":\"" + date + "\",\"amount\":\"1.00\"}",
+                StandardCharsets.UTF_8);
+        Result rejectedCredit = cli("--format", "json", "credit-invoice", "create", "--file",
+                duplicateCredit.toString());
+        require(rejectedCredit.exitCode != 0, "credit of a settled invoice unexpectedly succeeded");
+        require(rejectedCredit.stderr.contains("\"code\":\"CREDIT_INVOICE_INVALID\""),
+                "credit of a settled invoice lacks stable error code");
     }
 
     private static void runVatFlow(Path temporary) throws Exception {
         Result years=cli("--format","json","year","list");years.success();String from=firstString(years.stdout,"from");String to=firstString(years.stdout,"to");
         Result report=cli("--format","json","vat","report","--from",from,"--to",to);report.success();require(report.stdout.contains("\"boxes\":"),"VAT report lacks boxes");
+        Result vouchersBefore=cli("--format","json","voucher","list");vouchersBefore.success();
         Result preview=cli("--format","json","vat","settle","--from",from,"--to",to);preview.success();require(preview.stdout.contains("\"committed\":false"),"VAT preview committed");
+        Result vouchersAfter=cli("--format","json","voucher","list");vouchersAfter.success();require(vouchersAfter.stdout.equals(vouchersBefore.stdout),"VAT settlement preview changed vouchers");
         Result commit=cli("--format","json","vat","settle","--from",from,"--to",to,"--commit");commit.success();require(commit.stdout.contains("\"committed\":true"),"VAT settlement did not commit");int voucher=firstInt(commit.stdout,"voucherNumber");cli("--format","json","voucher","show",Integer.toString(voucher)).success();
     }
 
@@ -523,6 +575,10 @@ public final class CliSmokeTest {
         dryRun.success();
         int expectedNumber = firstInt(dryRun.stdout, "number");
         require(!dryRun.stdout.contains("\"created\":true"), "dry run unexpectedly created a voucher");
+        Result vouchersAfterDryRun = cli("--format", "json", "voucher", "list");
+        vouchersAfterDryRun.success();
+        require(!vouchersAfterDryRun.stdout.contains("\"description\":\"" + description + "\""),
+                "voucher dry run persisted data");
 
         Result create = cli("--format", "json", "voucher", "create", "--file", voucher.toString());
         create.success();
@@ -605,6 +661,10 @@ public final class CliSmokeTest {
                 "carry-forward preview unexpectedly committed");
         require(!preview.stdout.contains("\"balances\":[]"),
                 "carry-forward preview contains no balances");
+        Result beforeCommit = cli("--format", "json", "opening-balance", "show");
+        beforeCommit.success();
+        require(beforeCommit.stdout.contains("\"balances\":[]"),
+                "carry-forward preview changed opening balances");
         Result commit = cli("--format", "json", "opening-balance", "carry-forward",
                 "--from-year-id", Integer.toString(fromYearId), "--commit");
         commit.success();
@@ -651,6 +711,11 @@ public final class CliSmokeTest {
         require(preview.stdout.contains("\"previouslyImported\":false"),
                 "fresh SIE content unexpectedly exists in import history");
         require(preview.stdout.contains("\"sha256\":"), "SIE import preview lacks SHA-256");
+        Result historyBeforeCommit = cli("--format", "json", "sie", "import", "--file",
+                imported.toString(), "--vouchers-only");
+        historyBeforeCommit.success();
+        require(historyBeforeCommit.stdout.contains("\"previouslyImported\":false"),
+                "SIE preview wrote import history");
 
         Result commit = cli("--format", "json", "sie", "import", "--file", imported.toString(),
                 "--vouchers-only", "--commit");
@@ -692,6 +757,51 @@ public final class CliSmokeTest {
     }
 
     private static void runErrorFlow(Path temporary) throws Exception {
+        Result missingCompany = cli("--data-dir", data.toString(), "--company-id", "2147483647",
+                "--format", "json", "year", "list");
+        require(missingCompany.exitCode != 0, "missing company unexpectedly succeeded");
+        missingCompany.stderrJsonObject();
+        require(missingCompany.stderr.contains("\"code\":\"COMPANY_NOT_FOUND\""),
+                "missing company lacks stable error code");
+
+        int companyId = Integer.parseInt(Files.readString(temporary.resolve("created-company.txt")));
+        Result missingYear = cli("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", "2147483647", "--format", "json",
+                "account", "list");
+        require(missingYear.exitCode != 0, "missing accounting year unexpectedly succeeded");
+        missingYear.stderrJsonObject();
+        require(missingYear.stderr.contains("\"code\":\"YEAR_NOT_FOUND\""),
+                "missing accounting year lacks stable error code");
+
+        Result reportOutsideYear = cli("--format", "json", "balance-sheet", "--date", "2000-01-01");
+        require(reportOutsideYear.exitCode != 0, "out-of-year report unexpectedly succeeded");
+        reportOutsideYear.stderrJsonObject();
+        require(reportOutsideYear.stderr.contains("\"code\":\"REPORT_INVALID\""),
+                "out-of-year report lacks stable error code");
+
+        Result accounts = cli("--format", "json", "account", "list");
+        accounts.success();
+        int account = firstInt(accounts.stdout, "number");
+        Result years = cli("--format", "json", "year", "list");
+        years.success();
+        String date = firstString(years.stdout, "from");
+        Path unbalanced = temporary.resolve("unbalanced-voucher.json");
+        Files.writeString(unbalanced, "{\"date\":\"" + date
+                + "\",\"description\":\"Unbalanced\",\"rows\":[{\"account\":"
+                + account + ",\"debit\":\"10.00\"}]}", StandardCharsets.UTF_8);
+        Result unbalancedResult = cli("--format", "json", "voucher", "create", "--file",
+                unbalanced.toString());
+        require(unbalancedResult.exitCode != 0, "unbalanced voucher unexpectedly succeeded");
+        unbalancedResult.stderrJsonObject();
+        require(unbalancedResult.stderr.contains("\"code\":\"VOUCHER_INVALID\""),
+                "unbalanced voucher lacks stable top-level error code");
+        require(unbalancedResult.stderr.contains("\"code\":\"VOUCHER_NOT_BALANCED\""),
+                "unbalanced voucher lacks balance validation issue");
+        Result vouchersAfterFailure = cli("--format", "json", "voucher", "list");
+        vouchersAfterFailure.success();
+        require(!vouchersAfterFailure.stdout.contains("\"description\":\"Unbalanced\""),
+                "rejected unbalanced voucher was persisted");
+
         Path invalid = temporary.resolve("invalid-voucher.json");
         Files.writeString(invalid, """
                 {"schemaVersion":1,"date":"2000-01-01","description":"Invalid","rows":[]}
