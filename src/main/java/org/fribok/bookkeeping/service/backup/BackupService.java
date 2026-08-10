@@ -112,7 +112,8 @@ public final class BackupService {
         boolean replacesExisting = databaseFiles.stream()
                 .map(databaseDirectory::resolve).anyMatch(Files::exists);
         if (replacesExisting && !overwrite) {
-            throw new FileAlreadyExistsException(databaseDirectory.resolve("JFSDB.*").toString());
+            throw new FileAlreadyExistsException(
+                    databaseDirectory.resolve("JFSDB.properties").toString());
         }
         BackupRestorePlan plan = new BackupRestorePlan(verification.path(), target,
                 verification.createdAt(), databaseFiles, replacesExisting, commit);
