@@ -139,6 +139,7 @@
       <Component Id="BokfriCliPathComponent"
                  Guid="DE853CEE-1223-4CD5-AD9F-E014ED8CA482"
                  Win64="yes">
+        <CreateFolder/>
         <Environment Id="BokfriCliPath"
                      Name="PATH"
                      Value="[INSTALLDIR]bin"
