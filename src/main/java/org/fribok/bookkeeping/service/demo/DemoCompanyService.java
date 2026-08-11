@@ -66,29 +66,39 @@ public final class DemoCompanyService {
         if (!database.getCompanies().isEmpty()) {
             return null;
         }
-        return create(0);
+        database.dropTriggers();
+        try {
+            return create(0);
+        } finally {
+            database.createTriggers();
+        }
     }
 
     /** Replaces recognized current and legacy demos, leaving every other company untouched. */
     public DemoCompanyResult recreate() {
-        List<SSNewCompany> demos = findDemoCompanies();
-        SSNewCompany fallback = database.getCompanies().stream()
-                .filter(company -> !demos.contains(company)).findFirst().orElse(null);
-        boolean temporaryFallback = fallback == null;
-        if (temporaryFallback) {
-            fallback = new SSNewCompany();
-            fallback.setName("Bokfri demo replacement in progress");
-            database.addCompany(fallback);
+        database.dropTriggers();
+        try {
+            List<SSNewCompany> demos = findDemoCompanies();
+            SSNewCompany fallback = database.getCompanies().stream()
+                    .filter(company -> !demos.contains(company)).findFirst().orElse(null);
+            boolean temporaryFallback = fallback == null;
+            if (temporaryFallback) {
+                fallback = new SSNewCompany();
+                fallback.setName("Bokfri demo replacement in progress");
+                database.addCompany(fallback);
+            }
+            database.setCurrentCompany(fallback);
+            for (SSNewCompany demo : demos) {
+                database.deleteCompany(demo);
+            }
+            DemoCompanyResult result = create(demos.size());
+            if (temporaryFallback) {
+                database.deleteCompany(fallback);
+            }
+            return result;
+        } finally {
+            database.createTriggers();
         }
-        database.setCurrentCompany(fallback);
-        for (SSNewCompany demo : demos) {
-            database.deleteCompany(demo);
-        }
-        DemoCompanyResult result = create(demos.size());
-        if (temporaryFallback) {
-            database.deleteCompany(fallback);
-        }
-        return result;
     }
 
     private DemoCompanyResult create(int removedCompanies) {

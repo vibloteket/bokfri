@@ -29,6 +29,7 @@ public final class InvoiceService {
 
     public List<SSInvoice> list(LocalDate from, LocalDate to) {
         return database.getInvoices().stream()
+                .filter(java.util.Objects::nonNull)
                 .filter(invoice -> from == null || invoice.getLocalDate() == null
                         || !invoice.getLocalDate().isBefore(from))
                 .filter(invoice -> to == null || invoice.getLocalDate() == null
@@ -40,6 +41,7 @@ public final class InvoiceService {
 
     public Optional<SSInvoice> find(int number) {
         return database.getInvoices().stream()
+                .filter(java.util.Objects::nonNull)
                 .filter(invoice -> invoice.getNumber() != null && invoice.getNumber() == number)
                 .findFirst();
     }
