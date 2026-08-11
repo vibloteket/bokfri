@@ -172,7 +172,7 @@ jobs:
       if: runner.os == 'Windows'
       shell: bash
       run: |
-        jpackage \
+        jpackage --verbose \
           --type msi \
           --name "$APP_NAME" \
           --app-version "$PACKAGE_VERSION" \
