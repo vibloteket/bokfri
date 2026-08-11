@@ -13,6 +13,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- Windows MSI packages now install `bokfri` (`bokfri-dev` for development builds)
+  on the system PATH, use stable channel-specific upgrade identities, and verify
+  command discovery plus exact PATH cleanup during uninstall in CI.
 - Global CLI options now work before or after nested commands. VAT, trial balance,
   income statement, and general-ledger reports default to the full selected
   accounting year; balance sheet and account balance default to its final day.

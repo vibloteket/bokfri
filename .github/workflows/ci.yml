@@ -119,16 +119,22 @@ jobs:
         fi
 
         CLI_NAME="Bokfri-cli"
+        CLI_COMMAND="bokfri"
+        WINDOWS_UPGRADE_UUID="5fc98b3d-45ca-4504-a9dd-04b37dee1ec7"
         if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
           CLI_NAME="Bokfri-cli-dev"
+          CLI_COMMAND="bokfri-dev"
+          WINDOWS_UPGRADE_UUID="5254a08d-dd14-40a8-be38-683913534230"
         fi
 
         {
           echo "APP_NAME=$APP_NAME"
           echo "APP_BASENAME=$APP_BASENAME"
           echo "CLI_NAME=$CLI_NAME"
+          echo "CLI_COMMAND=$CLI_COMMAND"
           echo "APP_SUBDIR=$APP_SUBDIR"
           echo "PACKAGE_VERSION=$VERSION"
+          echo "WINDOWS_UPGRADE_UUID=$WINDOWS_UPGRADE_UUID"
         } >> "$GITHUB_ENV"
 
         mvn clean package -DskipTests -Djpackage.profile=true \
@@ -151,6 +157,17 @@ jobs:
         test -f "$CLI_LAUNCHER"
         java scripts/CliSmokeTest.java "$CLI_LAUNCHER"
 
+    - name: Prepare Windows CLI command
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $bin = Join-Path "dist/$env:APP_NAME" "bin"
+        New-Item -ItemType Directory -Force -Path $bin | Out-Null
+        $command = Join-Path $bin "$env:CLI_COMMAND.cmd"
+        Set-Content -LiteralPath $command `
+          -Value "@echo off`r`n`"%~dp0..\$env:CLI_NAME.exe`" %*`r`n" `
+          -Encoding Ascii -NoNewline
+
     - name: Package Windows MSI
       if: runner.os == 'Windows'
       shell: bash
@@ -161,6 +178,8 @@ jobs:
           --app-version "$PACKAGE_VERSION" \
           --app-image "dist/$APP_NAME" \
           --dest dist \
+          --resource-dir packaging/windows \
+          --win-upgrade-uuid "$WINDOWS_UPGRADE_UUID" \
           --win-menu \
           --win-shortcut
 
@@ -175,6 +194,7 @@ jobs:
         ./scripts/TestWindowsMsi.ps1 `
           -Msi $msi.FullName `
           -CliName $env:CLI_NAME `
+          -CliCommand $env:CLI_COMMAND `
           -AppName $env:APP_NAME `
           -AppSubdir $env:APP_SUBDIR
 

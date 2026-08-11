@@ -71,7 +71,9 @@ Taggen måste matcha Maven-versionen exakt och får inte peka på en
    nedladdningsknapparna på `https://bokfri.viblo.se/download/` fungerar.
 5. Installera och starta minst de paket som det finns tillgängliga testmiljöer
    för. Kontrollera särskilt start, versionsvisning och att en säkerhetskopia
-   kan öppnas utan att originaldata skrivs över.
+   kan öppnas utan att originaldata skrivs över. På Windows: öppna även ett nytt
+   terminalfönster, kör `bokfri version`, uppgradera från föregående MSI och
+   kontrollera att bara en Bokfri-installation finns kvar.
 
 ## 3. Starta nästa utvecklingsversion
 

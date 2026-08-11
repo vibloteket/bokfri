@@ -97,6 +97,10 @@ java -jar target/bokfri-1.0.1-jar-with-dependencies.jar company list
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar year list
 ```
 
+Windows-installationen gör kommandot `bokfri` tillgängligt i nya PowerShell-
+och kommandotolksfönster. Utvecklingspaketet använder i stället `bokfri-dev`,
+så att båda kan vara installerade samtidigt.
+
 Använd `--format json` för maskinläsbar utdata och `--config FIL` för en
 isolerad config, exempelvis för CI eller en agent. Globala val kan placeras
 före eller efter kommandot, till exempel både `bokfri --format json company list`
