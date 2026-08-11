@@ -54,8 +54,10 @@ Den senaste publicerade versionen finns på
 
 ## Kommandoradsgränssnitt
 
-Bokfri innehåller ett headless kommandoradsgränssnitt för rapporter,
-automatisering, datautbyte och reproducerbara bokföringsflöden. Windows-
+Bokfri innehåller ett engelskspråkigt, headless kommandoradsgränssnitt för
+rapporter, automatisering, datautbyte och reproducerbara bokföringsflöden.
+Kommandon, hjälptexter och standardutdata är på engelska; bokföringsdata och
+svenska begrepp i registren behåller naturligtvis sitt innehåll. Windows-
 installationen gör kommandot `bokfri` tillgängligt i nya terminalfönster;
 utvecklingspaketet använder `bokfri-dev`. På macOS finns launchern i
 app-paketet och på Linux kan AppImage-filen ta emot CLI-argument direkt.
