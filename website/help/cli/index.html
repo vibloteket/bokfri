@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kommandoradsgränssnittet — Bokfri</title>
+<link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/style.css">
+<script data-goatcounter="https://bokfri.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="/" class="header-logo"><img src="/assets/logo.svg" alt="Bokfri"></a>
+  <nav class="header-nav">
+    <a href="/">Hem</a>
+    <a href="/download/">Ladda ner</a>
+    <a href="/help/" class="active">Hjälp</a>
+  </nav>
+</header>
+
+<button class="sidebar-toggle" id="menu-toggle">☰ Innehåll</button>
+
+<div class="help-layout cli-help-layout">
+<nav class="sidebar cli-sidebar hidden" id="sidebar" aria-label="Innehåll">
+  <ul class="toc">
+    <li class="section">Kom igång
+      <ul>
+        <li><a href="#oversikt">Översikt</a></li>
+        <li><a href="#starta">Starta CLI:t</a></li>
+        <li><a href="#valj-data">Välj företag och år</a></li>
+        <li><a href="#globala-val">Globala val</a></li>
+      </ul>
+    </li>
+    <li class="section">Arbetsflöden
+      <ul>
+        <li><a href="#sakerhet">Säkra förhandsgranskningar</a></li>
+        <li><a href="#rapporter">Rapporter</a></li>
+        <li><a href="#forsaljning">Försäljning</a></li>
+        <li><a href="#inkop">Inköp</a></li>
+        <li><a href="#verifikationer">Verifikationer</a></li>
+        <li><a href="#moms">Moms</a></li>
+        <li><a href="#backup-sie">Backup och SIE</a></li>
+      </ul>
+    </li>
+    <li class="section">Referens
+      <ul>
+        <li><a href="#json">JSON-filer</a></li>
+        <li><a href="#kommandon">Kommandon</a></li>
+        <li><a href="#automatisering">Automatisering</a></li>
+        <li><a href="#felsokning">Felsökning</a></li>
+      </ul>
+    </li>
+    <li class="section"><a href="/help/">← All Bokfri-hjälp</a></li>
+  </ul>
+</nav>
+
+<main class="help-content cli-help-content">
+<nav class="breadcrumb"><a href="/help/">Hjälp</a> &rsaquo; Kommandorad</nav>
+<h1>Kommandoradsgränssnittet</h1>
+<p class="guide-lead">Bokfris CLI gör det möjligt att läsa, rapportera och skapa bokföringsdata utan att öppna det grafiska gränssnittet. Det är avsett för reproducerbara arbetsflöden, skript och integrationer.</p>
+
+<div class="guide-note"><strong>CLI och GUI använder samma data.</strong> Välj rätt datakatalog, företag och bokföringsår innan du kör ett skrivande kommando. Ta en säkerhetskopia först och använd förhandsgranskning där den finns.</div>
+
+<section id="oversikt">
+<h2>Översikt</h2>
+<p>CLI:t kan bland annat:</p>
+<ul>
+  <li>välja företag och bokföringsår med namngivna kontexter,</li>
+  <li>lista konton, verifikationer, kunder, produkter, leverantörer och fakturor,</li>
+  <li>skapa kunder, produkter, fakturor, betalningar och manuella verifikationer från JSON,</li>
+  <li>förhandsgranska och bokföra journaler, kreditfakturor och momsavräkning,</li>
+  <li>skapa finansiella rapporter i text eller JSON,</li>
+  <li>skapa, verifiera och återställa fullständiga säkerhetskopior,</li>
+  <li>importera och exportera SIE-filer.</li>
+</ul>
+<p>Den exakta syntaxen för den installerade versionen visas alltid med:</p>
+<pre><code>bokfri --help
+bokfri invoice --help
+bokfri invoice create --help</code></pre>
+</section>
+
+<section id="starta">
+<h2>Starta CLI:t</h2>
+<h3>Windows</h3>
+<p>MSI-installationen lägger kommandot <code>bokfri</code> i systemets PATH. Öppna ett <strong>nytt</strong> PowerShell- eller kommandotolksfönster efter installationen:</p>
+<pre><code>bokfri version
+bokfri doctor</code></pre>
+<p>Utvecklingspaketet använder <code>bokfri-dev</code>, så release- och utvecklingsversionen kan finnas samtidigt.</p>
+
+<h3>macOS</h3>
+<p>CLI-launchern finns i app-paketet men installeras inte globalt av DMG-paketet:</p>
+<pre><code>/Applications/Bokfri.app/Contents/MacOS/Bokfri-cli version</code></pre>
+<p>För utvecklingspaketet ligger den normalt under <code>/Applications/Bokfri Dev.app/Contents/MacOS/Bokfri-cli-dev</code>.</p>
+
+<h3>Linux</h3>
+<p>AppImage-filen tar emot CLI-argument direkt. Gör filen körbar och använd dess sökväg:</p>
+<pre><code>chmod +x Bokfri-x86_64.AppImage
+./Bokfri-x86_64.AppImage version</code></pre>
+
+<h3>Från byggd JAR</h3>
+<p>Utvecklare kan använda allt-i-ett-JAR-filen. Filnamnet följer projektversionen:</p>
+<pre><code>java -jar target/bokfri-VERSION-jar-with-dependencies.jar version</code></pre>
+<p>I resten av guiden används <code>bokfri</code> som kortnamn för den startmetod som gäller på din plattform.</p>
+</section>
+
+<section id="valj-data">
+<h2>Välj datakatalog, företag och bokföringsår</h2>
+<p>De flesta kommandon behöver ett företag och ett bokföringsår. Börja med att kontrollera sökvägar och tillgängliga ID:n:</p>
+<pre><code>bokfri paths
+bokfri company list
+bokfri --company-id 37 year list</code></pre>
+<p>Du kan ange valen vid varje körning:</p>
+<pre><code>bokfri --company-id 37 --year-id 12 trial-balance</code></pre>
+<p>För återkommande arbete är en namngiven kontext enklare. Ange datakatalogen som kommandot <code>paths</code> visar:</p>
+<pre><code>bokfri context create mitt-foretag \
+  --data-dir "/sökväg/till/bokfri-data" \
+  --company-id 37 --year-id 12
+bokfri context use mitt-foretag
+bokfri context current</code></pre>
+<p>Kontexten lagrar bara valen; bokföringsdata kopieras inte. Hantera kontexter med <code>context list</code>, <code>show</code>, <code>use</code> och <code>delete</code>.</p>
+
+<h3>Skapa ett nytt företag och år</h3>
+<p>Ett tomt dataområde kan byggas upp från JSON:</p>
+<pre><code>bokfri account-plan list
+bokfri company create --file company.json
+bokfri --company-id 37 year create --file year.json</code></pre>
+<pre><code>{
+  "name": "Exempel AB"
+}</code></pre>
+<pre><code>{
+  "from": "2026-01-01",
+  "to": "2026-12-31",
+  "accountPlanId": 7
+}</code></pre>
+<p>Använd de ID:n som kommandona returnerar när du skapar kontexten.</p>
+</section>
+
+<section id="globala-val">
+<h2>Globala val</h2>
+<div class="cli-table-wrap"><table class="cli-table">
+<thead><tr><th>Val</th><th>Betydelse</th></tr></thead>
+<tbody>
+<tr><td><code>--config FIL</code></td><td>Använd en annan CLI-konfigurationsfil.</td></tr>
+<tr><td><code>--context NAMN</code></td><td>Använd en namngiven kontext för just denna körning.</td></tr>
+<tr><td><code>--data-dir KATALOG</code></td><td>Använd en annan Bokfri-datakatalog.</td></tr>
+<tr><td><code>--company-id ID</code></td><td>Välj eller åsidosätt företag.</td></tr>
+<tr><td><code>--year-id ID</code></td><td>Välj eller åsidosätt bokföringsår.</td></tr>
+<tr><td><code>--format text|json</code></td><td>Välj läsbar text eller maskinläsbar JSON.</td></tr>
+</tbody></table></div>
+<p>Globala val fungerar både före och efter underkommandot:</p>
+<pre><code>bokfri --format json company list
+bokfri company list --format=json
+bokfri vat report --company-id=37 --year-id=12</code></pre>
+</section>
+
+<section id="sakerhet">
+<h2>Säkra förhandsgranskningar</h2>
+<p>Bokfri använder tre återkommande mönster för att minska risken för oavsiktliga ändringar:</p>
+<div class="cli-table-wrap"><table class="cli-table">
+<thead><tr><th>Mönster</th><th>Skriver data?</th><th>Användning</th></tr></thead>
+<tbody>
+<tr><td><code>validate --file …</code></td><td>Nej</td><td>Validerar JSON och referenser.</td></tr>
+<tr><td><code>create --dry-run --file …</code></td><td>Nej</td><td>Visar objektet och konteringen som skulle skapas.</td></tr>
+<tr><td><code>create --file …</code></td><td>Ja</td><td>Skapar objektet efter samma validering.</td></tr>
+<tr><td>Journal utan <code>--commit</code></td><td>Nej</td><td>Visar planerad verifikation.</td></tr>
+<tr><td>Journal med <code>--commit</code></td><td>Ja</td><td>Sparar verifikationen och uppdaterar berörda objekt.</td></tr>
+</tbody></table></div>
+<pre><code>bokfri voucher validate --file voucher.json
+bokfri voucher create --dry-run --file voucher.json
+bokfri voucher create --file voucher.json
+
+bokfri invoice journal --from 2026-08-01 --to 2026-08-31
+bokfri invoice journal --from 2026-08-01 --to 2026-08-31 --commit</code></pre>
+<div class="guide-note"><strong>Undantag:</strong> några administrativa kommandon, exempelvis <code>context use</code>, skriver sin konfiguration direkt. Kontrollera alltid kommandots <code>--help</code>.</div>
+</section>
+
+<section id="rapporter">
+<h2>Rapporter</h2>
+<p>Rapporter använder det valda bokföringsåret som säker standardperiod:</p>
+<div class="cli-table-wrap"><table class="cli-table">
+<thead><tr><th>Kommando</th><th>Standard utan datum</th></tr></thead>
+<tbody>
+<tr><td><code>trial-balance</code></td><td>Hela bokföringsåret</td></tr>
+<tr><td><code>income-statement</code></td><td>Hela bokföringsåret</td></tr>
+<tr><td><code>general-ledger</code></td><td>Hela bokföringsåret</td></tr>
+<tr><td><code>balance-sheet</code></td><td>Bokföringsårets sista dag</td></tr>
+<tr><td><code>account balance</code></td><td>Bokföringsårets sista dag</td></tr>
+<tr><td><code>vat report</code></td><td>Hela bokföringsåret</td></tr>
+</tbody></table></div>
+<pre><code>bokfri trial-balance
+bokfri income-statement --format json
+bokfri balance-sheet
+bokfri general-ledger --account 1930
+bokfri account balance 1930</code></pre>
+<p>För en delperiod måste både <code>--from</code> och <code>--to</code> anges. Punktdatum anges med <code>--date</code>. Datum måste ligga inom valt bokföringsår.</p>
+<pre><code>bokfri income-statement --from 2026-01-01 --to 2026-03-31
+bokfri balance-sheet --date 2026-03-31</code></pre>
+</section>
+
+<section id="forsaljning">
+<h2>Försäljning</h2>
+<h3>Kunder och produkter</h3>
+<pre><code>bokfri customer list
+bokfri customer show 1001
+bokfri customer validate --file customer.json
+bokfri customer create --dry-run --file customer.json
+bokfri customer create --file customer.json
+
+bokfri product list
+bokfri product show CONSULTING
+bokfri product validate --file product.json
+bokfri product create --dry-run --file product.json
+bokfri product create --file product.json</code></pre>
+
+<h3>Kundfakturor</h3>
+<pre><code>bokfri invoice validate --file invoice.json
+bokfri invoice create --dry-run --file invoice.json
+bokfri invoice create --file invoice.json
+bokfri invoice list
+bokfri invoice show 42
+bokfri invoice pdf 42 --output faktura-42.pdf
+bokfri invoice journal --from 2026-08-01 --to 2026-08-31
+bokfri invoice journal --from 2026-08-01 --to 2026-08-31 --commit</code></pre>
+<p>PDF-kommandot ändrar inte fakturans status. En befintlig fil skrivs bara över med <code>--overwrite</code>. Standardspråket är <code>sv-SE</code>.</p>
+
+<h3>Kreditfakturor och inbetalningar</h3>
+<pre><code>bokfri credit-invoice validate --file credit-invoice.json
+bokfri credit-invoice create --dry-run --file credit-invoice.json
+bokfri credit-invoice create --file credit-invoice.json
+bokfri credit-invoice journal --from 2026-08-01 --to 2026-08-31 --commit
+
+bokfri inpayment validate --file inpayment.json
+bokfri inpayment create --dry-run --file inpayment.json
+bokfri inpayment create --file inpayment.json
+bokfri inpayment journal --from 2026-08-01 --to 2026-08-31 --commit</code></pre>
+<p>Kreditfakturan refererar till en bokförd kundfaktura. En inbetalning refererar till en bokförd faktura och får inte överstiga dess återstående saldo.</p>
+</section>
+
+<section id="inkop">
+<h2>Inköp</h2>
+<h3>Leverantörer och leverantörsfakturor</h3>
+<pre><code>bokfri supplier validate --file supplier.json
+bokfri supplier create --dry-run --file supplier.json
+bokfri supplier create --file supplier.json
+
+bokfri supplier-invoice validate --file supplier-invoice.json
+bokfri supplier-invoice create --dry-run --file supplier-invoice.json
+bokfri supplier-invoice create --file supplier-invoice.json
+bokfri supplier-invoice journal --from 2026-08-01 --to 2026-08-31 --commit</code></pre>
+
+<h3>Leverantörskrediter och utbetalningar</h3>
+<pre><code>bokfri supplier-credit-invoice validate --file supplier-credit.json
+bokfri supplier-credit-invoice create --dry-run --file supplier-credit.json
+bokfri supplier-credit-invoice create --file supplier-credit.json
+bokfri supplier-credit-invoice journal --from 2026-08-01 --to 2026-08-31 --commit
+
+bokfri outpayment validate --file outpayment.json
+bokfri outpayment create --dry-run --file outpayment.json
+bokfri outpayment create --file outpayment.json
+bokfri outpayment journal --from 2026-08-01 --to 2026-08-31 --commit</code></pre>
+</section>
+
+<section id="verifikationer">
+<h2>Verifikationer och ingående balans</h2>
+<h3>Manuell verifikation</h3>
+<pre><code>{
+  "schemaVersion": 1,
+  "date": "2026-08-02",
+  "description": "Webbhotell",
+  "rows": [
+    {"account": 6540, "debit": "199.20"},
+    {"account": 2641, "debit": "49.80"},
+    {"account": 1930, "credit": "249.00"}
+  ]
+}</code></pre>
+<pre><code>bokfri voucher validate --file voucher.json
+bokfri voucher create --dry-run --file voucher.json
+bokfri voucher create --file voucher.json
+bokfri voucher list --from 2026-08-01 --to 2026-08-31
+bokfri voucher show 42</code></pre>
+<p>Debet och kredit måste balansera. Belopp bör anges som decimalsträngar för exakt precision.</p>
+
+<h3>Ingående balans och nytt år</h3>
+<p>I ingående balans är positiva belopp debet och negativa belopp kredit:</p>
+<pre><code>{
+  "balances": [
+    {"account": 1930, "amount": "100000.00"},
+    {"account": 2081, "amount": "-100000.00"}
+  ]
+}</code></pre>
+<pre><code>bokfri opening-balance validate --file opening-balance.json
+bokfri opening-balance set --dry-run --file opening-balance.json
+bokfri opening-balance set --file opening-balance.json
+bokfri opening-balance show
+bokfri opening-balance carry-forward --from-year-id 12
+bokfri opening-balance carry-forward --from-year-id 12 --commit</code></pre>
+<p><code>carry-forward</code> överför bara balanskonton från källåret till det valda året.</p>
+</section>
+
+<section id="moms">
+<h2>Momsrapport och momsavräkning</h2>
+<p>Rapporten är alltid läsande. Utan datum omfattar den hela valt bokföringsår:</p>
+<pre><code>bokfri vat report
+bokfri vat report --from 2026-07-01 --to 2026-09-30</code></pre>
+<p>Momsavräkningen kräver en uttrycklig period. Utan <code>--commit</code> visas bara den planerade verifikationen:</p>
+<pre><code>bokfri vat settle --from 2026-07-01 --to 2026-09-30
+bokfri vat settle --from 2026-07-01 --to 2026-09-30 --commit</code></pre>
+<p>Bokfri skickar inte momsdeklarationen till Skatteverket. Kontrollera rapporten och bokföringen innan avräkningen sparas.</p>
+</section>
+
+<section id="backup-sie">
+<h2>Backup och SIE</h2>
+<h3>Fullständig säkerhetskopia</h3>
+<pre><code>bokfri backup create --output bokfri-backup.zip
+bokfri backup list
+bokfri backup verify --file bokfri-backup.zip</code></pre>
+<p>Återställning kräver en målkatalog och är en förhandsgranskning tills <code>--commit</code> anges:</p>
+<pre><code>bokfri backup restore --file bokfri-backup.zip \
+  --target-data-dir "/ny/bokfri-data"
+bokfri backup restore --file bokfri-backup.zip \
+  --target-data-dir "/ny/bokfri-data" --commit</code></pre>
+<p>Använd <code>--overwrite</code> endast när en befintlig databas i målkatalogen avsiktligt ska ersättas.</p>
+
+<h3>SIE-export</h3>
+<pre><code>bokfri sie export --output foretag.se
+bokfri sie export --type 1 --output arssaldon.se</code></pre>
+<p>Standardtypen är <code>4E</code>. Typerna <code>1</code>, <code>2</code>, <code>3</code> och <code>4E</code> stöds. Befintliga filer kräver <code>--overwrite</code>.</p>
+
+<h3>SIE-import</h3>
+<pre><code>bokfri sie import --file foretag.se
+bokfri sie import --file foretag.se --commit
+bokfri sie import --file verifikationer.se --vouchers-only --commit</code></pre>
+<p>Importen är en förhandsgranskning som standard. Bokfri ändrar inte källfilen och registrerar innehållets SHA-256 för att motverka dubbelimport. <code>--allow-already-imported</code> ska bara användas efter kontroll.</p>
+</section>
+
+<section id="json">
+<h2>JSON-filer</h2>
+<p>Datum skrivs som <code>ÅÅÅÅ-MM-DD</code>. Pengar bör skrivas som strängar, exempelvis <code>"1250.00"</code>. Okända fält avvisas så att stavfel inte ignoreras tyst. Många kommandon accepterar <code>--file -</code> för JSON från standard input.</p>
+
+<h3>Kund</h3>
+<pre><code>{
+  "number": "1001",
+  "name": "Exempel AB",
+  "email": "faktura@exempel.se"
+}</code></pre>
+
+<h3>Produkt</h3>
+<pre><code>{
+  "number": "CONSULTING",
+  "description": "Konsultarbete",
+  "sellingPrice": "1200.00",
+  "vatRate": "25",
+  "salesAccount": 3001
+}</code></pre>
+
+<h3>Kundfaktura</h3>
+<pre><code>{
+  "customerNumber": "1001",
+  "date": "2026-08-05",
+  "rows": [
+    {"productNumber": "CONSULTING", "quantity": 10}
+  ]
+}</code></pre>
+
+<h3>Inbetalning</h3>
+<pre><code>{
+  "date": "2026-08-20",
+  "text": "Bankinbetalningar 2026-08-20",
+  "rows": [
+    {"invoiceNumber": 42, "amount": "15000.00"}
+  ]
+}</code></pre>
+<p>Objekttyperna har fler frivilliga fält än exemplen visar. Kör motsvarande <code>validate</code> och <code>create --dry-run</code> innan data sparas.</p>
+</section>
+
+<section id="kommandon">
+<h2>Kommandoöversikt</h2>
+<div class="cli-table-wrap"><table class="cli-table">
+<thead><tr><th>Område</th><th>Kommandon</th></tr></thead>
+<tbody>
+<tr><td>System</td><td><code>version</code>, <code>paths</code>, <code>doctor</code></td></tr>
+<tr><td>Urval</td><td><code>context</code>, <code>company</code>, <code>account-plan</code>, <code>year</code>, <code>account</code></td></tr>
+<tr><td>Rapporter</td><td><code>trial-balance</code>, <code>balance-sheet</code>, <code>income-statement</code>, <code>general-ledger</code>, <code>vat report</code></td></tr>
+<tr><td>Bokföring</td><td><code>voucher</code>, <code>opening-balance</code>, <code>vat settle</code></td></tr>
+<tr><td>Försäljning</td><td><code>customer</code>, <code>product</code>, <code>invoice</code>, <code>credit-invoice</code>, <code>inpayment</code></td></tr>
+<tr><td>Inköp</td><td><code>supplier</code>, <code>supplier-invoice</code>, <code>supplier-credit-invoice</code>, <code>outpayment</code></td></tr>
+<tr><td>Datautbyte</td><td><code>backup</code>, <code>sie</code></td></tr>
+</tbody></table></div>
+<p>De flesta objektsamlingar har <code>list</code> och <code>show</code>. Skrivande JSON-flöden har normalt <code>validate</code> och <code>create</code>. Se alltid den installerade versionens <code>--help</code> för alla parametrar.</p>
+</section>
+
+<section id="automatisering">
+<h2>JSON-utdata och automatisering</h2>
+<p><code>--format json</code> skriver ett JSON-dokument till standard output. Vid fel returneras en icke-noll exitkod och ett stabilt felobjekt till standard error när JSON-format är valt.</p>
+<pre><code>bokfri company list --format json
+bokfri trial-balance --format json &gt; trial-balance.json</code></pre>
+<p>Använd <code>--config</code> och <code>--data-dir</code> för isolerade tester. Låt inte automatiska skript lägga till <code>--commit</code> förrän förhandsgranskningen har kontrollerats.</p>
+</section>
+
+<section id="felsokning">
+<h2>Felsökning</h2>
+<dl>
+<dt><code>bokfri</code> hittas inte på Windows</dt>
+<dd>Öppna ett nytt terminalfönster efter MSI-installationen. Kontrollera med <code>Get-Command bokfri</code>. Utvecklingspaketet heter <code>bokfri-dev</code>.</dd>
+<dt><code>COMPANY_REQUIRED</code> eller <code>YEAR_REQUIRED</code></dt>
+<dd>Välj en kontext eller ange <code>--company-id</code> och <code>--year-id</code>.</dd>
+<dt><code>CONTEXT_NOT_FOUND</code></dt>
+<dd>Kör <code>bokfri context list</code> och kontrollera stavningen eller skapa kontexten på nytt.</dd>
+<dt>Rapportperioden avvisas</dt>
+<dd>Datum måste ligga inom valt bokföringsår. Periodrapporter kräver både <code>--from</code> och <code>--to</code> om ett av dem anges.</dd>
+<dt>En fil finns redan</dt>
+<dd>Bokfri skriver normalt inte över filer. Kontrollera filen och använd <code>--overwrite</code> endast när ersättning är avsiktlig.</dd>
+<dt>Databasen används av GUI:t</dt>
+<dd>Avsluta Bokfris GUI innan ett skrivande CLI-kommando eller en återställning körs mot samma datakatalog.</dd>
+</dl>
+<p>Kontrollera miljön med:</p>
+<pre><code>bokfri version
+bokfri paths
+bokfri doctor
+bokfri context current</code></pre>
+</section>
+
+<nav class="page-nav"><a href="/help/" class="prev">All Bokfri-hjälp</a></nav>
+</main>
+</div>
+
+<footer class="site-footer"><p>&copy; Bokfri &mdash; <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPLv3</a></p></footer>
+<script>
+(function() {
+  var sidebar = document.getElementById('sidebar');
+  var toggle = document.getElementById('menu-toggle');
+  toggle.addEventListener('click', function() { sidebar.classList.toggle('hidden'); });
+  sidebar.querySelectorAll('a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      if (window.innerWidth <= 768) sidebar.classList.add('hidden');
+    });
+  });
+})();
+</script>
+</body>
+</html>

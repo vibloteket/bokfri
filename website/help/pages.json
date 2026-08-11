@@ -1,5 +1,10 @@
 [
   {
+    "name": "Kommandoradsgränssnittet",
+    "file": "cli/",
+    "section": "Kom igång"
+  },
+  {
     "name": "Bokför en manuell verifikation",
     "file": "GuideManualVerification.html",
     "section": "Kom igång"
