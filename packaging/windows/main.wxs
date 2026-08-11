@@ -136,18 +136,15 @@
 
   <Fragment>
     <DirectoryRef Id="INSTALLDIR">
-      <Directory Id="BokfriCliBinDir" Name="bin">
-        <Component Id="BokfriCliPathComponent" Guid="*" Win64="yes">
-          <CreateFolder/>
-          <Environment Id="BokfriCliPath"
-                       Name="PATH"
-                       Value="[BokfriCliBinDir]"
-                       Permanent="no"
-                       Part="last"
-                       Action="set"
-                       System="yes"/>
-        </Component>
-      </Directory>
+      <Component Id="BokfriCliPathComponent" Guid="*" Win64="yes">
+        <Environment Id="BokfriCliPath"
+                     Name="PATH"
+                     Value="[INSTALLDIR]bin"
+                     Permanent="no"
+                     Part="last"
+                     Action="set"
+                     System="yes"/>
+      </Component>
     </DirectoryRef>
   </Fragment>
 
