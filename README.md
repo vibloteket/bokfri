@@ -50,6 +50,33 @@ Den senaste publicerade versionen finns på
 [bokfri.viblo.se/download](https://bokfri.viblo.se/download/) och under
 [GitHub Releases](https://github.com/vibloteket/bokfri/releases).
 
+## Kommandoradsgränssnitt
+
+Bokfri innehåller ett headless kommandoradsgränssnitt för rapporter,
+automatisering, datautbyte och reproducerbara bokföringsflöden. Windows-
+installationen gör kommandot `bokfri` tillgängligt i nya terminalfönster;
+utvecklingspaketet använder `bokfri-dev`. På macOS finns launchern i
+app-paketet och på Linux kan AppImage-filen ta emot CLI-argument direkt.
+
+`--format json` ger maskinläsbar utdata. Företag och bokföringsår kan väljas
+med globala alternativ eller sparas i en namngiven kontext:
+
+```sh
+bokfri company list
+bokfri --company-id 37 year list
+bokfri context create mitt-foretag \
+  --data-dir "/sökväg/till/bokfri-data" --company-id 37 --year-id 12
+bokfri context use mitt-foretag
+bokfri trial-balance --format json
+```
+
+Skrivande arbetsflöden kan normalt valideras eller förhandsgranskas med
+`validate`, `--dry-run` eller genom att utelämna `--commit`. Läs den
+[fullständiga CLI-guiden](https://bokfri.viblo.se/help/cli/) för installation,
+kontexter, rapporter, JSON-format, fakturor, betalningar, backup, SIE och
+felsökning. Den exakta syntaxen för den installerade versionen visas med
+`bokfri --help` och `bokfri KOMMANDO --help`.
+
 ## Hjälp, support och kontakt
 
 - [Användarhjälp](https://bokfri.viblo.se/help/)
@@ -82,34 +109,7 @@ köras från projektroten med:
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar
 ```
 
-### Kommandoradsgränssnitt
-
-Bokfri innehåller ett headless kommandoradsgränssnitt för rapporter,
-automatisering, datautbyte och reproducerbara bokföringsflöden. Windows-
-installationen gör kommandot `bokfri` tillgängligt i nya terminalfönster;
-utvecklingspaketet använder `bokfri-dev`. På macOS finns launchern i
-app-paketet och på Linux kan AppImage-filen ta emot CLI-argument direkt.
-
-`--format json` ger maskinläsbar utdata. Företag och bokföringsår kan väljas
-med globala alternativ eller sparas i en namngiven kontext:
-
-```sh
-bokfri company list
-bokfri --company-id 37 year list
-bokfri context create mitt-foretag \
-  --data-dir "/sökväg/till/bokfri-data" --company-id 37 --year-id 12
-bokfri context use mitt-foretag
-bokfri trial-balance --format json
-```
-
-Skrivande arbetsflöden kan normalt valideras eller förhandsgranskas med
-`validate`, `--dry-run` eller genom att utelämna `--commit`. Läs den
-[fullständiga CLI-guiden](https://bokfri.viblo.se/help/cli/) för installation,
-kontexter, rapporter, JSON-format, fakturor, betalningar, backup, SIE och
-felsökning. Den exakta syntaxen för den installerade versionen visas med
-`bokfri --help` och `bokfri KOMMANDO --help`.
-
-Från en lokal källkodsbyggnad kan samma CLI startas med:
+Samma JAR kan starta kommandoradsgränssnittet genom att ett CLI-argument anges:
 
 ```sh
 java -jar target/bokfri-1.0.1-jar-with-dependencies.jar version
