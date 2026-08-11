@@ -3,7 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ladda ner Bokfri</title>
+<title>Ladda ner Bokfri för Windows, macOS och Linux</title>
+<meta name="description" content="Ladda ner Bokfri, ett fritt svenskt bokföringsprogram med både grafiskt desktopgränssnitt och CLI i samma paket.">
+<meta property="og:title" content="Ladda ner Bokfri">
+<meta property="og:description" content="Desktopprogram och kommandoradsgränssnitt i samma nedladdning för Windows, macOS och Linux.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bokfri.viblo.se/download/">
+<link rel="canonical" href="https://bokfri.viblo.se/download/">
 <link rel="icon" type="image/x-icon" href="../assets/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32x32.png">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
@@ -26,7 +32,7 @@
 
 <main class="download-page">
   <h1>Ladda ner Bokfri</h1>
-  <p class="subtitle">Bokfri 1.0.1 — välj din plattform</p>
+  <p class="subtitle">Bokfri 1.0.1 – desktopprogram och CLI i samma nedladdning</p>
 
   <div class="release-notice">
     <strong>Säkerhetskopiera före uppgradering.</strong>
@@ -39,21 +45,27 @@
     <div class="dl-card">
       <img src="../assets/icons/windows.svg" alt="Windows" class="dl-icon-img">
       <h2>Windows</h2>
-      <p class="dl-type">MSI-installerare</p>
+      <p class="dl-type">MSI-installerare med desktopprogram och kommandot <code>bokfri</code></p>
       <a href="https://github.com/vibloteket/bokfri/releases/latest/download/Bokfri.msi" class="dl-btn">Ladda ner</a>
     </div>
     <div class="dl-card">
       <img src="../assets/icons/macos.svg" alt="macOS" class="dl-icon-img">
       <h2>macOS</h2>
-      <p class="dl-type">DMG-paket</p>
+      <p class="dl-type">DMG-paket med desktopprogram och CLI i app-paketet</p>
       <a href="https://github.com/vibloteket/bokfri/releases/latest/download/Bokfri.dmg" class="dl-btn">Ladda ner</a>
     </div>
     <div class="dl-card">
       <img src="../assets/icons/linux.svg" alt="Linux" class="dl-icon-img">
       <h2>Linux</h2>
-      <p class="dl-type">AppImage</p>
+      <p class="dl-type">AppImage för både desktop och kommandorad</p>
       <a href="https://github.com/vibloteket/bokfri/releases/latest/download/Bokfri-x86_64.AppImage" class="dl-btn">Ladda ner</a>
     </div>
+  </div>
+
+  <div class="download-cli-note">
+    <h2>Ett paket, två gränssnitt</h2>
+    <p>Du behöver inte ladda ner CLI:t separat. Alla paket innehåller både det grafiska desktopprogrammet och kommandoradsgränssnittet. Windows installerar kommandot <code>bokfri</code> i PATH; på macOS finns CLI:t i app-paketet och på Linux kan AppImage-filen köras med CLI-argument.</p>
+    <p><a href="/help/cli/">Läs hur du använder Bokfri från kommandoraden</a>.</p>
   </div>
 
   <p class="dl-more">

@@ -7,7 +7,8 @@
 # Bokfri
 
 Bokfri är ett fritt och kostnadsfritt bokföringsprogram för svenska föreningar
-och småföretag. Programmet installeras på din egen dator: det kräver inget
+och småföretag, med både grafiskt desktopgränssnitt och kommandorad för
+automatisering. Programmet installeras på din egen dator: det kräver inget
 abonnemang eller konto och bokföringsdata lagras inte i någon molntjänst.
 
 **[Webbplats](https://bokfri.viblo.se/) ·
@@ -25,6 +26,7 @@ men har en egen identitet och versionshistorik med start vid Bokfri 1.0.
 
 ## Funktioner
 
+- grafiskt desktopgränssnitt och CLI för manuellt arbete, rapporter och automatisering
 - verifikationer, bokföringsår och automatkonteringar
 - sex medföljande BAS 2026-kontoplaner för olika företags- och föreningsformer
 - import och export av SIE-filer samt import av BGMax
@@ -163,8 +165,9 @@ Bokfri är fri programvara under GNU General Public License version 3. Se
 för externa resurser och underlag.
 
 ## English Summary
-Bokfri is a free, open-source desktop accounting application for Swedish
-associations and small businesses. It runs locally on Windows, macOS, and Linux
-and supports vouchers, invoices, Swedish BAS account plans, reports, and
-SIE/BGMax import and export. The user interface may be translated, but the
-accounting functionality is intended for Sweden.
+Bokfri is a free, open-source accounting application for Swedish associations
+and small businesses, with both a graphical desktop interface and a command-line
+interface for automation. It runs locally on Windows, macOS, and Linux and
+supports vouchers, invoices, Swedish BAS account plans, reports, and SIE/BGMax
+import and export. The user interface may be translated, but the accounting
+functionality is intended for Sweden.

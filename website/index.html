@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bokfri — fri bokföring</title>
+<title>Bokfri – bokföringsprogram med grafiskt gränssnitt och CLI</title>
+<meta name="description" content="Fritt och kostnadsfritt bokföringsprogram för svenska föreningar och småföretag, med grafiskt desktopgränssnitt och CLI för automatisering.">
+<meta name="keywords" content="bokföringsprogram, bokföring, CLI, kommandorad, SIE, förening, småföretag, öppen källkod">
+<meta property="og:title" content="Bokfri – bokföringsprogram med grafiskt gränssnitt och CLI">
+<meta property="og:description" content="Fri svensk bokföring lokalt på din dator, både som desktopprogram och från kommandoraden.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bokfri.viblo.se/">
+<meta property="og:image" content="https://bokfri.viblo.se/assets/screenshot.png">
+<link rel="canonical" href="https://bokfri.viblo.se/">
 <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -27,7 +35,7 @@
 <div class="landing">
   <div class="landing-hero">
     <img src="assets/logo.svg" alt="Bokfri logotyp" class="logo" width="256" height="96">
-    <p class="tagline">Fri och kostnadsfri bokföring för föreningar och småföretag</p>
+    <p class="tagline">Fri och kostnadsfri bokföring för svenska föreningar och småföretag, både som grafiskt desktopprogram och från kommandoraden</p>
   </div>
 
   <div class="screenshot-wrap">
@@ -36,9 +44,10 @@
 
   <section id="intro">
     <p>
-      Bokfri är ett fritt och kostnadsfritt bokföringsprogram som du installerar
-      på din egen dator. Inga abonnemang, ingen molntjänst och dina data stannar
-      hos dig.
+      Bokfri är ett fritt och kostnadsfritt bokföringsprogram för svenska
+      föreningar och småföretag, med både grafiskt desktopgränssnitt och
+      kommandorad för automatisering. Du installerar det på din egen dator:
+      inga abonnemang, ingen molntjänst och dina data stannar hos dig.
     </p>
     <p>
       Programmet har använts i över 20 år (ursprungligen som JFS Accounting, sedan 
@@ -49,6 +58,7 @@
   <section id="features">
     <h2>Funktioner</h2>
     <ul>
+      <li><strong>Desktop och kommandorad</strong> — arbeta i det grafiska gränssnittet eller automatisera med CLI och JSON</li>
       <li><strong>Verifikationer</strong> — bokför med SIE-import/export och BGMax-stöd</li>
       <li><strong>Fakturor</strong> — skapa och skriv ut fakturor, kreditfakturor och offerter</li>
       <li><strong>Kund- &amp; leverantörsregister</strong> — håll koll på kontakter och betalningar</li>
@@ -56,6 +66,15 @@
       <li><strong>Excel-import/export</strong> — importera och exportera kunder, artiklar, kontoplaner</li>
       <li><strong>Periodisering</strong> — hantera bokföringsår, perioder och momsredovisning</li>
     </ul>
+  </section>
+
+  <section id="cli" class="cli-promo">
+    <h2>Bokför från kommandoraden</h2>
+    <p>Kör rapporter, förhandsgranska bokföringsflöden och skapa säkerhetskopior från terminalen. CLI:t använder samma lokala data som desktopprogrammet.</p>
+    <pre><code>bokfri trial-balance
+bokfri invoice create --dry-run --file invoice.json
+bokfri backup create --output bokfri-backup.zip</code></pre>
+    <p><a href="/help/cli/">Läs CLI-guiden</a></p>
   </section>
 
   <section id="platforms">
@@ -115,7 +134,8 @@
     <h2>About</h2>
     <p>
       Bokfri is a free, open-source accounting application for Swedish
-      associations and small businesses. It handles invoices, vouchers,
+      associations and small businesses, with both a graphical desktop interface
+      and a command-line interface for automation. It handles invoices, vouchers,
       customer and supplier registries, reports, and SIE/BGMax import/export.
       Available for Windows, macOS, and Linux under the GPLv3 license.
     </p>
