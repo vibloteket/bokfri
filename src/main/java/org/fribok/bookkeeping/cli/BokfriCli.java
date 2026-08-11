@@ -18,6 +18,8 @@ import org.fribok.bookkeeping.service.creditinvoice.CreditInvoiceService;
 import org.fribok.bookkeeping.service.customer.CustomerService;
 import org.fribok.bookkeeping.service.customer.CustomerValidationIssue;
 import org.fribok.bookkeeping.service.customer.CustomerValidationResult;
+import org.fribok.bookkeeping.service.demo.DemoCompanyResult;
+import org.fribok.bookkeeping.service.demo.DemoCompanyService;
 import org.fribok.bookkeeping.service.inpayment.InpaymentJournalPlan;
 import org.fribok.bookkeeping.service.inpayment.InpaymentJournalResult;
 import org.fribok.bookkeeping.service.inpayment.InpaymentService;
@@ -107,6 +109,7 @@ import java.util.concurrent.Callable;
             BokfriCli.DoctorCommand.class,
             BokfriCli.ContextCommand.class,
             BokfriCli.CompanyCommand.class,
+            BokfriCli.DemoCommand.class,
             BokfriCli.AccountPlanCommand.class,
             BokfriCli.YearCommand.class,
             BokfriCli.AccountCommand.class,
@@ -458,6 +461,55 @@ public class BokfriCli implements Runnable {
                         + (item.get("corporateId") == null ? "" : "\t" + item.get("corporateId")))
                         .reduce((left, right) -> left + "\n" + right).orElse("No companies found");
                 root.output(Map.of("context", context.asMap(), "companies", companies), text);
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "demo", description = "Manage the bundled demo company",
+            subcommands = DemoRecreate.class)
+    static class DemoCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "A demo command is required");
+        }
+    }
+
+    @Command(name = "recreate", description = "Replace the bundled demo company")
+    static class DemoRecreate implements Callable<Integer> {
+        @CommandLine.ParentCommand DemoCommand command;
+        @Option(names = "--commit", description = "Apply the replacement") boolean commit;
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(false, false);
+            try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
+                DemoCompanyService service = new DemoCompanyService(runtime.database());
+                List<SSNewCompany> matches = service.findDemoCompanies();
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("commit", commit);
+                result.put("remove", matches.stream().map(company -> Map.of(
+                        "id", company.getId(), "name", company.getName(),
+                        "corporateId", company.getCorporateID())).toList());
+                result.put("create", Map.of("name", DemoCompanyService.NAME,
+                        "corporateId", DemoCompanyService.CORPORATE_ID,
+                        "accountingYears", 2));
+                if (!commit) {
+                    root.output(result, "Would remove " + matches.size()
+                            + " recognized demo company/companies and create "
+                            + DemoCompanyService.NAME + ". Use --commit to apply.");
+                    return 0;
+                }
+                DemoCompanyResult created = service.recreate();
+                result.put("companyId", created.company().getId());
+                result.put("removedCompanies", created.removedCompanies());
+                result.put("vouchers", created.vouchers());
+                result.put("invoices", created.invoices());
+                root.output(result, "Recreated " + created.company().getName() + " (company "
+                        + created.company().getId() + ") with " + created.accountingYears()
+                        + " accounting years");
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);

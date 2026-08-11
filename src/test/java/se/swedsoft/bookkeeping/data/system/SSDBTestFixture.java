@@ -75,12 +75,12 @@ public final class SSDBTestFixture {
         Class.forName("org.hsqldb.jdbcDriver");
         Connection conn = DriverManager.getConnection(JDBC_URL, "sa", "");
 
-        // startupLocal creates tables, seeds example company, imports account
+        // startupLocal creates tables, seeds the Java-generated demo company, imports account
         // plans (slow, one-time), and reads last-used company/year from config.
         SSDB.getInstance().startupLocal(conn);
 
         // Ensure we have at least one company.  startupLocal already seeds an
-        // example company via sql/example.sql, so getCompanies() is non-empty
+        // bundled demo company, so getCompanies() is non-empty
         // on a fresh DB.  On subsequent JVM runs the example company is already
         // present so the seed is skipped.
         List<SSNewCompany> companies = SSDB.getInstance().getCompanies();

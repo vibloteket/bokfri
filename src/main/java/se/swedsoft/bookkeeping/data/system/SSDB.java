@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.data.system;
 
 
+import org.fribok.bookkeeping.service.demo.DemoCompanyService;
 import se.swedsoft.bookkeeping.SSTriggerHandler;
 import org.fribok.bookkeeping.app.Path;
 import se.swedsoft.bookkeeping.calc.math.*;
@@ -125,8 +126,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
         // dropTriggers();
         createLocalTriggers();
         
-        checkCreateExampleCompany();
         checkImportDefaultAccountPlans();
+        checkCreateExampleCompany();
         
         // Läs in företaget och året som senast var öppet.
         Integer iLastCompany = SSDBConfig.getCompanyId();
@@ -321,30 +322,18 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
         }
     }
     
-    /* skapa exempelföretaget i databasen */
+    /* Skapa demoföretaget i en tom databas. */
     private void checkCreateExampleCompany() {
         try {
             if (iConnection == null || iConnection.isClosed()) {
                 return;
             }
-
-            Statement iStatement = iConnection.createStatement();
-            ResultSet iResultSet = iStatement.executeQuery("SELECT 0 FROM tbl_company");
-            if (iResultSet.next()) {
-                // Have at least one company in DB
-                iStatement.close();
-                return;
+            if (getCompanies().isEmpty()) {
+                LOG.info("Creating demo company.");
+                new DemoCompanyService(this).createIfDatabaseEmpty();
             }
-
-            LOG.info("Creating example company.");
-
-            String q = SSUtil.readResourceToString("sql/example.sql");
-
-            iStatement.executeUpdate(q);
-            iConnection.commit();
-            iStatement.close();
-        } catch (SQLException e) {
-            LOG.error("Unexpected error", e);
+        } catch (SQLException | RuntimeException e) {
+            LOG.error("Could not create demo company", e);
         }
     }
     

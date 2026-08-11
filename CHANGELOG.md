@@ -13,6 +13,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- The bundled demo company is now generated through Bokfri's Java services instead
+  of serialized SQL, with completed 2025/26 and ongoing 2026/27 accounting years.
 - Windows MSI packages now install `bokfri` (`bokfri-dev` for development builds)
   on the system PATH, use stable channel-specific upgrade identities, and verify
   command discovery plus exact PATH cleanup during uninstall in CI.
@@ -21,6 +23,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   accounting year; balance sheet and account balance default to its final day.
 
 ### Added
+- Added GUI and `bokfri demo recreate [--commit]` actions for safely replacing
+  recognized current or legacy demo companies while preserving all other companies.
 - Added privacy-friendly GoatCounter visitor statistics to the website and help pages.
 - Added the first headless CLI slice with version, path, diagnostics, named
   company/year contexts, and read-only company and accounting-year commands.

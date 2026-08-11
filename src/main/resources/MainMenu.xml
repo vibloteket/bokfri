@@ -9,6 +9,7 @@
             <MenuItem Action="filemenu.companies"        Bundle="filemenu.companies"                           />
             <MenuItem Action="filemenu.company.settings"  Bundle="filemenu.company.settings" Dependent="Company" />
             <MenuItem Action="filemenu.accountplans"     Bundle="filemenu.accountplans"                        />
+            <MenuItem Action="filemenu.demo.recreate"    Bundle="filemenu.demo.recreate"                       />
             <Separator/>
 
             <Menu Name="Import" Bundle="filemenu.import" >

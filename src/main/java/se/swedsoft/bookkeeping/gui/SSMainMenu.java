@@ -1,6 +1,8 @@
 package se.swedsoft.bookkeeping.gui;
 
 import org.fribok.bookkeeping.app.Path;
+import org.fribok.bookkeeping.service.demo.DemoCompanyResult;
+import org.fribok.bookkeeping.service.demo.DemoCompanyService;
 import org.fribok.bookkeeping.service.sie.SieImportService;
 import se.swedsoft.bookkeeping.data.*;
 import se.swedsoft.bookkeeping.data.backup.SSBackupDatabase;
@@ -173,6 +175,26 @@ public class SSMainMenu {    private static final Logger LOG = LoggerFactory.get
         // Account plans
         // *****************************
         iMenuLoader.addActionListener("filemenu.accountplans", e -> SSAccountPlanFrame.showFrame(iMainFrame, 640, 480));
+
+        // Recreate bundled demo company
+        // *****************************
+        iMenuLoader.addActionListener("filemenu.demo.recreate", e -> {
+            int answer = new SSConfirmDialog("democompany.recreate",
+                    DemoCompanyService.NAME, DemoCompanyService.CORPORATE_ID).openDialog(iMainFrame);
+            if (answer != JOptionPane.YES_OPTION) {
+                return;
+            }
+            try {
+                SSFrameManager.getInstance().close();
+                DemoCompanyResult result = new DemoCompanyService(SSDB.getInstance()).recreate();
+                SSInformationDialog.showDialog(iMainFrame, "democompany.recreated",
+                        result.company().getName(), result.accountingYears());
+            } catch (RuntimeException ex) {
+                LOG.error("Could not recreate demo company", ex);
+                SSErrorDialog.showDialog(iMainFrame, "Kunde inte skapa om demoföretaget",
+                        ex.getMessage());
+            }
+        });
 
         // SIE Import
         // *****************************
