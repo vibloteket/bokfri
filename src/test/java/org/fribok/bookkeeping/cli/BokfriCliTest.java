@@ -23,7 +23,7 @@ class BokfriCliTest {
         Path config = temporaryDirectory.resolve("config/cli.yaml");
         Path data = temporaryDirectory.resolve("data");
 
-        Result create = execute("--config", config.toString(), "context", "create", "demo-2026",
+        Result create = execute("--config", config.toString(), "context", "create", "--name", "demo-2026",
                 "--data-dir", data.toString(), "--company-id", "12", "--year-id", "34");
         Result use = execute("--config", config.toString(), "context", "use", "demo-2026");
         Result current = execute("--config", config.toString(), "--format", "json",
@@ -43,11 +43,55 @@ class BokfriCliTest {
     }
 
     @Test
+    void contextCreateDerivesNameFromCompanyAndYear() throws Exception {
+        Path config = temporaryDirectory.resolve("auto-name-cli.yaml");
+        Path data = temporaryDirectory.resolve("auto-name-data");
+        Result companies = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode yearRows = new ObjectMapper().readTree(years.stdout()).path("years");
+        int yearId = 0;
+        for (JsonNode year : yearRows) {
+            if ("2026-07-01".equals(year.path("from").asText())) {
+                yearId = year.path("id").asInt();
+            }
+        }
+
+        Result create = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json", "context", "create");
+
+        assertThat(create.exitCode()).isZero();
+        JsonNode result = new ObjectMapper().readTree(create.stdout());
+        assertThat(result.path("name").asText()).isEqualTo("bokfri-demo-ab-20260701");
+        assertThat(Files.readString(config)).contains("bokfri-demo-ab-20260701:");
+    }
+
+    @Test
+    void contextCreateDoesNotOverwriteAnotherContextWithTheSameName() throws Exception {
+        Path config = temporaryDirectory.resolve("collision-cli.yaml");
+        Path data = temporaryDirectory.resolve("collision-data");
+        Result first = execute("--config", config.toString(), "context", "create", "--name", "demo",
+                "--data-dir", data.toString(), "--company-id", "1", "--year-id", "2");
+        Result duplicate = execute("--config", config.toString(), "--format", "json",
+                "context", "create", "--name", "demo", "--data-dir", data.toString(),
+                "--company-id", "9", "--year-id", "2");
+
+        assertThat(first.exitCode()).isZero();
+        assertThat(duplicate.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(duplicate.stderr()).at("/error/code").asText())
+                .isEqualTo("CONTEXT_NAME_EXISTS");
+    }
+
+    @Test
     void contextCreateUsesDefaultDataDirectoryWhenItIsOmitted() throws Exception {
         Path config = temporaryDirectory.resolve("cli.yaml");
 
         Result create = execute("--config", config.toString(), "--format", "json",
-                "context", "create", "default-data", "--company-id", "12", "--year-id", "34");
+                "context", "create", "--name", "default-data", "--company-id", "12", "--year-id", "34");
 
         assertThat(create.exitCode()).isZero();
         assertThat(create.stderr()).isEmpty();
@@ -62,7 +106,7 @@ class BokfriCliTest {
     @Test
     void contextCreateStillRequiresCompanyAndYear() throws Exception {
         Result result = execute("--config", temporaryDirectory.resolve("cli.yaml").toString(),
-                "--format", "json", "context", "create", "incomplete");
+                "--format", "json", "context", "create");
 
         assertThat(result.exitCode()).isEqualTo(1);
         JsonNode error = new ObjectMapper().readTree(result.stderr()).path("error");
@@ -75,9 +119,9 @@ class BokfriCliTest {
         Path config = temporaryDirectory.resolve("cli.yaml");
         Path firstData = temporaryDirectory.resolve("first");
         Path secondData = temporaryDirectory.resolve("second");
-        execute("--config", config.toString(), "context", "create", "first",
+        execute("--config", config.toString(), "context", "create", "--name", "first",
                 "--data-dir", firstData.toString(), "--company-id", "1", "--year-id", "10");
-        execute("--config", config.toString(), "context", "create", "second",
+        execute("--config", config.toString(), "context", "create", "--name", "second",
                 "--data-dir", secondData.toString(), "--company-id", "2", "--year-id", "20");
         execute("--config", config.toString(), "context", "use", "first");
 
@@ -101,7 +145,7 @@ class BokfriCliTest {
         Path config = temporaryDirectory.resolve("cli.yaml");
         Path storedData = temporaryDirectory.resolve("stored");
         Path overriddenData = temporaryDirectory.resolve("overridden");
-        Result create = execute("--config", config.toString(), "context", "create", "selected",
+        Result create = execute("--config", config.toString(), "context", "create", "--name", "selected",
                 "--data-dir", storedData.toString(), "--company-id", "1", "--year-id", "2");
 
         Result doctor = execute("doctor", "--config=" + config, "--context=selected",

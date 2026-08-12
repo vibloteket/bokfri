@@ -98,6 +98,7 @@ import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 
 /** Headless command-line interface for Bokfri. */
@@ -374,9 +375,10 @@ public class BokfriCli implements Runnable {
         return 0;
     }
 
-    @Command(name = "create", description = "Create or replace a context")
+    @Command(name = "create", description = "Create a context for a company and accounting year")
     static class ContextCreate extends ContextSubcommand implements Callable<Integer> {
-        @Parameters(index = "0") String name;
+        @Option(names = "--name", description = "Context name (defaults to company name and year start)")
+        String requestedName;
 
         @Override public Integer call() {
             BokfriCli root = root();
@@ -384,15 +386,51 @@ public class BokfriCli implements Runnable {
                 throw new CliException("CONTEXT_VALUES_REQUIRED",
                         "Provide --company-id and --year-id");
             }
-            java.nio.file.Path selectedDataDir = root.dataDir == null
+            java.nio.file.Path selectedDataDir = (root.dataDir == null
                     ? Path.get(Path.USER_DATA).toPath()
-                    : root.dataDir;
+                    : root.dataDir).toAbsolutePath().normalize();
+            String name = requestedName;
+            if (name == null) {
+                try (BokfriRuntime runtime = BokfriRuntime.open(selectedDataDir)) {
+                    SSNewCompany company = runtime.selectCompany(root.companyId);
+                    SSNewAccountingYear year = runtime.selectYear(company, root.yearId);
+                    name = contextName(company.getName(), year.getLocalFrom());
+                } catch (Exception exception) {
+                    throw databaseFailure(exception);
+                }
+            } else if (name.isBlank()) {
+                throw new CliException("CONTEXT_NAME_INVALID", "Context name must not be blank");
+            }
+
             CliConfig config = root.loadConfig();
-            config.getContexts().put(name,
-                    new CliContext(selectedDataDir, root.companyId, root.yearId));
+            CliContext context = new CliContext(selectedDataDir, root.companyId, root.yearId);
+            CliContext existing = config.getContexts().get(name);
+            if (existing != null && !sameContext(existing, context)) {
+                throw new CliException("CONTEXT_NAME_EXISTS",
+                        "Context " + name + " already points to another company, year, or data directory;"
+                                + " choose another --name");
+            }
+            config.getContexts().put(name, context);
             save(root, config);
             return showContext(root, config, name);
         }
+    }
+
+    private static String contextName(String companyName, java.time.LocalDate yearStart) {
+        String slug = companyName == null ? "" : companyName.strip().toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", "-")
+                .replaceAll("^-+|-+$", "");
+        if (slug.isEmpty()) {
+            slug = "company";
+        }
+        return slug + "-" + yearStart.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+    }
+
+    private static boolean sameContext(CliContext left, CliContext right) {
+        return java.nio.file.Paths.get(left.getDataDir()).toAbsolutePath().normalize()
+                        .equals(java.nio.file.Paths.get(right.getDataDir()).toAbsolutePath().normalize())
+                && Objects.equals(left.getCompanyId(), right.getCompanyId())
+                && Objects.equals(left.getYearId(), right.getYearId());
     }
 
     @Command(name = "use", description = "Select the current context")

@@ -68,9 +68,10 @@ med globala alternativ eller sparas i en namngiven kontext:
 ```sh
 bokfri company list
 bokfri --company-id 37 year list
-# --data-dir kan utelämnas för Bokfris vanliga datakatalog
-bokfri context create mitt-foretag --company-id 37 --year-id 12
-bokfri context use mitt-foretag
+# Namnet skapas från företag och årets start; --data-dir kan utelämnas
+bokfri context create --company-id 37 --year-id 12
+bokfri context use bokfri-demo-ab-20260701
+# Använd --name demo om du vill välja ett eget namn
 bokfri trial-balance --format json
 ```
 

@@ -14,7 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Changed
 - `bokfri context create` now uses Bokfri's platform-specific default data
-  directory when `--data-dir` is omitted.
+  directory when `--data-dir` is omitted and derives its default name from the
+  company and accounting-year start date; custom names remain available via `--name`.
 - The bundled demo company is now generated through Bokfri's Java services instead
   of serialized SQL, with completed 2025/26 and ongoing 2026/27 accounting years.
 - Windows MSI packages now install `bokfri` (`bokfri-dev` for development builds)
