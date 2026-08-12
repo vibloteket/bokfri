@@ -43,6 +43,34 @@ class BokfriCliTest {
     }
 
     @Test
+    void contextCreateUsesDefaultDataDirectoryWhenItIsOmitted() throws Exception {
+        Path config = temporaryDirectory.resolve("cli.yaml");
+
+        Result create = execute("--config", config.toString(), "--format", "json",
+                "context", "create", "default-data", "--company-id", "12", "--year-id", "34");
+
+        assertThat(create.exitCode()).isZero();
+        assertThat(create.stderr()).isEmpty();
+        JsonNode result = new ObjectMapper().readTree(create.stdout());
+        assertThat(result.path("dataDir").asText()).isEqualTo(
+                org.fribok.bookkeeping.app.Path.get(
+                        org.fribok.bookkeeping.app.Path.USER_DATA).toPath()
+                        .toAbsolutePath().normalize().toString());
+        assertThat(Files.readString(config)).contains("data-dir:");
+    }
+
+    @Test
+    void contextCreateStillRequiresCompanyAndYear() throws Exception {
+        Result result = execute("--config", temporaryDirectory.resolve("cli.yaml").toString(),
+                "--format", "json", "context", "create", "incomplete");
+
+        assertThat(result.exitCode()).isEqualTo(1);
+        JsonNode error = new ObjectMapper().readTree(result.stderr()).path("error");
+        assertThat(error.path("code").asText()).isEqualTo("CONTEXT_VALUES_REQUIRED");
+        assertThat(error.path("message").asText()).isEqualTo("Provide --company-id and --year-id");
+    }
+
+    @Test
     void commandLineOverridesCurrentContextWithoutChangingConfig() throws Exception {
         Path config = temporaryDirectory.resolve("cli.yaml");
         Path firstData = temporaryDirectory.resolve("first");

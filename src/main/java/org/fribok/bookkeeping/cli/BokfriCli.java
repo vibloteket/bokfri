@@ -380,13 +380,16 @@ public class BokfriCli implements Runnable {
 
         @Override public Integer call() {
             BokfriCli root = root();
-            if (root.dataDir == null || root.companyId == null || root.yearId == null) {
+            if (root.companyId == null || root.yearId == null) {
                 throw new CliException("CONTEXT_VALUES_REQUIRED",
-                        "Provide --data-dir, --company-id, and --year-id");
+                        "Provide --company-id and --year-id");
             }
+            java.nio.file.Path selectedDataDir = root.dataDir == null
+                    ? Path.get(Path.USER_DATA).toPath()
+                    : root.dataDir;
             CliConfig config = root.loadConfig();
             config.getContexts().put(name,
-                    new CliContext(root.dataDir, root.companyId, root.yearId));
+                    new CliContext(selectedDataDir, root.companyId, root.yearId));
             save(root, config);
             return showContext(root, config, name);
         }

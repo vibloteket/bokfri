@@ -13,6 +13,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- `bokfri context create` now uses Bokfri's platform-specific default data
+  directory when `--data-dir` is omitted.
 - The bundled demo company is now generated through Bokfri's Java services instead
   of serialized SQL, with completed 2025/26 and ongoing 2026/27 accounting years.
 - Windows MSI packages now install `bokfri` (`bokfri-dev` for development builds)

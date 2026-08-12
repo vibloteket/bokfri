@@ -68,8 +68,8 @@ med globala alternativ eller sparas i en namngiven kontext:
 ```sh
 bokfri company list
 bokfri --company-id 37 year list
-bokfri context create mitt-foretag \
-  --data-dir "/sökväg/till/bokfri-data" --company-id 37 --year-id 12
+# --data-dir kan utelämnas för Bokfris vanliga datakatalog
+bokfri context create mitt-foretag --company-id 37 --year-id 12
 bokfri context use mitt-foretag
 bokfri trial-balance --format json
 ```
