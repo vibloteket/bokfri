@@ -13,6 +13,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- Financial report commands now render their rows, totals, periods, and balances
+  in text mode instead of only printing a generic “generated” confirmation.
 - CLI text and logs now use the active terminal charset, and plain-text date ranges
   use an ASCII hyphen for reliable rendering in Windows consoles.
 - Packaged CLI launchers now favor faster startup with `-XX:TieredStopAtLevel=1`;

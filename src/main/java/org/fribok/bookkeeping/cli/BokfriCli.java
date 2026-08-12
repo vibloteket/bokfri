@@ -665,7 +665,7 @@ public class BokfriCli implements Runnable {
                 result.put("difference", decimal(report.debitTotal().subtract(report.creditTotal())));
                 result.put("context", context);
                 return result;
-            }, "Trial balance");
+            }, BokfriCli::trialBalanceText);
         }
     }
 
@@ -686,7 +686,7 @@ public class BokfriCli implements Runnable {
                 result.put("difference", decimal(report.difference()));
                 result.put("context", context);
                 return result;
-            }, "Balance sheet");
+            }, BokfriCli::balanceSheetText);
         }
     }
 
@@ -706,7 +706,7 @@ public class BokfriCli implements Runnable {
                 result.put("result", decimal(report.result()));
                 result.put("context", context);
                 return result;
-            }, "Income statement");
+            }, BokfriCli::incomeStatementText);
         }
     }
 
@@ -730,7 +730,7 @@ public class BokfriCli implements Runnable {
                 result.put("closing", decimal(report.closing()));
                 result.put("context", context);
                 return result;
-            }, "General ledger");
+            }, BokfriCli::generalLedgerText);
         }
     }
 
@@ -751,7 +751,7 @@ public class BokfriCli implements Runnable {
                 result.put("balance", decimal(report.balance()));
                 result.put("context", context);
                 return result;
-            }, "Account balance");
+            }, BokfriCli::accountBalanceText);
         }
     }
 
@@ -773,20 +773,86 @@ public class BokfriCli implements Runnable {
                 SSNewAccountingYear year);
     }
 
-    private static int withReport(BokfriCli root, ReportOperation operation, String title) {
+    @FunctionalInterface
+    interface ReportTextFormatter {
+        String format(Map<String, Object> result);
+    }
+
+    private static int withReport(BokfriCli root, ReportOperation operation,
+            ReportTextFormatter textFormatter) {
         ResolvedContext context = root.resolveContext(true, true);
         try (BokfriRuntime runtime = BokfriRuntime.open(context.dataDir())) {
             SSNewCompany company = runtime.selectCompany(context.companyId());
             SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
             Map<String, Object> result = operation.run(new FinancialReportService(year),
                     selectedContext(context, company, year), year);
-            root.output(result, title + " generated");
+            root.output(result, textFormatter.format(result));
             return 0;
         } catch (IllegalArgumentException exception) {
             throw new CliException("REPORT_INVALID", exception.getMessage(), exception);
         } catch (Exception exception) {
             throw databaseFailure(exception);
         }
+    }
+
+    private static String trialBalanceText(Map<String, Object> result) {
+        StringBuilder text = new StringBuilder("Trial balance ")
+                .append(result.get("from")).append(" - ").append(result.get("to"))
+                .append("\nAccount\tDescription\tOpening\tDebit\tCredit\tClosing");
+        reportRows(result, FinancialReportService.TrialBalanceRow.class).forEach(row ->
+                text.append('\n').append(row.account()).append('\t').append(row.description())
+                        .append('\t').append(decimal(row.opening())).append('\t')
+                        .append(decimal(row.debit())).append('\t').append(decimal(row.credit()))
+                        .append('\t').append(decimal(row.closing())));
+        return text.append("\nTOTAL\t\t").append(result.get("openingTotal")).append('\t')
+                .append(result.get("debitTotal")).append('\t').append(result.get("creditTotal"))
+                .append('\t').append(result.get("closingTotal")).append("\nDifference: ")
+                .append(result.get("difference")).toString();
+    }
+
+    private static String balanceSheetText(Map<String, Object> result) {
+        StringBuilder text = new StringBuilder("Balance sheet ").append(result.get("date"))
+                .append("\nAccount\tDescription\tBalance");
+        reportRows(result, FinancialReportService.BalanceSheetRow.class).forEach(row ->
+                text.append('\n').append(row.account()).append('\t').append(row.description())
+                        .append('\t').append(decimal(row.balance())));
+        return text.append("\nAssets: ").append(result.get("assets"))
+                .append("\nLiabilities and equity: ").append(result.get("liabilitiesAndEquity"))
+                .append("\nCurrent result: ").append(result.get("currentResult"))
+                .append("\nDifference: ").append(result.get("difference")).toString();
+    }
+
+    private static String incomeStatementText(Map<String, Object> result) {
+        StringBuilder text = new StringBuilder("Income statement ")
+                .append(result.get("from")).append(" - ").append(result.get("to"))
+                .append("\nAccount\tDescription\tAmount");
+        reportRows(result, FinancialReportService.IncomeStatementRow.class).forEach(row ->
+                text.append('\n').append(row.account()).append('\t').append(row.description())
+                        .append('\t').append(decimal(row.amount())));
+        return text.append("\nResult: ").append(result.get("result")).toString();
+    }
+
+    private static String generalLedgerText(Map<String, Object> result) {
+        StringBuilder text = new StringBuilder().append(result.get("account")).append('\t')
+                .append(result.get("description")).append("\nPeriod: ").append(result.get("from"))
+                .append(" - ").append(result.get("to")).append("\nOpening: ")
+                .append(result.get("opening"))
+                .append("\nVoucher\tDate\tDescription\tDebit\tCredit\tBalance");
+        reportRows(result, FinancialReportService.LedgerRow.class).forEach(row ->
+                text.append('\n').append(row.voucherNumber()).append('\t').append(row.date())
+                        .append('\t').append(row.description()).append('\t').append(decimal(row.debit()))
+                        .append('\t').append(decimal(row.credit())).append('\t')
+                        .append(decimal(row.balance())));
+        return text.append("\nClosing: ").append(result.get("closing")).toString();
+    }
+
+    private static String accountBalanceText(Map<String, Object> result) {
+        return result.get("account") + "\t" + result.get("description") + "\t"
+                + result.get("date") + "\t" + result.get("balance");
+    }
+
+    private static <T> List<T> reportRows(Map<String, Object> result, Class<T> rowType) {
+        return ((List<?>) result.get("rows")).stream().map(rowType::cast).toList();
     }
 
     @Command(name="opening-balance",description="Inspect and manage opening balances",subcommands={OpeningBalanceShow.class,OpeningBalanceValidate.class,OpeningBalanceSet.class,OpeningBalanceCarryForward.class})

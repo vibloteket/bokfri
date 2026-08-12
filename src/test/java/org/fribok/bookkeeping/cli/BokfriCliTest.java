@@ -162,6 +162,44 @@ class BokfriCliTest {
     }
 
     @Test
+    void financialReportsRenderUsefulText() throws Exception {
+        Path config = temporaryDirectory.resolve("reports-cli.yaml");
+        Path data = temporaryDirectory.resolve("reports-data");
+        Result companies = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode yearRows = new ObjectMapper().readTree(years.stdout()).path("years");
+        int yearId = 0;
+        for (JsonNode year : yearRows) {
+            if ("2026-07-01".equals(year.path("from").asText())) {
+                yearId = year.path("id").asInt();
+            }
+        }
+        String[] context = {"--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(yearId)};
+
+        Result trial = execute(concat(context, "trial-balance"));
+        Result balanceSheet = execute(concat(context, "balance-sheet"));
+        Result income = execute(concat(context, "income-statement"));
+        Result ledger = execute(concat(context, "general-ledger", "--account", "1930"));
+        Result balance = execute(concat(context, "account", "balance", "1930"));
+
+        assertThat(trial.stdout()).contains("Account\tDescription\tOpening\tDebit\tCredit\tClosing", "TOTAL")
+                .doesNotContain("generated");
+        assertThat(balanceSheet.stdout()).contains("Account\tDescription\tBalance", "Assets:", "Difference:")
+                .doesNotContain("generated");
+        assertThat(income.stdout()).contains("Account\tDescription\tAmount", "Result:")
+                .doesNotContain("generated");
+        assertThat(ledger.stdout()).contains("Voucher\tDate\tDescription\tDebit\tCredit\tBalance", "Closing:")
+                .doesNotContain("generated");
+        assertThat(balance.stdout()).contains("1930\tFöretagskonto\t2027-06-30\t")
+                .doesNotContain("generated");
+    }
+
+    @Test
     void reportsStableJsonErrorForUnknownContext() throws Exception {
         Path config = temporaryDirectory.resolve("cli.yaml");
 
@@ -172,6 +210,12 @@ class BokfriCliTest {
         assertThat(result.stdout()).isEmpty();
         JsonNode error = new ObjectMapper().readTree(result.stderr()).path("error");
         assertThat(error.path("code").asText()).isEqualTo("CONTEXT_NOT_FOUND");
+    }
+
+    private static String[] concat(String[] prefix, String... suffix) {
+        String[] result = java.util.Arrays.copyOf(prefix, prefix.length + suffix.length);
+        System.arraycopy(suffix, 0, result, prefix.length, suffix.length);
+        return result;
     }
 
     private Result execute(String... arguments) {
