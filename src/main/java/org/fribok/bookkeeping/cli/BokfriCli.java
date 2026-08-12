@@ -92,7 +92,10 @@ import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
 import se.swedsoft.bookkeeping.importexport.sie.util.SIEType;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
@@ -588,7 +591,7 @@ public class BokfriCli implements Runnable {
                     return item;
                 }).toList();
                 String text = years.stream().map(item -> item.get("id") + "\t" + item.get("from")
-                        + " – " + item.get("to"))
+                        + " - " + item.get("to"))
                         .reduce((left, right) -> left + "\n" + right).orElse("No accounting years found");
                 Map<String, Object> selected = context.asMap();
                 selected.put("companyName", company.getName());
@@ -1896,7 +1899,7 @@ public class BokfriCli implements Runnable {
                 if (selectedFrom.isBefore(year.getLocalFrom()) || selectedTo.isAfter(year.getLocalTo())) {
                     throw new CliException("VAT_REPORT_PERIOD_INVALID",
                             "VAT report period must be within the selected accounting year "
-                                    + year.getLocalFrom() + " – " + year.getLocalTo());
+                                    + year.getLocalFrom() + " - " + year.getLocalTo());
                 }
                 runtime.database().init(false);
                 var report = new VatService(runtime.database()).report(selectedFrom, selectedTo);
@@ -1906,7 +1909,7 @@ public class BokfriCli implements Runnable {
                 result.put("boxes", report.boxes());
                 result.put("vatToPayOrRefund", decimal(report.vatToPayOrRefund()));
                 result.put("context", selectedContext(context, company, year));
-                root.output(result, "VAT report " + selectedFrom + " – " + selectedTo
+                root.output(result, "VAT report " + selectedFrom + " - " + selectedTo
                         + "\nVAT to pay/refund: " + report.vatToPayOrRefund());
                 return 0;
             } catch (CliException exception) {
@@ -2998,7 +3001,13 @@ public class BokfriCli implements Runnable {
 
     public static void main(String[] args) {
         System.setProperty("java.awt.headless", "true");
-        int exitCode = execute(args, new PrintWriter(System.out, true), new PrintWriter(System.err, true));
+        Charset charset = System.console() == null
+                ? StandardCharsets.UTF_8
+                : System.console().charset();
+        System.setProperty("bokfri.cliCharset", charset.name());
+        int exitCode = execute(args,
+                new PrintWriter(new OutputStreamWriter(System.out, charset), true),
+                new PrintWriter(new OutputStreamWriter(System.err, charset), true));
         System.exit(exitCode);
     }
 }

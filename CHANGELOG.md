@@ -13,6 +13,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- CLI text and logs now use the active terminal charset, and plain-text date ranges
+  use an ASCII hyphen for reliable rendering in Windows consoles.
 - Packaged CLI launchers now favor faster startup with `-XX:TieredStopAtLevel=1`;
   the long-running GUI launcher retains the JVM's normal optimization strategy.
 - `bokfri context create` now uses Bokfri's platform-specific default data
