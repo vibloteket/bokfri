@@ -63,7 +63,7 @@ public class SSVoucherRow implements Serializable, Cloneable {
      * @param pCredit
      */
     public SSVoucherRow(SSAccount pAccount, BigDecimal pDebet, BigDecimal pCredit) {
-        iAccount = pAccount;
+        setAccount(pAccount);
         iDebet = pDebet;
         iCredit = pCredit;
     }

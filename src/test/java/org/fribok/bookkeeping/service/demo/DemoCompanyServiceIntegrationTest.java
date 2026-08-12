@@ -6,8 +6,11 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.system.SSDB;
+import org.fribok.bookkeeping.service.report.FinancialReportService;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.time.LocalDate;
@@ -56,6 +59,24 @@ class DemoCompanyServiceIntegrationTest {
         assertThat(years.get(1).getLocalTo()).isEqualTo(LocalDate.of(2027, 6, 30));
         assertThat(result.vouchers()).isGreaterThanOrEqualTo(9);
         assertThat(result.invoices()).isEqualTo(2);
+
+        SSNewAccountingYear current = years.get(1);
+        database.setCurrentCompany(result.company());
+        database.setCurrentYear(current);
+        List<SSVoucher> currentVouchers = database.getVouchers(current);
+        assertThat(currentVouchers).allSatisfy(voucher -> {
+            assertThat(voucher.getRows()).allSatisfy(row -> assertThat(row.getAccountNr()).isNotNull());
+            assertThat(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher))
+                    .isEqualByComparingTo(
+                            se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher));
+        });
+        SSVoucher bankFee = currentVouchers.stream().filter(voucher -> voucher.getNumber() == 2)
+                .findFirst().orElseThrow();
+        assertThat(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(bankFee))
+                .isEqualByComparingTo("125");
+        assertThat(new FinancialReportService(current)
+                .accountBalance(1930, LocalDate.of(2027, 6, 30)).balance())
+                .isEqualByComparingTo(new BigDecimal("64475"));
 
         DemoCompanyResult recreated = service.recreate();
         assertThat(recreated.removedCompanies()).isEqualTo(1);

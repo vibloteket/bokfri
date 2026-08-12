@@ -13,6 +13,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- Voucher rows created with an account now retain its account number after persistence;
+  demo vouchers therefore appear in balances and CLI output with correct totals and accounts.
+- Voucher list/show text now includes both debit and credit totals plus account descriptions.
 - Financial report commands now render their rows, totals, periods, and balances
   in text mode instead of only printing a generic “generated” confirmation.
 - CLI text and logs now use the active terminal charset, and plain-text date ranges

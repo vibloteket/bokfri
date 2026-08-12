@@ -2058,7 +2058,7 @@ public class BokfriCli implements Runnable {
                 result.put("vouchers", vouchers);
                 String text = vouchers.stream().map(voucher -> voucher.get("number") + "\t"
                         + voucher.get("date") + "\t" + voucher.get("description") + "\t"
-                        + voucher.get("debitTotal"))
+                        + voucher.get("debitTotal") + "\t" + voucher.get("creditTotal"))
                         .reduce((left, right) -> left + "\n" + right).orElse("No vouchers found");
                 root.output(result, text);
                 return 0;
@@ -2981,13 +2981,20 @@ public class BokfriCli implements Runnable {
         text.append("Voucher ").append(voucher.getNumber()).append('\n');
         text.append("Date: ").append(voucher.getLocalDate()).append('\n');
         text.append("Description: ").append(voucher.getDescription()).append('\n');
+        text.append("Account\tDescription\tDebit\tCredit\n");
         for (SSVoucherRow row : voucher.getRows()) {
+            SSAccount account = row.getAccount();
             text.append(row.getAccountNr()).append('\t')
+                    .append(account == null ? "" : account.getDescription()).append('\t')
                     .append(row.getDebet() == null ? "" : row.getDebet().toPlainString())
                     .append('\t')
                     .append(row.getCredit() == null ? "" : row.getCredit().toPlainString())
                     .append('\n');
         }
+        text.append("Total\t\t")
+                .append(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher))
+                .append('\t')
+                .append(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher));
         return text.toString().stripTrailing();
     }
 

@@ -35,6 +35,7 @@ class SSVoucherRowTest {
 
         SSVoucherRow row = new SSVoucherRow(account, debet, credit);
 
+        assertThat(row.getAccountNr()).isEqualTo(1000);
         assertThat(row.getDebet()).isEqualByComparingTo("100.00");
         assertThat(row.getCredit()).isEqualByComparingTo("50.00");
     }

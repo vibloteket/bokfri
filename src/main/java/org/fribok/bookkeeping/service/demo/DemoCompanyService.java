@@ -125,6 +125,9 @@ public final class DemoCompanyService {
                 debit(6310, "4800"), credit(1930, "4800"));
         createVoucher(5, LocalDate.of(2026, 6, 30), "Bankavgifter",
                 debit(6570, "600"), credit(1930, "600"));
+        createVoucher(6, LocalDate.of(2026, 6, 30), "Omföring av årets resultat",
+                debit(3001, "40000"), credit(5410, "8000"), credit(6310, "4800"),
+                credit(6570, "600"), credit(2099, "26600"));
 
         database.setCurrentYear(current);
         database.init(false);
