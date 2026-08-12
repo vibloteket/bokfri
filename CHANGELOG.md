@@ -13,6 +13,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- Packaged CLI launchers now favor faster startup with `-XX:TieredStopAtLevel=1`;
+  the long-running GUI launcher retains the JVM's normal optimization strategy.
 - `bokfri context create` now uses Bokfri's platform-specific default data
   directory when `--data-dir` is omitted and derives its default name from the
   company and accounting-year start date; custom names remain available via `--name`.

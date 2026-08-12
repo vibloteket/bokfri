@@ -75,7 +75,7 @@ public final class CliSmokeTest {
         years.jsonObject();
         int yearId = firstInt(years.stdout, "id");
 
-        cli("context", "create", "smoke", "--data-dir", data.toString(),
+        cli("context", "create", "--name", "smoke", "--data-dir", data.toString(),
                 "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(yearId)).success();
         cli("context", "use", "smoke").success();
         Result current = cli("--format", "json", "context", "current");
@@ -102,7 +102,7 @@ public final class CliSmokeTest {
         require(createdYear.stdout.contains("\"from\":\"2026-01-01\""),
                 "accounting year was not created");
 
-        cli("context", "create", "isolated-full-year", "--data-dir", data.toString(),
+        cli("context", "create", "--name", "isolated-full-year", "--data-dir", data.toString(),
                 "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(yearId)).success();
         cli("context", "use", "isolated-full-year").success();
         Result current = cli("--format", "json", "context", "current");
@@ -730,7 +730,7 @@ public final class CliSmokeTest {
         created.success();
         int toYearId = firstInt(created.stdout, "id");
 
-        cli("context", "create", "isolated-next-year", "--data-dir", data.toString(),
+        cli("context", "create", "--name", "isolated-next-year", "--data-dir", data.toString(),
                 "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(toYearId)).success();
         cli("context", "use", "isolated-next-year").success();
         Result current = cli("--format", "json", "context", "current");
