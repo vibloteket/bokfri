@@ -2966,7 +2966,6 @@ public class BokfriCli implements Runnable {
     }
 
     public static int execute(String[] args, PrintWriter out, PrintWriter err) {
-        System.setProperty("java.awt.headless", "true");
         if (System.getProperty("logback.configurationFile") == null) {
             System.setProperty("logback.configurationFile", "logback-cli.xml");
         }
@@ -2998,6 +2997,7 @@ public class BokfriCli implements Runnable {
     }
 
     public static void main(String[] args) {
+        System.setProperty("java.awt.headless", "true");
         int exitCode = execute(args, new PrintWriter(System.out, true), new PrintWriter(System.err, true));
         System.exit(exitCode);
     }

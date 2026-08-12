@@ -59,6 +59,9 @@ public final class BokfriRuntime implements AutoCloseable {
 
     @Override
     public void close() {
+        database.setCurrentYear(null);
+        database.setCurrentCompany(null);
+        database.clearLists();
         database.shutdown();
     }
 }

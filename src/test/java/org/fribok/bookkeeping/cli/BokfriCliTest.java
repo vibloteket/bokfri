@@ -174,14 +174,6 @@ class BokfriCliTest {
         assertThat(error.path("code").asText()).isEqualTo("CONTEXT_NOT_FOUND");
     }
 
-    @Test
-    void runsHeadlessly() {
-        Result result = execute("--config", temporaryDirectory.resolve("cli.yaml").toString(), "version");
-
-        assertThat(result.exitCode()).isZero();
-        assertThat(System.getProperty("java.awt.headless")).isEqualTo("true");
-    }
-
     private Result execute(String... arguments) {
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
