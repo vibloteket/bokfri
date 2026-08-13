@@ -44,6 +44,11 @@ public final class BackupService {
     }
 
     public BackupDetails create(Path output, boolean overwrite) throws IOException {
+        return create(output, overwrite, DataFormatManager.CURRENT_DATA_FORMAT_VERSION);
+    }
+
+    /** Creates a backup carrying the supplied, already detected database format version. */
+    public BackupDetails create(Path output, boolean overwrite, int dataFormatVersion) throws IOException {
         Path target = output.toAbsolutePath().normalize();
         if (Files.exists(target) && !overwrite) {
             throw new FileAlreadyExistsException(target.toString());
@@ -55,7 +60,7 @@ public final class BackupService {
         Path temporary = Files.createTempFile(target.getParent(), ".bokfri-backup-", ".zip");
         LocalDateTime createdAt = LocalDateTime.now();
         try {
-            writeArchive(temporary, target, createdAt);
+            writeArchive(temporary, target, createdAt, dataFormatVersion);
             moveIntoPlace(temporary, target, overwrite);
         } finally {
             Files.deleteIfExists(temporary);
@@ -203,7 +208,8 @@ public final class BackupService {
         return List.copyOf(backups);
     }
 
-    private void writeArchive(Path temporary, Path target, LocalDateTime createdAt) throws IOException {
+    private void writeArchive(Path temporary, Path target, LocalDateTime createdAt,
+            int dataFormatVersion) throws IOException {
         Path database = dataDirectory.resolve("db").resolve("JFSDB");
         List<Path> files = DATABASE_SUFFIXES.stream().map(suffix -> Path.of(database + suffix))
                 .filter(Files::isRegularFile).toList();
@@ -222,8 +228,7 @@ public final class BackupService {
             JSON.writerWithDefaultPrettyPrinter().writeValue(manifest.toFile(),
                     new BackupManifest(BackupManifest.FORMAT,
                             BackupManifest.CURRENT_BACKUP_FORMAT_VERSION,
-                            DataFormatManager.CURRENT_DATA_FORMAT_VERSION,
-                            Version.APP_VERSION, createdAt));
+                            dataFormatVersion, Version.APP_VERSION, createdAt));
             try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(temporary))) {
                 for (Path file : files) {
                     add(zip, file, file.getFileName().toString());

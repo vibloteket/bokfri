@@ -17,9 +17,10 @@ class DataFormatManagerTest {
         try (Connection connection = connection()) {
             connection.createStatement().executeUpdate("CREATE TABLE legacy_table (id INTEGER)");
 
-            int version = DataFormatManager.checkAndInitialize(connection, true);
-
-            assertThat(version).isEqualTo(1);
+            assertThatThrownBy(() -> DataFormatManager.checkAndInitialize(connection, true))
+                    .isInstanceOf(DataMigrationRequiredException.class)
+                    .hasMessageContaining("must be migrated");
+            assertThat(DataFormatManager.detect(connection)).isEqualTo(1);
             assertThat(metadataTableExists(connection)).isFalse();
         }
     }

@@ -78,7 +78,7 @@
 
     <field name="row.number"          class="java.lang.String"/>
     <field name="row.description"     class="java.lang.String"/>
-    <field name="row.count"           class="java.lang.Integer"/>
+    <field name="row.count"           class="java.math.BigDecimal"/>
     <field name="row.unit"            class="java.lang.String"/>
     <field name="row.unitprice"       class="java.math.BigDecimal"/>
     <field name="row.discount"        class="java.math.BigDecimal"/>

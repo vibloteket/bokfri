@@ -46,9 +46,14 @@ public final class InvoiceValidator {
                 issues.add(issue("INVOICE_ROW_DESCRIPTION_REQUIRED", "description", rowNumber,
                         "Fakturaraden saknar beskrivning."));
             }
-            if (row == null || row.getQuantity() == null || row.getQuantity() <= 0) {
+            if (row == null || row.getQuantity() == null || row.getQuantity().signum() <= 0
+                    || row.getQuantity().stripTrailingZeros().scale() > 6) {
                 issues.add(issue("INVOICE_ROW_QUANTITY_INVALID", "quantity", rowNumber,
-                        "Fakturaradens antal måste vara positivt."));
+                        "Fakturaradens antal måste vara positivt och ha högst sex decimaler."));
+            } else if (row.getProduct() != null && row.getProduct().isStockProduct()
+                    && row.getQuantity().stripTrailingZeros().scale() > 0) {
+                issues.add(issue("INVOICE_ROW_STOCK_QUANTITY_FRACTIONAL", "quantity", rowNumber,
+                        "Antalet för en lagerförd produkt måste vara ett heltal."));
             }
             if (row == null || row.getUnitprice() == null || row.getUnitprice().signum() < 0) {
                 issues.add(issue("INVOICE_ROW_PRICE_INVALID", "unitPrice", rowNumber,

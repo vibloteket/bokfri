@@ -16,7 +16,8 @@ public class SSBigDecimalCellRenderer extends DefaultTableCellRenderer {
     /**
      *
      */
-    private int iFractionDigits;
+    private int iMinimumFractionDigits;
+    private int iMaximumFractionDigits;
 
     private boolean iShowNullValues;
 
@@ -34,8 +35,15 @@ public class SSBigDecimalCellRenderer extends DefaultTableCellRenderer {
      * @param pShowNullValues
      */
     public SSBigDecimalCellRenderer(int pFractionDigits, boolean pShowNullValues) {
-        iFractionDigits = pFractionDigits;
-        iShowNullValues = pShowNullValues;
+        this(pFractionDigits, pFractionDigits, pShowNullValues);
+    }
+
+    /** Creates a renderer with independent minimum and maximum decimal digits. */
+    public SSBigDecimalCellRenderer(int minimumFractionDigits, int maximumFractionDigits,
+            boolean showNullValues) {
+        iMinimumFractionDigits = minimumFractionDigits;
+        iMaximumFractionDigits = maximumFractionDigits;
+        iShowNullValues = showNullValues;
 
         setHorizontalAlignment(DefaultTableCellRenderer.RIGHT);
     }
@@ -48,8 +56,8 @@ public class SSBigDecimalCellRenderer extends DefaultTableCellRenderer {
     protected void setValue(Object value) {
         NumberFormat format = NumberFormat.getNumberInstance();
 
-        format.setMinimumFractionDigits(iFractionDigits);
-        format.setMaximumFractionDigits(iFractionDigits);
+        format.setMinimumFractionDigits(iMinimumFractionDigits);
+        format.setMaximumFractionDigits(iMaximumFractionDigits);
         format.setGroupingUsed(true);
 
         if (value != null) {
@@ -71,7 +79,8 @@ public class SSBigDecimalCellRenderer extends DefaultTableCellRenderer {
 
         sb.append(
                 "se.swedsoft.bookkeeping.gui.util.table.editors.SSBigDecimalCellRenderer");
-        sb.append("{iFractionDigits=").append(iFractionDigits);
+        sb.append("{iMinimumFractionDigits=").append(iMinimumFractionDigits);
+        sb.append(", iMaximumFractionDigits=").append(iMaximumFractionDigits);
         sb.append(", iShowNullValues=").append(iShowNullValues);
         sb.append('}');
         return sb.toString();

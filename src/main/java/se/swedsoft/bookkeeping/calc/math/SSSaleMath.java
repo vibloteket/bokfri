@@ -281,13 +281,13 @@ public class SSSaleMath {
 
             // This is the product we want to get the quantity for
             if (iRowProduct.equals(iProduct)) {
-                iCount = iCount + iRow.getQuantity();
+                iCount = iCount + iRow.getQuantity().intValueExact();
             }
             // Get the quantity if this is a parcel product
             if (iRowProduct.isParcel()) {
                 Integer iQuantity = SSProductMath.getProductCount(iRowProduct, iProduct);
 
-                iCount = iCount + iRow.getQuantity() * iQuantity;
+                iCount = iCount + iRow.getQuantity().intValueExact() * iQuantity;
             }
 
         }

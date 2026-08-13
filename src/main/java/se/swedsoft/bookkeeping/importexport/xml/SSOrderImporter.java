@@ -617,7 +617,7 @@ public class SSOrderImporter {    private static final Logger LOG = LoggerFactor
                                 iValue = iTextRowAttList.item(0) == null
                                         ? "0"
                                         : iTextRowAttList.item(0).getNodeValue().trim();
-                                iRow.setQuantity(Integer.parseInt(iValue));
+                                iRow.setQuantity(new BigDecimal(iValue));
                             }
 
                             // Rabatt
@@ -980,7 +980,7 @@ public class SSOrderImporter {    private static final Logger LOG = LoggerFactor
                     }
 
                     try {
-                        iRow.setQuantity(Integer.parseInt(iFields[5]));
+                        iRow.setQuantity(new BigDecimal(iFields[5]));
                     } catch (NumberFormatException e) {
                         iRow.setQuantity(0);
                     }

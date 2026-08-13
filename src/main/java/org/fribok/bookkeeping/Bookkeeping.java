@@ -10,6 +10,8 @@ import com.jgoodies.looks.FontSets;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
+import org.fribok.bookkeeping.dataformat.DataMigrationRequiredException;
+import org.fribok.bookkeeping.dataformat.DataMigrationService;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.data.util.SSConfig;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
@@ -42,6 +44,10 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
      *
      */
     private static boolean startupDatabase() {
+        return startupDatabase(false);
+    }
+
+    private static boolean startupDatabase(boolean migrationApproved) {
         try {
             Class.forName("org.hsqldb.jdbcDriver");
         } catch (ClassNotFoundException e) {
@@ -57,10 +63,26 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
             connection = DriverManager.getConnection(
                     "jdbc:hsqldb:file:" + dbDir.getAbsolutePath() + File.separator + "JFSDB", "sa", "");
             connection.setAutoCommit(false);
-            DataFormatManager.checkAndInitialize(connection, databaseExisted);
+            try {
+                DataFormatManager.checkAndInitialize(connection, databaseExisted);
+            } catch (DataMigrationRequiredException exception) {
+                connection.close();
+                connection = null;
+                if (migrationApproved || !approveMigration(exception)) {
+                    return false;
+                }
+                java.nio.file.Path backup = DataMigrationService.migrate(
+                        Path.get(Path.USER_DATA).toPath());
+                JOptionPane.showMessageDialog(null,
+                        "Företaget har uppgraderats till dataformat "
+                                + DataFormatManager.CURRENT_DATA_FORMAT_VERSION
+                                + ".\nSäkerhetskopian finns i:\n" + backup,
+                        "Uppgraderingen är klar", JOptionPane.INFORMATION_MESSAGE);
+                return startupDatabase(true);
+            }
             SSDB.getInstance().startupLocal(connection);
             return true;
-        } catch (SQLException e) {
+        } catch (SQLException | java.io.IOException e) {
             if (connection != null) {
                 try {
                     connection.close();
@@ -75,6 +97,16 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
                     "Databasen kunde inte öppnas", JOptionPane.ERROR_MESSAGE);
             return false;
         }
+    }
+
+    private static boolean approveMigration(DataMigrationRequiredException exception) {
+        String message = "Företaget använder dataformat " + exception.getFoundVersion()
+                + " och måste uppgraderas till format " + exception.getRequiredVersion() + ".\n\n"
+                + "Bokfri skapar och verifierar automatiskt en fullständig säkerhetskopia först.\n"
+                + "Efter uppgraderingen ska företaget inte öppnas med äldre Bokfri/Fribok.\n\n"
+                + "Vill du uppgradera nu?";
+        return JOptionPane.showConfirmDialog(null, message, "Företaget behöver uppgraderas",
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION;
     }
 
     /**

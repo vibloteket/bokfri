@@ -522,18 +522,19 @@ public class SSInvoiceMath extends SSSaleMath {    private static final Logger L
                             iReserved = iInvoiceCount.get(iProductRow.getProductNr())
                                     == null
                                             ? iProductRow.getQuantity()
-                                                    * iRow.getQuantity()
+                                                    * iRow.getQuantity().intValueExact()
                                                     : iInvoiceCount.get(
                                                             iProductRow.getProductNr())
                                                                     + (iProductRow.getQuantity()
-                                                                            * iRow.getQuantity());
+                                                                            * iRow.getQuantity().intValueExact());
                             iInvoiceCount.put(iProductRow.getProductNr(), iReserved);
                         }
                     }
                 } else {
                     iReserved = iInvoiceCount.get(iRow.getProductNr()) == null
-                            ? iRow.getQuantity()
-                            : iInvoiceCount.get(iRow.getProductNr()) + iRow.getQuantity();
+                            ? iRow.getQuantity().intValueExact()
+                            : iInvoiceCount.get(iRow.getProductNr())
+                                    + iRow.getQuantity().intValueExact();
                     iInvoiceCount.put(iRow.getProductNr(), iReserved);
                 }
             }

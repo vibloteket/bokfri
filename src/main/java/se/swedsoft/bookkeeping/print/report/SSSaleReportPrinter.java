@@ -49,7 +49,7 @@ public class SSSaleReportPrinter extends SSPrinter {
     // The number of days in the period
     private Integer iDays;
     // The number of sold products in the period
-    private Map<String, Integer> iCount;
+    private Map<String, BigDecimal> iCount;
 
     private Map<String, BigDecimal> iContribution;
     private Map<String, BigDecimal> iContributionRate;
@@ -107,7 +107,7 @@ public class SSSaleReportPrinter extends SSPrinter {
 
                 SSProduct iProduct = getObject(rowIndex);
 
-                Integer    iProductCount = iCount.get(iProduct.getNumber());
+                BigDecimal iProductCount = iCount.get(iProduct.getNumber());
                 BigDecimal iProductContribution = iContribution.get(iProduct.getNumber());
                 BigDecimal iProductContributionRate = iContributionRate.get(
                         iProduct.getNumber());
@@ -130,7 +130,8 @@ public class SSSaleReportPrinter extends SSPrinter {
                         return null;
                     }
 
-                    value = new BigDecimal(iProductCount * 30.436875 / iDays);
+                    value = iProductCount.multiply(new BigDecimal("30.436875"))
+                            .divide(BigDecimal.valueOf(iDays), MathContext.DECIMAL64);
                     break;
 
                 case 4:
@@ -138,7 +139,8 @@ public class SSSaleReportPrinter extends SSPrinter {
                         return null;
                     }
 
-                    value = new BigDecimal(iProductCount * 7.00 / iDays);
+                    value = iProductCount.multiply(new BigDecimal("7.00"))
+                            .divide(BigDecimal.valueOf(iDays), MathContext.DECIMAL64);
                     break;
 
                 case 5:
@@ -162,7 +164,7 @@ public class SSSaleReportPrinter extends SSPrinter {
                         return null;
                     }
 
-                    value = iProductContribution.multiply(new BigDecimal(iProductCount));
+                    value = iProductContribution.multiply(iProductCount);
                     break;
 
                 case 10:
@@ -210,21 +212,17 @@ public class SSSaleReportPrinter extends SSPrinter {
         if (iSortingMode == SortingMode.Period) {
             Collections.sort(iProducts, (iProduct1, iProduct2) -> {
 
-                    Integer iCount1 = iCount.get(iProduct1.getNumber());
-                    Integer iCount2 = iCount.get(iProduct2.getNumber());
+                    BigDecimal iCount1 = iCount.get(iProduct1.getNumber());
+                    BigDecimal iCount2 = iCount.get(iProduct2.getNumber());
 
                     if (iCount1 == null) {
-                        iCount1 = 0;
+                        iCount1 = BigDecimal.ZERO;
                     }
                     if (iCount2 == null) {
-                        iCount2 = 0;
+                        iCount2 = BigDecimal.ZERO;
                     }
 
-                    if (iAscending) {
-                        return iCount1 - iCount2;
-                    } else {
-                        return iCount2 - iCount1;
-                    }
+                    return iAscending ? iCount1.compareTo(iCount2) : iCount2.compareTo(iCount1);
 
                 });
         }
@@ -360,7 +358,7 @@ public class SSSaleReportPrinter extends SSPrinter {
 
                         if (iCount.containsKey(iProduct.getNumber())) {
                             iCount.put(iProduct.getNumber(),
-                                    iCount.get(iProduct.getNumber()) + iRow.getQuantity());
+                                    iCount.get(iProduct.getNumber()).add(iRow.getQuantity()));
                         } else {
                             iCount.put(iProduct.getNumber(), iRow.getQuantity());
                         }
@@ -395,10 +393,9 @@ public class SSSaleReportPrinter extends SSPrinter {
 
                         if (iCount.containsKey(iProduct.getNumber())) {
                             iCount.put(iProduct.getNumber(),
-                                    iCount.get(iProduct.getNumber())
-                                    + (iRow.getQuantity() * -1));
+                                    iCount.get(iProduct.getNumber()).subtract(iRow.getQuantity()));
                         } else {
-                            iCount.put(iProduct.getNumber(), iRow.getQuantity() * -1);
+                            iCount.put(iProduct.getNumber(), iRow.getQuantity().negate());
                         }
                     }
                 }
@@ -443,21 +440,20 @@ public class SSSaleReportPrinter extends SSPrinter {
                 iInprices.put(iProduct.getNumber(), iProduct.getStockPrice());
             }
             if (!iCount.containsKey(iProduct.getNumber())) {
-                iCount.put(iProduct.getNumber(), 0);
+                iCount.put(iProduct.getNumber(), BigDecimal.ZERO);
             }
 
             if (iAverageSellingPrice.containsKey(iProduct.getNumber())
                     && iCount.containsKey(iProduct.getNumber())) {
-                Integer iSoldCount = iCount.get(iProduct.getNumber());
+                BigDecimal iSoldCount = iCount.get(iProduct.getNumber());
                 BigDecimal iTotalSellingPrice = iAverageSellingPrice.get(
                         iProduct.getNumber());
 
-                if (iSoldCount == null || iSoldCount == 0) {
+                if (iSoldCount == null || iSoldCount.signum() == 0) {
                     iAverageSellingPrice.put(iProduct.getNumber(),
                             iProduct.getSellingPrice());
                 } else {
-                    BigDecimal bSoldCount = new BigDecimal(iSoldCount);
-                    BigDecimal iAverage = iTotalSellingPrice.divide(bSoldCount, new MathContext(10)).setScale(
+                    BigDecimal iAverage = iTotalSellingPrice.divide(iSoldCount, new MathContext(10)).setScale(
                             2, RoundingMode.HALF_UP);
 
                     iAverageSellingPrice.put(iProduct.getNumber(), iAverage);

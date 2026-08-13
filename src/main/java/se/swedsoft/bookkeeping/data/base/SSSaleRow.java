@@ -34,8 +34,11 @@ public class SSSaleRow implements SSTableSearchable, Serializable {
     private String iDescription;
     // Enhetspris
     private BigDecimal iUnitprice;
-    // Antal
+    // Legacy integer quantity retained for Java serialization compatibility with data format 1.
+    @Deprecated
     private Integer iCount;
+    // Decimal quantity used by data format 2 and later.
+    private BigDecimal iQuantity;
     // Enhet
     private SSUnit iUnit;
     // Rabatt
@@ -78,6 +81,7 @@ public class SSSaleRow implements SSTableSearchable, Serializable {
         iProductNr = iTenderRow.iProductNr;
         iUnitprice = iTenderRow.iUnitprice;
         iCount = iTenderRow.iCount;
+        iQuantity = iTenderRow.iQuantity;
         iUnit = iTenderRow.iUnit;
         iDiscount = iTenderRow.iDiscount;
         iTaxCode = iTenderRow.iTaxCode;
@@ -106,6 +110,7 @@ public class SSSaleRow implements SSTableSearchable, Serializable {
         this.iProduct = iProduct;
         iDiscount = null;
         iCount = null;
+        iQuantity = null;
         iAccount = null;
     }
 
@@ -186,16 +191,28 @@ public class SSSaleRow implements SSTableSearchable, Serializable {
      *
      * @return
      */
-    public Integer getQuantity() {
-        return iCount;
+    public BigDecimal getQuantity() {
+        return iQuantity != null ? iQuantity : iCount == null ? null : BigDecimal.valueOf(iCount);
     }
 
     /**
+     * Sets the quantity without using binary floating-point conversion.
      *
-     * @param iCount
+     * @param quantity decimal or integer quantity
      */
-    public void setQuantity(Integer iCount) {
-        this.iCount = iCount;
+    public void setQuantity(Number quantity) {
+        if (quantity == null) {
+            iQuantity = null;
+            iCount = null;
+            return;
+        }
+        iQuantity = (quantity instanceof BigDecimal decimal
+                ? decimal : new BigDecimal(quantity.toString())).stripTrailingZeros();
+        try {
+            iCount = iQuantity.intValueExact();
+        } catch (ArithmeticException exception) {
+            iCount = null;
+        }
     }
 
     // //////////////////////////////////////////////////
@@ -399,7 +416,7 @@ public class SSSaleRow implements SSTableSearchable, Serializable {
         iUnit = iProduct.getUnit();
         iTaxCode = iProduct.getTaxCode();
         iAccountNr = iProduct.getDefaultAccount(SSDefaultAccount.Sales);
-        iCount = 1;
+        setQuantity(1);
         iAccount = null;
         this.iProduct = iProduct;
     }
@@ -491,7 +508,7 @@ public class SSSaleRow implements SSTableSearchable, Serializable {
         sb.append(", ");
         sb.append(iUnitprice);
         sb.append(", ");
-        sb.append(iCount);
+        sb.append(getQuantity());
         sb.append(' ');
         sb.append(iUnit);
         sb.append(", ");
@@ -530,12 +547,12 @@ public class SSSaleRow implements SSTableSearchable, Serializable {
      */
     public Optional<BigDecimal> getSum() {
         // If either of the unitprice or count is null we cant have a sum
-        if (iUnitprice == null || iCount == null) {
+        if (iUnitprice == null || getQuantity() == null) {
             return Optional.empty();
         }
 
         // Calculate the sum of the products
-        BigDecimal iSum = iUnitprice.multiply(new BigDecimal(iCount));
+        BigDecimal iSum = iUnitprice.multiply(getQuantity());
 
         // No discount
         if (iDiscount == null) {

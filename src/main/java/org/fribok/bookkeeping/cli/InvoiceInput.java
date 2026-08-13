@@ -38,7 +38,7 @@ public class InvoiceInput {
     public static class Row {
         private String productNumber;
         private String description;
-        private Integer quantity;
+        private BigDecimal quantity;
         private BigDecimal unitPrice;
         private BigDecimal discount;
         private BigDecimal vatRate;
@@ -51,8 +51,8 @@ public class InvoiceInput {
         public void setProductNumber(String productNumber) { this.productNumber = productNumber; }
         public String getDescription() { return description; }
         public void setDescription(String description) { this.description = description; }
-        public Integer getQuantity() { return quantity; }
-        public void setQuantity(Integer quantity) { this.quantity = quantity; }
+        public BigDecimal getQuantity() { return quantity; }
+        public void setQuantity(BigDecimal quantity) { this.quantity = quantity; }
         public BigDecimal getUnitPrice() { return unitPrice; }
         public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
         public BigDecimal getDiscount() { return discount; }

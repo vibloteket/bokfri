@@ -4,6 +4,7 @@ package se.swedsoft.bookkeeping.gui.invoice.panel;
 import se.swedsoft.bookkeeping.calc.math.SSInvoiceMath;
 import se.swedsoft.bookkeeping.calc.math.SSProductMath;
 import se.swedsoft.bookkeeping.data.*;
+import org.fribok.bookkeeping.service.invoice.InvoiceValidator;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.common.*;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -496,7 +497,16 @@ public class SSInvoicePanel {
      * @return
      */
     public boolean isValid() {
-        return iInputVerifier.isValid();
+        if (!iInputVerifier.isValid()) {
+            return false;
+        }
+        var validation = InvoiceValidator.validate(getInvoice(), SSDB.getInstance().getAccounts());
+        if (!validation.valid()) {
+            JOptionPane.showMessageDialog(iPanel, validation.issues().get(0).message(),
+                    "Ogiltig fakturarad", JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        return true;
     }
 
     /**

@@ -413,10 +413,10 @@ public class SSInvoice extends SSSale {
 
             if (iMatchingRowOpt.isPresent()) {
                 SSSaleRow iMatchingRow = iMatchingRowOpt.get();
-                Integer iQuantity = iMatchingRow.getQuantity();
+                BigDecimal iQuantity = iMatchingRow.getQuantity();
 
                 if (iQuantity != null) {
-                    iMatchingRow.setQuantity(iQuantity + iRow.getQuantity());
+                    iMatchingRow.setQuantity(iQuantity.add(iRow.getQuantity()));
                 } else {
                     iMatchingRow.setQuantity(iRow.getQuantity());
 

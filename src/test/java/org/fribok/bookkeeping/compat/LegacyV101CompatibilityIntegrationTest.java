@@ -2,6 +2,7 @@ package org.fribok.bookkeeping.compat;
 
 import org.fribok.bookkeeping.cli.BokfriRuntime;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
+import org.fribok.bookkeeping.dataformat.DataMigrationRequiredException;
 import org.fribok.bookkeeping.service.backup.BackupService;
 import org.fribok.bookkeeping.service.backup.BackupVerification;
 import org.junit.jupiter.api.Tag;
@@ -17,6 +18,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** End-to-end compatibility checks against artifacts produced by released Bokfri v1.0.1. */
 @Tag("integration")
@@ -24,16 +26,22 @@ class LegacyV101CompatibilityIntegrationTest {
     private static final String RESOURCE_ROOT = "/compat/v1.0.1/";
 
     @Test
-    void opensReleasedV101DatabaseWithoutRewritingItsFormat(@TempDir Path tempDir) throws Exception {
+    void requiresApprovalThenMigratesReleasedV101Database(@TempDir Path tempDir) throws Exception {
         Path dataDirectory = tempDir.resolve("direct");
         extract("database-v1.0.1.zip", dataDirectory.resolve("db"));
 
-        try (BokfriRuntime runtime = BokfriRuntime.open(dataDirectory)) {
+        assertThatThrownBy(() -> BokfriRuntime.open(dataDirectory))
+                .isInstanceOf(DataMigrationRequiredException.class);
+        assertLegacyFormat(dataDirectory);
+
+        try (BokfriRuntime runtime = BokfriRuntime.open(dataDirectory, true)) {
             assertThat(runtime.database().getCompanies())
                     .extracting(company -> company.getName())
                     .containsExactly("Exempelföretag");
         }
-        assertLegacyFormat(dataDirectory);
+        assertCurrentFormat(dataDirectory);
+        assertThat(Files.list(dataDirectory.resolve("backups")))
+                .singleElement().satisfies(path -> assertThat(path).exists());
     }
 
     @Test
@@ -50,12 +58,14 @@ class LegacyV101CompatibilityIntegrationTest {
 
         Path restored = tempDir.resolve("restored");
         service.restore(backup, restored, false, true);
-        try (BokfriRuntime runtime = BokfriRuntime.open(restored)) {
+        assertThatThrownBy(() -> BokfriRuntime.open(restored))
+                .isInstanceOf(DataMigrationRequiredException.class);
+        try (BokfriRuntime runtime = BokfriRuntime.open(restored, true)) {
             assertThat(runtime.database().getCompanies())
                     .extracting(company -> company.getName())
                     .containsExactly("Exempelföretag");
         }
-        assertLegacyFormat(restored);
+        assertCurrentFormat(restored);
     }
 
     private void assertLegacyFormat(Path dataDirectory) throws Exception {
@@ -65,6 +75,17 @@ class LegacyV101CompatibilityIntegrationTest {
                 "jdbc:hsqldb:file:" + database, "sa", "")) {
             assertThat(DataFormatManager.detect(connection))
                     .isEqualTo(DataFormatManager.LEGACY_DATA_FORMAT_VERSION);
+            connection.createStatement().execute("SHUTDOWN");
+        }
+    }
+
+    private void assertCurrentFormat(Path dataDirectory) throws Exception {
+        Class.forName("org.hsqldb.jdbcDriver");
+        String database = dataDirectory.resolve("db/JFSDB").toAbsolutePath().toString();
+        try (var connection = java.sql.DriverManager.getConnection(
+                "jdbc:hsqldb:file:" + database, "sa", "")) {
+            assertThat(DataFormatManager.detect(connection))
+                    .isEqualTo(DataFormatManager.CURRENT_DATA_FORMAT_VERSION);
             connection.createStatement().execute("SHUTDOWN");
         }
     }

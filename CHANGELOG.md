@@ -13,6 +13,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- Customer invoice, credit-invoice, order, tender, and periodic-invoice rows now support
+  decimal quantities such as `0.5` hours; stock-tracked products still require whole units.
+- Bokfri data format 2 is now the sole write format. Opening format 1 requires explicit
+  approval, creates and verifies a full backup, and then migrates before normal loading;
+  CLI users opt in with `--migrate`.
 - Voucher rows created with an account now retain its account number after persistence;
   demo vouchers therefore appear in balances and CLI output with correct totals and accounts.
 - Voucher list/show text now includes both debit and credit totals plus account descriptions.

@@ -27,9 +27,14 @@ public class SSBigDecimalCellEditor extends AbstractCellEditor implements TableC
      * @param maxFractionDigits
      */
     public SSBigDecimalCellEditor(int maxFractionDigits) {
+        this(maxFractionDigits, maxFractionDigits);
+    }
+
+    /** Creates an editor with independent minimum and maximum decimal digits. */
+    public SSBigDecimalCellEditor(int minFractionDigits, int maxFractionDigits) {
         NumberFormat iFormat = NumberFormat.getNumberInstance();
 
-        iFormat.setMinimumFractionDigits(maxFractionDigits);
+        iFormat.setMinimumFractionDigits(minFractionDigits);
         iFormat.setMaximumFractionDigits(maxFractionDigits);
 
         iTextField = new JFormattedTextField(iFormat);

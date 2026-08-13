@@ -40,7 +40,7 @@ class BackupServiceTest {
         try (ZipFile zip = new ZipFile(backup.toFile())) {
             String manifest = new String(zip.getInputStream(zip.getEntry("manifest.json")).readAllBytes());
             assertThat(manifest).contains("\"format\" : \"bokfri-backup\"")
-                    .contains("\"dataFormatVersion\" : 1")
+                    .contains("\"dataFormatVersion\" : 2")
                     .contains("\"applicationVersion\"");
         }
     }

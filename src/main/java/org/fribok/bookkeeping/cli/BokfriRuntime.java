@@ -22,6 +22,12 @@ public final class BokfriRuntime implements AutoCloseable {
     }
 
     public static BokfriRuntime open(Path dataDir) throws IOException, SQLException, ClassNotFoundException {
+        return open(dataDir, false);
+    }
+
+    /** Opens a database, optionally migrating legacy format 1 after caller approval. */
+    public static BokfriRuntime open(Path dataDir, boolean migrate)
+            throws IOException, SQLException, ClassNotFoundException {
         Path databaseDirectory = dataDir.toAbsolutePath().normalize().resolve("db");
         Files.createDirectories(databaseDirectory);
         boolean databaseExisted = Files.exists(databaseDirectory.resolve("JFSDB.properties"));
@@ -31,7 +37,16 @@ public final class BokfriRuntime implements AutoCloseable {
                 "jdbc:hsqldb:file:" + databasePath, "sa", "");
         try {
             connection.setAutoCommit(false);
-            DataFormatManager.checkAndInitialize(connection, databaseExisted);
+            try {
+                DataFormatManager.checkAndInitialize(connection, databaseExisted);
+            } catch (org.fribok.bookkeeping.dataformat.DataMigrationRequiredException exception) {
+                connection.close();
+                if (!migrate) {
+                    throw exception;
+                }
+                org.fribok.bookkeeping.dataformat.DataMigrationService.migrate(dataDir);
+                return open(dataDir, false);
+            }
             SSDB database = SSDB.getInstance();
             database.startupLocal(connection);
             return new BokfriRuntime(database);

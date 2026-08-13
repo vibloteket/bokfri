@@ -7,6 +7,8 @@ import se.swedsoft.bookkeeping.data.common.SSTaxCode;
 import se.swedsoft.bookkeeping.data.common.SSUnit;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.table.editors.SSBigDecimalCellEditor;
+import se.swedsoft.bookkeeping.gui.util.table.editors.SSBigDecimalCellRenderer;
 import se.swedsoft.bookkeeping.gui.util.table.model.SSEditableTableModel;
 import se.swedsoft.bookkeeping.gui.util.table.model.SSTableColumn;
 
@@ -195,17 +197,27 @@ public class SSInvoiceRowTableModel extends SSEditableTableModel<SSSaleRow> {
 
         @Override
         public void setValue(SSSaleRow iObject, Object iValue) {
-            iObject.setQuantity((Integer) iValue);
+            iObject.setQuantity((BigDecimal) iValue);
         }
 
         @Override
         public Class getColumnClass() {
-            return Integer.class;
+            return BigDecimal.class;
         }
 
         @Override
         public int getDefaultWidth() {
             return 60;
+        }
+
+        @Override
+        public javax.swing.table.TableCellEditor getCellEditor() {
+            return new SSBigDecimalCellEditor(0, 6);
+        }
+
+        @Override
+        public javax.swing.table.TableCellRenderer getCellRenderer() {
+            return new SSBigDecimalCellRenderer(0, 6, false);
         }
     };
 

@@ -11,7 +11,7 @@ import java.sql.Statement;
 /** Reads, validates, and initializes Bokfri's application-level database format metadata. */
 public final class DataFormatManager {
     public static final int LEGACY_DATA_FORMAT_VERSION = 1;
-    public static final int CURRENT_DATA_FORMAT_VERSION = 1;
+    public static final int CURRENT_DATA_FORMAT_VERSION = 2;
 
     private static final String TABLE_NAME = "BOKFRI_METADATA";
     private static final String FORMAT_KEY = "data_format_version";
@@ -31,6 +31,9 @@ public final class DataFormatManager {
     public static int checkAndInitialize(Connection connection, boolean databaseExisted)
             throws SQLException {
         int version = checkSupported(connection);
+        if (databaseExisted && version < CURRENT_DATA_FORMAT_VERSION) {
+            throw new DataMigrationRequiredException(version, CURRENT_DATA_FORMAT_VERSION);
+        }
         if (!databaseExisted) {
             createMetadataTable(connection);
             put(connection, FORMAT_KEY, Integer.toString(CURRENT_DATA_FORMAT_VERSION));
@@ -80,6 +83,14 @@ public final class DataFormatManager {
                 }
             }
         }
+    }
+
+    /** Records a completed migration after its backup and data checks have succeeded. */
+    public static void recordCurrentVersion(Connection connection) throws SQLException {
+        createMetadataTable(connection);
+        put(connection, FORMAT_KEY, Integer.toString(CURRENT_DATA_FORMAT_VERSION));
+        put(connection, APPLICATION_KEY, Version.APP_VERSION);
+        connection.commit();
     }
 
     static void writeForTesting(Connection connection, int version) throws SQLException {

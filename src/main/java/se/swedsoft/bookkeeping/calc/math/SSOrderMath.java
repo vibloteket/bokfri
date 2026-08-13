@@ -88,7 +88,7 @@ public class SSOrderMath extends SSTenderMath {
             SSProduct iProduct = iRow.getProduct(iProducts);
 
             if (iProduct != null) {
-                Integer iCount = iRow.getQuantity();
+                Integer iCount = iRow.getQuantity().intValueExact();
 
                 Integer iTotal = iProductCount.get(iProduct);
 
@@ -157,18 +157,19 @@ public class SSOrderMath extends SSTenderMath {
                             iReserved = iOrderCount.get(iProductRow.getProductNr())
                                     == null
                                             ? iProductRow.getQuantity()
-                                                    * iRow.getQuantity()
+                                                    * iRow.getQuantity().intValueExact()
                                                     : iOrderCount.get(
                                                             iProductRow.getProductNr())
                                                                     + (iProductRow.getQuantity()
-                                                                            * iRow.getQuantity());
+                                                                            * iRow.getQuantity().intValueExact());
                             iOrderCount.put(iProductRow.getProductNr(), iReserved);
                         }
                     }
                 } else {
                     iReserved = iOrderCount.get(iRow.getProductNr()) == null
-                            ? iRow.getQuantity()
-                            : iOrderCount.get(iRow.getProductNr()) + iRow.getQuantity();
+                            ? iRow.getQuantity().intValueExact()
+                            : iOrderCount.get(iRow.getProductNr())
+                                    + iRow.getQuantity().intValueExact();
                     iOrderCount.put(iRow.getProductNr(), iReserved);
                 }
             }

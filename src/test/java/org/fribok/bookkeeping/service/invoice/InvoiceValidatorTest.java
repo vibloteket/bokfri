@@ -3,6 +3,7 @@ package org.fribok.bookkeeping.service.invoice;
 import org.junit.jupiter.api.Test;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSInvoice;
+import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.common.SSTaxCode;
 
@@ -38,6 +39,51 @@ class InvoiceValidatorTest {
                         "INVOICE_DUE_DATE_REQUIRED", "INVOICE_ROW_DESCRIPTION_REQUIRED",
                         "INVOICE_ROW_QUANTITY_INVALID", "INVOICE_ROW_PRICE_INVALID",
                         "INVOICE_ROW_ACCOUNT_REQUIRED", "INVOICE_ROW_VAT_REQUIRED");
+    }
+
+    @Test
+    void acceptsFractionalServiceQuantityAndCalculatesExactAmount() {
+        SSInvoice invoice = validInvoice();
+        SSSaleRow row = invoice.getRows().get(0);
+        row.setQuantity(new BigDecimal("0.5"));
+
+        InvoiceValidationResult result = InvoiceValidator.validate(invoice);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(row.getSum()).contains(new BigDecimal("500.0"));
+    }
+
+    @Test
+    void rejectsFractionalQuantityForStockProduct() {
+        SSInvoice invoice = validInvoice();
+        SSProduct product = new SSProduct();
+        product.setStockProduct(true);
+        product.setNumber("STOCK-1");
+        invoice.getRows().get(0).setProduct(product);
+        invoice.getRows().get(0).setQuantity(new BigDecimal("0.5"));
+
+        InvoiceValidationResult result = InvoiceValidator.validate(invoice);
+
+        assertThat(result.issues()).extracting(InvoiceValidationIssue::code)
+                .contains("INVOICE_ROW_STOCK_QUANTITY_FRACTIONAL");
+    }
+
+    @Test
+    void acceptsUpToSixQuantityDecimals() {
+        SSInvoice invoice = validInvoice();
+        invoice.getRows().get(0).setQuantity(new BigDecimal("0.123456"));
+
+        assertThat(InvoiceValidator.validate(invoice).valid()).isTrue();
+    }
+
+    @Test
+    void rejectsMoreThanSixQuantityDecimals() {
+        SSInvoice invoice = validInvoice();
+        invoice.getRows().get(0).setQuantity(new BigDecimal("0.1234567"));
+
+        assertThat(InvoiceValidator.validate(invoice).issues())
+                .extracting(InvoiceValidationIssue::code)
+                .contains("INVOICE_ROW_QUANTITY_INVALID");
     }
 
     @Test

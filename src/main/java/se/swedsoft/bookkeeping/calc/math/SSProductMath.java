@@ -422,7 +422,7 @@ public class SSProductMath {
         List<SSCreditInvoice> iCreditInvoices = SSDB.getInstance().getCreditInvoices();
 
         BigDecimal iSum = new BigDecimal(0);
-        Integer    iCount = 0;
+        BigDecimal iCount = BigDecimal.ZERO;
 
         for (SSInvoice iInvoice : iInvoices) {
             if (iFrom == null || iTo == null
@@ -431,7 +431,7 @@ public class SSProductMath {
                 List<SSSaleRow> iRows = SSInvoiceMath.getRowsForProduct(iInvoice, iProduct);
 
                 for (SSSaleRow iRow : iRows) {
-                    Integer    iQuantity = iRow.getQuantity();
+                    BigDecimal iQuantity = iRow.getQuantity();
                     BigDecimal iUnitprice = iRow.getUnitprice();
                     BigDecimal iDiscount = iRow.getNormalizedDiscount();
 
@@ -439,7 +439,7 @@ public class SSProductMath {
                         continue;
                     }
 
-                    BigDecimal iValue = iUnitprice.multiply(new BigDecimal(iQuantity));
+                    BigDecimal iValue = iUnitprice.multiply(iQuantity);
 
                     if (iDiscount != null) {
                         iValue = iValue.subtract(iValue.multiply(iDiscount));
@@ -449,7 +449,7 @@ public class SSProductMath {
 
                     iSum = iSum.add(iValue);
 
-                    iCount = iCount + iQuantity;
+                    iCount = iCount.add(iQuantity);
                 }
 
             }
@@ -462,7 +462,7 @@ public class SSProductMath {
                         iCreditInvoice, iProduct);
 
                 for (SSSaleRow iRow : iRows) {
-                    Integer    iQuantity = iRow.getQuantity();
+                    BigDecimal iQuantity = iRow.getQuantity();
                     BigDecimal iUnitprice = iRow.getUnitprice();
                     BigDecimal iDiscount = iRow.getNormalizedDiscount();
 
@@ -470,7 +470,7 @@ public class SSProductMath {
                         continue;
                     }
 
-                    BigDecimal iValue = iUnitprice.multiply(new BigDecimal(iQuantity));
+                    BigDecimal iValue = iUnitprice.multiply(iQuantity);
 
                     if (iDiscount != null) {
                         iValue = iValue.subtract(iValue.multiply(iDiscount));
@@ -480,12 +480,12 @@ public class SSProductMath {
 
                     iSum = iSum.subtract(iValue);
 
-                    iCount = iCount - iQuantity;
+                    iCount = iCount.subtract(iQuantity);
                 }
             }
         }
 
-        if (iCount == 0) {
+        if (iCount.signum() == 0) {
             return iProduct.getSellingPrice();
         }
 
@@ -493,7 +493,7 @@ public class SSProductMath {
             return iSum;
         }
 
-        return iSum.divide(new BigDecimal(iCount), 20, RoundingMode.HALF_UP);
+        return iSum.divide(iCount, 20, RoundingMode.HALF_UP);
     }
 
 }

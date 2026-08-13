@@ -8,7 +8,7 @@
 
     <field name="row.number"          class="java.lang.String"/>
     <field name="row.description"     class="java.lang.String"/>
-    <field name="row.count"           class="java.lang.Integer"/>
+    <field name="row.count"           class="java.math.BigDecimal"/>
     <field name="row.unit"            class="java.lang.String"/>
     <field name="row.unitprice"       class="java.math.BigDecimal"/>
     <field name="row.discount"        class="java.math.BigDecimal"/>
@@ -149,7 +149,7 @@
                 <textElement textAlignment="Right">
                     <font size="8" isBold="false"/>
                 </textElement>
-                <textFieldExpression class="java.lang.Integer">
+                <textFieldExpression class="java.math.BigDecimal">
                     <![CDATA[$F{row.count}]]>
                 </textFieldExpression>
             </textField>
