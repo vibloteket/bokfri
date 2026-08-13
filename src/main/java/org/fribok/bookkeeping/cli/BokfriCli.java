@@ -932,6 +932,10 @@ public class BokfriCli implements Runnable {
                 result.put("path", verification.path().toString());
                 result.put("createdAt", verification.createdAt());
                 result.put("size", verification.size());
+                result.put("legacy", verification.legacy());
+                result.put("backupFormatVersion", verification.backupFormatVersion());
+                result.put("dataFormatVersion", verification.dataFormatVersion());
+                result.put("applicationVersion", verification.applicationVersion());
                 result.put("entries", verification.entries());
                 root.output(result, "Backup is valid: " + verification.path());
                 return 0;

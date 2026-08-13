@@ -35,6 +35,12 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   accounting year; balance sheet and account balance default to its final day.
 
 ### Added
+- Added application-level database format metadata and startup compatibility checks;
+  databases from newer unsupported Bokfri formats are rejected before normal loading.
+- Added versioned JSON manifests to new full backups while retaining verification
+  and restore support for legacy v1.0.1 backups without manifests.
+- Added checked-in v1.0.1 database and backup fixtures plus integration tests for
+  direct opening and backup verification, restoration, and opening.
 - Added GUI and `bokfri demo recreate [--commit]` actions for safely replacing
   recognized current or legacy demo companies while preserving all other companies.
 - Added privacy-friendly GoatCounter visitor statistics to the website and help pages.

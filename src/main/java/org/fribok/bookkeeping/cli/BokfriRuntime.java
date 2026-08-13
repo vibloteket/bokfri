@@ -1,5 +1,6 @@
 package org.fribok.bookkeeping.cli;
 
+import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -23,13 +24,21 @@ public final class BokfriRuntime implements AutoCloseable {
     public static BokfriRuntime open(Path dataDir) throws IOException, SQLException, ClassNotFoundException {
         Path databaseDirectory = dataDir.toAbsolutePath().normalize().resolve("db");
         Files.createDirectories(databaseDirectory);
+        boolean databaseExisted = Files.exists(databaseDirectory.resolve("JFSDB.properties"));
         Class.forName("org.hsqldb.jdbcDriver");
         String databasePath = databaseDirectory.resolve("JFSDB").toString();
         Connection connection = DriverManager.getConnection(
                 "jdbc:hsqldb:file:" + databasePath, "sa", "");
-        SSDB database = SSDB.getInstance();
-        database.startupLocal(connection);
-        return new BokfriRuntime(database);
+        try {
+            connection.setAutoCommit(false);
+            DataFormatManager.checkAndInitialize(connection, databaseExisted);
+            SSDB database = SSDB.getInstance();
+            database.startupLocal(connection);
+            return new BokfriRuntime(database);
+        } catch (SQLException | RuntimeException exception) {
+            connection.close();
+            throw exception;
+        }
     }
 
     public SSDB database() {

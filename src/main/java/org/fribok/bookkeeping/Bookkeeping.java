@@ -9,6 +9,7 @@ import com.jgoodies.looks.FontSets;
 
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
+import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.data.util.SSConfig;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
@@ -40,24 +41,39 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
     /**
      *
      */
-    private static void startupDatabase() {
+    private static boolean startupDatabase() {
         try {
             Class.forName("org.hsqldb.jdbcDriver");
         } catch (ClassNotFoundException e) {
             LOG.info("ERROR: failed to load HSQLDB JDBC driver.");
             LOG.error("Unexpected error", e);
-            return;
+            return false;
         }
 
+        Connection connection = null;
         try {
             File dbDir = new File(Path.get(Path.USER_DATA), "db");
-            Connection iConnection = DriverManager.getConnection(
+            boolean databaseExisted = new File(dbDir, "JFSDB.properties").exists();
+            connection = DriverManager.getConnection(
                     "jdbc:hsqldb:file:" + dbDir.getAbsolutePath() + File.separator + "JFSDB", "sa", "");
-
-            SSDB.getInstance().startupLocal(iConnection);
-
+            connection.setAutoCommit(false);
+            DataFormatManager.checkAndInitialize(connection, databaseExisted);
+            SSDB.getInstance().startupLocal(connection);
+            return true;
         } catch (SQLException e) {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException closeException) {
+                    e.addSuppressed(closeException);
+                }
+            }
             LOG.error("Failed to start local database", e);
+            JOptionPane.showMessageDialog(null,
+                    "Bokfri kunde inte öppna databasen. Ingen data har ändrats.\n\n"
+                            + e.getMessage(),
+                    "Databasen kunde inte öppnas", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
     }
 
@@ -164,8 +180,13 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
         // immediate feedback after launching the application.
         iMainFrame.setVisible(true);
         iMainFrame.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-        startupDatabase();
+        boolean databaseStarted = startupDatabase();
         iMainFrame.setCursor(Cursor.getDefaultCursor());
+        if (!databaseStarted) {
+            iMainFrame.dispose();
+            iRunning = false;
+            return;
+        }
 
         // Only display the company iMainFrame if there are no companies defined.
         // I would prefer to only open the select company iMainFrame if there are no companies.

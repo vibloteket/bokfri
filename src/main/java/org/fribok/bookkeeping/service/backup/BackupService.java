@@ -1,5 +1,9 @@
 package org.fribok.bookkeeping.service.backup;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.fribok.bookkeeping.app.Version;
+import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import se.swedsoft.bookkeeping.data.backup.SSBackup;
 import se.swedsoft.bookkeeping.data.backup.util.SSBackupType;
 
@@ -27,7 +31,9 @@ import java.util.zip.ZipOutputStream;
 /** Creates, lists, and verifies full Bokfri database backups. */
 public final class BackupService {
     private static final String INFO_ENTRY = "backup.info";
+    private static final String MANIFEST_ENTRY = "manifest.json";
     private static final String HISTORY_FILE = "backup.history.cli";
+    private static final ObjectMapper JSON = new ObjectMapper().registerModule(new JavaTimeModule());
     private static final List<String> DATABASE_SUFFIXES = List.of(
             ".properties", ".script", ".data", ".backup", ".log");
 
@@ -93,18 +99,44 @@ public final class BackupService {
             } catch (ClassNotFoundException exception) {
                 throw new IOException("Backup metadata cannot be read", exception);
             }
-        }
 
-        if (!entries.contains("JFSDB.properties") || !entries.contains("JFSDB.script")) {
-            throw new IOException("Backup database files are incomplete");
+            BackupManifest manifest = null;
+            ZipEntry manifestEntry = zip.getEntry(MANIFEST_ENTRY);
+            if (manifestEntry != null) {
+                try (InputStream stream = zip.getInputStream(manifestEntry)) {
+                    manifest = JSON.readValue(stream, BackupManifest.class);
+                }
+                if (!BackupManifest.FORMAT.equals(manifest.format())
+                        || manifest.backupFormatVersion() != BackupManifest.CURRENT_BACKUP_FORMAT_VERSION) {
+                    throw new IOException("Unsupported backup manifest format");
+                }
+                if (manifest.dataFormatVersion() < 1) {
+                    throw new IOException("Invalid backup data format version: "
+                            + manifest.dataFormatVersion());
+                }
+            }
+
+            if (!entries.contains("JFSDB.properties") || !entries.contains("JFSDB.script")) {
+                throw new IOException("Backup database files are incomplete");
+            }
+            return new BackupVerification(archive, metadata.getLocalDateTime(), Files.size(archive),
+                    entries.stream().sorted().toList(),
+                    manifest == null ? null : manifest.backupFormatVersion(),
+                    manifest == null ? DataFormatManager.LEGACY_DATA_FORMAT_VERSION
+                            : manifest.dataFormatVersion(),
+                    manifest == null ? null : manifest.applicationVersion());
         }
-        return new BackupVerification(archive, metadata.getLocalDateTime(), Files.size(archive),
-                entries.stream().sorted().toList());
     }
 
     public BackupRestorePlan restore(Path input, Path targetDataDirectory,
             boolean overwrite, boolean commit) throws IOException {
         BackupVerification verification = verify(input);
+        if (verification.dataFormatVersion() > DataFormatManager.CURRENT_DATA_FORMAT_VERSION) {
+            throw new IOException("Backup data format " + verification.dataFormatVersion()
+                    + " is newer than supported format "
+                    + DataFormatManager.CURRENT_DATA_FORMAT_VERSION
+                    + ". Install a newer version of Bokfri.");
+        }
         Path target = targetDataDirectory.toAbsolutePath().normalize();
         Path databaseDirectory = target.resolve("db");
         List<String> databaseFiles = verification.entries().stream()
@@ -184,16 +216,24 @@ public final class BackupService {
         metadata.setLocalDateTime(createdAt);
         metadata.setFilename(target.toString());
         Path info = Files.createTempFile("bokfri-backup-info-", ".bin");
+        Path manifest = Files.createTempFile("bokfri-backup-manifest-", ".json");
         try {
             SSBackup.storeBackup(info.toFile(), metadata);
+            JSON.writerWithDefaultPrettyPrinter().writeValue(manifest.toFile(),
+                    new BackupManifest(BackupManifest.FORMAT,
+                            BackupManifest.CURRENT_BACKUP_FORMAT_VERSION,
+                            DataFormatManager.CURRENT_DATA_FORMAT_VERSION,
+                            Version.APP_VERSION, createdAt));
             try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(temporary))) {
                 for (Path file : files) {
                     add(zip, file, file.getFileName().toString());
                 }
                 add(zip, info, INFO_ENTRY);
+                add(zip, manifest, MANIFEST_ENTRY);
             }
         } finally {
             Files.deleteIfExists(info);
+            Files.deleteIfExists(manifest);
         }
     }
 
