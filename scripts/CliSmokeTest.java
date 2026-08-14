@@ -64,6 +64,12 @@ public final class CliSmokeTest {
         version.jsonObject();
         require(version.stdout.contains("\"title\":\"Bokfri\""), "version output lacks title");
 
+        Result database = cli("--format", "json", "database", "status");
+        database.success();
+        require(database.stdout.contains("\"format\":2"), "database status lacks current format");
+        require(database.stdout.contains("\"migrationRequired\":false"),
+                "new database unexpectedly requires migration");
+
         Result companies = cli("--format", "json", "company", "list");
         companies.success();
         companies.jsonObject();

@@ -17,7 +17,7 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   decimal quantities such as `0.5` hours; stock-tracked products still require whole units.
 - Bokfri data format 2 is now the sole write format. Opening format 1 requires explicit
   approval, creates and verifies a full backup, and then migrates before normal loading;
-  CLI users opt in with `--migrate`.
+  CLI users inspect and migrate it explicitly with `database status` and `database migrate`.
 - Voucher rows created with an account now retain its account number after persistence;
   demo vouchers therefore appear in balances and CLI output with correct totals and accounts.
 - Voucher list/show text now includes both debit and credit totals plus account descriptions.
@@ -27,6 +27,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   use an ASCII hyphen for reliable rendering in Windows consoles.
 - Packaged CLI launchers now favor faster startup with `-XX:TieredStopAtLevel=1`;
   the long-running GUI launcher retains the JVM's normal optimization strategy.
+- Database migration is now a dedicated `bokfri database migrate` operation instead
+  of a global `--migrate` option inherited by every CLI command; `database status`
+  reports the detected and supported formats without normal database startup.
 - CLI and GUI now share the selected company and accounting year. The public
   context concept has been replaced by `company current|use` and `year current|use`;
   `--company-id`, `--year-id`, and `--data-dir` remain per-command overrides.

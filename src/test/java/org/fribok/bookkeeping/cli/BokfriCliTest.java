@@ -10,6 +10,9 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -103,6 +106,63 @@ class BokfriCliTest {
     }
 
     @Test
+    void databaseStatusReportsCurrentFormat() throws Exception {
+        Path data = temporaryDirectory.resolve("current-data");
+        execute("--data-dir", data.toString(), "company", "list");
+
+        Result status = execute("--data-dir", data.toString(), "--format", "json",
+                "database", "status");
+
+        assertThat(status.exitCode()).isZero();
+        JsonNode result = new ObjectMapper().readTree(status.stdout());
+        assertThat(result.path("exists").asBoolean()).isTrue();
+        assertThat(result.path("format").asInt()).isEqualTo(2);
+        assertThat(result.path("supportedFormat").asInt()).isEqualTo(2);
+        assertThat(result.path("migrationRequired").asBoolean()).isFalse();
+    }
+
+    @Test
+    void databaseMigrateCreatesVerifiedBackupAndEnablesNormalCommands() throws Exception {
+        Path data = temporaryDirectory.resolve("legacy-data");
+        extractLegacyDatabase(data.resolve("db"));
+
+        Result blocked = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        Result status = execute("--data-dir", data.toString(), "--format", "json",
+                "database", "status");
+        Result migrated = execute("--data-dir", data.toString(), "--format", "json",
+                "database", "migrate");
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+
+        assertThat(blocked.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(blocked.stderr()).at("/error/code").asText())
+                .isEqualTo("DATABASE_MIGRATION_REQUIRED");
+        assertThat(blocked.stderr()).contains("bokfri database migrate");
+        assertThat(new ObjectMapper().readTree(status.stdout()).path("migrationRequired").asBoolean()).isTrue();
+        JsonNode result = new ObjectMapper().readTree(migrated.stdout());
+        assertThat(result.path("migrated").asBoolean()).isTrue();
+        assertThat(result.path("fromFormat").asInt()).isEqualTo(1);
+        assertThat(result.path("toFormat").asInt()).isEqualTo(2);
+        assertThat(Path.of(result.path("backup").asText())).exists();
+        assertThat(companies.exitCode()).isZero();
+        assertThat(companies.stdout()).contains("Exempelföretag");
+    }
+
+    @Test
+    void databaseMigrateIsIdempotentForCurrentFormat() throws Exception {
+        Path data = temporaryDirectory.resolve("current-data");
+        execute("--data-dir", data.toString(), "company", "list");
+
+        Result migrated = execute("--data-dir", data.toString(), "--format", "json",
+                "database", "migrate");
+
+        assertThat(migrated.exitCode()).isZero();
+        assertThat(new ObjectMapper().readTree(migrated.stdout()).path("migrated").asBoolean()).isFalse();
+        assertThat(data.resolve("backups")).doesNotExist();
+    }
+
+    @Test
     void financialReportsRenderUsefulText() throws Exception {
         Path config = temporaryDirectory.resolve("reports-cli.yaml");
         Path data = temporaryDirectory.resolve("reports-data");
@@ -138,6 +198,20 @@ class BokfriCliTest {
                 .doesNotContain("generated");
         assertThat(balance.stdout()).contains("1930\tFöretagskonto\t2027-06-30\t")
                 .doesNotContain("generated");
+    }
+
+    private void extractLegacyDatabase(Path destination) throws Exception {
+        Files.createDirectories(destination);
+        try (var input = getClass().getResourceAsStream("/compat/v1.0.1/database-v1.0.1.zip");
+             ZipInputStream zip = new ZipInputStream(input)) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (!entry.isDirectory() && !entry.getName().startsWith("META-INF/")) {
+                    Path target = destination.resolve(entry.getName()).normalize();
+                    Files.copy(zip, target, StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
     }
 
     private static String[] concat(String[] prefix, String... suffix) {

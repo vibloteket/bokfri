@@ -3,6 +3,7 @@ package org.fribok.bookkeeping.compat;
 import org.fribok.bookkeeping.cli.BokfriRuntime;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.DataMigrationRequiredException;
+import org.fribok.bookkeeping.dataformat.DataMigrationService;
 import org.fribok.bookkeeping.service.backup.BackupService;
 import org.fribok.bookkeeping.service.backup.BackupVerification;
 import org.junit.jupiter.api.Tag;
@@ -34,7 +35,8 @@ class LegacyV101CompatibilityIntegrationTest {
                 .isInstanceOf(DataMigrationRequiredException.class);
         assertLegacyFormat(dataDirectory);
 
-        try (BokfriRuntime runtime = BokfriRuntime.open(dataDirectory, true)) {
+        DataMigrationService.migrate(dataDirectory);
+        try (BokfriRuntime runtime = BokfriRuntime.open(dataDirectory)) {
             assertThat(runtime.database().getCompanies())
                     .extracting(company -> company.getName())
                     .containsExactly("Exempelföretag");
@@ -60,7 +62,8 @@ class LegacyV101CompatibilityIntegrationTest {
         service.restore(backup, restored, false, true);
         assertThatThrownBy(() -> BokfriRuntime.open(restored))
                 .isInstanceOf(DataMigrationRequiredException.class);
-        try (BokfriRuntime runtime = BokfriRuntime.open(restored, true)) {
+        DataMigrationService.migrate(restored);
+        try (BokfriRuntime runtime = BokfriRuntime.open(restored)) {
             assertThat(runtime.database().getCompanies())
                     .extracting(company -> company.getName())
                     .containsExactly("Exempelföretag");

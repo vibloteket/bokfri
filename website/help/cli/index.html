@@ -131,6 +131,12 @@ bokfri year use 12</code></pre>
 <pre><code>bokfri --company-id 37 --year-id 12 trial-balance
 bokfri --data-dir "/sökväg/till/testdata" --company-id 37 --year-id 12 voucher list</code></pre>
 
+<h3>Kontrollera och migrera databasformat</h3>
+<p>Databasmigrering är en separat administrationsåtgärd, inte ett val på vanliga kommandon:</p>
+<pre><code>bokfri database status
+bokfri database migrate</code></pre>
+<p><code>database status</code> visar upptäckt och stött dataformat. <code>database migrate</code> skapar och verifierar först en fullständig backup, migrerar därefter databasen och skriver ut backupens sökväg. Om databasen redan har aktuellt format görs ingen ändring. Använd <code>--data-dir</code> för att kontrollera eller migrera en alternativ datakatalog.</p>
+
 <h3>Skapa ett nytt företag och år</h3>
 <p>Ett tomt dataområde kan byggas upp från JSON:</p>
 <pre><code>bokfri account-plan list
@@ -414,6 +420,8 @@ bokfri trial-balance --format json &gt; trial-balance.json</code></pre>
 <dd>Öppna ett nytt terminalfönster efter MSI-installationen. Kontrollera med <code>Get-Command bokfri</code>. Utvecklingspaketet heter <code>bokfri-dev</code>.</dd>
 <dt><code>COMPANY_REQUIRED</code> eller <code>YEAR_REQUIRED</code></dt>
 <dd>Kör <code>bokfri company use ID</code> och <code>bokfri year use ID</code>, eller ange <code>--company-id</code> och <code>--year-id</code> för den aktuella körningen.</dd>
+<dt><code>DATABASE_MIGRATION_REQUIRED</code></dt>
+<dd>Kontrollera formatet med <code>bokfri database status</code> och kör sedan <code>bokfri database migrate</code>. En verifierad backup skapas före migreringen.</dd>
 <dt>Rapportperioden avvisas</dt>
 <dd>Datum måste ligga inom valt bokföringsår. Periodrapporter kräver både <code>--from</code> och <code>--to</code> om ett av dem anges.</dd>
 <dt>En fil finns redan</dt>
@@ -425,6 +433,7 @@ bokfri trial-balance --format json &gt; trial-balance.json</code></pre>
 <pre><code>bokfri version
 bokfri paths
 bokfri doctor
+bokfri database status
 bokfri company current
 bokfri year current</code></pre>
 </section>

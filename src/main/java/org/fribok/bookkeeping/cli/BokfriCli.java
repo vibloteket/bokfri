@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
+import org.fribok.bookkeeping.dataformat.DataFormatManager;
+import org.fribok.bookkeeping.dataformat.DataMigrationService;
 import org.fribok.bookkeeping.service.backup.BackupDetails;
 import org.fribok.bookkeeping.service.backup.BackupRestorePlan;
 import org.fribok.bookkeeping.service.backup.BackupService;
@@ -113,6 +115,7 @@ import java.util.concurrent.Callable;
             BokfriCli.VersionCommand.class,
             BokfriCli.PathsCommand.class,
             BokfriCli.DoctorCommand.class,
+            BokfriCli.DatabaseCommand.class,
             BokfriCli.CompanyCommand.class,
             BokfriCli.DemoCommand.class,
             BokfriCli.AccountPlanCommand.class,
@@ -160,10 +163,6 @@ public class BokfriCli implements Runnable {
             description = "Output format: ${COMPLETION-CANDIDATES}")
     OutputFormat format;
 
-    @Option(names = "--migrate", scope = CommandLine.ScopeType.INHERIT,
-            description = "Back up and migrate an older database before running the command")
-    boolean migrate;
-
     @Override
     public void run() {
         throw new CommandLine.ParameterException(spec.commandLine(), "A command is required");
@@ -202,7 +201,7 @@ public class BokfriCli implements Runnable {
     }
 
     BokfriRuntime openRuntime(java.nio.file.Path selectedDataDir) throws Exception {
-        return BokfriRuntime.open(selectedDataDir, migrate);
+        return BokfriRuntime.open(selectedDataDir);
     }
 
     static ObjectMapper jsonMapper() {
@@ -290,6 +289,84 @@ public class BokfriCli implements Runnable {
                     + context.dataDir() + (dataDirExists ? "" : " (will be created when needed)")
                     + "\nCompany id: " + context.companyId() + "\nYear id: " + context.yearId());
             return 0;
+        }
+    }
+
+    @Command(name = "database", description = "Inspect and migrate the database format",
+            subcommands = {DatabaseStatus.class, DatabaseMigrate.class})
+    static class DatabaseCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(), "A database command is required");
+        }
+    }
+
+    abstract static class DatabaseSubcommand implements Callable<Integer> {
+        @CommandLine.ParentCommand DatabaseCommand command;
+        BokfriCli root() { return command.parent; }
+    }
+
+    @Command(name = "status", description = "Show the database format and migration status")
+    static class DatabaseStatus extends DatabaseSubcommand {
+        @Override public Integer call() {
+            BokfriCli root = root();
+            java.nio.file.Path data = root.resolveContext(false, false).dataDir();
+            try {
+                DataFormatManager.DataFormatStatus status = DataFormatManager.inspect(data);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("exists", status.exists());
+                result.put("format", status.format());
+                result.put("supportedFormat", status.supportedFormat());
+                result.put("migrationRequired", status.migrationRequired());
+                String text = "Database: " + (status.exists() ? "exists" : "not created")
+                        + "\nDatabase format: " + status.format()
+                        + "\nSupported format: " + status.supportedFormat()
+                        + "\nMigration required: " + (status.migrationRequired() ? "yes" : "no");
+                root.output(result, text);
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "migrate", description = "Back up and migrate an older database")
+    static class DatabaseMigrate extends DatabaseSubcommand {
+        @Override public Integer call() {
+            BokfriCli root = root();
+            java.nio.file.Path data = root.resolveContext(false, false).dataDir();
+            try {
+                DataFormatManager.DataFormatStatus before = DataFormatManager.inspect(data);
+                if (!before.exists()) {
+                    throw new CliException("DATABASE_NOT_FOUND",
+                            "No database exists in " + data);
+                }
+                if (!before.migrationRequired()) {
+                    Map<String, Object> result = Map.of("migrated", false,
+                            "format", before.format(), "supportedFormat", before.supportedFormat());
+                    root.output(result, "Database already uses format " + before.format()
+                            + "; no migration was needed");
+                    return 0;
+                }
+                java.nio.file.Path backup = DataMigrationService.migrate(data);
+                DataFormatManager.DataFormatStatus after = DataFormatManager.inspect(data);
+                if (after.migrationRequired()
+                        || after.format() != DataFormatManager.CURRENT_DATA_FORMAT_VERSION) {
+                    throw new CliException("DATABASE_MIGRATION_FAILED",
+                            "Database migration did not produce format "
+                                    + DataFormatManager.CURRENT_DATA_FORMAT_VERSION);
+                }
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("migrated", true);
+                result.put("fromFormat", before.format());
+                result.put("toFormat", after.format());
+                result.put("backup", backup.toString());
+                root.output(result, "Database migrated from format " + before.format()
+                        + " to format " + after.format() + "\nBackup: " + backup);
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
         }
     }
 
@@ -2944,8 +3021,8 @@ public class BokfriCli implements Runnable {
         }
         if (exception instanceof org.fribok.bookkeeping.dataformat.DataMigrationRequiredException) {
             return new CliException("DATABASE_MIGRATION_REQUIRED",
-                    exception.getMessage() + " Re-run with --migrate to create a verified backup "
-                            + "and migrate the database.", exception);
+                    exception.getMessage() + " Run 'bokfri database migrate' to create a verified "
+                            + "backup and migrate the database.", exception);
         }
         return new CliException("DATABASE_FAILED", "Could not inspect the database: "
                 + exception.getMessage(), exception);

@@ -59,6 +59,40 @@ public final class DataFormatManager {
         return version;
     }
 
+    /**
+     * Inspects the database in a Bokfri data directory without initializing or migrating it.
+     * A missing database is reported by returning the current format for a database that does not yet exist.
+     *
+     * @param dataDirectory Bokfri data directory
+     * @return detected database status
+     * @throws SQLException if the database cannot be inspected
+     * @throws ClassNotFoundException if the HSQLDB driver is unavailable
+     */
+    public static DataFormatStatus inspect(java.nio.file.Path dataDirectory)
+            throws SQLException, ClassNotFoundException {
+        java.nio.file.Path database = dataDirectory.toAbsolutePath().normalize().resolve("db/JFSDB");
+        boolean exists = java.nio.file.Files.exists(java.nio.file.Path.of(database + ".properties"));
+        if (!exists) {
+            return new DataFormatStatus(false, CURRENT_DATA_FORMAT_VERSION,
+                    CURRENT_DATA_FORMAT_VERSION, false);
+        }
+        Class.forName("org.hsqldb.jdbcDriver");
+        try (Connection connection = java.sql.DriverManager.getConnection(
+                "jdbc:hsqldb:file:" + database, "sa", "")) {
+            connection.setAutoCommit(false);
+            int version = checkSupported(connection);
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("SHUTDOWN");
+            }
+            return new DataFormatStatus(true, version, CURRENT_DATA_FORMAT_VERSION,
+                    version < CURRENT_DATA_FORMAT_VERSION);
+        }
+    }
+
+    /** Result of inspecting a Bokfri database format. */
+    public record DataFormatStatus(boolean exists, int format, int supportedFormat,
+                                   boolean migrationRequired) {}
+
     /** Returns the stored format, or legacy format 1 when metadata is absent. */
     public static int detect(Connection connection) throws SQLException {
         if (!tableExists(connection)) {
