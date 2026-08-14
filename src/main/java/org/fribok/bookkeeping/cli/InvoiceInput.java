@@ -11,11 +11,16 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class InvoiceInput {
     private int schemaVersion = 1;
+    @jakarta.validation.constraints.NotBlank
     private String customerNumber;
+    @jakarta.validation.constraints.NotNull
     private LocalDate date;
     private LocalDate dueDate;
     private String yourOrderNumber;
     private String text;
+    @jakarta.validation.Valid
+    @jakarta.validation.constraints.NotNull
+    @jakarta.validation.constraints.Size(min = 1)
     private List<Row> rows = new ArrayList<>();
 
     public int getSchemaVersion() { return schemaVersion; }

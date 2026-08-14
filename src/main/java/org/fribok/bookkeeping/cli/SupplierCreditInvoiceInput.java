@@ -9,8 +9,12 @@ import java.time.LocalDate;
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class SupplierCreditInvoiceInput {
     private int schemaVersion = 1;
+    @jakarta.validation.constraints.NotNull
     private Integer supplierInvoiceNumber;
+    @jakarta.validation.constraints.NotNull
     private LocalDate date;
+    @jakarta.validation.constraints.NotNull
+    @jakarta.validation.constraints.Positive
     private BigDecimal amount;
 
     public int getSchemaVersion() { return schemaVersion; }

@@ -64,6 +64,14 @@ public final class CliSmokeTest {
         version.jsonObject();
         require(version.stdout.contains("\"title\":\"Bokfri\""), "version output lacks title");
 
+        Result voucherSchema = cli("voucher", "schema");
+        voucherSchema.success();
+        voucherSchema.jsonObject();
+        require(voucherSchema.stdout.contains("https://json-schema.org/draft/2020-12/schema"),
+                "voucher schema does not use Draft 2020-12");
+        require(voucherSchema.stdout.contains("voucher-v1.schema.json"),
+                "voucher schema lacks its stable id");
+
         Result database = cli("--format", "json", "database", "status");
         database.success();
         require(database.stdout.contains("\"format\":2"), "database status lacks current format");
@@ -943,8 +951,8 @@ public final class CliSmokeTest {
         Result validation = cli("--format", "json", "voucher", "validate", "--file", invalid.toString());
         require(validation.exitCode != 0, "invalid voucher unexpectedly succeeded");
         validation.stderrJsonObject();
-        require(validation.stderr.contains("\"code\":\"VOUCHER_INVALID\""),
-                "invalid voucher lacks stable error code");
+        require(validation.stderr.contains("\"code\":\"INPUT_INVALID\""),
+                "structurally invalid voucher lacks stable error code");
 
         Result missing = cli("--format", "json", "voucher", "show", "2147483647");
         require(missing.exitCode != 0, "missing voucher unexpectedly succeeded");

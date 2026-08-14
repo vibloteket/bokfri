@@ -8,7 +8,9 @@ import java.math.BigDecimal;
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class CustomerInput {
     private int schemaVersion = 1;
+    @jakarta.validation.constraints.NotBlank
     private String number;
+    @jakarta.validation.constraints.NotBlank
     private String name;
     private String registrationNumber;
     private String vatNumber;

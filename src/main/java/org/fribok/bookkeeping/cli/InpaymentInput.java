@@ -11,8 +11,13 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class InpaymentInput {
     private int schemaVersion = 1;
+    @jakarta.validation.constraints.NotNull
     private LocalDate date;
+    @jakarta.validation.constraints.NotBlank
     private String text;
+    @jakarta.validation.Valid
+    @jakarta.validation.constraints.NotNull
+    @jakarta.validation.constraints.Size(min = 1)
     private List<Row> rows = new ArrayList<>();
 
     public int getSchemaVersion() { return schemaVersion; }
@@ -27,7 +32,10 @@ public class InpaymentInput {
     /** One invoice payment row. */
     @JsonIgnoreProperties(ignoreUnknown = false)
     public static class Row {
+        @jakarta.validation.constraints.NotNull
         private Integer invoiceNumber;
+        @jakarta.validation.constraints.NotNull
+        @jakarta.validation.constraints.Positive
         private BigDecimal amount;
         private BigDecimal currencyRate;
 

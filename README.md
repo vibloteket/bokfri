@@ -75,7 +75,9 @@ bokfri trial-balance --format json
 ```
 
 För skript kan `--company-id`, `--year-id` och `--data-dir` användas som
-tillfälliga alternativ utan att ändra de sparade valen. Databasformatet kan
+tillfälliga alternativ utan att ändra de sparade valen. Alla kommandon som tar
+Bokfri-JSON kan skriva sitt code-first JSON Schema, exempelvis med
+`bokfri voucher schema`. Databasformatet kan
 kontrolleras med `bokfri database status`; en äldre databas migreras separat
 med `bokfri database migrate`, som först skapar och verifierar en full backup.
 

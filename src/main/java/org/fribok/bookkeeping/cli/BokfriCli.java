@@ -371,7 +371,8 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(name = "company", description = "Inspect, create, and select companies",
-            subcommands = {CompanyList.class, CompanyCurrent.class, CompanyUse.class, CompanyCreate.class})
+            subcommands = {CompanyList.class, CompanyCurrent.class, CompanyUse.class, CompanyCreate.class,
+                    CliInputSchemas.Company.class})
     static class CompanyCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -502,7 +503,8 @@ public class BokfriCli implements Runnable {
     @Command(name="list") static class AccountPlanList implements Callable<Integer>{@CommandLine.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),plans.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(name = "year", description = "Inspect, create, and select accounting years",
-            subcommands = {YearList.class, YearCurrent.class, YearUse.class, YearCreate.class})
+            subcommands = {YearList.class, YearCurrent.class, YearUse.class, YearCreate.class,
+                    CliInputSchemas.Year.class})
     static class YearCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -833,7 +835,7 @@ public class BokfriCli implements Runnable {
         return ((List<?>) result.get("rows")).stream().map(rowType::cast).toList();
     }
 
-    @Command(name="opening-balance",description="Inspect and manage opening balances",subcommands={OpeningBalanceShow.class,OpeningBalanceValidate.class,OpeningBalanceSet.class,OpeningBalanceCarryForward.class})
+    @Command(name="opening-balance",description="Inspect and manage opening balances",subcommands={OpeningBalanceShow.class,OpeningBalanceValidate.class,OpeningBalanceSet.class,OpeningBalanceCarryForward.class,CliInputSchemas.OpeningBalance.class})
     static class OpeningBalanceCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An opening-balance command is required");}}
     @Command(name="show") static class OpeningBalanceShow implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());OpeningBalancePlan p=new OpeningBalanceService(r.database()).current(y);Map<String,Object>x=openingBalanceDetails(p);x.put("selection",selectedContext(c,co,y));root.output(x,"Opening balance\nDebit: "+p.debitTotal()+"\nCredit: "+p.creditTotal());return 0;}catch(Exception e){throw databaseFailure(e);}}}
     abstract static class OpeningBalanceFileCommand implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);OpeningBalanceInput in=readOpeningBalanceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());Map<Integer,java.math.BigDecimal> values=new LinkedHashMap<>();for(var row:in.getBalances()){if(values.put(row.getAccount(),row.getAmount())!=null)throw new CliException("OPENING_BALANCE_INVALID","Duplicate account: "+row.getAccount());}OpeningBalanceService s=new OpeningBalanceService(r.database());OpeningBalancePlan p=persist()?s.replace(y,values):s.validate(y,values);Map<String,Object>x=openingBalanceDetails(p);x.put("written",persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Opening balance updated":"Opening balance is valid; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
@@ -1040,8 +1042,8 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(name = "customer", description = "Inspect and create customers",
-            subcommands = {CustomerList.class, CustomerShow.class,
-                    CustomerValidate.class, CustomerCreate.class})
+            subcommands = {CustomerList.class, CustomerShow.class, CustomerValidate.class,
+                    CustomerCreate.class, CliInputSchemas.Customer.class})
     static class CustomerCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -1148,8 +1150,8 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(name = "product", description = "Inspect and create products",
-            subcommands = {ProductList.class, ProductShow.class,
-                    ProductValidate.class, ProductCreate.class})
+            subcommands = {ProductList.class, ProductShow.class, ProductValidate.class,
+                    ProductCreate.class, CliInputSchemas.Product.class})
     static class ProductCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -1257,8 +1259,8 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(name = "supplier", description = "Inspect and create suppliers",
-            subcommands = {SupplierList.class, SupplierShow.class,
-                    SupplierValidate.class, SupplierCreate.class})
+            subcommands = {SupplierList.class, SupplierShow.class, SupplierValidate.class,
+                    SupplierCreate.class, CliInputSchemas.Supplier.class})
     static class SupplierCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -1350,7 +1352,7 @@ public class BokfriCli implements Runnable {
         @Override boolean persist() { return !dryRun; }
     }
 
-    @Command(name="supplier-invoice",description="Inspect, create, and book supplier invoices",subcommands={SupplierInvoiceList.class,SupplierInvoiceShow.class,SupplierInvoiceJournal.class,SupplierInvoiceValidate.class,SupplierInvoiceCreate.class})
+    @Command(name="supplier-invoice",description="Inspect, create, and book supplier invoices",subcommands={SupplierInvoiceList.class,SupplierInvoiceShow.class,SupplierInvoiceJournal.class,SupplierInvoiceValidate.class,SupplierInvoiceCreate.class,CliInputSchemas.SupplierInvoice.class})
     static class SupplierInvoiceCommand extends CliCommand implements Runnable {@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"A supplier-invoice command is required");}}
     @Command(name="list") static class SupplierInvoiceList implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> x=new SupplierInvoiceService(r.database()).list().stream().map(BokfriCli::supplierInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"count",x.size(),"supplierInvoices",x),x.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
     @Command(name="show") static class SupplierInvoiceShow implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Parameters(index="0")int number;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierInvoice i=new SupplierInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+number));Map<String,Object>x=supplierInvoiceDetails(i);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Supplier invoice "+number+"\nSupplier: "+i.getSupplierName()+"\nTotal: "+x.get("total"));return 0;}catch(Exception e){throw databaseFailure(e);}}}
@@ -1362,7 +1364,7 @@ public class BokfriCli implements Runnable {
     @Command(name = "supplier-credit-invoice", description = "Credit booked supplier invoices",
             subcommands = {SupplierCreditInvoiceList.class, SupplierCreditInvoiceShow.class,
                     SupplierCreditInvoiceValidate.class, SupplierCreditInvoiceCreate.class,
-                    SupplierCreditInvoiceJournal.class})
+                    SupplierCreditInvoiceJournal.class, CliInputSchemas.SupplierCreditInvoice.class})
     static class SupplierCreditInvoiceCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         public void run() { throw new CommandLine.ParameterException(spec.commandLine(),
@@ -1402,7 +1404,7 @@ public class BokfriCli implements Runnable {
 
     @Command(name = "invoice", description = "Inspect and create customer invoices",
             subcommands = {InvoiceList.class, InvoiceShow.class, InvoicePdf.class,
-                    InvoiceJournal.class, InvoiceValidate.class, InvoiceCreate.class})
+                    InvoiceJournal.class, InvoiceValidate.class, InvoiceCreate.class, CliInputSchemas.Invoice.class})
     static class InvoiceCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -1602,7 +1604,8 @@ public class BokfriCli implements Runnable {
 
     @Command(name = "credit-invoice", description = "Credit booked customer invoices",
             subcommands = {CreditInvoiceList.class, CreditInvoiceShow.class,
-                    CreditInvoiceValidate.class, CreditInvoiceCreate.class, CreditInvoiceJournal.class})
+                    CreditInvoiceValidate.class, CreditInvoiceCreate.class, CreditInvoiceJournal.class,
+                    CliInputSchemas.CreditInvoice.class})
     static class CreditInvoiceCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() { throw new CommandLine.ParameterException(spec.commandLine(), "A credit-invoice command is required"); }
@@ -1632,7 +1635,7 @@ public class BokfriCli implements Runnable {
 
     @Command(name = "inpayment", description = "Inspect, create, and book customer inpayments",
             subcommands = {InpaymentList.class, InpaymentShow.class, InpaymentJournal.class,
-                    InpaymentValidate.class, InpaymentCreate.class})
+                    InpaymentValidate.class, InpaymentCreate.class, CliInputSchemas.Inpayment.class})
     static class InpaymentCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -1772,7 +1775,7 @@ public class BokfriCli implements Runnable {
 
     @Command(name = "outpayment", description = "Inspect, create, and book supplier outpayments",
             subcommands = {OutpaymentList.class, OutpaymentShow.class, OutpaymentJournal.class,
-                    OutpaymentValidate.class, OutpaymentCreate.class})
+                    OutpaymentValidate.class, OutpaymentCreate.class, CliInputSchemas.Outpayment.class})
     static class OutpaymentCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -1999,7 +2002,7 @@ public class BokfriCli implements Runnable {
 
     @Command(name = "voucher", description = "Inspect, validate, and create manual vouchers",
             subcommands = {VoucherList.class, VoucherShow.class,
-                    VoucherValidate.class, VoucherCreate.class})
+                    VoucherValidate.class, VoucherCreate.class, CliInputSchemas.Voucher.class})
     static class VoucherCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -2132,7 +2135,7 @@ public class BokfriCli implements Runnable {
                 throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
                         "Unsupported outpayment schemaVersion: " + input.getSchemaVersion());
             }
-            return input;
+            return CliInputValidator.validate(input);
         } catch (CliException exception) { throw exception; }
         catch (IOException exception) {
             throw new CliException("INPUT_INVALID", "Could not read outpayment JSON: "
@@ -2233,14 +2236,14 @@ public class BokfriCli implements Runnable {
         };
     }
 
-    private static OpeningBalanceInput readOpeningBalanceInput(String file){try{OpeningBalanceInput i="-".equals(file)?jsonMapper().readValue(System.in,OpeningBalanceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),OpeningBalanceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported opening balance schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read opening balance JSON: "+e.getMessage(),e);}}
+    private static OpeningBalanceInput readOpeningBalanceInput(String file){try{OpeningBalanceInput i="-".equals(file)?jsonMapper().readValue(System.in,OpeningBalanceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),OpeningBalanceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported opening balance schemaVersion: "+i.getSchemaVersion());return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read opening balance JSON: "+e.getMessage(),e);}}
     private static Map<String,Object> openingBalanceDetails(OpeningBalancePlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("balances",p.balances());x.put("debitTotal",p.debitTotal().toPlainString());x.put("creditTotal",p.creditTotal().toPlainString());x.put("difference",p.difference().toPlainString());return x;}
 
-    private static CompanyInput readCompanyInput(String file){try{CompanyInput i="-".equals(file)?jsonMapper().readValue(System.in,CompanyInput.class):jsonMapper().readValue(Paths.get(file).toFile(),CompanyInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported company schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read company JSON: "+e.getMessage(),e);}}
-    private static AccountingYearInput readAccountingYearInput(String file){try{AccountingYearInput i="-".equals(file)?jsonMapper().readValue(System.in,AccountingYearInput.class):jsonMapper().readValue(Paths.get(file).toFile(),AccountingYearInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported accounting year schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read accounting year JSON: "+e.getMessage(),e);}}
+    private static CompanyInput readCompanyInput(String file){try{CompanyInput i="-".equals(file)?jsonMapper().readValue(System.in,CompanyInput.class):jsonMapper().readValue(Paths.get(file).toFile(),CompanyInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported company schemaVersion: "+i.getSchemaVersion());return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read company JSON: "+e.getMessage(),e);}}
+    private static AccountingYearInput readAccountingYearInput(String file){try{AccountingYearInput i="-".equals(file)?jsonMapper().readValue(System.in,AccountingYearInput.class):jsonMapper().readValue(Paths.get(file).toFile(),AccountingYearInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported accounting year schemaVersion: "+i.getSchemaVersion());return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read accounting year JSON: "+e.getMessage(),e);}}
 
-    private static SupplierInvoiceInput readSupplierInvoiceInput(String file){try{SupplierInvoiceInput i="-".equals(file)?jsonMapper().readValue(System.in,SupplierInvoiceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),SupplierInvoiceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported supplier invoice schemaVersion: "+i.getSchemaVersion());return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read supplier invoice JSON: "+e.getMessage(),e);}}
-    private static SupplierCreditInvoiceInput readSupplierCreditInvoiceInput(String file){try{SupplierCreditInvoiceInput i="-".equals(file)?jsonMapper().readValue(System.in,SupplierCreditInvoiceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),SupplierCreditInvoiceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported supplier credit invoice schemaVersion: "+i.getSchemaVersion());if(i.getSupplierInvoiceNumber()==null)throw new CliException("SUPPLIER_CREDIT_INVOICE_INVALID","supplierInvoiceNumber is required");return i;}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read supplier credit invoice JSON: "+e.getMessage(),e);}}
+    private static SupplierInvoiceInput readSupplierInvoiceInput(String file){try{SupplierInvoiceInput i="-".equals(file)?jsonMapper().readValue(System.in,SupplierInvoiceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),SupplierInvoiceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported supplier invoice schemaVersion: "+i.getSchemaVersion());return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read supplier invoice JSON: "+e.getMessage(),e);}}
+    private static SupplierCreditInvoiceInput readSupplierCreditInvoiceInput(String file){try{SupplierCreditInvoiceInput i="-".equals(file)?jsonMapper().readValue(System.in,SupplierCreditInvoiceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),SupplierCreditInvoiceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported supplier credit invoice schemaVersion: "+i.getSchemaVersion());if(i.getSupplierInvoiceNumber()==null)throw new CliException("SUPPLIER_CREDIT_INVOICE_INVALID","supplierInvoiceNumber is required");return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read supplier credit invoice JSON: "+e.getMessage(),e);}}
     private static SSSupplierInvoice toSupplierInvoice(SupplierInvoiceInput in,BokfriRuntime r){SSSupplierInvoice i=new SSSupplierInvoice();SSSupplier s=new SupplierService(r.database()).find(in.getSupplierNumber()).orElseThrow(()->new CliException("SUPPLIER_INVOICE_SUPPLIER_NOT_FOUND","No supplier has number "+in.getSupplierNumber()));i.setSupplier(s);i.setPaymentTerm(s.getPaymentTerm());i.setLocalDate(in.getDate());if(in.getDueDate()!=null)i.setLocalDueDate(in.getDueDate());else i.setDueDate();i.setReferencenumber(normalized(in.getReference()));i.setTaxSum(in.getVat()==null?java.math.BigDecimal.ZERO:in.getVat());i.setRoundingSum(in.getRounding()==null?java.math.BigDecimal.ZERO:in.getRounding());i.setCurrencyRate(i.getCurrency()==null?java.math.BigDecimal.ONE:i.getCurrency().getExchangeRate());List<SSSupplierInvoiceRow> rows=new java.util.ArrayList<>();for(var x:in.getRows()){SSSupplierInvoiceRow row=new SSSupplierInvoiceRow();if(x.getProductNumber()!=null)row.setProduct(r.database().getProduct(x.getProductNumber()).orElseThrow(()->new CliException("SUPPLIER_INVOICE_PRODUCT_NOT_FOUND","No product has number "+x.getProductNumber())));if(x.getDescription()!=null)row.setDescription(normalized(x.getDescription()));if(x.getQuantity()!=null)row.setQuantity(x.getQuantity());else if(row.getQuantity()==null)row.setQuantity(1);if(x.getUnitPrice()!=null)row.setUnitprice(x.getUnitPrice());if(x.getFreight()!=null)row.setUnitFreight(x.getFreight());if(x.getAccount()!=null)row.setAccount(r.database().getAccounts().stream().filter(a->x.getAccount().equals(a.getNumber())).findFirst().orElseThrow(()->new CliException("SUPPLIER_INVOICE_ACCOUNT_NOT_FOUND","No account has number "+x.getAccount())));rows.add(row);}i.setRows(rows);i.generateVoucher();return i;}
     private static CliException supplierInvoiceValidationFailure(SupplierInvoiceValidationResult v){Map<String,Object>d=new LinkedHashMap<>();d.put("valid",false);d.put("issues",v.issues());SupplierInvoiceValidationIssue f=v.issues().get(0);return new CliException("SUPPLIER_INVOICE_INVALID",f.message(),d);}
 
@@ -2253,7 +2256,7 @@ public class BokfriCli implements Runnable {
                 throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
                         "Unsupported supplier schemaVersion: " + input.getSchemaVersion());
             }
-            return input;
+            return CliInputValidator.validate(input);
         } catch (CliException exception) { throw exception; }
         catch (IOException exception) {
             throw new CliException("INPUT_INVALID", "Could not read supplier JSON: "
@@ -2315,7 +2318,7 @@ public class BokfriCli implements Runnable {
                 throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
                         "Unsupported inpayment schemaVersion: " + input.getSchemaVersion());
             }
-            return input;
+            return CliInputValidator.validate(input);
         } catch (CliException exception) { throw exception; }
         catch (IOException exception) {
             throw new CliException("INPUT_INVALID", "Could not read inpayment JSON: "
@@ -2361,7 +2364,7 @@ public class BokfriCli implements Runnable {
                 throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
                         "Unsupported product schemaVersion: " + input.getSchemaVersion());
             }
-            return input;
+            return CliInputValidator.validate(input);
         } catch (CliException exception) {
             throw exception;
         } catch (IOException exception) {
@@ -2434,7 +2437,7 @@ public class BokfriCli implements Runnable {
             if (input.getInvoiceNumber() == null) {
                 throw new CliException("CREDIT_INVOICE_INVALID", "invoiceNumber is required");
             }
-            return input;
+            return CliInputValidator.validate(input);
         } catch (CliException exception) {
             throw exception;
         } catch (IOException exception) {
@@ -2451,7 +2454,7 @@ public class BokfriCli implements Runnable {
                 throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
                         "Unsupported invoice schemaVersion: " + input.getSchemaVersion());
             }
-            return input;
+            return CliInputValidator.validate(input);
         } catch (CliException exception) {
             throw exception;
         } catch (IOException exception) {
@@ -2583,7 +2586,7 @@ public class BokfriCli implements Runnable {
                 throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
                         "Unsupported customer schemaVersion: " + input.getSchemaVersion());
             }
-            return input;
+            return CliInputValidator.validate(input);
         } catch (CliException exception) {
             throw exception;
         } catch (IOException exception) {
@@ -2667,7 +2670,7 @@ public class BokfriCli implements Runnable {
                 throw new CliException("INPUT_SCHEMA_UNSUPPORTED",
                         "Unsupported voucher schemaVersion: " + input.getSchemaVersion());
             }
-            return input;
+            return CliInputValidator.validate(input);
         } catch (CliException exception) {
             throw exception;
         } catch (IOException exception) {

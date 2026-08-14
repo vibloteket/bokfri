@@ -106,6 +106,58 @@ class BokfriCliTest {
     }
 
     @Test
+    void generatesVoucherSchemaWithoutOpeningDatabase() throws Exception {
+        Result schema = execute("voucher", "schema");
+
+        assertThat(schema.exitCode()).isZero();
+        assertThat(schema.stderr()).isEmpty();
+        JsonNode result = new ObjectMapper().readTree(schema.stdout());
+        assertThat(result.path("$schema").asText())
+                .isEqualTo("https://json-schema.org/draft/2020-12/schema");
+        assertThat(result.path("$id").asText())
+                .isEqualTo("https://bokfri.viblo.se/schemas/cli/voucher-v1.schema.json");
+        assertThat(result.path("additionalProperties").asBoolean()).isFalse();
+        assertThat(result.path("required")).extracting(JsonNode::asText)
+                .contains("date", "description", "rows");
+        assertThat(result.at("/properties/rows/minItems").asInt()).isEqualTo(1);
+        assertThat(result.at("/properties/rows/items/required")).extracting(JsonNode::asText)
+                .contains("account");
+        assertThat(result.at("/properties/schemaVersion/const").asInt()).isEqualTo(1);
+        assertThat(result.at("/properties/schemaVersion/default").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    void everyJsonInputCommandGeneratesDraft202012Schema() throws Exception {
+        String[] commands = {"company", "year", "opening-balance", "customer", "product",
+                "supplier", "supplier-invoice", "supplier-credit-invoice", "invoice",
+                "credit-invoice", "inpayment", "outpayment", "voucher"};
+
+        for (String command : commands) {
+            Result schema = execute(command, "schema");
+            assertThat(schema.exitCode()).as(command).isZero();
+            JsonNode result = new ObjectMapper().readTree(schema.stdout());
+            assertThat(result.path("$schema").asText()).as(command)
+                    .isEqualTo("https://json-schema.org/draft/2020-12/schema");
+            assertThat(result.path("$id").asText()).as(command).endsWith(command + "-v1.schema.json");
+            assertThat(result.path("additionalProperties").asBoolean()).as(command).isFalse();
+        }
+    }
+
+    @Test
+    void structuralAnnotationsDriveInputValidation() throws Exception {
+        Path invalid = temporaryDirectory.resolve("invalid-voucher.json");
+        Files.writeString(invalid, "{\"rows\":[]}");
+
+        Result result = execute("--format", "json", "--company-id", "1", "--year-id", "1",
+                "voucher", "validate", "--file", invalid.toString());
+
+        assertThat(result.exitCode()).isEqualTo(1);
+        JsonNode error = new ObjectMapper().readTree(result.stderr()).path("error");
+        assertThat(error.path("code").asText()).isEqualTo("INPUT_INVALID");
+        assertThat(error.path("message").asText()).contains("$.date is required");
+    }
+
+    @Test
     void databaseStatusReportsCurrentFormat() throws Exception {
         Path data = temporaryDirectory.resolve("current-data");
         execute("--data-dir", data.toString(), "company", "list");

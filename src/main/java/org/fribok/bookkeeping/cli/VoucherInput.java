@@ -11,8 +11,13 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class VoucherInput {
     private int schemaVersion = 1;
+    @jakarta.validation.constraints.NotNull
     private LocalDate date;
+    @jakarta.validation.constraints.NotBlank
     private String description;
+    @jakarta.validation.Valid
+    @jakarta.validation.constraints.NotNull
+    @jakarta.validation.constraints.Size(min = 1)
     private List<Row> rows = new ArrayList<>();
 
     public int getSchemaVersion() {
@@ -50,6 +55,7 @@ public class VoucherInput {
     /** One posting row in the JSON input contract. */
     @JsonIgnoreProperties(ignoreUnknown = false)
     public static class Row {
+        @jakarta.validation.constraints.NotNull
         private Integer account;
         private BigDecimal debit;
         private BigDecimal credit;

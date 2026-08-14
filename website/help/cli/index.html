@@ -352,6 +352,12 @@ bokfri sie import --file verifikationer.se --vouchers-only --commit</code></pre>
 <section id="json">
 <h2>JSON-filer</h2>
 <p>Datum skrivs som <code>ÅÅÅÅ-MM-DD</code>. Pengar bör skrivas som strängar, exempelvis <code>"1250.00"</code>. Okända fält avvisas så att stavfel inte ignoreras tyst. Många kommandon accepterar <code>--file -</code> för JSON från standard input.</p>
+<h3>Genererade JSON Schemas</h3>
+<p>Alla Bokfri-kommandon som tar JSON-indata kan skriva ett JSON Schema Draft 2020-12 direkt till standard output:</p>
+<pre><code>bokfri voucher schema &gt; voucher.schema.json
+bokfri invoice schema &gt; invoice.schema.json
+bokfri customer schema &gt; customer.schema.json</code></pre>
+<p>Schemat genereras vid körning från samma Java-indataklass och strukturella valideringsannoteringar som kommandot använder. Det kräver ingen databas och kan användas av editorer, integrationer och kodgeneratorer. Schemat kontrollerar JSON-strukturen; <code>validate</code> kontrollerar dessutom databasberoende regler som konton, bokföringsår och balansering.</p>
 
 <h3>Kund</h3>
 <pre><code>{
@@ -402,7 +408,7 @@ bokfri sie import --file verifikationer.se --vouchers-only --commit</code></pre>
 <tr><td>Inköp</td><td><code>supplier</code>, <code>supplier-invoice</code>, <code>supplier-credit-invoice</code>, <code>outpayment</code></td></tr>
 <tr><td>Datautbyte</td><td><code>backup</code>, <code>sie</code></td></tr>
 </tbody></table></div>
-<p>De flesta objektsamlingar har <code>list</code> och <code>show</code>. Skrivande JSON-flöden har normalt <code>validate</code> och <code>create</code>. Se alltid den installerade versionens <code>--help</code> för alla parametrar.</p>
+<p>De flesta objektsamlingar har <code>list</code> och <code>show</code>. Skrivande JSON-flöden har normalt <code>schema</code>, <code>validate</code> och <code>create</code>. Se alltid den installerade versionens <code>--help</code> för alla parametrar.</p>
 </section>
 
 <section id="automatisering">

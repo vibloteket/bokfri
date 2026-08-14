@@ -8,11 +8,16 @@ import java.math.BigDecimal;
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class ProductInput {
     private int schemaVersion = 1;
+    @jakarta.validation.constraints.NotBlank
     private String number;
+    @jakarta.validation.constraints.NotBlank
     private String description;
+    @jakarta.validation.constraints.NotNull
     private BigDecimal sellingPrice;
+    @jakarta.validation.constraints.NotNull
     private BigDecimal vatRate;
     private String unit;
+    @jakarta.validation.constraints.NotNull
     private Integer salesAccount;
     private String project;
     private String resultUnit;

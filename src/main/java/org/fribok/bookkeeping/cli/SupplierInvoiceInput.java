@@ -10,12 +10,17 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class SupplierInvoiceInput {
     private int schemaVersion = 1;
+    @jakarta.validation.constraints.NotBlank
     private String supplierNumber;
+    @jakarta.validation.constraints.NotNull
     private LocalDate date;
     private LocalDate dueDate;
     private String reference;
     private BigDecimal vat;
     private BigDecimal rounding;
+    @jakarta.validation.Valid
+    @jakarta.validation.constraints.NotNull
+    @jakarta.validation.constraints.Size(min = 1)
     private List<Row> rows = new ArrayList<>();
     public int getSchemaVersion(){return schemaVersion;} public void setSchemaVersion(int v){schemaVersion=v;}
     public String getSupplierNumber(){return supplierNumber;} public void setSupplierNumber(String v){supplierNumber=v;}

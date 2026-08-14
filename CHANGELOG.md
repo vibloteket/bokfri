@@ -43,6 +43,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   accounting year; balance sheet and account balance default to its final day.
 
 ### Added
+- Added code-first JSON Schema Draft 2020-12 output through `schema` under every
+  CLI command that accepts Bokfri JSON input. Schemas are generated at runtime
+  from the same Jackson input classes and structural validation annotations used
+  when reading input, require no database, and have stable versioned `$id` values.
 - Added application-level database format metadata and startup compatibility checks;
   databases from newer unsupported Bokfri formats are rejected before normal loading.
 - Added versioned JSON manifests to new full backups while retaining verification
