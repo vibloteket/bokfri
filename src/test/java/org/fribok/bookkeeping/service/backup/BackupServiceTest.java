@@ -46,6 +46,56 @@ class BackupServiceTest {
     }
 
     @Test
+    void overwriteRestoreReplacesWholeDatabaseDirectory(@TempDir Path tempDir) throws Exception {
+        Path source = tempDir.resolve("source");
+        Path sourceDatabase = source.resolve("db");
+        Files.createDirectories(sourceDatabase);
+        Files.writeString(sourceDatabase.resolve("JFSDB.properties"), "new-properties");
+        Files.writeString(sourceDatabase.resolve("JFSDB.script"), "new-script");
+        Path backup = tempDir.resolve("backup.zip");
+        BackupService service = new BackupService(source);
+        service.create(backup, false);
+
+        Path target = tempDir.resolve("target");
+        Path targetDatabase = target.resolve("db");
+        Files.createDirectories(targetDatabase);
+        Files.writeString(targetDatabase.resolve("JFSDB.properties"), "old-properties");
+        Files.writeString(targetDatabase.resolve("JFSDB.script"), "old-script");
+        Files.writeString(targetDatabase.resolve("JFSDB.data"), "stale-data");
+        Files.writeString(targetDatabase.resolve("unrelated.txt"), "stale-file");
+
+        BackupRestorePlan plan = service.restore(backup, target, true, true);
+
+        assertThat(plan.replacesExistingDatabase()).isTrue();
+        assertThat(targetDatabase.resolve("JFSDB.properties")).hasContent("new-properties");
+        assertThat(targetDatabase.resolve("JFSDB.script")).hasContent("new-script");
+        assertThat(targetDatabase.resolve("JFSDB.data")).doesNotExist();
+        assertThat(targetDatabase.resolve("unrelated.txt")).doesNotExist();
+    }
+
+    @Test
+    void restoreRejectsExistingDatabaseWhenBackupHasNoMatchingOptionalFiles(
+            @TempDir Path tempDir) throws Exception {
+        Path source = tempDir.resolve("source");
+        Path sourceDatabase = source.resolve("db");
+        Files.createDirectories(sourceDatabase);
+        Files.writeString(sourceDatabase.resolve("JFSDB.properties"), "new-properties");
+        Files.writeString(sourceDatabase.resolve("JFSDB.script"), "new-script");
+        Path backup = tempDir.resolve("backup.zip");
+        BackupService service = new BackupService(source);
+        service.create(backup, false);
+
+        Path target = tempDir.resolve("target");
+        Path targetDatabase = target.resolve("db");
+        Files.createDirectories(targetDatabase);
+        Files.writeString(targetDatabase.resolve("JFSDB.data"), "existing-data");
+
+        assertThatThrownBy(() -> service.restore(backup, target, false, true))
+                .isInstanceOf(java.nio.file.FileAlreadyExistsException.class);
+        assertThat(targetDatabase.resolve("JFSDB.data")).hasContent("existing-data");
+    }
+
+    @Test
     void restoreRejectsBackupFromNewerDataFormat(@TempDir Path tempDir) throws Exception {
         Path backup = tempDir.resolve("future.zip");
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(backup))) {

@@ -512,25 +512,25 @@ public class SSInvoiceMath extends SSSaleMath {    private static final Logger L
                 if (iRow.getQuantity() == null) {
                     continue;
                 }
+                SSProduct iProduct = iRow.getProduct();
+                if (iProduct == null) {
+                    continue;
+                }
                 Integer iReserved;
 
                 if (iParcelProducts.contains(iRow.getProductNr())) {
-                    SSProduct iProduct = iRow.getProduct();
-
-                    if (iProduct != null) {
-                        for (SSProductRow iProductRow : iProduct.getParcelRows()) {
-                            iReserved = iInvoiceCount.get(iProductRow.getProductNr())
-                                    == null
-                                            ? iProductRow.getQuantity()
-                                                    * iRow.getQuantity().intValueExact()
-                                                    : iInvoiceCount.get(
-                                                            iProductRow.getProductNr())
-                                                                    + (iProductRow.getQuantity()
-                                                                            * iRow.getQuantity().intValueExact());
-                            iInvoiceCount.put(iProductRow.getProductNr(), iReserved);
-                        }
+                    for (SSProductRow iProductRow : iProduct.getParcelRows()) {
+                        iReserved = iInvoiceCount.get(iProductRow.getProductNr())
+                                == null
+                                        ? iProductRow.getQuantity()
+                                                * iRow.getQuantity().intValueExact()
+                                                : iInvoiceCount.get(
+                                                        iProductRow.getProductNr())
+                                                                + (iProductRow.getQuantity()
+                                                                        * iRow.getQuantity().intValueExact());
+                        iInvoiceCount.put(iProductRow.getProductNr(), iReserved);
                     }
-                } else {
+                } else if (iProduct.isStockProduct()) {
                     iReserved = iInvoiceCount.get(iRow.getProductNr()) == null
                             ? iRow.getQuantity().intValueExact()
                             : iInvoiceCount.get(iRow.getProductNr())

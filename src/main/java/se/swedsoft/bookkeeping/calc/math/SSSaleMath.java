@@ -279,8 +279,8 @@ public class SSSaleMath {
                 continue;
             }
 
-            // This is the product we want to get the quantity for
-            if (iRowProduct.equals(iProduct)) {
+            // This is the stock product we want to get the quantity for.
+            if (iRowProduct.equals(iProduct) && iRowProduct.isStockProduct()) {
                 iCount = iCount + iRow.getQuantity().intValueExact();
             }
             // Get the quantity if this is a parcel product

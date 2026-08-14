@@ -146,8 +146,9 @@ public final class BackupService {
         Path databaseDirectory = target.resolve("db");
         List<String> databaseFiles = verification.entries().stream()
                 .filter(entry -> entry.startsWith("JFSDB.")).sorted().toList();
-        boolean replacesExisting = databaseFiles.stream()
-                .map(databaseDirectory::resolve).anyMatch(Files::exists);
+        boolean replacesExisting = DATABASE_SUFFIXES.stream()
+                .map(suffix -> databaseDirectory.resolve("JFSDB" + suffix))
+                .anyMatch(Files::exists);
         if (replacesExisting && !overwrite) {
             throw new FileAlreadyExistsException(
                     databaseDirectory.resolve("JFSDB.properties").toString());
@@ -160,24 +161,33 @@ public final class BackupService {
 
         Files.createDirectories(target);
         Path staging = Files.createTempDirectory(target, ".bokfri-restore-");
+        Path stagedDatabase = staging.resolve("db");
+        Path previousDatabase = staging.resolve("previous-db");
+        boolean previousMoved = false;
+        boolean restoredMoved = false;
         try {
-            extractDatabaseFiles(verification.path(), staging, databaseFiles);
-            Files.createDirectories(databaseDirectory);
-            for (String name : databaseFiles) {
-                moveIntoPlace(staging.resolve(name), databaseDirectory.resolve(name), overwrite);
+            Files.createDirectories(stagedDatabase);
+            extractDatabaseFiles(verification.path(), stagedDatabase, databaseFiles);
+            if (Files.exists(databaseDirectory)) {
+                Files.move(databaseDirectory, previousDatabase);
+                previousMoved = true;
             }
+            Files.move(stagedDatabase, databaseDirectory);
+            restoredMoved = true;
+        } catch (IOException exception) {
+            if (restoredMoved) {
+                deleteTree(databaseDirectory);
+            }
+            if (previousMoved && !Files.exists(databaseDirectory)) {
+                try {
+                    Files.move(previousDatabase, databaseDirectory);
+                } catch (IOException rollbackException) {
+                    exception.addSuppressed(rollbackException);
+                }
+            }
+            throw exception;
         } finally {
-            try (var paths = Files.walk(staging)) {
-                paths.sorted(Comparator.reverseOrder()).forEach(path -> {
-                    try {
-                        Files.deleteIfExists(path);
-                    } catch (IOException exception) {
-                        throw new java.io.UncheckedIOException(exception);
-                    }
-                });
-            } catch (java.io.UncheckedIOException exception) {
-                throw exception.getCause();
-            }
+            deleteTree(staging);
         }
         return plan;
     }
@@ -265,6 +275,23 @@ public final class BackupService {
         zip.putNextEntry(new ZipEntry(name));
         Files.copy(file, zip);
         zip.closeEntry();
+    }
+
+    private static void deleteTree(Path root) throws IOException {
+        if (!Files.exists(root)) {
+            return;
+        }
+        try (var paths = Files.walk(root)) {
+            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException exception) {
+                    throw new java.io.UncheckedIOException(exception);
+                }
+            });
+        } catch (java.io.UncheckedIOException exception) {
+            throw exception.getCause();
+        }
     }
 
     private static void moveIntoPlace(Path source, Path target, boolean overwrite) throws IOException {
