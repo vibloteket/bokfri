@@ -27,12 +27,12 @@ public final class CliSmokeTest {
         jarLauncher = launcher.getFileName().toString().endsWith(".jar");
 
         Path temporary = Files.createTempDirectory("bokfri-cli-smoke-");
-        config = temporary.resolve("config/cli.yaml");
+        config = temporary.resolve("config/database.config");
         data = temporary.resolve("data");
         Files.createDirectories(data);
 
         try {
-            runReadOnlyAndContextFlow();
+            runReadOnlyAndSelectionFlow();
             runCompanyAndYearCreationFlow(temporary);
             runOpeningBalanceFlow(temporary);
             runReferenceDataFlow(temporary);
@@ -58,29 +58,35 @@ public final class CliSmokeTest {
         }
     }
 
-    private static void runReadOnlyAndContextFlow() throws Exception {
+    private static void runReadOnlyAndSelectionFlow() throws Exception {
         Result version = cli("--format", "json", "version");
         version.success();
         version.jsonObject();
         require(version.stdout.contains("\"title\":\"Bokfri\""), "version output lacks title");
 
-        Result companies = cli("--data-dir", data.toString(), "--format", "json", "company", "list");
+        Result companies = cli("--format", "json", "company", "list");
         companies.success();
         companies.jsonObject();
         int companyId = firstInt(companies.stdout, "id");
 
-        Result years = cli("--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
+        Result years = cli("--company-id", Integer.toString(companyId),
                 "--format", "json", "year", "list");
         years.success();
         years.jsonObject();
         int yearId = firstInt(years.stdout, "id");
 
-        cli("context", "create", "--name", "smoke", "--data-dir", data.toString(),
-                "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(yearId)).success();
-        cli("context", "use", "smoke").success();
-        Result current = cli("--format", "json", "context", "current");
-        current.success();
-        require(current.stdout.contains("\"name\":\"smoke\""), "current context was not selected");
+        cli("company", "use", Integer.toString(companyId)).success();
+        cli("year", "use", Integer.toString(yearId)).success();
+        Result currentCompany = cli("--format", "json",
+                "company", "current");
+        currentCompany.success();
+        require(currentCompany.stdout.contains("\"id\":" + companyId),
+                "current company was not selected");
+        Result currentYear = cli("--format", "json",
+                "year", "current");
+        currentYear.success();
+        require(currentYear.stdout.contains("\"id\":" + yearId),
+                "current accounting year was not selected");
     }
 
     private static void runCompanyAndYearCreationFlow(Path temporary) throws Exception {
@@ -102,15 +108,14 @@ public final class CliSmokeTest {
         require(createdYear.stdout.contains("\"from\":\"2026-01-01\""),
                 "accounting year was not created");
 
-        cli("context", "create", "--name", "isolated-full-year", "--data-dir", data.toString(),
-                "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(yearId)).success();
-        cli("context", "use", "isolated-full-year").success();
-        Result current = cli("--format", "json", "context", "current");
+        cli("company", "use", Integer.toString(companyId)).success();
+        cli("year", "use", Integer.toString(yearId)).success();
+        Result current = cli("--format", "json", "year", "current");
         current.success();
         require(current.stdout.contains("\"companyId\":" + companyId),
-                "isolated context did not select the created company");
-        require(current.stdout.contains("\"yearId\":" + yearId),
-                "isolated context did not select the created year");
+                "created company was not selected");
+        require(current.stdout.contains("\"id\":" + yearId),
+                "created accounting year was not selected");
 
         Files.writeString(temporary.resolve("created-company.txt"), Integer.toString(companyId));
         Files.writeString(temporary.resolve("created-year.txt"), Integer.toString(yearId));
@@ -730,13 +735,12 @@ public final class CliSmokeTest {
         created.success();
         int toYearId = firstInt(created.stdout, "id");
 
-        cli("context", "create", "--name", "isolated-next-year", "--data-dir", data.toString(),
-                "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(toYearId)).success();
-        cli("context", "use", "isolated-next-year").success();
-        Result current = cli("--format", "json", "context", "current");
+        cli("--company-id", Integer.toString(companyId),
+                "year", "use", Integer.toString(toYearId)).success();
+        Result current = cli("--format", "json", "year", "current");
         current.success();
-        require(current.stdout.contains("\"yearId\":" + toYearId),
-                "next-year context did not select 2027");
+        require(current.stdout.contains("\"id\":" + toYearId),
+                "next accounting year was not selected");
 
         Result preview = cli("--format", "json", "opening-balance", "carry-forward",
                 "--from-year-id", Integer.toString(fromYearId));
@@ -762,7 +766,10 @@ public final class CliSmokeTest {
     }
 
     private static void runSieExportFlow(Path temporary) throws Exception {
-        cli("context", "use", "isolated-full-year").success();
+        int companyId = Integer.parseInt(Files.readString(temporary.resolve("created-company.txt")));
+        int yearId = Integer.parseInt(Files.readString(temporary.resolve("created-year.txt")));
+        cli("company", "use", Integer.toString(companyId)).success();
+        cli("year", "use", Integer.toString(yearId)).success();
         Path output = temporary.resolve("company-2026.se");
         Result export = cli("--format", "json", "sie", "export", "--output", output.toString());
         export.success();
@@ -878,7 +885,7 @@ public final class CliSmokeTest {
     }
 
     private static void runErrorFlow(Path temporary) throws Exception {
-        Result missingCompany = cli("--data-dir", data.toString(), "--company-id", "2147483647",
+        Result missingCompany = cli("--company-id", "2147483647",
                 "--format", "json", "year", "list");
         require(missingCompany.exitCode != 0, "missing company unexpectedly succeeded");
         missingCompany.stderrJsonObject();
@@ -886,7 +893,7 @@ public final class CliSmokeTest {
                 "missing company lacks stable error code");
 
         int companyId = Integer.parseInt(Files.readString(temporary.resolve("created-company.txt")));
-        Result missingYear = cli("--data-dir", data.toString(), "--company-id",
+        Result missingYear = cli("--company-id",
                 Integer.toString(companyId), "--year-id", "2147483647", "--format", "json",
                 "account", "list");
         require(missingYear.exitCode != 0, "missing accounting year unexpectedly succeeded");
@@ -949,6 +956,12 @@ public final class CliSmokeTest {
         command.add(launcher.toString());
         command.add("--config");
         command.add(config.toString());
+        boolean overridesDataDirectory = java.util.Arrays.stream(arguments)
+                .anyMatch(argument -> argument.equals("--data-dir") || argument.startsWith("--data-dir="));
+        if (!overridesDataDirectory) {
+            command.add("--data-dir");
+            command.add(data.toString());
+        }
         command.addAll(List.of(arguments));
         Process process = new ProcessBuilder(command).start();
         String stdout = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();

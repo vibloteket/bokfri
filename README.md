@@ -62,23 +62,25 @@ installationen gör kommandot `bokfri` tillgängligt i nya terminalfönster;
 utvecklingspaketet använder `bokfri-dev`. På macOS finns launchern i
 app-paketet och på Linux kan AppImage-filen ta emot CLI-argument direkt.
 
-`--format json` ger maskinläsbar utdata. Företag och bokföringsår kan väljas
-med globala alternativ eller sparas i en namngiven kontext:
+`--format json` ger maskinläsbar utdata. CLI:t delar aktuellt företag och
+bokföringsår med det grafiska gränssnittet. Valen kan därför göras i valfritt
+gränssnitt:
 
 ```sh
 bokfri company list
-bokfri --company-id 37 year list
-# Namnet skapas från företag och årets start; --data-dir kan utelämnas
-bokfri context create --company-id 37 --year-id 12
-bokfri context use bokfri-demo-ab-20260701
-# Använd --name demo om du vill välja ett eget namn
+bokfri company use 37
+bokfri year list
+bokfri year use 12
 bokfri trial-balance --format json
 ```
+
+För skript kan `--company-id`, `--year-id` och `--data-dir` användas som
+tillfälliga alternativ utan att ändra de sparade valen.
 
 Skrivande arbetsflöden kan normalt valideras eller förhandsgranskas med
 `validate`, `--dry-run` eller genom att utelämna `--commit`. Läs den
 [fullständiga CLI-guiden](https://bokfri.viblo.se/help/cli/) för installation,
-kontexter, rapporter, JSON-format, fakturor, betalningar, backup, SIE och
+företags- och årsval, rapporter, JSON-format, fakturor, betalningar, backup, SIE och
 felsökning. Den exakta syntaxen för den installerade versionen visas med
 `bokfri --help` och `bokfri KOMMANDO --help`.
 

@@ -89,8 +89,10 @@ import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.common.SSCurrency;
 import se.swedsoft.bookkeeping.data.common.SSDefaultAccount;
 import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
+import se.swedsoft.bookkeeping.data.system.SSDBConfig;
 import se.swedsoft.bookkeeping.importexport.sie.util.SIEType;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -111,7 +113,6 @@ import java.util.concurrent.Callable;
             BokfriCli.VersionCommand.class,
             BokfriCli.PathsCommand.class,
             BokfriCli.DoctorCommand.class,
-            BokfriCli.ContextCommand.class,
             BokfriCli.CompanyCommand.class,
             BokfriCli.DemoCommand.class,
             BokfriCli.AccountPlanCommand.class,
@@ -139,13 +140,9 @@ import java.util.concurrent.Callable;
 public class BokfriCli implements Runnable {
     enum OutputFormat { text, json }
 
-    @Option(names = "--config", scope = CommandLine.ScopeType.INHERIT,
-            description = "CLI config file")
+    @Option(names = "--config", scope = CommandLine.ScopeType.INHERIT, hidden = true,
+            description = "Override the shared GUI/CLI selection file")
     java.nio.file.Path configPath;
-
-    @Option(names = "--context", scope = CommandLine.ScopeType.INHERIT,
-            description = "Context to use for this command")
-    String contextName;
 
     @Option(names = "--data-dir", scope = CommandLine.ScopeType.INHERIT,
             description = "Override the Bokfri data directory")
@@ -175,47 +172,33 @@ public class BokfriCli implements Runnable {
     @CommandLine.Spec
     CommandLine.Model.CommandSpec spec;
 
-    CliConfigStore configStore() {
-        java.nio.file.Path selected = configPath != null
-                ? configPath
-                : Path.get(Path.USER_CONF).toPath().resolve("cli.yaml");
-        return new CliConfigStore(selected);
-    }
-
-    CliConfig loadConfig() {
-        try {
-            return configStore().load();
-        } catch (IOException exception) {
-            throw new CliException("CONFIG_READ_FAILED",
-                    "Could not read " + configStore().getPath() + ": " + exception.getMessage(), exception);
-        }
+    File selectionFile() {
+        return (configPath != null ? configPath
+                : Path.get(Path.USER_CONF).toPath().resolve("database.config")).toFile();
     }
 
     ResolvedContext resolveContext(boolean requireCompany, boolean requireYear) {
-        CliConfig config = loadConfig();
-        String selectedName = contextName != null ? contextName : config.getCurrentContext();
-        CliContext stored = selectedName == null ? null : config.getContexts().get(selectedName);
-        if (selectedName != null && stored == null) {
-            throw new CliException("CONTEXT_NOT_FOUND", "No context is named " + selectedName);
-        }
-
-        java.nio.file.Path selectedDataDir = dataDir != null
-                ? dataDir
-                : stored != null && stored.getDataDir() != null
-                        ? Paths.get(stored.getDataDir())
-                        : Path.get(Path.USER_DATA).toPath();
         Integer selectedCompany = companyId != null
-                ? companyId : stored == null ? null : stored.getCompanyId();
-        Integer selectedYear = yearId != null ? yearId : stored == null ? null : stored.getYearId();
+                ? companyId : SSDBConfig.getCompanyId(selectionFile());
+        Integer selectedYear = yearId;
+        if (selectedYear == null && selectedCompany != null) {
+            selectedYear = SSDBConfig.getYearId(selectionFile(), selectedCompany);
+            if (selectedYear == null && companyId == null) {
+                selectedYear = SSDBConfig.getYearId(selectionFile());
+            }
+        }
+        java.nio.file.Path selectedDataDir = (dataDir != null
+                ? dataDir : Path.get(Path.USER_DATA).toPath()).toAbsolutePath().normalize();
 
         if (requireCompany && selectedCompany == null) {
-            throw new CliException("COMPANY_REQUIRED", "Select a context or provide --company-id");
+            throw new CliException("COMPANY_REQUIRED",
+                    "Select a company with 'company use' or provide --company-id");
         }
         if (requireYear && selectedYear == null) {
-            throw new CliException("YEAR_REQUIRED", "Select a context or provide --year-id");
+            throw new CliException("YEAR_REQUIRED",
+                    "Select an accounting year with 'year use' or provide --year-id");
         }
-        return new ResolvedContext(selectedName, selectedDataDir.toAbsolutePath().normalize(),
-                selectedCompany, selectedYear);
+        return new ResolvedContext(selectedDataDir, selectedCompany, selectedYear);
     }
 
     BokfriRuntime openRuntime(java.nio.file.Path selectedDataDir) throws Exception {
@@ -240,11 +223,9 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    record ResolvedContext(String name, java.nio.file.Path dataDir,
-                           Integer companyId, Integer yearId) {
+    record ResolvedContext(java.nio.file.Path dataDir, Integer companyId, Integer yearId) {
         Map<String, Object> asMap() {
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("name", name);
             result.put("dataDir", dataDir.toString());
             result.put("companyId", companyId);
             result.put("yearId", yearId);
@@ -279,7 +260,7 @@ public class BokfriCli implements Runnable {
             for (Path path : Path.values()) {
                 result.put(toCamelCase(path.name()), Path.get(path).getAbsolutePath());
             }
-            result.put("cliConfig", parent.configStore().getPath().toString());
+            result.put("selectionConfig", parent.selectionFile().toString());
             StringBuilder text = new StringBuilder();
             result.forEach((name, value) -> text.append(name).append(": ").append(value).append('\n'));
             parent.output(result, text.toString().stripTrailing());
@@ -297,199 +278,69 @@ public class BokfriCli implements Runnable {
         @Override
         public Integer call() {
             ResolvedContext context = parent.resolveContext(false, false);
-            boolean configExists = Files.exists(parent.configStore().getPath());
+            boolean configExists = Files.exists(parent.selectionFile().toPath());
             boolean dataDirExists = Files.isDirectory(context.dataDir());
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("ok", true);
             result.put("configExists", configExists);
             result.put("dataDirExists", dataDirExists);
-            result.put("context", context.asMap());
-            parent.output(result, "Status: OK\nConfig: " + parent.configStore().getPath()
+            result.put("selection", context.asMap());
+            parent.output(result, "Status: OK\nSelection config: " + parent.selectionFile()
                     + (configExists ? "" : " (not created yet)") + "\nData directory: "
                     + context.dataDir() + (dataDirExists ? "" : " (will be created when needed)")
-                    + "\nContext: " + (context.name() == null ? "none" : context.name()));
+                    + "\nCompany id: " + context.companyId() + "\nYear id: " + context.yearId());
             return 0;
         }
     }
 
-    @Command(name = "context", description = "Manage named company/year contexts",
-            subcommands = {ContextList.class, ContextCurrent.class, ContextShow.class,
-                    ContextCreate.class, ContextUse.class, ContextDelete.class})
-    static class ContextCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
-        @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A context command is required");
-        }
-    }
-
-    abstract static class ContextSubcommand {
-        @CommandLine.ParentCommand ContextCommand command;
-        BokfriCli root() { return command.parent; }
-    }
-
-    @Command(name = "list", description = "List contexts")
-    static class ContextList extends ContextSubcommand implements Callable<Integer> {
-        @Override public Integer call() {
-            CliConfig config = root().loadConfig();
-            List<Map<String, Object>> contexts = config.getContexts().entrySet().stream().map(entry -> {
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("name", entry.getKey());
-                item.put("current", entry.getKey().equals(config.getCurrentContext()));
-                item.put("dataDir", entry.getValue().getDataDir());
-                item.put("companyId", entry.getValue().getCompanyId());
-                item.put("yearId", entry.getValue().getYearId());
-                return item;
-            }).toList();
-            String text = contexts.isEmpty() ? "No contexts configured" : contexts.stream()
-                    .map(item -> (Boolean.TRUE.equals(item.get("current")) ? "* " : "  ")
-                            + item.get("name") + "  company=" + item.get("companyId")
-                            + " year=" + item.get("yearId") + "  " + item.get("dataDir"))
-                    .reduce((left, right) -> left + "\n" + right).orElse("");
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("currentContext", config.getCurrentContext());
-            result.put("contexts", contexts);
-            root().output(result, text);
-            return 0;
-        }
-    }
-
-    @Command(name = "current", description = "Show the current context")
-    static class ContextCurrent extends ContextSubcommand implements Callable<Integer> {
-        @Override public Integer call() {
-            CliConfig config = root().loadConfig();
-            if (config.getCurrentContext() == null) {
-                throw new CliException("CONTEXT_NOT_SELECTED", "No current context is selected");
-            }
-            return showContext(root(), config, config.getCurrentContext());
-        }
-    }
-
-    @Command(name = "show", description = "Show a context")
-    static class ContextShow extends ContextSubcommand implements Callable<Integer> {
-        @Parameters(index = "0") String name;
-        @Override public Integer call() { return showContext(root(), root().loadConfig(), name); }
-    }
-
-    private static int showContext(BokfriCli root, CliConfig config, String name) {
-        CliContext context = config.getContexts().get(name);
-        if (context == null) {
-            throw new CliException("CONTEXT_NOT_FOUND", "No context is named " + name);
-        }
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("name", name);
-        result.put("current", name.equals(config.getCurrentContext()));
-        result.put("dataDir", context.getDataDir());
-        result.put("companyId", context.getCompanyId());
-        result.put("yearId", context.getYearId());
-        root.output(result, "Context: " + name + "\nData directory: " + context.getDataDir()
-                + "\nCompany id: " + context.getCompanyId() + "\nYear id: " + context.getYearId());
-        return 0;
-    }
-
-    @Command(name = "create", description = "Create a context for a company and accounting year")
-    static class ContextCreate extends ContextSubcommand implements Callable<Integer> {
-        @Option(names = "--name", description = "Context name (defaults to company name and year start)")
-        String requestedName;
-
-        @Override public Integer call() {
-            BokfriCli root = root();
-            if (root.companyId == null || root.yearId == null) {
-                throw new CliException("CONTEXT_VALUES_REQUIRED",
-                        "Provide --company-id and --year-id");
-            }
-            java.nio.file.Path selectedDataDir = (root.dataDir == null
-                    ? Path.get(Path.USER_DATA).toPath()
-                    : root.dataDir).toAbsolutePath().normalize();
-            String name = requestedName;
-            if (name == null) {
-                try (BokfriRuntime runtime = root.openRuntime(selectedDataDir)) {
-                    SSNewCompany company = runtime.selectCompany(root.companyId);
-                    SSNewAccountingYear year = runtime.selectYear(company, root.yearId);
-                    name = contextName(company.getName(), year.getLocalFrom());
-                } catch (Exception exception) {
-                    throw databaseFailure(exception);
-                }
-            } else if (name.isBlank()) {
-                throw new CliException("CONTEXT_NAME_INVALID", "Context name must not be blank");
-            }
-
-            CliConfig config = root.loadConfig();
-            CliContext context = new CliContext(selectedDataDir, root.companyId, root.yearId);
-            CliContext existing = config.getContexts().get(name);
-            if (existing != null && !sameContext(existing, context)) {
-                throw new CliException("CONTEXT_NAME_EXISTS",
-                        "Context " + name + " already points to another company, year, or data directory;"
-                                + " choose another --name");
-            }
-            config.getContexts().put(name, context);
-            save(root, config);
-            return showContext(root, config, name);
-        }
-    }
-
-    private static String contextName(String companyName, java.time.LocalDate yearStart) {
-        String slug = companyName == null ? "" : companyName.strip().toLowerCase(java.util.Locale.ROOT)
-                .replaceAll("[^\\p{L}\\p{N}]+", "-")
-                .replaceAll("^-+|-+$", "");
-        if (slug.isEmpty()) {
-            slug = "company";
-        }
-        return slug + "-" + yearStart.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
-    }
-
-    private static boolean sameContext(CliContext left, CliContext right) {
-        return java.nio.file.Paths.get(left.getDataDir()).toAbsolutePath().normalize()
-                        .equals(java.nio.file.Paths.get(right.getDataDir()).toAbsolutePath().normalize())
-                && Objects.equals(left.getCompanyId(), right.getCompanyId())
-                && Objects.equals(left.getYearId(), right.getYearId());
-    }
-
-    @Command(name = "use", description = "Select the current context")
-    static class ContextUse extends ContextSubcommand implements Callable<Integer> {
-        @Parameters(index = "0") String name;
-        @Override public Integer call() {
-            CliConfig config = root().loadConfig();
-            if (!config.getContexts().containsKey(name)) {
-                throw new CliException("CONTEXT_NOT_FOUND", "No context is named " + name);
-            }
-            config.setCurrentContext(name);
-            save(root(), config);
-            root().output(Map.of("currentContext", name), "Current context is now " + name);
-            return 0;
-        }
-    }
-
-    @Command(name = "delete", description = "Delete a context")
-    static class ContextDelete extends ContextSubcommand implements Callable<Integer> {
-        @Parameters(index = "0") String name;
-        @Override public Integer call() {
-            CliConfig config = root().loadConfig();
-            if (config.getContexts().remove(name) == null) {
-                throw new CliException("CONTEXT_NOT_FOUND", "No context is named " + name);
-            }
-            if (name.equals(config.getCurrentContext())) {
-                config.setCurrentContext(null);
-            }
-            save(root(), config);
-            root().output(Map.of("deleted", name), "Deleted context " + name);
-            return 0;
-        }
-    }
-
-    private static void save(BokfriCli root, CliConfig config) {
-        try {
-            root.configStore().save(config);
-        } catch (IOException exception) {
-            throw new CliException("CONFIG_WRITE_FAILED",
-                    "Could not write " + root.configStore().getPath() + ": " + exception.getMessage(), exception);
-        }
-    }
-
-    @Command(name = "company", description = "Inspect and create companies", subcommands = {CompanyList.class,CompanyCreate.class})
+    @Command(name = "company", description = "Inspect, create, and select companies",
+            subcommands = {CompanyList.class, CompanyCurrent.class, CompanyUse.class, CompanyCreate.class})
     static class CompanyCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
             throw new CommandLine.ParameterException(spec.commandLine(), "A company command is required");
+        }
+    }
+
+    @Command(name = "current", description = "Show the company shared with the graphical interface")
+    static class CompanyCurrent implements Callable<Integer> {
+        @CommandLine.ParentCommand CompanyCommand command;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                root.output(Map.of("id", company.getId(), "name", company.getName()),
+                        company.getId() + "\t" + company.getName());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "use", description = "Select the company shared with the graphical interface")
+    static class CompanyUse implements Callable<Integer> {
+        @CommandLine.ParentCommand CompanyCommand command;
+        @Parameters(index = "0", description = "Company id") int id;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(false, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(id);
+                Integer selectedYear = SSDBConfig.getYearId(root.selectionFile(), id);
+                SSDBConfig.setCompanyId(root.selectionFile(), id);
+                SSDBConfig.setYearId(root.selectionFile(), id, selectedYear);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("id", id);
+                result.put("name", company.getName());
+                result.put("yearId", selectedYear);
+                root.output(result, "Current company is now " + id + " - " + company.getName()
+                        + (selectedYear == null ? "" : " (year " + selectedYear + ")"));
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
         }
     }
 
@@ -512,7 +363,7 @@ public class BokfriCli implements Runnable {
                 String text = companies.stream().map(item -> item.get("id") + "\t" + item.get("name")
                         + (item.get("corporateId") == null ? "" : "\t" + item.get("corporateId")))
                         .reduce((left, right) -> left + "\n" + right).orElse("No companies found");
-                root.output(Map.of("context", context.asMap(), "companies", companies), text);
+                root.output(Map.of("selection", context.asMap(), "companies", companies), text);
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
@@ -573,11 +424,53 @@ public class BokfriCli implements Runnable {
     static class AccountPlanCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An account-plan command is required");}}
     @Command(name="list") static class AccountPlanList implements Callable<Integer>{@CommandLine.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),plans.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
-    @Command(name = "year", description = "Inspect accounting years", subcommands = {YearList.class,YearCreate.class})
+    @Command(name = "year", description = "Inspect, create, and select accounting years",
+            subcommands = {YearList.class, YearCurrent.class, YearUse.class, YearCreate.class})
     static class YearCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
             throw new CommandLine.ParameterException(spec.commandLine(), "A year command is required");
+        }
+    }
+
+    @Command(name = "current", description = "Show the accounting year shared with the graphical interface")
+    static class YearCurrent implements Callable<Integer> {
+        @CommandLine.ParentCommand YearCommand command;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                root.output(Map.of("id", year.getId(), "companyId", company.getId(),
+                                "from", year.getLocalFrom(), "to", year.getLocalTo()),
+                        year.getId() + "\t" + year.getLocalFrom() + " - " + year.getLocalTo());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(name = "use", description = "Select the accounting year shared with the graphical interface")
+    static class YearUse implements Callable<Integer> {
+        @CommandLine.ParentCommand YearCommand command;
+        @Parameters(index = "0", description = "Accounting year id") int id;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, id);
+                SSDBConfig.setYearId(root.selectionFile(), company.getId(), id);
+                root.output(Map.of("id", id, "companyId", company.getId(),
+                                "from", year.getLocalFrom(), "to", year.getLocalTo()),
+                        "Current accounting year is now " + year.getLocalFrom()
+                                + " - " + year.getLocalTo());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
         }
     }
 
@@ -603,7 +496,7 @@ public class BokfriCli implements Runnable {
                         .reduce((left, right) -> left + "\n" + right).orElse("No accounting years found");
                 Map<String, Object> selected = context.asMap();
                 selected.put("companyName", company.getName());
-                root.output(Map.of("context", selected, "years", years), text);
+                root.output(Map.of("selection", selected, "years", years), text);
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
@@ -645,7 +538,7 @@ public class BokfriCli implements Runnable {
                 selected.put("companyName", company.getName());
                 selected.put("yearFrom", year.getLocalFrom().toString());
                 selected.put("yearTo", year.getLocalTo().toString());
-                root.output(Map.of("context", selected, "accounts", accounts), text);
+                root.output(Map.of("selection", selected, "accounts", accounts), text);
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
@@ -671,7 +564,7 @@ public class BokfriCli implements Runnable {
                 result.put("creditTotal", decimal(report.creditTotal()));
                 result.put("closingTotal", decimal(report.closingTotal()));
                 result.put("difference", decimal(report.debitTotal().subtract(report.creditTotal())));
-                result.put("context", context);
+                result.put("selection", context);
                 return result;
             }, BokfriCli::trialBalanceText);
         }
@@ -692,7 +585,7 @@ public class BokfriCli implements Runnable {
                 result.put("liabilitiesAndEquity", decimal(report.liabilitiesAndEquity()));
                 result.put("currentResult", decimal(report.currentResult()));
                 result.put("difference", decimal(report.difference()));
-                result.put("context", context);
+                result.put("selection", context);
                 return result;
             }, BokfriCli::balanceSheetText);
         }
@@ -712,7 +605,7 @@ public class BokfriCli implements Runnable {
                 result.put("to", period.to());
                 result.put("rows", report.rows());
                 result.put("result", decimal(report.result()));
-                result.put("context", context);
+                result.put("selection", context);
                 return result;
             }, BokfriCli::incomeStatementText);
         }
@@ -736,7 +629,7 @@ public class BokfriCli implements Runnable {
                 result.put("opening", decimal(report.opening()));
                 result.put("rows", report.rows());
                 result.put("closing", decimal(report.closing()));
-                result.put("context", context);
+                result.put("selection", context);
                 return result;
             }, BokfriCli::generalLedgerText);
         }
@@ -757,7 +650,7 @@ public class BokfriCli implements Runnable {
                 result.put("description", report.description());
                 result.put("date", selectedDate);
                 result.put("balance", decimal(report.balance()));
-                result.put("context", context);
+                result.put("selection", context);
                 return result;
             }, BokfriCli::accountBalanceText);
         }
@@ -865,11 +758,11 @@ public class BokfriCli implements Runnable {
 
     @Command(name="opening-balance",description="Inspect and manage opening balances",subcommands={OpeningBalanceShow.class,OpeningBalanceValidate.class,OpeningBalanceSet.class,OpeningBalanceCarryForward.class})
     static class OpeningBalanceCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An opening-balance command is required");}}
-    @Command(name="show") static class OpeningBalanceShow implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());OpeningBalancePlan p=new OpeningBalanceService(r.database()).current(y);Map<String,Object>x=openingBalanceDetails(p);x.put("context",selectedContext(c,co,y));root.output(x,"Opening balance\nDebit: "+p.debitTotal()+"\nCredit: "+p.creditTotal());return 0;}catch(Exception e){throw databaseFailure(e);}}}
-    abstract static class OpeningBalanceFileCommand implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);OpeningBalanceInput in=readOpeningBalanceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());Map<Integer,java.math.BigDecimal> values=new LinkedHashMap<>();for(var row:in.getBalances()){if(values.put(row.getAccount(),row.getAmount())!=null)throw new CliException("OPENING_BALANCE_INVALID","Duplicate account: "+row.getAccount());}OpeningBalanceService s=new OpeningBalanceService(r.database());OpeningBalancePlan p=persist()?s.replace(y,values):s.validate(y,values);Map<String,Object>x=openingBalanceDetails(p);x.put("written",persist());x.put("context",selectedContext(c,co,y));root.output(x,persist()?"Opening balance updated":"Opening balance is valid; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(name="show") static class OpeningBalanceShow implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());OpeningBalancePlan p=new OpeningBalanceService(r.database()).current(y);Map<String,Object>x=openingBalanceDetails(p);x.put("selection",selectedContext(c,co,y));root.output(x,"Opening balance\nDebit: "+p.debitTotal()+"\nCredit: "+p.creditTotal());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    abstract static class OpeningBalanceFileCommand implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);OpeningBalanceInput in=readOpeningBalanceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());Map<Integer,java.math.BigDecimal> values=new LinkedHashMap<>();for(var row:in.getBalances()){if(values.put(row.getAccount(),row.getAmount())!=null)throw new CliException("OPENING_BALANCE_INVALID","Duplicate account: "+row.getAccount());}OpeningBalanceService s=new OpeningBalanceService(r.database());OpeningBalancePlan p=persist()?s.replace(y,values):s.validate(y,values);Map<String,Object>x=openingBalanceDetails(p);x.put("written",persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Opening balance updated":"Opening balance is valid; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
     @Command(name="validate") static class OpeningBalanceValidate extends OpeningBalanceFileCommand{boolean persist(){return false;}}
     @Command(name="set") static class OpeningBalanceSet extends OpeningBalanceFileCommand{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
-    @Command(name="carry-forward") static class OpeningBalanceCarryForward implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--from-year-id",required=true)int fromYearId;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear to=r.selectYear(co,c.yearId());SSNewAccountingYear from=r.database().getYearsForCompany(co).stream().filter(y->y.getId()==fromYearId).findFirst().orElseThrow(()->new CliException("YEAR_NOT_FOUND","No source year has id "+fromYearId));OpeningBalancePlan p=new OpeningBalanceService(r.database()).carryForward(from,to,commit);Map<String,Object>x=openingBalanceDetails(p);x.put("fromYearId",fromYearId);x.put("toYearId",to.getId());x.put("committed",commit);x.put("context",selectedContext(c,co,to));root.output(x,commit?"Opening balances carried forward":"Carry-forward preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(name="carry-forward") static class OpeningBalanceCarryForward implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--from-year-id",required=true)int fromYearId;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear to=r.selectYear(co,c.yearId());SSNewAccountingYear from=r.database().getYearsForCompany(co).stream().filter(y->y.getId()==fromYearId).findFirst().orElseThrow(()->new CliException("YEAR_NOT_FOUND","No source year has id "+fromYearId));OpeningBalancePlan p=new OpeningBalanceService(r.database()).carryForward(from,to,commit);Map<String,Object>x=openingBalanceDetails(p);x.put("fromYearId",fromYearId);x.put("toYearId",to.getId());x.put("committed",commit);x.put("selection",selectedContext(c,co,to));root.output(x,commit?"Opening balances carried forward":"Carry-forward preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(name = "backup", description = "Create, list, verify, and restore full backups",
             subcommands = {BackupCreate.class, BackupList.class, BackupVerify.class,
@@ -1014,7 +907,7 @@ public class BokfriCli implements Runnable {
                 result.put("output", file.toString());
                 result.put("size", Files.size(file));
                 result.put("type", type.toUpperCase(java.util.Locale.ROOT));
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 root.output(result, "Created SIE export " + file + " (" + Files.size(file) + " bytes)");
                 return 0;
             } catch (java.nio.file.FileAlreadyExistsException exception) {
@@ -1052,7 +945,7 @@ public class BokfriCli implements Runnable {
                 }
                 Map<String, Object> result = sieImportDetails(plan);
                 result.put("committed", commit);
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 if (commit) {
                     result.put("voucherCountAfter", runtime.database().getVouchers().size());
                     result.put("accountCountAfter", year.getAccountPlan().getAccounts().size());
@@ -1090,7 +983,7 @@ public class BokfriCli implements Runnable {
                 CustomerService service = new CustomerService(runtime.database());
                 List<Map<String, Object>> customers = service.list().stream()
                         .map(BokfriCli::customerSummary).toList();
-                root.output(Map.of("context", selectedCompanyContext(context, company),
+                root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", customers.size(), "customers", customers),
                         customers.stream().map(customer -> customer.get("number") + "\t"
                                 + customer.get("name") + "\t" + customer.get("email"))
@@ -1116,7 +1009,7 @@ public class BokfriCli implements Runnable {
                         .orElseThrow(() -> new CliException("CUSTOMER_NOT_FOUND",
                                 "No customer has number " + number));
                 Map<String, Object> result = customerDetails(customer);
-                result.put("context", selectedCompanyContext(context, company));
+                result.put("selection", selectedCompanyContext(context, company));
                 root.output(result, customer.getNumber() + "\t" + customer.getName()
                         + "\nEmail: " + customer.getEMail() + "\nVAT number: " + customer.getVATNumber());
                 return 0;
@@ -1152,7 +1045,7 @@ public class BokfriCli implements Runnable {
                 result.put("valid", true);
                 result.put("dryRun", !persist());
                 result.put("created", persist());
-                result.put("context", selectedCompanyContext(context, company));
+                result.put("selection", selectedCompanyContext(context, company));
                 result.put("customer", customerDetails(customer));
                 root.output(result, persist()
                         ? "Created customer " + customer.getNumber() + " - " + customer.getName()
@@ -1198,7 +1091,7 @@ public class BokfriCli implements Runnable {
                 ProductService service = new ProductService(runtime.database());
                 List<Map<String, Object>> products = service.list().stream()
                         .map(BokfriCli::productDetails).toList();
-                root.output(Map.of("context", selectedCompanyContext(context, company),
+                root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", products.size(), "products", products),
                         products.stream().map(product -> product.get("number") + "\t"
                                 + product.get("description") + "\t" + product.get("sellingPrice"))
@@ -1224,7 +1117,7 @@ public class BokfriCli implements Runnable {
                         .orElseThrow(() -> new CliException("PRODUCT_NOT_FOUND",
                                 "No product has number " + number));
                 Map<String, Object> result = productDetails(product);
-                result.put("context", selectedCompanyContext(context, company));
+                result.put("selection", selectedCompanyContext(context, company));
                 root.output(result, product.getNumber() + "\t" + product.getDescription()
                         + "\nSelling price: " + product.getSellingPrice());
                 return 0;
@@ -1261,7 +1154,7 @@ public class BokfriCli implements Runnable {
                 result.put("valid", true);
                 result.put("dryRun", !persist());
                 result.put("created", persist());
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 result.put("product", productDetails(product));
                 root.output(result, persist()
                         ? "Created product " + product.getNumber() + " - " + product.getDescription()
@@ -1306,7 +1199,7 @@ public class BokfriCli implements Runnable {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 List<Map<String, Object>> suppliers = new SupplierService(runtime.database()).list()
                         .stream().map(BokfriCli::supplierDetails).toList();
-                root.output(Map.of("context", selectedCompanyContext(context, company),
+                root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", suppliers.size(), "suppliers", suppliers),
                         suppliers.stream().map(item -> item.get("number") + "\t" + item.get("name")
                                 + "\t" + item.get("email"))
@@ -1330,7 +1223,7 @@ public class BokfriCli implements Runnable {
                         .orElseThrow(() -> new CliException("SUPPLIER_NOT_FOUND",
                                 "No supplier has number " + number));
                 Map<String, Object> result = supplierDetails(supplier);
-                result.put("context", selectedCompanyContext(context, company));
+                result.put("selection", selectedCompanyContext(context, company));
                 root.output(result, supplier.getNumber() + "\t" + supplier.getName()
                         + "\nEmail: " + supplier.getEMail());
                 return 0;
@@ -1359,7 +1252,7 @@ public class BokfriCli implements Runnable {
                 result.put("dryRun", !persist());
                 result.put("created", persist());
                 result.put("supplier", supplierDetails(supplier));
-                result.put("context", selectedCompanyContext(context, company));
+                result.put("selection", selectedCompanyContext(context, company));
                 root.output(result, persist()
                         ? "Created supplier " + supplier.getNumber() + " - " + supplier.getName()
                         : "Supplier is valid; no changes written\n" + supplier.getNumber()
@@ -1382,12 +1275,12 @@ public class BokfriCli implements Runnable {
 
     @Command(name="supplier-invoice",description="Inspect, create, and book supplier invoices",subcommands={SupplierInvoiceList.class,SupplierInvoiceShow.class,SupplierInvoiceJournal.class,SupplierInvoiceValidate.class,SupplierInvoiceCreate.class})
     static class SupplierInvoiceCommand extends CliCommand implements Runnable {@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"A supplier-invoice command is required");}}
-    @Command(name="list") static class SupplierInvoiceList implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> x=new SupplierInvoiceService(r.database()).list().stream().map(BokfriCli::supplierInvoiceDetails).toList();root.output(Map.of("context",selectedCompanyContext(c,co),"count",x.size(),"supplierInvoices",x),x.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
-    @Command(name="show") static class SupplierInvoiceShow implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Parameters(index="0")int number;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierInvoice i=new SupplierInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+number));Map<String,Object>x=supplierInvoiceDetails(i);x.put("context",selectedCompanyContext(c,co));root.output(x,"Supplier invoice "+number+"\nSupplier: "+i.getSupplierName()+"\nTotal: "+x.get("total"));return 0;}catch(Exception e){throw databaseFailure(e);}}}
-    abstract static class SupplierInvoiceOperation implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierInvoiceInput input=readSupplierInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SSSupplierInvoice i=toSupplierInvoice(input,r);SupplierInvoiceService s=new SupplierInvoiceService(r.database());var v=s.validate(i);if(!v.valid())throw supplierInvoiceValidationFailure(v);Map<String,Object>x=supplierInvoiceDetails(i);x.put("number",s.nextNumber());x.put("dryRun",!persist());x.put("created",persist());x.put("context",selectedContext(c,co,y));if(persist()){s.create(i);x.put("number",i.getNumber());}root.output(x,persist()?"Created supplier invoice "+i.getNumber():"Supplier invoice is valid; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(name="list") static class SupplierInvoiceList implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> x=new SupplierInvoiceService(r.database()).list().stream().map(BokfriCli::supplierInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"count",x.size(),"supplierInvoices",x),x.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(name="show") static class SupplierInvoiceShow implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Parameters(index="0")int number;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierInvoice i=new SupplierInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+number));Map<String,Object>x=supplierInvoiceDetails(i);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Supplier invoice "+number+"\nSupplier: "+i.getSupplierName()+"\nTotal: "+x.get("total"));return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    abstract static class SupplierInvoiceOperation implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierInvoiceInput input=readSupplierInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SSSupplierInvoice i=toSupplierInvoice(input,r);SupplierInvoiceService s=new SupplierInvoiceService(r.database());var v=s.validate(i);if(!v.valid())throw supplierInvoiceValidationFailure(v);Map<String,Object>x=supplierInvoiceDetails(i);x.put("number",s.nextNumber());x.put("dryRun",!persist());x.put("created",persist());x.put("selection",selectedContext(c,co,y));if(persist()){s.create(i);x.put("number",i.getNumber());}root.output(x,persist()?"Created supplier invoice "+i.getNumber():"Supplier invoice is valid; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
     @Command(name="validate") static class SupplierInvoiceValidate extends SupplierInvoiceOperation{boolean persist(){return false;}}
     @Command(name="create") static class SupplierInvoiceCreate extends SupplierInvoiceOperation{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
-    @Command(name="journal") static class SupplierInvoiceJournal implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierInvoiceService s=new SupplierInvoiceService(r.database());SupplierInvoiceJournalPlan p=s.planJournal(from,to);if(p.invoices().isEmpty())throw new CliException("SUPPLIER_INVOICE_JOURNAL_EMPTY","No unbooked supplier invoices exist in the selected period");Map<String,Object>x=supplierInvoiceJournalDetails(p);x.put("committed",commit);x.put("context",selectedContext(c,co,y));if(commit)x.put("voucherNumber",s.commitJournal(p).voucherNumber());root.output(x,commit?"Committed supplier invoice journal "+p.journalNumber():"Supplier invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(name="journal") static class SupplierInvoiceJournal implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierInvoiceService s=new SupplierInvoiceService(r.database());SupplierInvoiceJournalPlan p=s.planJournal(from,to);if(p.invoices().isEmpty())throw new CliException("SUPPLIER_INVOICE_JOURNAL_EMPTY","No unbooked supplier invoices exist in the selected period");Map<String,Object>x=supplierInvoiceJournalDetails(p);x.put("committed",commit);x.put("selection",selectedContext(c,co,y));if(commit)x.put("voucherNumber",s.commitJournal(p).voucherNumber());root.output(x,commit?"Committed supplier invoice journal "+p.journalNumber():"Supplier invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(name = "supplier-credit-invoice", description = "Credit booked supplier invoices",
             subcommands = {SupplierCreditInvoiceList.class, SupplierCreditInvoiceShow.class,
@@ -1402,20 +1295,20 @@ public class BokfriCli implements Runnable {
     @Command(name = "list")
     static class SupplierCreditInvoiceList implements Callable<Integer> {
         @CommandLine.ParentCommand SupplierCreditInvoiceCommand command;
-        public Integer call() { BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new SupplierCreditInvoiceService(r.database()).list().stream().map(BokfriCli::supplierCreditInvoiceDetails).toList();root.output(Map.of("context",selectedCompanyContext(c,co),"supplierCreditInvoices",rows,"count",rows.size()),rows.toString());return 0;}catch(Exception e){throw databaseFailure(e);} }
+        public Integer call() { BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new SupplierCreditInvoiceService(r.database()).list().stream().map(BokfriCli::supplierCreditInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"supplierCreditInvoices",rows,"count",rows.size()),rows.toString());return 0;}catch(Exception e){throw databaseFailure(e);} }
     }
 
     @Command(name = "show")
     static class SupplierCreditInvoiceShow implements Callable<Integer> {
         @CommandLine.ParentCommand SupplierCreditInvoiceCommand command; @Parameters(index="0") int number;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierCreditInvoice invoice=new SupplierCreditInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_CREDIT_INVOICE_NOT_FOUND","No supplier credit invoice has number "+number));Map<String,Object>x=supplierCreditInvoiceDetails(invoice);x.put("context",selectedCompanyContext(c,co));root.output(x,"Supplier credit invoice "+number);return 0;}catch(Exception e){throw databaseFailure(e);} }
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierCreditInvoice invoice=new SupplierCreditInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_CREDIT_INVOICE_NOT_FOUND","No supplier credit invoice has number "+number));Map<String,Object>x=supplierCreditInvoiceDetails(invoice);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Supplier credit invoice "+number);return 0;}catch(Exception e){throw databaseFailure(e);} }
     }
 
     abstract static class SupplierCreditInvoiceOperation implements Callable<Integer> {
         @CommandLine.ParentCommand SupplierCreditInvoiceCommand command;
         @Option(names="--file",required=true) String file;
         abstract boolean persist();
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierCreditInvoiceInput input=readSupplierCreditInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierCreditInvoiceService service=new SupplierCreditInvoiceService(r.database());SSSupplierInvoice original=new SupplierInvoiceService(r.database()).find(input.getSupplierInvoiceNumber()).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+input.getSupplierInvoiceNumber()));SSSupplierCreditInvoice credit=persist()?service.create(original,input.getDate(),input.getAmount()):service.preview(original,input.getDate(),input.getAmount());Map<String,Object>x=supplierCreditInvoiceDetails(credit);x.put("created",persist());x.put("dryRun",!persist());x.put("context",selectedContext(c,co,y));root.output(x,persist()?"Created supplier credit invoice "+credit.getNumber():"Supplier credit invoice is valid; no changes written");return 0;}catch(CliException e){throw e;}catch(IllegalArgumentException e){throw new CliException("SUPPLIER_CREDIT_INVOICE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);} }
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierCreditInvoiceInput input=readSupplierCreditInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierCreditInvoiceService service=new SupplierCreditInvoiceService(r.database());SSSupplierInvoice original=new SupplierInvoiceService(r.database()).find(input.getSupplierInvoiceNumber()).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+input.getSupplierInvoiceNumber()));SSSupplierCreditInvoice credit=persist()?service.create(original,input.getDate(),input.getAmount()):service.preview(original,input.getDate(),input.getAmount());Map<String,Object>x=supplierCreditInvoiceDetails(credit);x.put("created",persist());x.put("dryRun",!persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Created supplier credit invoice "+credit.getNumber():"Supplier credit invoice is valid; no changes written");return 0;}catch(CliException e){throw e;}catch(IllegalArgumentException e){throw new CliException("SUPPLIER_CREDIT_INVOICE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);} }
     }
 
     @Command(name="validate") static class SupplierCreditInvoiceValidate extends SupplierCreditInvoiceOperation {boolean persist(){return false;}}
@@ -1427,7 +1320,7 @@ public class BokfriCli implements Runnable {
         @Option(names="--from",required=true) java.time.LocalDate from;
         @Option(names="--to",required=true) java.time.LocalDate to;
         @Option(names="--commit") boolean commit;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierCreditInvoiceService service=new SupplierCreditInvoiceService(r.database());SupplierCreditInvoiceJournalPlan plan=service.planJournal(from,to);if(plan.invoices().isEmpty())throw new CliException("SUPPLIER_CREDIT_INVOICE_JOURNAL_EMPTY","No unbooked supplier credit invoices exist in the selected period");Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",plan.journalNumber());x.put("supplierCreditInvoiceNumbers",plan.invoices().stream().map(SSSupplierCreditInvoice::getNumber).toList());x.put("debitTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher()).toPlainString());x.put("creditTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher()).toPlainString());x.put("committed",commit);if(commit)x.put("voucherNumber",service.commitJournal(plan).voucherNumber());x.put("context",selectedContext(c,co,y));root.output(x,commit?"Supplier credit-invoice journal committed":"Supplier credit-invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);} }
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierCreditInvoiceService service=new SupplierCreditInvoiceService(r.database());SupplierCreditInvoiceJournalPlan plan=service.planJournal(from,to);if(plan.invoices().isEmpty())throw new CliException("SUPPLIER_CREDIT_INVOICE_JOURNAL_EMPTY","No unbooked supplier credit invoices exist in the selected period");Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",plan.journalNumber());x.put("supplierCreditInvoiceNumbers",plan.invoices().stream().map(SSSupplierCreditInvoice::getNumber).toList());x.put("debitTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher()).toPlainString());x.put("creditTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher()).toPlainString());x.put("committed",commit);if(commit)x.put("voucherNumber",service.commitJournal(plan).voucherNumber());x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Supplier credit-invoice journal committed":"Supplier credit-invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);} }
     }
 
     @Command(name = "invoice", description = "Inspect and create customer invoices",
@@ -1453,7 +1346,7 @@ public class BokfriCli implements Runnable {
                 runtime.database().init(false);
                 List<Map<String, Object>> invoices = new InvoiceService(runtime.database())
                         .list(from, to).stream().map(BokfriCli::invoiceSummary).toList();
-                root.output(Map.of("context", selectedCompanyContext(context, company),
+                root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", invoices.size(), "invoices", invoices),
                         invoices.stream().map(invoice -> invoice.get("number") + "\t"
                                 + invoice.get("date") + "\t" + invoice.get("customerName")
@@ -1481,7 +1374,7 @@ public class BokfriCli implements Runnable {
                         .orElseThrow(() -> new CliException("INVOICE_NOT_FOUND",
                                 "No invoice has number " + number));
                 Map<String, Object> result = invoiceDetails(invoice);
-                result.put("context", selectedCompanyContext(context, company));
+                result.put("selection", selectedCompanyContext(context, company));
                 root.output(result, "Invoice " + invoice.getNumber() + "\nCustomer: "
                         + invoice.getCustomerName() + "\nTotal: " + SSSaleMath.getTotalSum(invoice));
                 return 0;
@@ -1514,7 +1407,7 @@ public class BokfriCli implements Runnable {
                 }
                 Map<String, Object> result = invoiceJournalDetails(plan);
                 result.put("committed", commit);
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 if (commit) {
                     InvoiceJournalResult committed = service.commitJournal(plan);
                     result.put("voucherNumber", committed.voucherNumber());
@@ -1565,7 +1458,7 @@ public class BokfriCli implements Runnable {
                 result.put("output", pdf.toString());
                 result.put("bytes", Files.size(pdf));
                 result.put("language", language);
-                result.put("context", selectedCompanyContext(context, company));
+                result.put("selection", selectedCompanyContext(context, company));
                 root.output(result, "Created invoice PDF " + pdf + " (" + Files.size(pdf) + " bytes)");
                 return 0;
             } catch (java.nio.file.FileAlreadyExistsException exception) {
@@ -1602,7 +1495,7 @@ public class BokfriCli implements Runnable {
                 result.put("dryRun", !persist());
                 result.put("created", persist());
                 result.put("number", service.nextNumber());
-                result.put("context", selectedCompanyContext(context, company));
+                result.put("selection", selectedCompanyContext(context, company));
                 if (persist()) {
                     service.create(invoice);
                     result.put("number", invoice.getNumber());
@@ -1640,24 +1533,24 @@ public class BokfriCli implements Runnable {
 
     @Command(name = "list") static class CreditInvoiceList implements Callable<Integer> {
         @CommandLine.ParentCommand CreditInvoiceCommand command;
-        public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new CreditInvoiceService(r.database()).list().stream().map(BokfriCli::creditInvoiceDetails).toList();root.output(Map.of("context",selectedCompanyContext(c,co),"creditInvoices",rows,"count",rows.size()),rows.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}
+        public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new CreditInvoiceService(r.database()).list().stream().map(BokfriCli::creditInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"creditInvoices",rows,"count",rows.size()),rows.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}
     }
 
     @Command(name = "show") static class CreditInvoiceShow implements Callable<Integer> {
         @CommandLine.ParentCommand CreditInvoiceCommand command; @Parameters(index="0") int number;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSCreditInvoice i=new CreditInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("CREDIT_INVOICE_NOT_FOUND","No credit invoice has number "+number));Map<String,Object>x=creditInvoiceDetails(i);x.put("context",selectedCompanyContext(c,co));root.output(x,"Credit invoice "+number+" for invoice "+i.getCreditingNr());return 0;}catch(CliException e){throw e;}catch(Exception e){throw databaseFailure(e);}}
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSCreditInvoice i=new CreditInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("CREDIT_INVOICE_NOT_FOUND","No credit invoice has number "+number));Map<String,Object>x=creditInvoiceDetails(i);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Credit invoice "+number+" for invoice "+i.getCreditingNr());return 0;}catch(CliException e){throw e;}catch(Exception e){throw databaseFailure(e);}}
     }
 
     abstract static class CreditInvoiceOperation implements Callable<Integer> {
         @CommandLine.ParentCommand CreditInvoiceCommand command; @Option(names="--file",required=true) String file; abstract boolean persist();
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);CreditInvoiceInput input=readCreditInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());SSInvoice original=new InvoiceService(r.database()).find(input.getInvoiceNumber()).orElseThrow(()->new CliException("INVOICE_NOT_FOUND","No invoice has number "+input.getInvoiceNumber()));SSCreditInvoice credit=persist()?s.create(original,input.getDate(),input.getAmount()):s.preview(original,input.getDate(),input.getAmount());Map<String,Object>x=creditInvoiceDetails(credit);x.put("created",persist());x.put("dryRun",!persist());x.put("context",selectedContext(c,co,y));root.output(x,persist()?"Created credit invoice "+credit.getNumber():"Credit invoice is valid; no changes written");return 0;}catch(CliException e){throw e;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);CreditInvoiceInput input=readCreditInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());SSInvoice original=new InvoiceService(r.database()).find(input.getInvoiceNumber()).orElseThrow(()->new CliException("INVOICE_NOT_FOUND","No invoice has number "+input.getInvoiceNumber()));SSCreditInvoice credit=persist()?s.create(original,input.getDate(),input.getAmount()):s.preview(original,input.getDate(),input.getAmount());Map<String,Object>x=creditInvoiceDetails(credit);x.put("created",persist());x.put("dryRun",!persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Created credit invoice "+credit.getNumber():"Credit invoice is valid; no changes written");return 0;}catch(CliException e){throw e;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
     }
     @Command(name="validate") static class CreditInvoiceValidate extends CreditInvoiceOperation {boolean persist(){return false;}}
     @Command(name="create") static class CreditInvoiceCreate extends CreditInvoiceOperation {@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
 
     @Command(name="journal") static class CreditInvoiceJournal implements Callable<Integer> {
         @CommandLine.ParentCommand CreditInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());CreditInvoiceJournalPlan p=s.planJournal(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("from",from);x.put("to",to);x.put("creditInvoiceNumbers",p.invoices().stream().map(SSCreditInvoice::getNumber).toList());x.put("invoiceCount",p.invoices().size());x.put("rows",voucherRows(p.voucher()));x.put("debitTotal",voucherDebit(p.voucher()).toPlainString());x.put("creditTotal",voucherCredit(p.voucher()).toPlainString());x.put("committed",commit);if(commit){CreditInvoiceJournalResult done=s.commitJournal(p);x.put("voucherNumber",done.voucherNumber());}x.put("context",selectedContext(c,co,y));root.output(x,commit?"Credit invoice journal committed":"Credit invoice journal preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_JOURNAL_EMPTY",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());CreditInvoiceJournalPlan p=s.planJournal(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("from",from);x.put("to",to);x.put("creditInvoiceNumbers",p.invoices().stream().map(SSCreditInvoice::getNumber).toList());x.put("invoiceCount",p.invoices().size());x.put("rows",voucherRows(p.voucher()));x.put("debitTotal",voucherDebit(p.voucher()).toPlainString());x.put("creditTotal",voucherCredit(p.voucher()).toPlainString());x.put("committed",commit);if(commit){CreditInvoiceJournalResult done=s.commitJournal(p);x.put("voucherNumber",done.voucherNumber());}x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Credit invoice journal committed":"Credit invoice journal preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_JOURNAL_EMPTY",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
     }
 
     @Command(name = "inpayment", description = "Inspect, create, and book customer inpayments",
@@ -1681,7 +1574,7 @@ public class BokfriCli implements Runnable {
                 runtime.database().init(false);
                 List<Map<String, Object>> items = new InpaymentService(runtime.database()).list()
                         .stream().map(BokfriCli::inpaymentDetails).toList();
-                root.output(Map.of("context", selectedCompanyContext(context, company),
+                root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", items.size(), "inpayments", items),
                         items.stream().map(item -> item.get("number") + "\t" + item.get("date")
                                 + "\t" + item.get("text") + "\t" + item.get("total"))
@@ -1706,7 +1599,7 @@ public class BokfriCli implements Runnable {
                         .orElseThrow(() -> new CliException("INPAYMENT_NOT_FOUND",
                                 "No inpayment has number " + number));
                 Map<String, Object> result = inpaymentDetails(item);
-                result.put("context", selectedCompanyContext(context, company));
+                result.put("selection", selectedCompanyContext(context, company));
                 root.output(result, "Inpayment " + number + "\nDate: " + item.getLocalDate()
                         + "\nText: " + item.getText() + "\nTotal: " + result.get("total"));
                 return 0;
@@ -1736,7 +1629,7 @@ public class BokfriCli implements Runnable {
                 result.put("number", service.nextNumber());
                 result.put("dryRun", !persist());
                 result.put("created", persist());
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 if (persist()) {
                     service.create(item);
                     result.put("number", item.getNumber());
@@ -1782,7 +1675,7 @@ public class BokfriCli implements Runnable {
                 }
                 Map<String, Object> result = inpaymentJournalDetails(plan);
                 result.put("committed", commit);
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 if (commit) {
                     InpaymentJournalResult committed = service.commitJournal(plan);
                     result.put("voucherNumber", committed.voucherNumber());
@@ -1821,7 +1714,7 @@ public class BokfriCli implements Runnable {
                 runtime.database().init(false);
                 List<Map<String, Object>> items = new OutpaymentService(runtime.database()).list()
                         .stream().map(BokfriCli::outpaymentDetails).toList();
-                root.output(Map.of("context", selectedCompanyContext(context, company),
+                root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", items.size(), "outpayments", items),
                         items.stream().map(item -> item.get("number") + "\t" + item.get("date")
                                 + "\t" + item.get("text") + "\t" + item.get("total"))
@@ -1846,7 +1739,7 @@ public class BokfriCli implements Runnable {
                         .orElseThrow(() -> new CliException("INPAYMENT_NOT_FOUND",
                                 "No outpayment has number " + number));
                 Map<String, Object> result = outpaymentDetails(item);
-                result.put("context", selectedCompanyContext(context, company));
+                result.put("selection", selectedCompanyContext(context, company));
                 root.output(result, "Outpayment " + number + "\nDate: " + item.getLocalDate()
                         + "\nText: " + item.getText() + "\nTotal: " + result.get("total"));
                 return 0;
@@ -1876,7 +1769,7 @@ public class BokfriCli implements Runnable {
                 result.put("number", service.nextNumber());
                 result.put("dryRun", !persist());
                 result.put("created", persist());
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 if (persist()) {
                     service.create(item);
                     result.put("number", item.getNumber());
@@ -1922,7 +1815,7 @@ public class BokfriCli implements Runnable {
                 }
                 Map<String, Object> result = outpaymentJournalDetails(plan);
                 result.put("committed", commit);
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 if (commit) {
                     OutpaymentJournalResult committed = service.commitJournal(plan);
                     result.put("voucherNumber", committed.voucherNumber());
@@ -1986,7 +1879,7 @@ public class BokfriCli implements Runnable {
                 result.put("to", selectedTo);
                 result.put("boxes", report.boxes());
                 result.put("vatToPayOrRefund", decimal(report.vatToPayOrRefund()));
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 root.output(result, "VAT report " + selectedFrom + " - " + selectedTo
                         + "\nVAT to pay/refund: " + report.vatToPayOrRefund());
                 return 0;
@@ -2014,7 +1907,7 @@ public class BokfriCli implements Runnable {
                 VatSettlementPlan p = s.plan(from, to);
                 Map<String, Object> x = vatSettlementDetails(p);
                 x.put("committed", commit);
-                x.put("context", selectedContext(c, co, y));
+                x.put("selection", selectedContext(c, co, y));
                 if (commit) x.put("voucherNumber", s.commit(p).voucherNumber());
                 root.output(x, commit ? "Committed VAT settlement voucher " + x.get("voucherNumber")
                         : "VAT settlement preview; no changes written");
@@ -2065,7 +1958,7 @@ public class BokfriCli implements Runnable {
                 }
                 List<Map<String, Object>> vouchers = filtered.map(BokfriCli::voucherSummary).toList();
                 Map<String, Object> result = new LinkedHashMap<>();
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 result.put("count", vouchers.size());
                 result.put("vouchers", vouchers);
                 String text = vouchers.stream().map(voucher -> voucher.get("number") + "\t"
@@ -2096,7 +1989,7 @@ public class BokfriCli implements Runnable {
                 SSVoucher voucher = service.find(number).orElseThrow(() ->
                         new CliException("VOUCHER_NOT_FOUND", "No voucher has number " + number));
                 Map<String, Object> result = voucherDetails(voucher);
-                result.put("context", selectedContext(context, company, year));
+                result.put("selection", selectedContext(context, company, year));
                 root.output(result, voucherDetailsText(voucher));
                 return 0;
             } catch (Exception exception) {
@@ -3017,7 +2910,7 @@ public class BokfriCli implements Runnable {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("valid", validation.valid());
         result.put("dryRun", !persist);
-        result.put("context", selected);
+        result.put("selection", selected);
         result.put("number", nextNumber);
         result.put("date", voucher.getLocalDate());
         result.put("description", voucher.getDescription());

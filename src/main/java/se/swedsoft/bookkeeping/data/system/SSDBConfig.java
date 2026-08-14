@@ -40,15 +40,25 @@ public class SSDBConfig {    private static final Logger LOG = LoggerFactory.get
         return iCompanyId;
     }
 
+    public static Integer getCompanyId(File iConfigFile) {
+        return readIntegerAttribute(iConfigFile, "company");
+    }
+
     public static void setCompanyId(Integer iId) {
-        iCompanyId = iId;
+        setCompanyId(CONFIG_FILE, iId);
+    }
+
+    public static void setCompanyId(File iConfigFile, Integer iId) {
+        if (CONFIG_FILE.equals(iConfigFile)) {
+            iCompanyId = iId;
+        }
 
         try {
-            Document iDocument = readConfigDocument();
+            Document iDocument = readConfigDocument(iConfigFile);
 
             iDocument.getDocumentElement().setAttribute("company",
-                    iCompanyId == null ? "" : iCompanyId.toString());
-            writeConfigDocument(iDocument);
+                    iId == null ? "" : iId.toString());
+            writeConfigDocument(iDocument, iConfigFile);
         } catch (IOException | ParserConfigurationException | SAXException | TransformerException ex) {
             LOG.error("Unexpected error", ex);
         }
@@ -58,14 +68,47 @@ public class SSDBConfig {    private static final Logger LOG = LoggerFactory.get
         return iYearId;
     }
 
+    public static Integer getYearId(File iConfigFile) {
+        return readIntegerAttribute(iConfigFile, "year");
+    }
+
+    public static Integer getYearId(File iConfigFile, Integer iCompanyId) {
+        if (iCompanyId == null) {
+            return null;
+        }
+        try {
+            Document iDocument = readConfigDocument(iConfigFile);
+            NodeList iCompanyElements = iDocument.getDocumentElement().getElementsByTagName("company");
+
+            for (int i = 0; i < iCompanyElements.getLength(); i++) {
+                Node iCompanyNode = iCompanyElements.item(i);
+                if (iCompanyNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element iCompanyElement = (Element) iCompanyNode;
+                    if (iCompanyId.toString().equals(iCompanyElement.getAttribute("id"))) {
+                        return parseInteger(iCompanyElement.getAttribute("yearid"));
+                    }
+                }
+            }
+        } catch (IOException | ParserConfigurationException | SAXException | TransformerException ex) {
+            LOG.error("Unexpected error", ex);
+        }
+        return null;
+    }
+
     public static void setYearId(Integer pCompanyId, Integer iId) {
-        iYearId = iId;
+        setYearId(CONFIG_FILE, pCompanyId, iId);
+    }
+
+    public static void setYearId(File iConfigFile, Integer pCompanyId, Integer iId) {
+        if (CONFIG_FILE.equals(iConfigFile)) {
+            iYearId = iId;
+        }
 
         try {
-            Document iDocument = readConfigDocument();
+            Document iDocument = readConfigDocument(iConfigFile);
 
             iDocument.getDocumentElement().setAttribute("year",
-                    iYearId == null ? "" : iYearId.toString());
+                    iId == null ? "" : iId.toString());
 
             boolean iExists = false;
             NodeList iCompanyElements = iDocument.getDocumentElement().getElementsByTagName(
@@ -93,7 +136,7 @@ public class SSDBConfig {    private static final Logger LOG = LoggerFactory.get
                 iCompanyElement.setAttribute("yearid", iId == null ? "" : iId.toString());
                 iDocument.getDocumentElement().appendChild(iCompanyElement);
             }
-            writeConfigDocument(iDocument);
+            writeConfigDocument(iDocument, iConfigFile);
 
         } catch (IOException | ParserConfigurationException | SAXException | TransformerException ex) {
             LOG.error("Unexpected error", ex);
@@ -145,19 +188,20 @@ public class SSDBConfig {    private static final Logger LOG = LoggerFactory.get
     /*
      * Create a config file if not found
     */
-    private static void createIfNotExists() throws IOException, ParserConfigurationException, TransformerException {
-        File parent = CONFIG_FILE.getParentFile();
+    private static void createIfNotExists(File iConfigFile)
+            throws IOException, ParserConfigurationException, TransformerException {
+        File parent = iConfigFile.getParentFile();
 
         if (parent != null && !parent.exists()) {
             parent.mkdirs();
         }
-        if (!CONFIG_FILE.exists()) {
+        if (!iConfigFile.exists()) {
             LOG.info("Creating database config file.");
             Document iDocument = SSXmlUtil.newDocument();
             Element iRoot = iDocument.createElement("database");
 
             iDocument.appendChild(iRoot);
-            writeConfigDocument(iDocument);
+            writeConfigDocument(iDocument, iConfigFile);
         }
     }
 
@@ -192,15 +236,39 @@ public class SSDBConfig {    private static final Logger LOG = LoggerFactory.get
         }
     }
 
+    private static Integer readIntegerAttribute(File iConfigFile, String iName) {
+        try {
+            Document iDocument = readConfigDocument(iConfigFile);
+            return parseInteger(iDocument.getDocumentElement().getAttribute(iName));
+        } catch (IOException | ParserConfigurationException | SAXException | TransformerException ex) {
+            LOG.error("Unexpected error", ex);
+            return null;
+        }
+    }
+
+    private static Integer parseInteger(String iValue) {
+        return iValue == null || iValue.isEmpty() ? null : Integer.parseInt(iValue);
+    }
+
     private static Document readConfigDocument()
             throws IOException, ParserConfigurationException, SAXException, TransformerException {
-        createIfNotExists();
-        try (FileInputStream iInputStream = new FileInputStream(CONFIG_FILE)) {
+        return readConfigDocument(CONFIG_FILE);
+    }
+
+    private static Document readConfigDocument(File iConfigFile)
+            throws IOException, ParserConfigurationException, SAXException, TransformerException {
+        createIfNotExists(iConfigFile);
+        try (FileInputStream iInputStream = new FileInputStream(iConfigFile)) {
             return SSXmlUtil.parse(iInputStream);
         }
     }
 
     private static void writeConfigDocument(Document iDocument) throws IOException, TransformerException {
-        SSXmlUtil.write(iDocument, CONFIG_FILE);
+        writeConfigDocument(iDocument, CONFIG_FILE);
+    }
+
+    private static void writeConfigDocument(Document iDocument, File iConfigFile)
+            throws IOException, TransformerException {
+        SSXmlUtil.write(iDocument, iConfigFile);
     }
 }

@@ -27,9 +27,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   use an ASCII hyphen for reliable rendering in Windows consoles.
 - Packaged CLI launchers now favor faster startup with `-XX:TieredStopAtLevel=1`;
   the long-running GUI launcher retains the JVM's normal optimization strategy.
-- `bokfri context create` now uses Bokfri's platform-specific default data
-  directory when `--data-dir` is omitted and derives its default name from the
-  company and accounting-year start date; custom names remain available via `--name`.
+- CLI and GUI now share the selected company and accounting year. The public
+  context concept has been replaced by `company current|use` and `year current|use`;
+  `--company-id`, `--year-id`, and `--data-dir` remain per-command overrides.
 - The bundled demo company is now generated through Bokfri's Java services instead
   of serialized SQL, with completed 2025/26 and ongoing 2026/27 accounting years.
 - Windows MSI packages now install `bokfri` (`bokfri-dev` for development builds)
@@ -49,10 +49,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Added GUI and `bokfri demo recreate [--commit]` actions for safely replacing
   recognized current or legacy demo companies while preserving all other companies.
 - Added privacy-friendly GoatCounter visitor statistics to the website and help pages.
-- Added the first headless CLI slice with version, path, diagnostics, named
-  company/year contexts, and read-only company and accounting-year commands.
-- Added text and JSON output plus isolated config and context overrides for
-  scripts, CI, and agent-driven automation.
+- Added the first headless CLI slice with version, path, diagnostics, shared
+  company/year selection, and read-only company and accounting-year commands.
+- Added text and JSON output plus explicit per-command data, company, and year
+  overrides for scripts, CI, and agent-driven automation.
 - Added account and voucher inspection plus JSON-based manual voucher
   validation, dry runs, and creation through a shared UI-independent validation
   and application service.
@@ -95,7 +95,7 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Added read-only customer, product, and customer-invoice list/show commands,
   including invoice totals, status, and posting source rows in JSON output.
 - Added a cross-platform CI black-box test that launches the assembled fat JAR
-  and verifies contexts, JSON contracts, account/year lookup, voucher
+  and verifies shared selections, JSON contracts, account/year lookup, voucher
   validation, dry runs, creation, list/show round trips, and stable errors.
 - Expanded the black-box scenario into an isolated full accounting year: it now
   creates its own company and 2026 year, runs opening balances, sales,
@@ -117,7 +117,7 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   behavior and shared import history.
 
 ### Fixed
-- Expanded packaged CLI regression coverage for invalid contexts, out-of-year
+- Expanded packaged CLI regression coverage for missing selections, out-of-year
   reports, unbalanced vouchers, invalid credits, and non-mutating previews.
 - Prevented customer invoices from being created or edited without a valid sales
   account from the selected accounting year, in both Swing and the CLI.

@@ -70,13 +70,13 @@
 <h1>Kommandoradsgränssnittet</h1>
 <p class="guide-lead">Bokfris CLI gör det möjligt att läsa, rapportera och skapa bokföringsdata utan att öppna det grafiska gränssnittet. Det är avsett för reproducerbara arbetsflöden, skript och integrationer.</p>
 
-<div class="guide-note"><strong>CLI och GUI använder samma data.</strong> Välj rätt datakatalog, företag och bokföringsår innan du kör ett skrivande kommando. Ta en säkerhetskopia först och använd förhandsgranskning där den finns.</div>
+<div class="guide-note"><strong>CLI och GUI använder samma data och samma sparade val.</strong> Företag och bokföringsår som väljs i det ena gränssnittet används nästa gång det andra startas eller körs. Ta en säkerhetskopia före riskfyllda ändringar och använd förhandsgranskning där den finns.</div>
 
 <section id="oversikt">
 <h2>Översikt</h2>
 <p>CLI:t kan bland annat:</p>
 <ul>
-  <li>välja företag och bokföringsår med namngivna kontexter,</li>
+  <li>välja företag och bokföringsår gemensamt med det grafiska gränssnittet,</li>
   <li>lista konton, verifikationer, kunder, produkter, leverantörer och fakturor,</li>
   <li>skapa kunder, produkter, fakturor, betalningar och manuella verifikationer från JSON,</li>
   <li>förhandsgranska och bokföra journaler, kreditfakturor och momsavräkning,</li>
@@ -120,15 +120,16 @@ bokfri doctor</code></pre>
 <pre><code>bokfri paths
 bokfri company list
 bokfri --company-id 37 year list</code></pre>
-<p>Du kan ange valen vid varje körning:</p>
-<pre><code>bokfri --company-id 37 --year-id 12 trial-balance</code></pre>
-<p>För återkommande arbete är en namngiven kontext enklare. Ange datakatalogen som kommandot <code>paths</code> visar:</p>
-<pre><code>bokfri context create mitt-foretag \
-  --data-dir "/sökväg/till/bokfri-data" \
-  --company-id 37 --year-id 12
-bokfri context use mitt-foretag
-bokfri context current</code></pre>
-<p>Kontexten lagrar bara valen; bokföringsdata kopieras inte. Hantera kontexter med <code>context list</code>, <code>show</code>, <code>use</code> och <code>delete</code>.</p>
+<p>CLI:t använder normalt samma sparade val som det grafiska gränssnittet. Visa eller ändra dem med:</p>
+<pre><code>bokfri company current
+bokfri company use 37
+bokfri year list
+bokfri year current
+bokfri year use 12</code></pre>
+<p>När ett företag väljs återställs det senast använda bokföringsåret för just det företaget, om ett sådant finns. Ett redan öppet grafiskt gränssnitt byter inte direkt; det läser det nya valet vid nästa start.</p>
+<p>I skript kan valen anges tillfälligt för en enda körning. De sparade GUI/CLI-valen ändras då inte:</p>
+<pre><code>bokfri --company-id 37 --year-id 12 trial-balance
+bokfri --data-dir "/sökväg/till/testdata" --company-id 37 --year-id 12 voucher list</code></pre>
 
 <h3>Skapa ett nytt företag och år</h3>
 <p>Ett tomt dataområde kan byggas upp från JSON:</p>
@@ -143,7 +144,7 @@ bokfri --company-id 37 year create --file year.json</code></pre>
   "to": "2026-12-31",
   "accountPlanId": 7
 }</code></pre>
-<p>Använd de ID:n som kommandona returnerar när du skapar kontexten.</p>
+<p>Använd sedan <code>company use</code> och <code>year use</code> med de ID:n som kommandona returnerar.</p>
 </section>
 
 <section id="globala-val">
@@ -151,11 +152,9 @@ bokfri --company-id 37 year create --file year.json</code></pre>
 <div class="cli-table-wrap"><table class="cli-table">
 <thead><tr><th>Val</th><th>Betydelse</th></tr></thead>
 <tbody>
-<tr><td><code>--config FIL</code></td><td>Använd en annan CLI-konfigurationsfil.</td></tr>
-<tr><td><code>--context NAMN</code></td><td>Använd en namngiven kontext för just denna körning.</td></tr>
-<tr><td><code>--data-dir KATALOG</code></td><td>Använd en annan Bokfri-datakatalog.</td></tr>
-<tr><td><code>--company-id ID</code></td><td>Välj eller åsidosätt företag.</td></tr>
-<tr><td><code>--year-id ID</code></td><td>Välj eller åsidosätt bokföringsår.</td></tr>
+<tr><td><code>--data-dir KATALOG</code></td><td>Använd en annan Bokfri-datakatalog för denna körning.</td></tr>
+<tr><td><code>--company-id ID</code></td><td>Åsidosätt sparat företag för denna körning.</td></tr>
+<tr><td><code>--year-id ID</code></td><td>Åsidosätt sparat bokföringsår för denna körning.</td></tr>
 <tr><td><code>--format text|json</code></td><td>Välj läsbar text eller maskinläsbar JSON.</td></tr>
 </tbody></table></div>
 <p>Globala val fungerar både före och efter underkommandot:</p>
@@ -182,7 +181,7 @@ bokfri voucher create --file voucher.json
 
 bokfri invoice journal --from 2026-08-01 --to 2026-08-31
 bokfri invoice journal --from 2026-08-01 --to 2026-08-31 --commit</code></pre>
-<div class="guide-note"><strong>Undantag:</strong> några administrativa kommandon, exempelvis <code>context use</code>, skriver sin konfiguration direkt. Kontrollera alltid kommandots <code>--help</code>.</div>
+<div class="guide-note"><strong>Undantag:</strong> <code>company use</code> och <code>year use</code> ändrar det sparade valet direkt. Kontrollera alltid kommandots <code>--help</code>.</div>
 </section>
 
 <section id="rapporter">
@@ -405,7 +404,7 @@ bokfri sie import --file verifikationer.se --vouchers-only --commit</code></pre>
 <p><code>--format json</code> skriver ett JSON-dokument till standard output. Vid fel returneras en icke-noll exitkod och ett stabilt felobjekt till standard error när JSON-format är valt.</p>
 <pre><code>bokfri company list --format json
 bokfri trial-balance --format json &gt; trial-balance.json</code></pre>
-<p>Använd <code>--config</code> och <code>--data-dir</code> för isolerade tester. Låt inte automatiska skript lägga till <code>--commit</code> förrän förhandsgranskningen har kontrollerats.</p>
+<p>Använd explicita <code>--data-dir</code>, <code>--company-id</code> och <code>--year-id</code> för isolerade tester och automatiska skript. Låt inte automatiska skript lägga till <code>--commit</code> förrän förhandsgranskningen har kontrollerats.</p>
 </section>
 
 <section id="felsokning">
@@ -414,9 +413,7 @@ bokfri trial-balance --format json &gt; trial-balance.json</code></pre>
 <dt><code>bokfri</code> hittas inte på Windows</dt>
 <dd>Öppna ett nytt terminalfönster efter MSI-installationen. Kontrollera med <code>Get-Command bokfri</code>. Utvecklingspaketet heter <code>bokfri-dev</code>.</dd>
 <dt><code>COMPANY_REQUIRED</code> eller <code>YEAR_REQUIRED</code></dt>
-<dd>Välj en kontext eller ange <code>--company-id</code> och <code>--year-id</code>.</dd>
-<dt><code>CONTEXT_NOT_FOUND</code></dt>
-<dd>Kör <code>bokfri context list</code> och kontrollera stavningen eller skapa kontexten på nytt.</dd>
+<dd>Kör <code>bokfri company use ID</code> och <code>bokfri year use ID</code>, eller ange <code>--company-id</code> och <code>--year-id</code> för den aktuella körningen.</dd>
 <dt>Rapportperioden avvisas</dt>
 <dd>Datum måste ligga inom valt bokföringsår. Periodrapporter kräver både <code>--from</code> och <code>--to</code> om ett av dem anges.</dd>
 <dt>En fil finns redan</dt>
@@ -428,7 +425,8 @@ bokfri trial-balance --format json &gt; trial-balance.json</code></pre>
 <pre><code>bokfri version
 bokfri paths
 bokfri doctor
-bokfri context current</code></pre>
+bokfri company current
+bokfri year current</code></pre>
 </section>
 
 <nav class="page-nav"><a href="/help/" class="prev">All Bokfri-hjälp</a></nav>
