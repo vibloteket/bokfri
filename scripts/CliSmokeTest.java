@@ -64,6 +64,11 @@ public final class CliSmokeTest {
         version.jsonObject();
         require(version.stdout.contains("\"title\":\"Bokfri\""), "version output lacks title");
 
+        Result nestedHelp = cli("voucher", "create", "--help");
+        nestedHelp.success();
+        require(nestedHelp.stdout.startsWith("Usage:"), "nested command help lacks usage");
+        require(nestedHelp.stderr.isEmpty(), "nested command help wrote an error");
+
         Result voucherSchema = cli("voucher", "schema");
         voucherSchema.success();
         voucherSchema.jsonObject();

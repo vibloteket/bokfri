@@ -124,6 +124,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   behavior and shared import history.
 
 ### Fixed
+- `-h` and `--help` now work consistently on every CLI command and nested
+  subcommand, without requiring the command's normal positional arguments or options.
 - Expanded packaged CLI regression coverage for missing selections, out-of-year
   reports, unbalanced vouchers, invalid credits, and non-mutating previews.
 - Prevented customer invoices from being created or edited without a valid sales

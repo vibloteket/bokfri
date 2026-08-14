@@ -3,6 +3,7 @@ package org.fribok.bookkeeping.cli;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import picocli.CommandLine;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayOutputStream;
@@ -11,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -103,6 +106,25 @@ class BokfriCliTest {
         assertThat(result.exitCode()).isEqualTo(1);
         assertThat(new ObjectMapper().readTree(result.stderr()).at("/error/code").asText())
                 .isEqualTo("COMPANY_REQUIRED");
+    }
+
+    @Test
+    void everyCommandSupportsLongAndShortHelp() {
+        List<List<String>> paths = new ArrayList<>();
+        collectCommandPaths(new CommandLine(new BokfriCli()), List.of(), paths);
+
+        assertThat(paths).hasSize(114);
+        for (List<String> path : paths) {
+            for (String helpOption : List.of("--help", "-h")) {
+                List<String> arguments = new ArrayList<>(path);
+                arguments.add(helpOption);
+                Result result = execute(arguments.toArray(String[]::new));
+                String command = path.isEmpty() ? "bokfri" : "bokfri " + String.join(" ", path);
+                assertThat(result.exitCode()).as(command + " " + helpOption).isZero();
+                assertThat(result.stderr()).as(command + " " + helpOption).isEmpty();
+                assertThat(result.stdout()).as(command + " " + helpOption).startsWith("Usage:");
+            }
+        }
     }
 
     @Test
@@ -250,6 +272,16 @@ class BokfriCliTest {
                 .doesNotContain("generated");
         assertThat(balance.stdout()).contains("1930\tFöretagskonto\t2027-06-30\t")
                 .doesNotContain("generated");
+    }
+
+    private static void collectCommandPaths(CommandLine command, List<String> prefix,
+                                            List<List<String>> paths) {
+        paths.add(List.copyOf(prefix));
+        command.getSubcommands().forEach((name, subcommand) -> {
+            List<String> path = new ArrayList<>(prefix);
+            path.add(name);
+            collectCommandPaths(subcommand, path, paths);
+        });
     }
 
     private void extractLegacyDatabase(Path destination) throws Exception {
