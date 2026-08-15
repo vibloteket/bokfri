@@ -274,9 +274,7 @@ public class SIEIterator implements Iterator<String> {    private static final L
      * @return
      */
     public BigDecimal nextBigDecimal() {
-        Double iValue = nextDouble();
-
-        return new BigDecimal(iValue);
+        return new BigDecimal(next());
     }
 
     /**

@@ -637,12 +637,12 @@ public class BokfriCli implements Runnable {
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("from", period.from());
                 result.put("to", period.to());
-                result.put("rows", report.rows());
-                result.put("openingTotal", decimal(report.openingTotal()));
-                result.put("debitTotal", decimal(report.debitTotal()));
-                result.put("creditTotal", decimal(report.creditTotal()));
-                result.put("closingTotal", decimal(report.closingTotal()));
-                result.put("difference", decimal(report.debitTotal().subtract(report.creditTotal())));
+                result.put("rows", trialBalanceRows(report.rows()));
+                result.put("openingTotal", money(report.openingTotal()));
+                result.put("debitTotal", money(report.debitTotal()));
+                result.put("creditTotal", money(report.creditTotal()));
+                result.put("closingTotal", money(report.closingTotal()));
+                result.put("difference", money(report.debitTotal().subtract(report.creditTotal())));
                 result.put("selection", context);
                 return result;
             }, BokfriCli::trialBalanceText);
@@ -659,11 +659,11 @@ public class BokfriCli implements Runnable {
                 var report = service.balanceSheet(selectedDate);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("date", selectedDate);
-                result.put("rows", report.rows());
-                result.put("assets", decimal(report.assets()));
-                result.put("liabilitiesAndEquity", decimal(report.liabilitiesAndEquity()));
-                result.put("currentResult", decimal(report.currentResult()));
-                result.put("difference", decimal(report.difference()));
+                result.put("rows", balanceSheetRows(report.rows()));
+                result.put("assets", money(report.assets()));
+                result.put("liabilitiesAndEquity", money(report.liabilitiesAndEquity()));
+                result.put("currentResult", money(report.currentResult()));
+                result.put("difference", money(report.difference()));
                 result.put("selection", context);
                 return result;
             }, BokfriCli::balanceSheetText);
@@ -682,8 +682,8 @@ public class BokfriCli implements Runnable {
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("from", period.from());
                 result.put("to", period.to());
-                result.put("rows", report.rows());
-                result.put("result", decimal(report.result()));
+                result.put("rows", incomeStatementRows(report.rows()));
+                result.put("result", money(report.result()));
                 result.put("selection", context);
                 return result;
             }, BokfriCli::incomeStatementText);
@@ -705,9 +705,9 @@ public class BokfriCli implements Runnable {
                 result.put("description", report.description());
                 result.put("from", period.from());
                 result.put("to", period.to());
-                result.put("opening", decimal(report.opening()));
-                result.put("rows", report.rows());
-                result.put("closing", decimal(report.closing()));
+                result.put("opening", money(report.opening()));
+                result.put("rows", ledgerRows(report.rows()));
+                result.put("closing", money(report.closing()));
                 result.put("selection", context);
                 return result;
             }, BokfriCli::generalLedgerText);
@@ -728,7 +728,7 @@ public class BokfriCli implements Runnable {
                 result.put("account", account);
                 result.put("description", report.description());
                 result.put("date", selectedDate);
-                result.put("balance", decimal(report.balance()));
+                result.put("balance", money(report.balance()));
                 result.put("selection", context);
                 return result;
             }, BokfriCli::accountBalanceText);
@@ -779,11 +779,10 @@ public class BokfriCli implements Runnable {
         StringBuilder text = new StringBuilder("Trial balance ")
                 .append(result.get("from")).append(" - ").append(result.get("to"))
                 .append("\nAccount\tDescription\tOpening\tDebit\tCredit\tClosing");
-        reportRows(result, FinancialReportService.TrialBalanceRow.class).forEach(row ->
-                text.append('\n').append(row.account()).append('\t').append(row.description())
-                        .append('\t').append(decimal(row.opening())).append('\t')
-                        .append(decimal(row.debit())).append('\t').append(decimal(row.credit()))
-                        .append('\t').append(decimal(row.closing())));
+        reportMaps(result).forEach(row -> text.append('\n').append(row.get("account"))
+                .append('\t').append(row.get("description")).append('\t').append(row.get("opening"))
+                .append('\t').append(row.get("debit")).append('\t').append(row.get("credit"))
+                .append('\t').append(row.get("closing")));
         return text.append("\nTOTAL\t\t").append(result.get("openingTotal")).append('\t')
                 .append(result.get("debitTotal")).append('\t').append(result.get("creditTotal"))
                 .append('\t').append(result.get("closingTotal")).append("\nDifference: ")
@@ -793,9 +792,8 @@ public class BokfriCli implements Runnable {
     private static String balanceSheetText(Map<String, Object> result) {
         StringBuilder text = new StringBuilder("Balance sheet ").append(result.get("date"))
                 .append("\nAccount\tDescription\tBalance");
-        reportRows(result, FinancialReportService.BalanceSheetRow.class).forEach(row ->
-                text.append('\n').append(row.account()).append('\t').append(row.description())
-                        .append('\t').append(decimal(row.balance())));
+        reportMaps(result).forEach(row -> text.append('\n').append(row.get("account"))
+                .append('\t').append(row.get("description")).append('\t').append(row.get("balance")));
         return text.append("\nAssets: ").append(result.get("assets"))
                 .append("\nLiabilities and equity: ").append(result.get("liabilitiesAndEquity"))
                 .append("\nCurrent result: ").append(result.get("currentResult"))
@@ -806,9 +804,8 @@ public class BokfriCli implements Runnable {
         StringBuilder text = new StringBuilder("Income statement ")
                 .append(result.get("from")).append(" - ").append(result.get("to"))
                 .append("\nAccount\tDescription\tAmount");
-        reportRows(result, FinancialReportService.IncomeStatementRow.class).forEach(row ->
-                text.append('\n').append(row.account()).append('\t').append(row.description())
-                        .append('\t').append(decimal(row.amount())));
+        reportMaps(result).forEach(row -> text.append('\n').append(row.get("account"))
+                .append('\t').append(row.get("description")).append('\t').append(row.get("amount")));
         return text.append("\nResult: ").append(result.get("result")).toString();
     }
 
@@ -818,11 +815,10 @@ public class BokfriCli implements Runnable {
                 .append(" - ").append(result.get("to")).append("\nOpening: ")
                 .append(result.get("opening"))
                 .append("\nVoucher\tDate\tDescription\tDebit\tCredit\tBalance");
-        reportRows(result, FinancialReportService.LedgerRow.class).forEach(row ->
-                text.append('\n').append(row.voucherNumber()).append('\t').append(row.date())
-                        .append('\t').append(row.description()).append('\t').append(decimal(row.debit()))
-                        .append('\t').append(decimal(row.credit())).append('\t')
-                        .append(decimal(row.balance())));
+        reportMaps(result).forEach(row -> text.append('\n').append(row.get("voucherNumber"))
+                .append('\t').append(row.get("date")).append('\t').append(row.get("description"))
+                .append('\t').append(row.get("debit")).append('\t').append(row.get("credit"))
+                .append('\t').append(row.get("balance")));
         return text.append("\nClosing: ").append(result.get("closing")).toString();
     }
 
@@ -831,13 +827,56 @@ public class BokfriCli implements Runnable {
                 + result.get("date") + "\t" + result.get("balance");
     }
 
-    private static <T> List<T> reportRows(Map<String, Object> result, Class<T> rowType) {
-        return ((List<?>) result.get("rows")).stream().map(rowType::cast).toList();
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> reportMaps(Map<String, Object> result) {
+        return (List<Map<String, Object>>) result.get("rows");
+    }
+
+    private static List<Map<String, Object>> trialBalanceRows(
+            List<FinancialReportService.TrialBalanceRow> rows) {
+        return rows.stream().map(row -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("account", row.account());
+            item.put("description", row.description());
+            item.put("opening", money(row.opening()));
+            item.put("debit", money(row.debit()));
+            item.put("credit", money(row.credit()));
+            item.put("closing", money(row.closing()));
+            return item;
+        }).toList();
+    }
+
+    private static List<Map<String, Object>> balanceSheetRows(
+            List<FinancialReportService.BalanceSheetRow> rows) {
+        return rows.stream().map(row -> Map.<String, Object>of(
+                "account", row.account(), "description", row.description(),
+                "balance", money(row.balance()))).toList();
+    }
+
+    private static List<Map<String, Object>> incomeStatementRows(
+            List<FinancialReportService.IncomeStatementRow> rows) {
+        return rows.stream().map(row -> Map.<String, Object>of(
+                "account", row.account(), "description", row.description(),
+                "amount", money(row.amount()))).toList();
+    }
+
+    private static List<Map<String, Object>> ledgerRows(
+            List<FinancialReportService.LedgerRow> rows) {
+        return rows.stream().map(row -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("voucherNumber", row.voucherNumber());
+            item.put("date", row.date());
+            item.put("description", row.description());
+            item.put("debit", money(row.debit()));
+            item.put("credit", money(row.credit()));
+            item.put("balance", money(row.balance()));
+            return item;
+        }).toList();
     }
 
     @Command(mixinStandardHelpOptions = true, name="opening-balance",description="Inspect and manage opening balances",subcommands={OpeningBalanceShow.class,OpeningBalanceValidate.class,OpeningBalanceSet.class,OpeningBalanceCarryForward.class,CliInputSchemas.OpeningBalance.class})
     static class OpeningBalanceCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An opening-balance command is required");}}
-    @Command(mixinStandardHelpOptions = true, name="show") static class OpeningBalanceShow implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());OpeningBalancePlan p=new OpeningBalanceService(r.database()).current(y);Map<String,Object>x=openingBalanceDetails(p);x.put("selection",selectedContext(c,co,y));root.output(x,"Opening balance\nDebit: "+p.debitTotal()+"\nCredit: "+p.creditTotal());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="show") static class OpeningBalanceShow implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());OpeningBalancePlan p=new OpeningBalanceService(r.database()).current(y);Map<String,Object>x=openingBalanceDetails(p);x.put("selection",selectedContext(c,co,y));root.output(x,"Opening balance\nDebit: "+money(p.debitTotal())+"\nCredit: "+money(p.creditTotal()));return 0;}catch(Exception e){throw databaseFailure(e);}}}
     abstract static class OpeningBalanceFileCommand implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);OpeningBalanceInput in=readOpeningBalanceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());Map<Integer,java.math.BigDecimal> values=new LinkedHashMap<>();for(var row:in.getBalances()){if(values.put(row.getAccount(),row.getAmount())!=null)throw new CliException("OPENING_BALANCE_INVALID","Duplicate account: "+row.getAccount());}OpeningBalanceService s=new OpeningBalanceService(r.database());OpeningBalancePlan p=persist()?s.replace(y,values):s.validate(y,values);Map<String,Object>x=openingBalanceDetails(p);x.put("written",persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Opening balance updated":"Opening balance is valid; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
     @Command(mixinStandardHelpOptions = true, name="validate") static class OpeningBalanceValidate extends OpeningBalanceFileCommand{boolean persist(){return false;}}
     @Command(mixinStandardHelpOptions = true, name="set") static class OpeningBalanceSet extends OpeningBalanceFileCommand{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
@@ -1399,7 +1438,7 @@ public class BokfriCli implements Runnable {
         @Option(names="--from",required=true) java.time.LocalDate from;
         @Option(names="--to",required=true) java.time.LocalDate to;
         @Option(names="--commit") boolean commit;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierCreditInvoiceService service=new SupplierCreditInvoiceService(r.database());SupplierCreditInvoiceJournalPlan plan=service.planJournal(from,to);if(plan.invoices().isEmpty())throw new CliException("SUPPLIER_CREDIT_INVOICE_JOURNAL_EMPTY","No unbooked supplier credit invoices exist in the selected period");Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",plan.journalNumber());x.put("supplierCreditInvoiceNumbers",plan.invoices().stream().map(SSSupplierCreditInvoice::getNumber).toList());x.put("debitTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher()).toPlainString());x.put("creditTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher()).toPlainString());x.put("committed",commit);if(commit)x.put("voucherNumber",service.commitJournal(plan).voucherNumber());x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Supplier credit-invoice journal committed":"Supplier credit-invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);} }
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierCreditInvoiceService service=new SupplierCreditInvoiceService(r.database());SupplierCreditInvoiceJournalPlan plan=service.planJournal(from,to);if(plan.invoices().isEmpty())throw new CliException("SUPPLIER_CREDIT_INVOICE_JOURNAL_EMPTY","No unbooked supplier credit invoices exist in the selected period");Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",plan.journalNumber());x.put("supplierCreditInvoiceNumbers",plan.invoices().stream().map(SSSupplierCreditInvoice::getNumber).toList());x.put("debitTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher())));x.put("creditTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher())));x.put("committed",commit);if(commit)x.put("voucherNumber",service.commitJournal(plan).voucherNumber());x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Supplier credit-invoice journal committed":"Supplier credit-invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);} }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "invoice", description = "Inspect and create customer invoices",
@@ -1496,10 +1535,8 @@ public class BokfriCli implements Runnable {
                                 + result.get("voucherNumber") + " for " + plan.invoices().size() + " invoices"
                         : "Invoice journal " + plan.journalNumber() + " preview\nInvoices: "
                                 + plan.invoices().size() + "\nDebit: "
-                                + se.swedsoft.bookkeeping.calc.math.SSVoucherMath
-                                        .getDebetSum(plan.voucher()).toPlainString()
-                                + "\nCredit: " + se.swedsoft.bookkeeping.calc.math.SSVoucherMath
-                                        .getCreditSum(plan.voucher()).toPlainString()
+                                + money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher()))
+                                + "\nCredit: " + money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher()))
                                 + "\nNo changes written");
                 return 0;
             } catch (IllegalArgumentException exception) {
@@ -1630,7 +1667,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name="journal") static class CreditInvoiceJournal implements Callable<Integer> {
         @CommandLine.ParentCommand CreditInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());CreditInvoiceJournalPlan p=s.planJournal(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("from",from);x.put("to",to);x.put("creditInvoiceNumbers",p.invoices().stream().map(SSCreditInvoice::getNumber).toList());x.put("invoiceCount",p.invoices().size());x.put("rows",voucherRows(p.voucher()));x.put("debitTotal",voucherDebit(p.voucher()).toPlainString());x.put("creditTotal",voucherCredit(p.voucher()).toPlainString());x.put("committed",commit);if(commit){CreditInvoiceJournalResult done=s.commitJournal(p);x.put("voucherNumber",done.voucherNumber());}x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Credit invoice journal committed":"Credit invoice journal preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_JOURNAL_EMPTY",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());CreditInvoiceJournalPlan p=s.planJournal(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("from",from);x.put("to",to);x.put("creditInvoiceNumbers",p.invoices().stream().map(SSCreditInvoice::getNumber).toList());x.put("invoiceCount",p.invoices().size());x.put("rows",voucherRows(p.voucher()));x.put("debitTotal",money(voucherDebit(p.voucher())));x.put("creditTotal",money(voucherCredit(p.voucher())));x.put("committed",commit);if(commit){CreditInvoiceJournalResult done=s.commitJournal(p);x.put("voucherNumber",done.voucherNumber());}x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Credit invoice journal committed":"Credit invoice journal preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_JOURNAL_EMPTY",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
     }
 
     @Command(mixinStandardHelpOptions = true, name = "inpayment", description = "Inspect, create, and book customer inpayments",
@@ -1957,8 +1994,8 @@ public class BokfriCli implements Runnable {
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("from", selectedFrom);
                 result.put("to", selectedTo);
-                result.put("boxes", report.boxes());
-                result.put("vatToPayOrRefund", decimal(report.vatToPayOrRefund()));
+                result.put("boxes", vatBoxes(report.boxes()));
+                result.put("vatToPayOrRefund", money(report.vatToPayOrRefund()));
                 result.put("selection", selectedContext(context, company, year));
                 root.output(result, "VAT report " + selectedFrom + " - " + selectedTo
                         + "\nVAT to pay/refund: " + report.vatToPayOrRefund());
@@ -2178,11 +2215,11 @@ public class BokfriCli implements Runnable {
         result.put("date", item.getLocalDate());
         result.put("text", item.getText());
         result.put("entered", item.isEntered());
-        result.put("total", decimal(se.swedsoft.bookkeeping.calc.math.SSOutpaymentMath.getSum(item)));
+        result.put("total", money(se.swedsoft.bookkeeping.calc.math.SSOutpaymentMath.getSum(item)));
         result.put("rows", item.getRows().stream().map(row -> {
             Map<String, Object> value = new LinkedHashMap<>();
             value.put("invoiceNumber", row.getInvoiceNr());
-            value.put("amount", decimal(row.getValue()));
+            value.put("amount", money(row.getValue()));
             value.put("currencyRate", decimal(row.getCurrencyRate()));
             return value;
         }).toList());
@@ -2196,10 +2233,8 @@ public class BokfriCli implements Runnable {
         result.put("to", plan.to());
         result.put("outpaymentNumbers", plan.outpayments().stream().map(SSOutpayment::getNumber).toList());
         result.put("outpaymentCount", plan.outpayments().size());
-        result.put("debitTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
-                .getDebetSum(plan.voucher()).toPlainString());
-        result.put("creditTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
-                .getCreditSum(plan.voucher()).toPlainString());
+        result.put("debitTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher())));
+        result.put("creditTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher())));
         return result;
     }
 
@@ -2237,7 +2272,7 @@ public class BokfriCli implements Runnable {
     }
 
     private static OpeningBalanceInput readOpeningBalanceInput(String file){try{OpeningBalanceInput i="-".equals(file)?jsonMapper().readValue(System.in,OpeningBalanceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),OpeningBalanceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported opening balance schemaVersion: "+i.getSchemaVersion());return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read opening balance JSON: "+e.getMessage(),e);}}
-    private static Map<String,Object> openingBalanceDetails(OpeningBalancePlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("balances",p.balances());x.put("debitTotal",p.debitTotal().toPlainString());x.put("creditTotal",p.creditTotal().toPlainString());x.put("difference",p.difference().toPlainString());return x;}
+    private static Map<String,Object> openingBalanceDetails(OpeningBalancePlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("balances",p.balances().stream().map(b->Map.<String,Object>of("account",b.account(),"description",b.description(),"amount",money(b.amount()))).toList());x.put("debitTotal",money(p.debitTotal()));x.put("creditTotal",money(p.creditTotal()));x.put("difference",money(p.difference()));return x;}
 
     private static CompanyInput readCompanyInput(String file){try{CompanyInput i="-".equals(file)?jsonMapper().readValue(System.in,CompanyInput.class):jsonMapper().readValue(Paths.get(file).toFile(),CompanyInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported company schemaVersion: "+i.getSchemaVersion());return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read company JSON: "+e.getMessage(),e);}}
     private static AccountingYearInput readAccountingYearInput(String file){try{AccountingYearInput i="-".equals(file)?jsonMapper().readValue(System.in,AccountingYearInput.class):jsonMapper().readValue(Paths.get(file).toFile(),AccountingYearInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported accounting year schemaVersion: "+i.getSchemaVersion());return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read accounting year JSON: "+e.getMessage(),e);}}
@@ -2743,7 +2778,7 @@ public class BokfriCli implements Runnable {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("number", product.getNumber());
         result.put("description", product.getDescription());
-        result.put("sellingPrice", decimal(product.getSellingPrice()));
+        result.put("sellingPrice", money(product.getSellingPrice()));
         result.put("taxCode", product.getTaxCode() == null ? null : product.getTaxCode().name());
         result.put("taxRate", product.getTaxRate().map(BokfriCli::decimal).orElse(null));
         result.put("unit", product.getUnit() == null ? null : product.getUnit().getName());
@@ -2754,8 +2789,8 @@ public class BokfriCli implements Runnable {
         return result;
     }
 
-    private static Map<String,Object> supplierInvoiceDetails(SSSupplierInvoice i){Map<String,Object>x=new LinkedHashMap<>();x.put("number",i.getNumber());x.put("date",i.getLocalDate());x.put("dueDate",i.getLocalDueDate());x.put("supplierNumber",i.getSupplierNr());x.put("supplierName",i.getSupplierName());x.put("reference",i.getReferencenumber());x.put("entered",i.isEntered());x.put("net",decimal(se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.getNetSum(i)));x.put("vat",decimal(i.getTaxSum()));x.put("total",decimal(se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.getTotalSum(i)));x.put("balance",i.getNumber()==null?null:decimal(se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.getSaldo(i)));x.put("rows",i.getRows().stream().map(r->Map.of("description",r.getDescription(),"quantity",r.getQuantity(),"unitPrice",decimal(r.getUnitprice()),"account",r.getAccountNr())).toList());return x;}
-    private static Map<String,Object> supplierInvoiceJournalDetails(SupplierInvoiceJournalPlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("invoiceNumbers",p.invoices().stream().map(SSSupplierInvoice::getNumber).toList());x.put("debitTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(p.voucher()).toPlainString());x.put("creditTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(p.voucher()).toPlainString());return x;}
+    private static Map<String,Object> supplierInvoiceDetails(SSSupplierInvoice i){Map<String,Object>x=new LinkedHashMap<>();x.put("number",i.getNumber());x.put("date",i.getLocalDate());x.put("dueDate",i.getLocalDueDate());x.put("supplierNumber",i.getSupplierNr());x.put("supplierName",i.getSupplierName());x.put("reference",i.getReferencenumber());x.put("entered",i.isEntered());x.put("net",money(se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.getNetSum(i)));x.put("vat",money(i.getTaxSum()));x.put("total",money(se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.getTotalSum(i)));x.put("balance",i.getNumber()==null?null:money(se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.getSaldo(i)));x.put("rows",i.getRows().stream().map(r->Map.of("description",r.getDescription(),"quantity",r.getQuantity(),"unitPrice",money(r.getUnitprice()),"account",r.getAccountNr())).toList());return x;}
+    private static Map<String,Object> supplierInvoiceJournalDetails(SupplierInvoiceJournalPlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("invoiceNumbers",p.invoices().stream().map(SSSupplierInvoice::getNumber).toList());x.put("debitTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(p.voucher())));x.put("creditTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(p.voucher())));return x;}
     private static Map<String,Object> supplierCreditInvoiceDetails(SSSupplierCreditInvoice i){Map<String,Object>x=supplierInvoiceDetails(i);x.put("creditingSupplierInvoiceNumber",i.getCreditingNr());return x;}
 
     private static Map<String, Object> supplierDetails(SSSupplier supplier) {
@@ -2786,11 +2821,11 @@ public class BokfriCli implements Runnable {
         result.put("date", item.getLocalDate());
         result.put("text", item.getText());
         result.put("entered", item.isEntered());
-        result.put("total", decimal(se.swedsoft.bookkeeping.calc.math.SSInpaymentMath.getSum(item)));
+        result.put("total", money(se.swedsoft.bookkeeping.calc.math.SSInpaymentMath.getSum(item)));
         result.put("rows", item.getRows().stream().map(row -> {
             Map<String, Object> value = new LinkedHashMap<>();
             value.put("invoiceNumber", row.getInvoiceNr());
-            value.put("amount", decimal(row.getValue()));
+            value.put("amount", money(row.getValue()));
             value.put("currencyRate", decimal(row.getCurrencyRate()));
             return value;
         }).toList());
@@ -2804,10 +2839,8 @@ public class BokfriCli implements Runnable {
         result.put("to", plan.to());
         result.put("inpaymentNumbers", plan.inpayments().stream().map(SSInpayment::getNumber).toList());
         result.put("inpaymentCount", plan.inpayments().size());
-        result.put("debitTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
-                .getDebetSum(plan.voucher()).toPlainString());
-        result.put("creditTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
-                .getCreditSum(plan.voucher()).toPlainString());
+        result.put("debitTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher())));
+        result.put("creditTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher())));
         return result;
     }
 
@@ -2818,15 +2851,13 @@ public class BokfriCli implements Runnable {
         result.put("to", plan.to());
         result.put("invoiceNumbers", plan.invoices().stream().map(SSInvoice::getNumber).toList());
         result.put("invoiceCount", plan.invoices().size());
-        result.put("debitTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
-                .getDebetSum(plan.voucher()).toPlainString());
-        result.put("creditTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
-                .getCreditSum(plan.voucher()).toPlainString());
+        result.put("debitTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher())));
+        result.put("creditTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher())));
         result.put("voucherRows", plan.voucher().getRows().stream().map(row -> {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("account", row.getAccountNr());
-            item.put("debit", decimal(row.getDebet()));
-            item.put("credit", decimal(row.getCredit()));
+            item.put("debit", money(row.getDebet()));
+            item.put("credit", money(row.getCredit()));
             item.put("project", row.getProjectNr());
             item.put("resultUnit", row.getResultUnitNr());
             return item;
@@ -2845,11 +2876,11 @@ public class BokfriCli implements Runnable {
         result.put("type", invoice.getType().name());
         result.put("entered", invoice.isEntered());
         result.put("printed", invoice.isPrinted());
-        result.put("net", decimal(SSSaleMath.getNetSum(invoice)));
-        result.put("vat", decimal(SSSaleMath.getTotalTaxSum(invoice)));
-        result.put("total", decimal(SSSaleMath.getTotalSum(invoice)));
+        result.put("net", money(SSSaleMath.getNetSum(invoice)));
+        result.put("vat", money(SSSaleMath.getTotalTaxSum(invoice)));
+        result.put("total", money(SSSaleMath.getTotalSum(invoice)));
         result.put("balance", invoice.getNumber() == null
-                ? null : decimal(se.swedsoft.bookkeeping.calc.math.SSInvoiceMath.getSaldo(invoice)));
+                ? null : money(se.swedsoft.bookkeeping.calc.math.SSInvoiceMath.getSaldo(invoice)));
         result.put("rowCount", invoice.getRows().size());
         return result;
     }
@@ -2865,8 +2896,8 @@ public class BokfriCli implements Runnable {
         return voucher.getRows().stream().map(row -> {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("account", row.getAccountNr());
-            item.put("debit", decimal(row.getDebet()));
-            item.put("credit", decimal(row.getCredit()));
+            item.put("debit", money(row.getDebet()));
+            item.put("credit", money(row.getCredit()));
             item.put("project", row.getProjectNr());
             item.put("resultUnit", row.getResultUnitNr());
             return item;
@@ -2890,7 +2921,7 @@ public class BokfriCli implements Runnable {
         result.put("yourOrderNumber", invoice.getYourOrderNumber());
         result.put("text", invoice.getText());
         result.put("taxFree", invoice.getTaxFree());
-        result.put("rounding", decimal(SSSaleMath.getRounding(invoice)));
+        result.put("rounding", money(SSSaleMath.getRounding(invoice)));
         return result;
     }
 
@@ -2899,27 +2930,25 @@ public class BokfriCli implements Runnable {
         result.put("productNumber", row.getProductNr());
         result.put("description", row.getDescription());
         result.put("quantity", row.getQuantity());
-        result.put("unitPrice", decimal(row.getUnitprice()));
+        result.put("unitPrice", money(row.getUnitprice()));
         result.put("discount", decimal(row.getDiscount()));
         result.put("taxCode", row.getTaxCode() == null ? null : row.getTaxCode().name());
         result.put("account", row.getAccountNr());
         result.put("project", row.getProjectNr());
         result.put("resultUnit", row.getResultUnitNr());
-        result.put("sum", row.getSum().map(BokfriCli::decimal).orElse(null));
+        result.put("sum", row.getSum().map(BokfriCli::money).orElse(null));
         return result;
     }
 
-    private static Map<String,Object> vatSettlementDetails(VatSettlementPlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("from",p.report().from());x.put("to",p.report().to());x.put("boxes",p.report().boxes());x.put("vatToPayOrRefund",decimal(p.report().vatToPayOrRefund()));x.put("debitTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(p.voucher()).toPlainString());x.put("creditTotal",se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(p.voucher()).toPlainString());x.put("voucherRows",p.voucher().getRows().stream().map(r->{Map<String,Object> v=new LinkedHashMap<>();v.put("account",r.getAccountNr());v.put("debit",decimal(r.getDebet()));v.put("credit",decimal(r.getCredit()));return v;}).toList());return x;}
+    private static Map<String,Object> vatSettlementDetails(VatSettlementPlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("from",p.report().from());x.put("to",p.report().to());x.put("boxes",vatBoxes(p.report().boxes()));x.put("vatToPayOrRefund",money(p.report().vatToPayOrRefund()));x.put("debitTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(p.voucher())));x.put("creditTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(p.voucher())));x.put("voucherRows",p.voucher().getRows().stream().map(r->{Map<String,Object> v=new LinkedHashMap<>();v.put("account",r.getAccountNr());v.put("debit",money(r.getDebet()));v.put("credit",money(r.getCredit()));return v;}).toList());return x;}
 
     private static Map<String, Object> voucherSummary(SSVoucher voucher) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("number", voucher.getNumber());
         result.put("date", voucher.getLocalDate());
         result.put("description", voucher.getDescription());
-        result.put("debitTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
-                .getDebetSum(voucher).toPlainString());
-        result.put("creditTotal", se.swedsoft.bookkeeping.calc.math.SSVoucherMath
-                .getCreditSum(voucher).toPlainString());
+        result.put("debitTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher)));
+        result.put("creditTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher)));
         result.put("rowCount", voucher.getRows().size());
         return result;
     }
@@ -2931,8 +2960,8 @@ public class BokfriCli implements Runnable {
             item.put("account", row.getAccountNr());
             SSAccount account = row.getAccount();
             item.put("accountDescription", account == null ? null : account.getDescription());
-            item.put("debit", decimal(row.getDebet()));
-            item.put("credit", decimal(row.getCredit()));
+            item.put("debit", money(row.getDebet()));
+            item.put("credit", money(row.getCredit()));
             item.put("project", row.getProjectNr());
             item.put("resultUnit", row.getResultUnitNr());
             item.put("crossed", row.isCrossed());
@@ -2948,7 +2977,18 @@ public class BokfriCli implements Runnable {
         return result;
     }
 
-    private static String decimal(java.math.BigDecimal value) {
+    private static List<Map<String, Object>> vatBoxes(
+            List<org.fribok.bookkeeping.service.vat.VatReportBox> boxes) {
+        return boxes.stream().map(box -> Map.<String, Object>of(
+                "number", box.number(), "vatCodes", box.vatCodes(),
+                "amount", money(box.amount()))).toList();
+    }
+
+    static String money(java.math.BigDecimal value) {
+        return value == null ? null : value.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
+    }
+
+    static String decimal(java.math.BigDecimal value) {
         return value == null ? null : value.toPlainString();
     }
 
@@ -2971,15 +3011,15 @@ public class BokfriCli implements Runnable {
             SSAccount account = row.getAccount();
             text.append(row.getAccountNr()).append('\t')
                     .append(account == null ? "" : account.getDescription()).append('\t')
-                    .append(row.getDebet() == null ? "" : row.getDebet().toPlainString())
+                    .append(row.getDebet() == null ? "" : money(row.getDebet()))
                     .append('\t')
-                    .append(row.getCredit() == null ? "" : row.getCredit().toPlainString())
+                    .append(row.getCredit() == null ? "" : money(row.getCredit()))
                     .append('\n');
         }
         text.append("Total\t\t")
-                .append(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher))
+                .append(money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher)))
                 .append('\t')
-                .append(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher));
+                .append(money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher)));
         return text.toString().stripTrailing();
     }
 
@@ -2994,8 +3034,8 @@ public class BokfriCli implements Runnable {
         result.put("number", nextNumber);
         result.put("date", voucher.getLocalDate());
         result.put("description", voucher.getDescription());
-        result.put("debitTotal", validation.debitTotal().toPlainString());
-        result.put("creditTotal", validation.creditTotal().toPlainString());
+        result.put("debitTotal", money(validation.debitTotal()));
+        result.put("creditTotal", money(validation.creditTotal()));
         result.put("issues", validation.issues());
         return result;
     }
@@ -3003,16 +3043,16 @@ public class BokfriCli implements Runnable {
     private static String voucherText(Map<String, Object> result,
             VoucherValidationResult validation) {
         return "Voucher is valid\nNumber: " + result.get("number") + "\nDebit: "
-                + validation.debitTotal().toPlainString() + "\nCredit: "
-                + validation.creditTotal().toPlainString()
+                + money(validation.debitTotal()) + "\nCredit: "
+                + money(validation.creditTotal())
                 + (Boolean.TRUE.equals(result.get("created")) ? "\nCreated" : "\nNo changes written");
     }
 
     private static CliException validationFailure(VoucherValidationResult validation) {
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("valid", false);
-        details.put("debitTotal", validation.debitTotal().toPlainString());
-        details.put("creditTotal", validation.creditTotal().toPlainString());
+        details.put("debitTotal", money(validation.debitTotal()));
+        details.put("creditTotal", money(validation.creditTotal()));
         details.put("issues", validation.issues());
         VoucherValidationIssue first = validation.issues().get(0);
         return new CliException("VOUCHER_INVALID", first.message(), details);

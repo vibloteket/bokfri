@@ -148,11 +148,17 @@ class SIEReaderTest {
     // ---- BigDecimal parsing ----
 
     @Test
-    void nextBigDecimalReturnsCorrectValue() {
-        SIEReader reader = new SIEReader("100.25");
-        BigDecimal result = reader.nextBigDecimal();
+    void nextBigDecimalPreservesExactDecimalValue() {
+        SIEReader reader = new SIEReader("0.18");
 
-        assertThat(result.doubleValue()).isEqualTo(100.25);
+        assertThat(reader.nextBigDecimal()).isEqualByComparingTo(new BigDecimal("0.18"));
+    }
+
+    @Test
+    void nextBigDecimalPreservesSourcePrecision() {
+        SIEReader reader = new SIEReader("1234.567890123456789");
+
+        assertThat(reader.nextBigDecimal().toPlainString()).isEqualTo("1234.567890123456789");
     }
 
     // ---- Array parsing ----

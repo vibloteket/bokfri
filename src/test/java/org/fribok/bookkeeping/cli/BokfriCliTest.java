@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -234,6 +235,17 @@ class BokfriCliTest {
         assertThat(migrated.exitCode()).isZero();
         assertThat(new ObjectMapper().readTree(migrated.stdout()).path("migrated").asBoolean()).isFalse();
         assertThat(data.resolve("backups")).doesNotExist();
+    }
+
+    @Test
+    void formatsMoneyWithTwoDecimalsAndOtherDecimalsAtTheirActualPrecision() {
+        BigDecimal binaryNoise = new BigDecimal(0.18d);
+
+        assertThat(BokfriCli.money(binaryNoise)).isEqualTo("0.18");
+        assertThat(BokfriCli.money(new BigDecimal("12"))).isEqualTo("12.00");
+        assertThat(BokfriCli.decimal(new BigDecimal("10.543210"))).isEqualTo("10.543210");
+        assertThat(BokfriCli.money(null)).isNull();
+        assertThat(BokfriCli.decimal(null)).isNull();
     }
 
     @Test

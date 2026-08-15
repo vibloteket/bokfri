@@ -13,6 +13,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- SIE import and export now keep decimal amounts out of binary floating-point conversions,
+  and CLI monetary output consistently uses two decimals while quantities, rates, and other
+  non-monetary decimals retain their actual precision.
 - Customer invoice, credit-invoice, order, tender, and periodic-invoice rows now support
   decimal quantities such as `0.5` hours; stock-tracked products still require whole units.
 - Bokfri data format 2 is now the sole write format. Opening format 1 requires explicit

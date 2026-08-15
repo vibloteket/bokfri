@@ -5,6 +5,7 @@ import se.swedsoft.bookkeeping.data.SSMonth;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -208,7 +209,8 @@ public class SIEWriter {
      * @param pValue
      */
     public void append(BigDecimal pValue) {
-        append(pValue.doubleValue());
+        iStringBuilder.append(pValue.setScale(2, RoundingMode.HALF_UP).toPlainString());
+        iStringBuilder.append(' ');
     }
 
     /**

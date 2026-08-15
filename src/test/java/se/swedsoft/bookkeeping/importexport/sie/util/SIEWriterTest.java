@@ -139,10 +139,17 @@ class SIEWriterTest {
     // ---- append(BigDecimal) ----
 
     @Test
-    void appendBigDecimalDelegatesToDouble() {
-        writer.append(new BigDecimal("3.14"));
+    void appendBigDecimalFormatsMoneyWithTwoDecimals() {
+        writer.append(new BigDecimal("1234567890.125"));
 
-        assertThat(writer.getLine()).isEqualTo("3.14");
+        assertThat(writer.getLine()).isEqualTo("1234567890.13");
+    }
+
+    @Test
+    void appendBigDecimalDoesNotIntroduceBinaryFloatingPointNoise() {
+        writer.append(new BigDecimal("0.18"));
+
+        assertThat(writer.getLine()).isEqualTo("0.18");
     }
 
     // ---- append(LocalDate) ----
