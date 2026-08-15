@@ -30,19 +30,19 @@ public final class CliJsonSchemaService {
                 .with(new JakartaValidationModule(
                         JakartaValidationOption.NOT_NULLABLE_FIELD_IS_REQUIRED,
                         JakartaValidationOption.NOT_NULLABLE_METHOD_IS_REQUIRED))
-                .with((type, context) -> {
-                    if (!java.math.BigDecimal.class.equals(type.getErasedType())) {
-                        return null;
-                    }
-                    ObjectNode decimal = context.getGeneratorConfig().createObjectNode();
-                    com.fasterxml.jackson.databind.node.ArrayNode oneOf = decimal.putArray("oneOf");
-                    oneOf.addObject().put("type", "string")
-                            .put("pattern", "^-?[0-9]+(?:\\.[0-9]+)?$");
-                    oneOf.addObject().put("type", "number");
-                    return new CustomDefinition(decimal, CustomDefinition.INLINE_DEFINITION,
-                            CustomDefinition.EXCLUDING_ATTRIBUTES);
-                })
                 .with(Option.FORBIDDEN_ADDITIONAL_PROPERTIES_BY_DEFAULT);
+        builder.forTypesInGeneral().withCustomDefinitionProvider((type, context) -> {
+            if (!java.math.BigDecimal.class.equals(type.getErasedType())) {
+                return null;
+            }
+            ObjectNode decimal = context.getGeneratorConfig().createObjectNode();
+            com.fasterxml.jackson.databind.node.ArrayNode oneOf = decimal.putArray("oneOf");
+            oneOf.addObject().put("type", "string")
+                    .put("pattern", "^-?[0-9]+(?:\\.[0-9]+)?$");
+            oneOf.addObject().put("type", "number");
+            return new CustomDefinition(decimal, CustomDefinition.INLINE_DEFINITION,
+                    CustomDefinition.EXCLUDING_ATTRIBUTES);
+        });
         builder.forFields().withRequiredCheck(field ->
                 field.getAnnotationConsideringFieldAndGetter(NotNull.class) != null
                         || field.getAnnotationConsideringFieldAndGetter(NotBlank.class) != null);
