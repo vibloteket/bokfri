@@ -13,6 +13,8 @@ import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -31,6 +33,10 @@ public class SSSIEExporter {    private static final Logger LOG = LoggerFactory.
     private SIEType iType;
 
     private String iComment;
+
+    private List<SIEExportAdjustment> iAdjustments = new ArrayList<>();
+
+    private boolean iAllowRoundingAdjustments;
 
     /**
      *
@@ -71,6 +77,14 @@ public class SSSIEExporter {    private static final Logger LOG = LoggerFactory.
         // Test so we have an active company
         if (iCompany == null) {
             throw new SSExportException(SSBundleString.getString("sieexport.nocompany"));
+        }
+
+        iLines.clear();
+        iAdjustments = new ArrayList<>(findRequiredAdjustments());
+        if (!iAdjustments.isEmpty() && !iAllowRoundingAdjustments) {
+            throw new SSExportException(iAdjustments.size()
+                    + " voucher(s) need SIE-only rounding rows. Approve rounding adjustments "
+                    + "to continue; the stored vouchers will not be changed.");
         }
 
         // Get the exporter factory
@@ -168,6 +182,39 @@ public class SSSIEExporter {    private static final Logger LOG = LoggerFactory.
     public List<String> getLines() {
         return iLines;
     }
+
+    /** Finds rounding rows that would be needed without writing an export file. */
+    public List<SIEExportAdjustment> findRequiredAdjustments() {
+        SSNewCompany company = SSDB.getInstance().getCurrentCompany();
+        if (company == null) {
+            return List.of();
+        }
+        int account = company.getDefaultAccount(
+                se.swedsoft.bookkeeping.data.common.SSDefaultAccount.Rounding);
+        var roundingAccount = SSDB.getInstance().getCurrentAccountPlan().getAccount(account);
+        List<SIEExportAdjustment> adjustments = SSDB.getInstance().getVouchers().stream()
+                .map(voucher -> new SIEExportAdjustment(voucher.getNumber(), account,
+                        SIERounding.voucherAdjustment(voucher)))
+                .filter(adjustment -> adjustment.amount().signum() != 0).toList();
+        if (!adjustments.isEmpty() && roundingAccount == null) {
+            throw new SSExportException("SIE rounding account " + account
+                    + " does not exist in the selected accounting year");
+        }
+        return adjustments;
+    }
+
+    /** Allows required non-persistent rounding rows to be included in the export. */
+    public void setAllowRoundingAdjustments(boolean allowRoundingAdjustments) {
+        iAllowRoundingAdjustments = allowRoundingAdjustments;
+    }
+
+    /** Adjustments added only to SIE output to balance two-decimal voucher rows. */
+    public List<SIEExportAdjustment> getAdjustments() {
+        return List.copyOf(iAdjustments);
+    }
+
+    /** One non-persistent SIE rounding row. */
+    public record SIEExportAdjustment(Integer voucherNumber, int account, BigDecimal amount) {}
 
     @Override
     public String toString() {

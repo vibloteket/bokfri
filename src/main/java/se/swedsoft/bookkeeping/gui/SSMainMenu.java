@@ -260,6 +260,18 @@ public class SSMainMenu {    private static final Logger LOG = LoggerFactory.get
                 if(iFileChooser.showSaveDialog(iMainFrame) == JFileChooser.APPROVE_OPTION ){
                     try {
                         SSSIEExporter iExporter = new SSSIEExporter(SIEType.SIE_4I, "Format SIE 4I");
+                        var adjustments = iExporter.findRequiredAdjustments();
+                        if (!adjustments.isEmpty()) {
+                            int response = JOptionPane.showConfirmDialog(iMainFrame,
+                                    adjustments.size() + " verifikation(er) behöver en "
+                                            + "avrundningsrad endast i SIE-filen. Fortsätt?",
+                                    "SIE-export", JOptionPane.OK_CANCEL_OPTION,
+                                    JOptionPane.WARNING_MESSAGE);
+                            if (response != JOptionPane.OK_OPTION) {
+                                return;
+                            }
+                            iExporter.setAllowRoundingAdjustments(true);
+                        }
                         iExporter.exportSIE(iFileChooser.getSelectedFile() );
                     } catch (SSExportException ex ) {
                         new SSErrorDialog(iMainFrame, "exportexceptiondialog", ex.getMessage());

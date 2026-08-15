@@ -75,10 +75,11 @@ public class SSStartingAmountPanel {
     public void setInBalance(Map<SSAccount, BigDecimal> pInBalance, List<SSAccount> pBalanceAccounts) {
         iInBalance.clear();
 
-        // Copy all ammounts
+        // Copy monetary amounts without a binary floating-point round trip.
         for (Map.Entry<SSAccount, BigDecimal> ssAccountBigDecimalEntry : pInBalance.entrySet()) {
             iInBalance.put(ssAccountBigDecimalEntry.getKey(),
-                    new BigDecimal(ssAccountBigDecimalEntry.getValue().doubleValue()));
+                    ssAccountBigDecimalEntry.getValue().setScale(2,
+                            java.math.RoundingMode.HALF_UP));
         }
 
         iModel.setObjects(pBalanceAccounts);
@@ -92,10 +93,11 @@ public class SSStartingAmountPanel {
     public void setInBalance(Map<SSAccount, BigDecimal> pInBalance) {
         iInBalance.clear();
 
-        // Copy all ammounts
+        // Copy monetary amounts without a binary floating-point round trip.
         for (Map.Entry<SSAccount, BigDecimal> ssAccountBigDecimalEntry : pInBalance.entrySet()) {
             iInBalance.put(ssAccountBigDecimalEntry.getKey(),
-                    new BigDecimal(ssAccountBigDecimalEntry.getValue().doubleValue()));
+                    ssAccountBigDecimalEntry.getValue().setScale(2,
+                            java.math.RoundingMode.HALF_UP));
         }
         updateSumField();
     }

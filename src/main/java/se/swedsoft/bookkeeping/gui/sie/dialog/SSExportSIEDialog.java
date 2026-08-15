@@ -58,7 +58,19 @@ public class SSExportSIEDialog {
 
                         try {
                             SSSIEExporter iExporter = new SSSIEExporter(iType, iComment);
-
+                            var adjustments = iExporter.findRequiredAdjustments();
+                            if (!adjustments.isEmpty()) {
+                                int response = JOptionPane.showConfirmDialog(iMainFrame,
+                                        adjustments.size() + " verifikation(er) behöver en "
+                                                + "avrundningsrad endast i SIE-filen för att "
+                                                + "tvådecimalbeloppen ska balansera. Fortsätt?",
+                                        "SIE-export", JOptionPane.OK_CANCEL_OPTION,
+                                        JOptionPane.WARNING_MESSAGE);
+                                if (response != JOptionPane.OK_OPTION) {
+                                    return;
+                                }
+                                iExporter.setAllowRoundingAdjustments(true);
+                            }
                             iExporter.exportSIE(iFile);
                         } catch (SSExportException ex) {
                             new SSErrorDialog(iMainFrame, "exportexceptiondialog", ex.getMessage());

@@ -7,6 +7,7 @@ import se.swedsoft.bookkeeping.calc.math.SSVoucherMath;
 import se.swedsoft.bookkeeping.data.*;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.SSBundleString;
+import se.swedsoft.bookkeeping.importexport.sie.SIERounding;
 import se.swedsoft.bookkeeping.importexport.sie.SSSIEExporter;
 import se.swedsoft.bookkeeping.importexport.sie.SSSIEImporter;
 import se.swedsoft.bookkeeping.importexport.sie.util.SIEIterator;
@@ -173,18 +174,35 @@ public class SIEEntryTransaktion implements SIEEntry {
 
         // #TRANS kontonr {objectlista} belopp [transdat] [transtext] [kvantitet]
         for (SSVoucherRow iVoucherRow: iVoucher.getRows()) {
-            SSAccount    iAccount = iVoucherRow.getAccount();
+            SSAccount iAccount = iVoucherRow.getAccount();
 
             if (!iVoucherRow.isValid() || iVoucherRow.isCrossed()) {
                 continue;
             }
 
+            BigDecimal amount = SSVoucherMath.getDebetMinusCredit(iVoucherRow);
             iWriter.append(SIELabel.SIE_TRANS);
             iWriter.append(iAccount.getNumber());
             iWriter.append(getObjects(iVoucherRow));
-            iWriter.append(SSVoucherMath.getDebetMinusCredit(iVoucherRow));
+            iWriter.append(amount);
             iWriter.newLine();
             iHasData = true;
+        }
+
+        BigDecimal adjustment = SIERounding.voucherAdjustment(iVoucher);
+        if (adjustment.signum() != 0) {
+            SSAccount account = SSDB.getInstance().getCurrentCompany()
+                    .getDefaultAccount(SSDB.getInstance().getCurrentAccountPlan(),
+                            se.swedsoft.bookkeeping.data.common.SSDefaultAccount.Rounding)
+                    .orElseThrow(() -> new SSExportException(
+                            "Voucher " + iVoucher.getNumber() + " needs a SIE rounding adjustment of "
+                                    + adjustment.toPlainString()
+                                    + ", but no rounding account is configured"));
+            iWriter.append(SIELabel.SIE_TRANS);
+            iWriter.append(account.getNumber());
+            iWriter.append(List.of());
+            iWriter.append(adjustment);
+            iWriter.newLine();
         }
 
         return iHasData;

@@ -5,7 +5,6 @@
 package se.swedsoft.bookkeeping.gui.accountingyear;
 
 
-import se.swedsoft.bookkeeping.calc.SSBalanceCalculator;
 import se.swedsoft.bookkeeping.calc.math.SSAccountMath;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
@@ -18,6 +17,8 @@ import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSProgressDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
 import se.swedsoft.bookkeeping.gui.util.frame.SSDefaultTableFrame;
+import org.fribok.bookkeeping.service.openingbalance.OpeningBalancePlan;
+import org.fribok.bookkeeping.service.openingbalance.OpeningBalanceService;
 import se.swedsoft.bookkeeping.print.report.SSStartingAmountPrinter;
 
 import javax.swing.*;
@@ -87,8 +88,9 @@ public class SSStartingAmountFrame extends SSDefaultTableFrame {
                             if (iResponce != JOptionPane.YES_OPTION) {
                                 return;
                             }
-                            iAccountingYear.setInBalance(iStartingAmountPanel.getInBalance());
-                            SSDB.getInstance().updateAccountingYear(iAccountingYear);
+                            if (!saveOpeningBalance()) {
+                                return;
+                            }
                         }
 
                     });
@@ -109,8 +111,9 @@ public class SSStartingAmountFrame extends SSDefaultTableFrame {
         SSButton iButton = new SSButton("ICON_SAVEITEM", "startingammountframe.savebutton",
                 e -> {
 
-                        iAccountingYear.setInBalance(iStartingAmountPanel.getInBalance());
-                        SSDB.getInstance().updateAccountingYear(iAccountingYear);
+                        if (!saveOpeningBalance()) {
+                            return;
+                        }
                         cInstance = null;
                         setVisible(false);
 
@@ -214,6 +217,20 @@ public class SSStartingAmountFrame extends SSDefaultTableFrame {
         return true;
     }
 
+    private boolean saveOpeningBalance() {
+        Map<Integer, BigDecimal> values = new java.util.LinkedHashMap<>();
+        iStartingAmountPanel.getInBalance().forEach((account, amount) ->
+                values.put(account.getNumber(), amount));
+        try {
+            new OpeningBalanceService(SSDB.getInstance()).replace(iAccountingYear, values);
+            return true;
+        } catch (IllegalArgumentException exception) {
+            JOptionPane.showMessageDialog(getMainFrame(), exception.getMessage(),
+                    "Ingående balans", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+    }
+
     /**
      *
      */
@@ -250,16 +267,26 @@ public class SSStartingAmountFrame extends SSDefaultTableFrame {
         if (iResponce != JOptionPane.YES_OPTION) {
             return;
         }
-        // SSBalanceCalculator iCalculator = new SSBalanceCalculator(iPreviousYear);
-
-        // iCalculator.calculate();
-
-        Map<SSAccount, BigDecimal > iOutBalance = SSBalanceCalculator.getOutBalance(
-                iPreviousYear);
-
-        // iCalculator.getOutSaldo();
-
-        iStartingAmountPanel.setInBalance(iOutBalance);
+        OpeningBalancePlan plan = new OpeningBalanceService(SSDB.getInstance())
+                .carryForward(iPreviousYear, iAccountingYear, false);
+        Map<SSAccount, BigDecimal> inBalance = new java.util.LinkedHashMap<>();
+        for (var entry : plan.balances()) {
+            inBalance.put(iAccountingYear.getAccountPlan().getAccount(entry.account()),
+                    entry.amount());
+        }
+        if (plan.adjustment() != null) {
+            int response = JOptionPane.showConfirmDialog(getMainFrame(),
+                    "Avrundning till två decimaler kräver att konto "
+                            + plan.adjustment().account() + " justeras med "
+                            + plan.adjustment().amount().toPlainString()
+                            + " kr för att ingående balans ska balansera. Fortsätt?",
+                    "Överför ingående balans", JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (response != JOptionPane.OK_OPTION) {
+                return;
+            }
+        }
+        iStartingAmountPanel.setInBalance(inBalance);
     }
 
     public void actionPerformed(ActionEvent e) {

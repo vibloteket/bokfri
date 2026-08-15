@@ -880,7 +880,7 @@ public class BokfriCli implements Runnable {
     abstract static class OpeningBalanceFileCommand implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);OpeningBalanceInput in=readOpeningBalanceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());Map<Integer,java.math.BigDecimal> values=new LinkedHashMap<>();for(var row:in.getBalances()){if(values.put(row.getAccount(),row.getAmount())!=null)throw new CliException("OPENING_BALANCE_INVALID","Duplicate account: "+row.getAccount());}OpeningBalanceService s=new OpeningBalanceService(r.database());OpeningBalancePlan p=persist()?s.replace(y,values):s.validate(y,values);Map<String,Object>x=openingBalanceDetails(p);x.put("written",persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Opening balance updated":"Opening balance is valid; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
     @Command(mixinStandardHelpOptions = true, name="validate") static class OpeningBalanceValidate extends OpeningBalanceFileCommand{boolean persist(){return false;}}
     @Command(mixinStandardHelpOptions = true, name="set") static class OpeningBalanceSet extends OpeningBalanceFileCommand{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
-    @Command(mixinStandardHelpOptions = true, name="carry-forward") static class OpeningBalanceCarryForward implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--from-year-id",required=true)int fromYearId;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear to=r.selectYear(co,c.yearId());SSNewAccountingYear from=r.database().getYearsForCompany(co).stream().filter(y->y.getId()==fromYearId).findFirst().orElseThrow(()->new CliException("YEAR_NOT_FOUND","No source year has id "+fromYearId));OpeningBalancePlan p=new OpeningBalanceService(r.database()).carryForward(from,to,commit);Map<String,Object>x=openingBalanceDetails(p);x.put("fromYearId",fromYearId);x.put("toYearId",to.getId());x.put("committed",commit);x.put("selection",selectedContext(c,co,to));root.output(x,commit?"Opening balances carried forward":"Carry-forward preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="carry-forward") static class OpeningBalanceCarryForward implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--from-year-id",required=true)int fromYearId;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear to=r.selectYear(co,c.yearId());SSNewAccountingYear from=r.database().getYearsForCompany(co).stream().filter(y->y.getId()==fromYearId).findFirst().orElseThrow(()->new CliException("YEAR_NOT_FOUND","No source year has id "+fromYearId));OpeningBalancePlan p=new OpeningBalanceService(r.database()).carryForward(from,to,commit);Map<String,Object>x=openingBalanceDetails(p);x.put("fromYearId",fromYearId);x.put("toYearId",to.getId());x.put("committed",commit);x.put("selection",selectedContext(c,co,to));String adjustment=p.adjustment()==null?"":"\nAdjusted account "+p.adjustment().account()+" by "+money(p.adjustment().amount())+" to preserve balance";root.output(x,(commit?"Opening balances carried forward":"Carry-forward preview; no changes written")+adjustment);return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "backup", description = "Create, list, verify, and restore full backups",
             subcommands = {BackupCreate.class, BackupList.class, BackupVerify.class,
@@ -1013,6 +1013,9 @@ public class BokfriCli implements Runnable {
         String type;
         @Option(names = "--comment", description = "Optional SIE comment") String comment;
         @Option(names = "--overwrite", description = "Replace an existing output file") boolean overwrite;
+        @Option(names = "--allow-rounding-adjustments",
+                description = "Add disclosed SIE-only rounding rows when two-decimal output needs them")
+        boolean allowRoundingAdjustments;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, true);
@@ -1020,13 +1023,23 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                java.nio.file.Path file = new SieExportService().export(output, sieType, comment, overwrite);
+                var exported = new SieExportService().export(output, sieType, comment, overwrite,
+                        allowRoundingAdjustments);
+                java.nio.file.Path file = exported.path();
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("output", file.toString());
                 result.put("size", Files.size(file));
                 result.put("type", type.toUpperCase(java.util.Locale.ROOT));
+                result.put("roundingAdjustments", exported.adjustments().stream().map(adjustment ->
+                        Map.<String, Object>of("voucherNumber", adjustment.voucherNumber(),
+                                "account", adjustment.account(),
+                                "amount", money(adjustment.amount()))).toList());
                 result.put("selection", selectedContext(context, company, year));
-                root.output(result, "Created SIE export " + file + " (" + Files.size(file) + " bytes)");
+                String adjustmentText = exported.adjustments().isEmpty() ? ""
+                        : "\nAdded " + exported.adjustments().size()
+                                + " SIE-only rounding adjustment(s)";
+                root.output(result, "Created SIE export " + file + " (" + Files.size(file)
+                        + " bytes)" + adjustmentText);
                 return 0;
             } catch (java.nio.file.FileAlreadyExistsException exception) {
                 throw new CliException("OUTPUT_EXISTS",
@@ -2272,7 +2285,7 @@ public class BokfriCli implements Runnable {
     }
 
     private static OpeningBalanceInput readOpeningBalanceInput(String file){try{OpeningBalanceInput i="-".equals(file)?jsonMapper().readValue(System.in,OpeningBalanceInput.class):jsonMapper().readValue(Paths.get(file).toFile(),OpeningBalanceInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported opening balance schemaVersion: "+i.getSchemaVersion());return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read opening balance JSON: "+e.getMessage(),e);}}
-    private static Map<String,Object> openingBalanceDetails(OpeningBalancePlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("balances",p.balances().stream().map(b->Map.<String,Object>of("account",b.account(),"description",b.description(),"amount",money(b.amount()))).toList());x.put("debitTotal",money(p.debitTotal()));x.put("creditTotal",money(p.creditTotal()));x.put("difference",money(p.difference()));return x;}
+    private static Map<String,Object> openingBalanceDetails(OpeningBalancePlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("balances",p.balances().stream().map(b->Map.<String,Object>of("account",b.account(),"description",b.description(),"amount",money(b.amount()))).toList());x.put("debitTotal",money(p.debitTotal()));x.put("creditTotal",money(p.creditTotal()));x.put("difference",money(p.difference()));x.put("adjustment",p.adjustment()==null?null:Map.of("account",p.adjustment().account(),"description",p.adjustment().description(),"before",money(p.adjustment().before()),"after",money(p.adjustment().after()),"amount",money(p.adjustment().amount())));return x;}
 
     private static CompanyInput readCompanyInput(String file){try{CompanyInput i="-".equals(file)?jsonMapper().readValue(System.in,CompanyInput.class):jsonMapper().readValue(Paths.get(file).toFile(),CompanyInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported company schemaVersion: "+i.getSchemaVersion());return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read company JSON: "+e.getMessage(),e);}}
     private static AccountingYearInput readAccountingYearInput(String file){try{AccountingYearInput i="-".equals(file)?jsonMapper().readValue(System.in,AccountingYearInput.class):jsonMapper().readValue(Paths.get(file).toFile(),AccountingYearInput.class);if(i.getSchemaVersion()!=1)throw new CliException("INPUT_SCHEMA_UNSUPPORTED","Unsupported accounting year schemaVersion: "+i.getSchemaVersion());return CliInputValidator.validate(i);}catch(CliException e){throw e;}catch(IOException e){throw new CliException("INPUT_INVALID","Could not read accounting year JSON: "+e.getMessage(),e);}}

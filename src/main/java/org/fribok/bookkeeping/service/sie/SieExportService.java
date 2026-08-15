@@ -12,7 +12,8 @@ import java.nio.file.StandardCopyOption;
 
 /** Headless SIE export with safe output-file handling. */
 public final class SieExportService {
-    public Path export(Path output, SIEType type, String comment, boolean overwrite)
+    public SieExportResult export(Path output, SIEType type, String comment, boolean overwrite,
+                                  boolean allowRoundingAdjustments)
             throws IOException, SSExportException {
         Path target = output.toAbsolutePath().normalize();
         if (Files.exists(target) && !overwrite) {
@@ -23,13 +24,15 @@ public final class SieExportService {
         }
         Path temporary = Files.createTempFile(target.getParent(), ".bokfri-sie-", ".se");
         try {
-            new SSSIEExporter(type, comment).exportSIE(temporary.toFile());
+            SSSIEExporter exporter = new SSSIEExporter(type, comment);
+            exporter.setAllowRoundingAdjustments(allowRoundingAdjustments);
+            exporter.exportSIE(temporary.toFile());
             if (overwrite) {
                 Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
             } else {
                 Files.move(temporary, target);
             }
-            return target;
+            return new SieExportResult(target, exporter.getAdjustments());
         } finally {
             Files.deleteIfExists(temporary);
         }
