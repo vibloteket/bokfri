@@ -18,7 +18,6 @@ param(
 $ErrorActionPreference = "Stop"
 
 $msiPath = (Resolve-Path $Msi).Path
-$workspace = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $testRoot = Join-Path $env:RUNNER_TEMP ("bokfri-msi-" + [Guid]::NewGuid().ToString("N"))
 $installRoot = Join-Path $env:ProgramFiles $AppName
 $installLog = Join-Path $testRoot "install.log"
@@ -83,9 +82,18 @@ try {
         throw "$CliCommand resolved to $($resolved.Source), expected $installedCommand"
     }
 
-    & java (Join-Path $workspace "scripts/CliSmokeTest.java") $resolved.Source
+    $versionOutput = & $resolved.Source --format json version 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "CLI black-box test failed with exit code $LASTEXITCODE"
+        throw "Installed CLI version command failed with exit code $LASTEXITCODE`: $versionOutput"
+    }
+    try {
+        $version = ($versionOutput | Out-String) | ConvertFrom-Json
+    }
+    catch {
+        throw "Installed CLI version command did not return JSON: $versionOutput"
+    }
+    if ($version.title -ne "Bokfri") {
+        throw "Installed CLI version command returned unexpected title: $($version.title)"
     }
 
     New-Item -ItemType Directory -Force -Path $userData | Out-Null

@@ -211,6 +211,25 @@ jobs:
           --app-image "dist/$APP_NAME.app" \
           --dest dist
 
+    - name: Test macOS DMG
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        DMG=$(find dist -maxdepth 1 -name '*.dmg' -print -quit)
+        test -n "$DMG"
+        MOUNT_POINT=$(mktemp -d)
+        cleanup() {
+          hdiutil detach "$MOUNT_POINT" -quiet || true
+          rmdir "$MOUNT_POINT" || true
+        }
+        trap cleanup EXIT
+        hdiutil attach "$DMG" -mountpoint "$MOUNT_POINT" -nobrowse -quiet
+        CLI_LAUNCHER="$MOUNT_POINT/$APP_NAME.app/Contents/MacOS/$CLI_NAME"
+        test -x "$CLI_LAUNCHER"
+        VERSION_OUTPUT=$("$CLI_LAUNCHER" --format json version)
+        echo "$VERSION_OUTPUT" | grep -F '"title":"Bokfri"'
+
     - name: List dist contents
       shell: bash
       run: ls -lR dist/ || echo "dist/ directory not found"
@@ -262,9 +281,12 @@ jobs:
       if: runner.os == 'Linux'
       shell: bash
       run: |
-        chmod +x "dist/${APP_BASENAME}-x86_64.AppImage"
-        env -u DISPLAY APPIMAGE_EXTRACT_AND_RUN=1 \
-          java scripts/CliSmokeTest.java "dist/${APP_BASENAME}-x86_64.AppImage"
+        set -euo pipefail
+        APPIMAGE="dist/${APP_BASENAME}-x86_64.AppImage"
+        chmod +x "$APPIMAGE"
+        VERSION_OUTPUT=$(env -u DISPLAY APPIMAGE_EXTRACT_AND_RUN=1 \
+          "$APPIMAGE" --format json version)
+        echo "$VERSION_OUTPUT" | grep -F '"title":"Bokfri"'
 
     - name: Upload Linux artifact
       if: runner.os == 'Linux'
