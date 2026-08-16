@@ -12,6 +12,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-16
+
 ### Changed
 - SIE import and export now keep decimal amounts out of binary floating-point conversions,
   and CLI monetary output consistently uses two decimals while quantities, rates, and other
