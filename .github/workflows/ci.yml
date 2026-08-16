@@ -33,6 +33,7 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '21'
+        cache: 'maven'
 
     - name: Build and test
       run: mvn clean install -Pcoverage
@@ -73,6 +74,7 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '21'
+        cache: 'maven'
 
     - name: Verify release version
       if: startsWith(github.ref, 'refs/tags/v')
