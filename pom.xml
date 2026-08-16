@@ -52,6 +52,7 @@
           <compilerArgs>
             <arg>-Xlint:deprecation</arg>
             <arg>-Xlint:unchecked</arg>
+            <arg>-Werror</arg>
           </compilerArgs>
         </configuration>
       </plugin>
