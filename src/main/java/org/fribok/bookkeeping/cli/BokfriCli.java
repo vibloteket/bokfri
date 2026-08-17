@@ -113,8 +113,7 @@ import java.util.concurrent.Callable;
         description = "Inspect and configure Bokfri without starting the Swing interface.",
         subcommands = {
             BokfriCli.VersionCommand.class,
-            BokfriCli.PathsCommand.class,
-            BokfriCli.DoctorCommand.class,
+            BokfriCli.StatusCommand.class,
             BokfriCli.DatabaseCommand.class,
             BokfriCli.CompanyCommand.class,
             BokfriCli.DemoCommand.class,
@@ -251,44 +250,102 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(mixinStandardHelpOptions = true, name = "paths", description = "Print resolved Bokfri paths")
-    static class PathsCommand extends CliCommand implements Callable<Integer> {
-        @Override
-        public Integer call() {
-            Map<String, Object> result = new LinkedHashMap<>();
-            for (Path path : Path.values()) {
-                result.put(toCamelCase(path.name()), Path.get(path).getAbsolutePath());
-            }
-            result.put("selectionConfig", parent.selectionFile().toString());
-            StringBuilder text = new StringBuilder();
-            result.forEach((name, value) -> text.append(name).append(": ").append(value).append('\n'));
-            parent.output(result, text.toString().stripTrailing());
-            return 0;
-        }
-
-        private static String toCamelCase(String name) {
-            String[] parts = name.toLowerCase().split("_");
-            return parts[0] + Character.toUpperCase(parts[1].charAt(0)) + parts[1].substring(1);
-        }
-    }
-
-    @Command(mixinStandardHelpOptions = true, name = "doctor", description = "Check CLI configuration and selected data directory")
-    static class DoctorCommand extends CliCommand implements Callable<Integer> {
+    @Command(mixinStandardHelpOptions = true, name = "status",
+            description = "Show Bokfri's database and current selection")
+    static class StatusCommand extends CliCommand implements Callable<Integer> {
         @Override
         public Integer call() {
             ResolvedContext context = parent.resolveContext(false, false);
-            boolean configExists = Files.exists(parent.selectionFile().toPath());
-            boolean dataDirExists = Files.isDirectory(context.dataDir());
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("ok", true);
-            result.put("configExists", configExists);
-            result.put("dataDirExists", dataDirExists);
-            result.put("selection", context.asMap());
-            parent.output(result, "Status: OK\nSelection config: " + parent.selectionFile()
-                    + (configExists ? "" : " (not created yet)") + "\nData directory: "
-                    + context.dataDir() + (dataDirExists ? "" : " (will be created when needed)")
-                    + "\nCompany id: " + context.companyId() + "\nYear id: " + context.yearId());
-            return 0;
+            result.put("application", Map.of("version", Version.APP_VERSION, "build", Version.APP_BUILD));
+            result.put("paths", Map.of("dataDir", context.dataDir().toString(),
+                    "selectionConfig", parent.selectionFile().toString()));
+
+            String state = "ready";
+            String problem = null;
+            String databaseText = "unavailable";
+            Map<String, Object> companyResult = null;
+            Map<String, Object> yearResult = null;
+            try {
+                DataFormatManager.DataFormatStatus database = DataFormatManager.inspect(context.dataDir());
+                result.put("database", databaseStatus(database));
+                databaseText = database.exists()
+                        ? "format " + database.format()
+                                + (database.migrationRequired() ? " (migration required)" : "")
+                        : "not created";
+                if (!database.exists()) {
+                    state = "incomplete";
+                    problem = "Database has not been created";
+                } else if (database.migrationRequired()) {
+                    state = "broken";
+                    problem = "Database migration is required";
+                } else if (context.companyId() == null) {
+                    state = "incomplete";
+                    problem = "No company is selected";
+                } else {
+                    try (BokfriRuntime runtime = parent.openRuntime(context.dataDir())) {
+                        SSNewCompany company = runtime.selectCompany(context.companyId());
+                        companyResult = Map.of("id", company.getId(), "name", company.getName());
+                        if (context.yearId() == null) {
+                            state = "incomplete";
+                            problem = "No accounting year is selected";
+                        } else {
+                            SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                            yearResult = Map.of("id", year.getId(), "from", year.getLocalFrom(),
+                                    "to", year.getLocalTo());
+                        }
+                    }
+                }
+            } catch (CliException exception) {
+                state = "broken";
+                problem = exception.getMessage();
+            } catch (Exception exception) {
+                state = "broken";
+                problem = databaseFailure(exception).getMessage();
+            }
+
+            Map<String, Object> selection = new LinkedHashMap<>();
+            selection.put("companyId", context.companyId());
+            selection.put("company", companyResult);
+            selection.put("yearId", context.yearId());
+            selection.put("year", yearResult);
+            result.put("selection", selection);
+            result.put("status", state);
+            if (problem != null) {
+                result.put("problem", problem);
+            }
+
+            String text = "Bokfri " + Version.APP_VERSION + " (built " + Version.APP_BUILD + ")"
+                    + "\nData directory: " + context.dataDir()
+                    + "\nDatabase: " + databaseText
+                    + "\nCompany: " + selectionText(context.companyId(), companyResult)
+                    + "\nAccounting year: " + selectionText(context.yearId(), yearResult)
+                    + "\nStatus: " + state
+                    + (problem == null ? "" : "\nProblem: " + problem);
+            parent.output(result, text);
+            return "ready".equals(state) ? 0 : 1;
+        }
+
+        private static Map<String, Object> databaseStatus(DataFormatManager.DataFormatStatus status) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("exists", status.exists());
+            result.put("format", status.format());
+            result.put("supportedFormat", status.supportedFormat());
+            result.put("migrationRequired", status.migrationRequired());
+            return result;
+        }
+
+        private static String selectionText(Integer id, Map<String, Object> resolved) {
+            if (id == null) {
+                return "not selected";
+            }
+            if (resolved == null) {
+                return id + " - not found";
+            }
+            if (resolved.containsKey("name")) {
+                return id + " - " + resolved.get("name");
+            }
+            return id + " - " + resolved.get("from") + " - " + resolved.get("to");
         }
     }
 
@@ -371,29 +428,12 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "company", description = "Inspect, create, and select companies",
-            subcommands = {CompanyList.class, CompanyCurrent.class, CompanyUse.class, CompanyCreate.class,
+            subcommands = {CompanyList.class, CompanyUse.class, CompanyCreate.class,
                     CliInputSchemas.Company.class})
     static class CompanyCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
             throw new CommandLine.ParameterException(spec.commandLine(), "A company command is required");
-        }
-    }
-
-    @Command(mixinStandardHelpOptions = true, name = "current", description = "Show the company shared with the graphical interface")
-    static class CompanyCurrent implements Callable<Integer> {
-        @CommandLine.ParentCommand CompanyCommand command;
-        @Override public Integer call() {
-            BokfriCli root = command.parent;
-            ResolvedContext context = root.resolveContext(true, false);
-            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
-                SSNewCompany company = runtime.selectCompany(context.companyId());
-                root.output(Map.of("id", company.getId(), "name", company.getName()),
-                        company.getId() + "\t" + company.getName());
-                return 0;
-            } catch (Exception exception) {
-                throw databaseFailure(exception);
-            }
         }
     }
 
@@ -469,6 +509,8 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 DemoCompanyService service = new DemoCompanyService(runtime.database());
                 List<SSNewCompany> matches = service.findDemoCompanies();
+                boolean selectedDemoWillBeRemoved = context.companyId() != null
+                        && matches.stream().anyMatch(company -> company.getId().equals(context.companyId()));
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("commit", commit);
                 result.put("remove", matches.stream().map(company -> Map.of(
@@ -484,7 +526,15 @@ public class BokfriCli implements Runnable {
                     return 0;
                 }
                 DemoCompanyResult created = service.recreate();
+                Integer selectedYearId = runtime.database().getCurrentYear() == null
+                        ? null : runtime.database().getCurrentYear().getId();
+                if (selectedDemoWillBeRemoved && root.companyId == null) {
+                    SSDBConfig.setCompanyId(root.selectionFile(), created.company().getId());
+                    SSDBConfig.setYearId(root.selectionFile(), created.company().getId(), selectedYearId);
+                }
                 result.put("companyId", created.company().getId());
+                result.put("yearId", selectedYearId);
+                result.put("selectionUpdated", selectedDemoWillBeRemoved && root.companyId == null);
                 result.put("removedCompanies", created.removedCompanies());
                 result.put("vouchers", created.vouchers());
                 result.put("invoices", created.invoices());
@@ -503,31 +553,12 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name="list") static class AccountPlanList implements Callable<Integer>{@CommandLine.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),plans.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "year", description = "Inspect, create, and select accounting years",
-            subcommands = {YearList.class, YearCurrent.class, YearUse.class, YearCreate.class,
+            subcommands = {YearList.class, YearUse.class, YearCreate.class,
                     CliInputSchemas.Year.class})
     static class YearCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
             throw new CommandLine.ParameterException(spec.commandLine(), "A year command is required");
-        }
-    }
-
-    @Command(mixinStandardHelpOptions = true, name = "current", description = "Show the accounting year shared with the graphical interface")
-    static class YearCurrent implements Callable<Integer> {
-        @CommandLine.ParentCommand YearCommand command;
-        @Override public Integer call() {
-            BokfriCli root = command.parent;
-            ResolvedContext context = root.resolveContext(true, true);
-            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
-                SSNewCompany company = runtime.selectCompany(context.companyId());
-                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                root.output(Map.of("id", year.getId(), "companyId", company.getId(),
-                                "from", year.getLocalFrom(), "to", year.getLocalTo()),
-                        year.getId() + "\t" + year.getLocalFrom() + " - " + year.getLocalTo());
-                return 0;
-            } catch (Exception exception) {
-                throw databaseFailure(exception);
-            }
         }
     }
 

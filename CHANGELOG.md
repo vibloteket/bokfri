@@ -12,6 +12,13 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Changed
+- Replaced the overlapping `paths`, `doctor`, `company current`, and `year current`
+  CLI commands with one `bokfri status` overview that validates the selected company
+  and accounting year and returns a failing exit code for incomplete or broken state.
+- Recreating the currently selected demo company now selects its replacement and
+  current accounting year instead of leaving a stale selection.
+
 ## [1.1.0] - 2026-08-16
 
 ### Changed

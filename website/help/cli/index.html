@@ -95,7 +95,7 @@ bokfri invoice create --help</code></pre>
 <h3>Windows</h3>
 <p>MSI-installationen lägger kommandot <code>bokfri</code> i systemets PATH. Öppna ett <strong>nytt</strong> PowerShell- eller kommandotolksfönster efter installationen:</p>
 <pre><code>bokfri version
-bokfri doctor</code></pre>
+bokfri status</code></pre>
 <p>Utvecklingspaketet använder <code>bokfri-dev</code>, så release- och utvecklingsversionen kan finnas samtidigt.</p>
 
 <h3>macOS</h3>
@@ -116,16 +116,15 @@ bokfri doctor</code></pre>
 
 <section id="valj-data">
 <h2>Välj datakatalog, företag och bokföringsår</h2>
-<p>De flesta kommandon behöver ett företag och ett bokföringsår. Börja med att kontrollera sökvägar och tillgängliga ID:n:</p>
-<pre><code>bokfri paths
+<p>De flesta kommandon behöver ett företag och ett bokföringsår. Börja med att visa Bokfris aktuella status och tillgängliga ID:n:</p>
+<pre><code>bokfri status
 bokfri company list
 bokfri --company-id 37 year list</code></pre>
-<p>CLI:t använder normalt samma sparade val som det grafiska gränssnittet. Visa eller ändra dem med:</p>
-<pre><code>bokfri company current
-bokfri company use 37
+<p>CLI:t använder normalt samma sparade val som det grafiska gränssnittet. Ändra dem med:</p>
+<pre><code>bokfri company use 37
 bokfri year list
-bokfri year current
-bokfri year use 12</code></pre>
+bokfri year use 12
+bokfri status</code></pre>
 <p>När ett företag väljs återställs det senast använda bokföringsåret för just det företaget, om ett sådant finns. Ett redan öppet grafiskt gränssnitt byter inte direkt; det läser det nya valet vid nästa start.</p>
 <p>I skript kan valen anges tillfälligt för en enda körning. De sparade GUI/CLI-valen ändras då inte:</p>
 <pre><code>bokfri --company-id 37 --year-id 12 trial-balance
@@ -437,11 +436,8 @@ bokfri trial-balance --format json &gt; trial-balance.json</code></pre>
 </dl>
 <p>Kontrollera miljön med:</p>
 <pre><code>bokfri version
-bokfri paths
-bokfri doctor
-bokfri database status
-bokfri company current
-bokfri year current</code></pre>
+bokfri status
+bokfri database status</code></pre>
 </section>
 
 <nav class="page-nav"><a href="/help/" class="prev">All Bokfri-hjälp</a></nav>

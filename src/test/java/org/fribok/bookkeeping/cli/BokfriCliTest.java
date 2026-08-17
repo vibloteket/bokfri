@@ -41,15 +41,15 @@ class BokfriCliTest {
                 "company", "use", Integer.toString(companyId));
         Result yearUse = execute("--config", config.toString(), "--data-dir", data.toString(),
                 "year", "use", Integer.toString(yearId));
-        Result companyCurrent = execute("--config", config.toString(), "--data-dir", data.toString(),
-                "--format", "json", "company", "current");
-        Result yearCurrent = execute("--config", config.toString(), "--data-dir", data.toString(),
-                "--format", "json", "year", "current");
+        Result status = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "status");
 
         assertThat(companyUse.exitCode()).isZero();
         assertThat(yearUse.exitCode()).isZero();
-        assertThat(new ObjectMapper().readTree(companyCurrent.stdout()).path("id").asInt()).isEqualTo(companyId);
-        assertThat(new ObjectMapper().readTree(yearCurrent.stdout()).path("id").asInt()).isEqualTo(yearId);
+        JsonNode statusJson = new ObjectMapper().readTree(status.stdout());
+        assertThat(statusJson.at("/selection/company/id").asInt()).isEqualTo(companyId);
+        assertThat(statusJson.at("/selection/year/id").asInt()).isEqualTo(yearId);
+        assertThat(statusJson.path("status").asText()).isEqualTo("ready");
         assertThat(Files.readString(config)).contains("company=\"" + companyId + "\"")
                 .contains("year=\"" + yearId + "\"")
                 .contains("yearid=\"" + yearId + "\"");
@@ -90,12 +90,15 @@ class BokfriCliTest {
                 "company", "use", Integer.toString(companyId));
         String before = Files.readString(config);
 
-        Result doctor = execute("--config", config.toString(), "--data-dir", data.toString(),
+        Result status = execute("--config", config.toString(), "--data-dir", data.toString(),
                 "--company-id", Integer.toString(companyId), "--year-id", "999",
-                "--format", "json", "doctor");
+                "--format", "json", "status");
 
-        assertThat(doctor.exitCode()).isZero();
-        assertThat(new ObjectMapper().readTree(doctor.stdout()).at("/selection/yearId").asInt()).isEqualTo(999);
+        assertThat(status.exitCode()).isEqualTo(1);
+        JsonNode statusJson = new ObjectMapper().readTree(status.stdout());
+        assertThat(statusJson.at("/selection/yearId").asInt()).isEqualTo(999);
+        assertThat(statusJson.path("status").asText()).isEqualTo("broken");
+        assertThat(statusJson.path("problem").asText()).contains("no accounting year with id 999");
         assertThat(Files.readString(config)).isEqualTo(before);
     }
 
@@ -110,11 +113,70 @@ class BokfriCliTest {
     }
 
     @Test
+    void recreatingSelectedDemoUpdatesSharedSelection() throws Exception {
+        Path config = temporaryDirectory.resolve("database.config");
+        Path data = temporaryDirectory.resolve("data");
+        Result companies = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "company", "list");
+        JsonNode companyRows = new ObjectMapper().readTree(companies.stdout()).path("companies");
+        int oldDemoId = 0;
+        for (JsonNode company : companyRows) {
+            if (company.path("name").asText().contains("demo")) {
+                oldDemoId = company.path("id").asInt();
+                break;
+            }
+        }
+        assertThat(oldDemoId).isPositive();
+        execute("--config", config.toString(), "--data-dir", data.toString(),
+                "company", "use", Integer.toString(oldDemoId));
+
+        Result recreated = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "demo", "recreate", "--commit");
+        Result status = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "status");
+
+        JsonNode recreatedJson = new ObjectMapper().readTree(recreated.stdout());
+        JsonNode statusJson = new ObjectMapper().readTree(status.stdout());
+        assertThat(recreated.exitCode()).isZero();
+        assertThat(recreatedJson.path("selectionUpdated").asBoolean()).isTrue();
+        assertThat(recreatedJson.path("companyId").asInt()).isNotEqualTo(oldDemoId);
+        assertThat(status.exitCode()).isZero();
+        assertThat(statusJson.at("/selection/company/id").asInt())
+                .isEqualTo(recreatedJson.path("companyId").asInt());
+        assertThat(statusJson.at("/selection/year/id").asInt())
+                .isEqualTo(recreatedJson.path("yearId").asInt());
+    }
+
+    @Test
+    void statusReportsMissingSelectedCompany() throws Exception {
+        Path data = temporaryDirectory.resolve("data");
+        execute("--data-dir", data.toString(), "company", "list");
+
+        Result status = execute("--data-dir", data.toString(), "--company-id", "999",
+                "--format", "json", "status");
+
+        assertThat(status.exitCode()).isEqualTo(1);
+        JsonNode json = new ObjectMapper().readTree(status.stdout());
+        assertThat(json.path("status").asText()).isEqualTo("broken");
+        assertThat(json.at("/selection/companyId").asInt()).isEqualTo(999);
+        assertThat(json.path("problem").asText()).contains("No company has id 999");
+    }
+
+    @Test
+    void removedOverviewCommandsAreNoLongerAvailable() {
+        CommandLine command = new CommandLine(new BokfriCli());
+
+        assertThat(command.getSubcommands()).doesNotContainKeys("paths", "doctor");
+        assertThat(command.getSubcommands().get("company").getSubcommands()).doesNotContainKey("current");
+        assertThat(command.getSubcommands().get("year").getSubcommands()).doesNotContainKey("current");
+    }
+
+    @Test
     void everyCommandSupportsLongAndShortHelp() {
         List<List<String>> paths = new ArrayList<>();
         collectCommandPaths(new CommandLine(new BokfriCli()), List.of(), paths);
 
-        assertThat(paths).hasSize(114);
+        assertThat(paths).hasSize(110);
         for (List<String> path : paths) {
             for (String helpOption : List.of("--help", "-h")) {
                 List<String> arguments = new ArrayList<>(path);
