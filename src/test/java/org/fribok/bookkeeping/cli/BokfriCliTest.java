@@ -103,29 +103,27 @@ class BokfriCliTest {
     }
 
     @Test
-    void reportsStableJsonErrorWhenNoCompanyIsSelected() throws Exception {
+    void statusReportsWhenNoCompanyIsSelected() throws Exception {
         Path config = temporaryDirectory.resolve("database.config");
-        Result result = execute("--config", config.toString(), "--format", "json", "company", "current");
+        Path data = temporaryDirectory.resolve("data");
+        execute("--config", config.toString(), "--data-dir", data.toString(), "company", "list");
+        Result result = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "status");
 
         assertThat(result.exitCode()).isEqualTo(1);
-        assertThat(new ObjectMapper().readTree(result.stderr()).at("/error/code").asText())
-                .isEqualTo("COMPANY_REQUIRED");
+        JsonNode status = new ObjectMapper().readTree(result.stdout());
+        assertThat(status.path("status").asText()).isEqualTo("incomplete");
+        assertThat(status.path("problem").asText()).isEqualTo("No company is selected");
     }
 
     @Test
     void recreatingSelectedDemoUpdatesSharedSelection() throws Exception {
         Path config = temporaryDirectory.resolve("database.config");
         Path data = temporaryDirectory.resolve("data");
-        Result companies = execute("--config", config.toString(), "--data-dir", data.toString(),
-                "--format", "json", "company", "list");
-        JsonNode companyRows = new ObjectMapper().readTree(companies.stdout()).path("companies");
-        int oldDemoId = 0;
-        for (JsonNode company : companyRows) {
-            if (company.path("name").asText().contains("demo")) {
-                oldDemoId = company.path("id").asInt();
-                break;
-            }
-        }
+        Result initial = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "demo", "recreate", "--commit");
+        int oldDemoId = new ObjectMapper().readTree(initial.stdout()).path("companyId").asInt();
+        assertThat(initial.exitCode()).isZero();
         assertThat(oldDemoId).isPositive();
         execute("--config", config.toString(), "--data-dir", data.toString(),
                 "company", "use", Integer.toString(oldDemoId));
@@ -176,7 +174,7 @@ class BokfriCliTest {
         List<List<String>> paths = new ArrayList<>();
         collectCommandPaths(new CommandLine(new BokfriCli()), List.of(), paths);
 
-        assertThat(paths).hasSize(110);
+        assertThat(paths).hasSize(111);
         for (List<String> path : paths) {
             for (String helpOption : List.of("--help", "-h")) {
                 List<String> arguments = new ArrayList<>(path);
