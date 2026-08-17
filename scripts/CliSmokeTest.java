@@ -96,15 +96,11 @@ public final class CliSmokeTest {
 
         cli("company", "use", Integer.toString(companyId)).success();
         cli("year", "use", Integer.toString(yearId)).success();
-        Result currentCompany = cli("--format", "json",
-                "company", "current");
-        currentCompany.success();
-        require(currentCompany.stdout.contains("\"id\":" + companyId),
+        Result status = cli("--format", "json", "status");
+        status.success();
+        require(status.stdout.contains("\"company\":{\"id\":" + companyId),
                 "current company was not selected");
-        Result currentYear = cli("--format", "json",
-                "year", "current");
-        currentYear.success();
-        require(currentYear.stdout.contains("\"id\":" + yearId),
+        require(status.stdout.contains("\"year\":{\"id\":" + yearId),
                 "current accounting year was not selected");
     }
 
@@ -129,11 +125,11 @@ public final class CliSmokeTest {
 
         cli("company", "use", Integer.toString(companyId)).success();
         cli("year", "use", Integer.toString(yearId)).success();
-        Result current = cli("--format", "json", "year", "current");
-        current.success();
-        require(current.stdout.contains("\"companyId\":" + companyId),
+        Result status = cli("--format", "json", "status");
+        status.success();
+        require(status.stdout.contains("\"company\":{\"id\":" + companyId),
                 "created company was not selected");
-        require(current.stdout.contains("\"id\":" + yearId),
+        require(status.stdout.contains("\"year\":{\"id\":" + yearId),
                 "created accounting year was not selected");
 
         Files.writeString(temporary.resolve("created-company.txt"), Integer.toString(companyId));
@@ -756,9 +752,9 @@ public final class CliSmokeTest {
 
         cli("--company-id", Integer.toString(companyId),
                 "year", "use", Integer.toString(toYearId)).success();
-        Result current = cli("--format", "json", "year", "current");
-        current.success();
-        require(current.stdout.contains("\"id\":" + toYearId),
+        Result status = cli("--format", "json", "status");
+        status.success();
+        require(status.stdout.contains("\"year\":{\"id\":" + toYearId),
                 "next accounting year was not selected");
 
         Result preview = cli("--format", "json", "opening-balance", "carry-forward",
