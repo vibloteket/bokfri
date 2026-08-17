@@ -20,6 +20,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   current accounting year instead of leaving a stale selection.
 - `account list --filter TEXT` now filters the selected year's accounts by number
   or description using case-insensitive substring matching.
+- Human-readable CLI lists and financial reports now use shared content-sized columns,
+  headings, and right-aligned numbers instead of inconsistent tab stops. JSON output
+  remains unchanged for integrations.
 
 ## [1.1.0] - 2026-08-16
 

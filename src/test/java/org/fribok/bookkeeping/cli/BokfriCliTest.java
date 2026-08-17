@@ -371,16 +371,20 @@ class BokfriCliTest {
         Result ledger = execute(concat(context, "general-ledger", "--account", "1930"));
         Result balance = execute(concat(context, "account", "balance", "1930"));
 
-        assertThat(trial.stdout()).contains("Account\tDescription\tOpening\tDebit\tCredit\tClosing", "TOTAL")
-                .doesNotContain("generated");
-        assertThat(balanceSheet.stdout()).contains("Account\tDescription\tBalance", "Assets:", "Difference:")
-                .doesNotContain("generated");
-        assertThat(income.stdout()).contains("Account\tDescription\tAmount", "Result:")
-                .doesNotContain("generated");
-        assertThat(ledger.stdout()).contains("Voucher\tDate\tDescription\tDebit\tCredit\tBalance", "Closing:")
-                .doesNotContain("generated");
-        assertThat(balance.stdout()).contains("1930\tFöretagskonto\t2027-06-30\t")
-                .doesNotContain("generated");
+        assertThat(trial.stdout()).contains("Account  Description", "Opening", "Debit", "Credit",
+                        "Closing", "TOTAL")
+                .doesNotContain("generated", "\t");
+        assertThat(balanceSheet.stdout()).contains("Account  Description", "Balance", "Assets:",
+                        "Difference:")
+                .doesNotContain("generated", "\t");
+        assertThat(income.stdout()).contains("Account  Description", "Amount", "Result:")
+                .doesNotContain("generated", "\t");
+        assertThat(ledger.stdout()).contains("Voucher  Date", "Description", "Debit", "Credit",
+                        "Balance", "Closing:")
+                .doesNotContain("generated", "\t");
+        assertThat(balance.stdout()).contains("Account  Description", "1930", "Företagskonto",
+                        "2027-06-30")
+                .doesNotContain("generated", "\t");
     }
 
     private static void collectCommandPaths(CommandLine command, List<String> prefix,

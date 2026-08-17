@@ -479,9 +479,8 @@ public class BokfriCli implements Runnable {
                     item.put("corporateId", company.getCorporateID());
                     return item;
                 }).toList();
-                String text = companies.stream().map(item -> item.get("id") + "\t" + item.get("name")
-                        + (item.get("corporateId") == null ? "" : "\t" + item.get("corporateId")))
-                        .reduce((left, right) -> left + "\n" + right).orElse("No companies found");
+                String text = table(companies, "No companies found",
+                        left("Id", "id"), left("Name", "name"), left("Corporate id", "corporateId"));
                 root.output(Map.of("selection", context.asMap(), "companies", companies), text);
                 return 0;
             } catch (Exception exception) {
@@ -551,7 +550,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name="account-plan",description="Inspect available account plans",subcommands=AccountPlanList.class)
     static class AccountPlanCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An account-plan command is required");}}
-    @Command(mixinStandardHelpOptions = true, name="list") static class AccountPlanList implements Callable<Integer>{@CommandLine.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),plans.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="list") static class AccountPlanList implements Callable<Integer>{@CommandLine.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),table(plans,"No account plans found",right("Id","id"),left("Name","name"),right("Assessment year","assessmentYear"),right("Accounts","accountCount")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "year", description = "Inspect, create, and select accounting years",
             subcommands = {YearList.class, YearUse.class, YearCreate.class,
@@ -602,9 +601,8 @@ public class BokfriCli implements Runnable {
                     item.put("to", year.getLocalTo().toString());
                     return item;
                 }).toList();
-                String text = years.stream().map(item -> item.get("id") + "\t" + item.get("from")
-                        + " - " + item.get("to"))
-                        .reduce((left, right) -> left + "\n" + right).orElse("No accounting years found");
+                String text = table(years, "No accounting years found",
+                        left("Id", "id"), left("From", "from"), left("To", "to"));
                 Map<String, Object> selected = context.asMap();
                 selected.put("companyName", company.getName());
                 root.output(Map.of("selection", selected, "years", years), text);
@@ -651,11 +649,9 @@ public class BokfriCli implements Runnable {
                                     .isBalanceAccount(account, year));
                             return item;
                         }).toList();
-                String text = accounts.stream().map(item -> item.get("number") + "\t"
-                        + item.get("description"))
-                        .reduce((left, right) -> left + "\n" + right)
-                        .orElse(filter == null || filter.isBlank()
-                                ? "No accounts found" : "No accounts found for \"" + filter + "\"");
+                String text = table(accounts, filter == null || filter.isBlank()
+                                ? "No accounts found" : "No accounts found for \"" + filter + "\"",
+                        right("Number", "number"), left("Description", "description"));
                 Map<String, Object> selected = context.asMap();
                 selected.put("companyName", company.getName());
                 selected.put("yearFrom", year.getLocalFrom().toString());
@@ -823,55 +819,67 @@ public class BokfriCli implements Runnable {
     }
 
     private static String trialBalanceText(Map<String, Object> result) {
-        StringBuilder text = new StringBuilder("Trial balance ")
-                .append(result.get("from")).append(" - ").append(result.get("to"))
-                .append("\nAccount\tDescription\tOpening\tDebit\tCredit\tClosing");
-        reportMaps(result).forEach(row -> text.append('\n').append(row.get("account"))
-                .append('\t').append(row.get("description")).append('\t').append(row.get("opening"))
-                .append('\t').append(row.get("debit")).append('\t').append(row.get("credit"))
-                .append('\t').append(row.get("closing")));
-        return text.append("\nTOTAL\t\t").append(result.get("openingTotal")).append('\t')
-                .append(result.get("debitTotal")).append('\t').append(result.get("creditTotal"))
-                .append('\t').append(result.get("closingTotal")).append("\nDifference: ")
-                .append(result.get("difference")).toString();
+        List<Map<String, Object>> rows = new java.util.ArrayList<>(reportMaps(result));
+        Map<String, Object> total = new LinkedHashMap<>();
+        total.put("description", "TOTAL");
+        total.put("opening", result.get("openingTotal"));
+        total.put("debit", result.get("debitTotal"));
+        total.put("credit", result.get("creditTotal"));
+        total.put("closing", result.get("closingTotal"));
+        rows.add(total);
+        return "Trial balance " + result.get("from") + " - " + result.get("to") + "\n"
+                + table(rows, "No accounts found", right("Account", "account"),
+                        left("Description", "description"), right("Opening", "opening"),
+                        right("Debit", "debit"), right("Credit", "credit"),
+                        right("Closing", "closing"))
+                + "\nDifference: " + result.get("difference");
     }
 
     private static String balanceSheetText(Map<String, Object> result) {
-        StringBuilder text = new StringBuilder("Balance sheet ").append(result.get("date"))
-                .append("\nAccount\tDescription\tBalance");
-        reportMaps(result).forEach(row -> text.append('\n').append(row.get("account"))
-                .append('\t').append(row.get("description")).append('\t').append(row.get("balance")));
-        return text.append("\nAssets: ").append(result.get("assets"))
-                .append("\nLiabilities and equity: ").append(result.get("liabilitiesAndEquity"))
-                .append("\nCurrent result: ").append(result.get("currentResult"))
-                .append("\nDifference: ").append(result.get("difference")).toString();
+        return "Balance sheet " + result.get("date") + "\n"
+                + table(reportMaps(result), "No accounts found", right("Account", "account"),
+                        left("Description", "description"), right("Balance", "balance"))
+                + "\nAssets: " + result.get("assets")
+                + "\nLiabilities and equity: " + result.get("liabilitiesAndEquity")
+                + "\nCurrent result: " + result.get("currentResult")
+                + "\nDifference: " + result.get("difference");
     }
 
     private static String incomeStatementText(Map<String, Object> result) {
-        StringBuilder text = new StringBuilder("Income statement ")
-                .append(result.get("from")).append(" - ").append(result.get("to"))
-                .append("\nAccount\tDescription\tAmount");
-        reportMaps(result).forEach(row -> text.append('\n').append(row.get("account"))
-                .append('\t').append(row.get("description")).append('\t').append(row.get("amount")));
-        return text.append("\nResult: ").append(result.get("result")).toString();
+        return "Income statement " + result.get("from") + " - " + result.get("to") + "\n"
+                + table(reportMaps(result), "No accounts found", right("Account", "account"),
+                        left("Description", "description"), right("Amount", "amount"))
+                + "\nResult: " + result.get("result");
     }
 
     private static String generalLedgerText(Map<String, Object> result) {
-        StringBuilder text = new StringBuilder().append(result.get("account")).append('\t')
-                .append(result.get("description")).append("\nPeriod: ").append(result.get("from"))
-                .append(" - ").append(result.get("to")).append("\nOpening: ")
-                .append(result.get("opening"))
-                .append("\nVoucher\tDate\tDescription\tDebit\tCredit\tBalance");
-        reportMaps(result).forEach(row -> text.append('\n').append(row.get("voucherNumber"))
-                .append('\t').append(row.get("date")).append('\t').append(row.get("description"))
-                .append('\t').append(row.get("debit")).append('\t').append(row.get("credit"))
-                .append('\t').append(row.get("balance")));
-        return text.append("\nClosing: ").append(result.get("closing")).toString();
+        return result.get("account") + "  " + result.get("description")
+                + "\nPeriod: " + result.get("from") + " - " + result.get("to")
+                + "\nOpening: " + result.get("opening") + "\n"
+                + table(reportMaps(result), "No transactions found",
+                        right("Voucher", "voucherNumber"), left("Date", "date"),
+                        left("Description", "description"), right("Debit", "debit"),
+                        right("Credit", "credit"), right("Balance", "balance"))
+                + "\nClosing: " + result.get("closing");
     }
 
     private static String accountBalanceText(Map<String, Object> result) {
-        return result.get("account") + "\t" + result.get("description") + "\t"
-                + result.get("date") + "\t" + result.get("balance");
+        return table(List.of(result), "", right("Account", "account"),
+                left("Description", "description"), left("Date", "date"),
+                right("Balance", "balance"));
+    }
+
+    private static String table(List<? extends Map<String, ?>> rows, String emptyMessage,
+            CliTableFormatter.Column... columns) {
+        return CliTableFormatter.format(rows, emptyMessage, columns);
+    }
+
+    private static CliTableFormatter.Column left(String heading, String key) {
+        return CliTableFormatter.Column.left(heading, key);
+    }
+
+    private static CliTableFormatter.Column right(String heading, String key) {
+        return CliTableFormatter.Column.right(heading, key);
     }
 
     @SuppressWarnings("unchecked")
@@ -973,9 +981,8 @@ public class BokfriCli implements Runnable {
             try {
                 List<BackupDetails> backups = new BackupService(context.dataDir()).list();
                 List<Map<String, Object>> rows = backups.stream().map(BokfriCli::backupDetails).toList();
-                String text = rows.stream().map(row -> row.get("createdAt") + "\t" + row.get("size")
-                        + "\t" + row.get("exists") + "\t" + row.get("path"))
-                        .reduce((left, right) -> left + "\n" + right).orElse("No backups found");
+                String text = table(rows, "No backups found", left("Created", "createdAt"),
+                        right("Size", "size"), left("Exists", "exists"), left("Path", "path"));
                 root.output(Map.of("backups", rows, "count", rows.size()), text);
                 return 0;
             } catch (Exception exception) {
@@ -1163,10 +1170,8 @@ public class BokfriCli implements Runnable {
                         .map(BokfriCli::customerSummary).toList();
                 root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", customers.size(), "customers", customers),
-                        customers.stream().map(customer -> customer.get("number") + "\t"
-                                + customer.get("name") + "\t" + customer.get("email"))
-                                .reduce((left, right) -> left + "\n" + right)
-                                .orElse("No customers found"));
+                        table(customers, "No customers found", left("Number", "number"),
+                                left("Name", "name"), left("Email", "email")));
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
@@ -1271,10 +1276,8 @@ public class BokfriCli implements Runnable {
                         .map(BokfriCli::productDetails).toList();
                 root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", products.size(), "products", products),
-                        products.stream().map(product -> product.get("number") + "\t"
-                                + product.get("description") + "\t" + product.get("sellingPrice"))
-                                .reduce((left, right) -> left + "\n" + right)
-                                .orElse("No products found"));
+                        table(products, "No products found", left("Number", "number"),
+                                left("Description", "description"), right("Selling price", "sellingPrice")));
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
@@ -1379,10 +1382,8 @@ public class BokfriCli implements Runnable {
                         .stream().map(BokfriCli::supplierDetails).toList();
                 root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", suppliers.size(), "suppliers", suppliers),
-                        suppliers.stream().map(item -> item.get("number") + "\t" + item.get("name")
-                                + "\t" + item.get("email"))
-                                .reduce((left, right) -> left + "\n" + right)
-                                .orElse("No suppliers found"));
+                        table(suppliers, "No suppliers found", left("Number", "number"),
+                                left("Name", "name"), left("Email", "email")));
                 return 0;
             } catch (Exception exception) { throw databaseFailure(exception); }
         }
@@ -1453,7 +1454,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name="supplier-invoice",description="Inspect, create, and book supplier invoices",subcommands={SupplierInvoiceList.class,SupplierInvoiceShow.class,SupplierInvoiceJournal.class,SupplierInvoiceValidate.class,SupplierInvoiceCreate.class,CliInputSchemas.SupplierInvoice.class})
     static class SupplierInvoiceCommand extends CliCommand implements Runnable {@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"A supplier-invoice command is required");}}
-    @Command(mixinStandardHelpOptions = true, name="list") static class SupplierInvoiceList implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> x=new SupplierInvoiceService(r.database()).list().stream().map(BokfriCli::supplierInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"count",x.size(),"supplierInvoices",x),x.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="list") static class SupplierInvoiceList implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> x=new SupplierInvoiceService(r.database()).list().stream().map(BokfriCli::supplierInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"count",x.size(),"supplierInvoices",x),table(x,"No supplier invoices found",right("Number","number"),left("Date","date"),left("Supplier","supplierName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
     @Command(mixinStandardHelpOptions = true, name="show") static class SupplierInvoiceShow implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Parameters(index="0")int number;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierInvoice i=new SupplierInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+number));Map<String,Object>x=supplierInvoiceDetails(i);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Supplier invoice "+number+"\nSupplier: "+i.getSupplierName()+"\nTotal: "+x.get("total"));return 0;}catch(Exception e){throw databaseFailure(e);}}}
     abstract static class SupplierInvoiceOperation implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierInvoiceInput input=readSupplierInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SSSupplierInvoice i=toSupplierInvoice(input,r);SupplierInvoiceService s=new SupplierInvoiceService(r.database());var v=s.validate(i);if(!v.valid())throw supplierInvoiceValidationFailure(v);Map<String,Object>x=supplierInvoiceDetails(i);x.put("number",s.nextNumber());x.put("dryRun",!persist());x.put("created",persist());x.put("selection",selectedContext(c,co,y));if(persist()){s.create(i);x.put("number",i.getNumber());}root.output(x,persist()?"Created supplier invoice "+i.getNumber():"Supplier invoice is valid; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
     @Command(mixinStandardHelpOptions = true, name="validate") static class SupplierInvoiceValidate extends SupplierInvoiceOperation{boolean persist(){return false;}}
@@ -1473,7 +1474,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "list")
     static class SupplierCreditInvoiceList implements Callable<Integer> {
         @CommandLine.ParentCommand SupplierCreditInvoiceCommand command;
-        public Integer call() { BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new SupplierCreditInvoiceService(r.database()).list().stream().map(BokfriCli::supplierCreditInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"supplierCreditInvoices",rows,"count",rows.size()),rows.toString());return 0;}catch(Exception e){throw databaseFailure(e);} }
+        public Integer call() { BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new SupplierCreditInvoiceService(r.database()).list().stream().map(BokfriCli::supplierCreditInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"supplierCreditInvoices",rows,"count",rows.size()),table(rows,"No supplier credit invoices found",right("Number","number"),left("Date","date"),left("Supplier","supplierName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);} }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "show")
@@ -1526,11 +1527,9 @@ public class BokfriCli implements Runnable {
                         .list(from, to).stream().map(BokfriCli::invoiceSummary).toList();
                 root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", invoices.size(), "invoices", invoices),
-                        invoices.stream().map(invoice -> invoice.get("number") + "\t"
-                                + invoice.get("date") + "\t" + invoice.get("customerName")
-                                + "\t" + invoice.get("total"))
-                                .reduce((left, right) -> left + "\n" + right)
-                                .orElse("No invoices found"));
+                        table(invoices, "No invoices found", right("Number", "number"),
+                                left("Date", "date"), left("Customer", "customerName"),
+                                right("Total", "total")));
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
@@ -1710,7 +1709,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "list") static class CreditInvoiceList implements Callable<Integer> {
         @CommandLine.ParentCommand CreditInvoiceCommand command;
-        public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new CreditInvoiceService(r.database()).list().stream().map(BokfriCli::creditInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"creditInvoices",rows,"count",rows.size()),rows.toString());return 0;}catch(Exception e){throw databaseFailure(e);}}
+        public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new CreditInvoiceService(r.database()).list().stream().map(BokfriCli::creditInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"creditInvoices",rows,"count",rows.size()),table(rows,"No credit invoices found",right("Number","number"),left("Date","date"),left("Customer","customerName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}
     }
 
     @Command(mixinStandardHelpOptions = true, name = "show") static class CreditInvoiceShow implements Callable<Integer> {
@@ -1753,10 +1752,8 @@ public class BokfriCli implements Runnable {
                         .stream().map(BokfriCli::inpaymentDetails).toList();
                 root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", items.size(), "inpayments", items),
-                        items.stream().map(item -> item.get("number") + "\t" + item.get("date")
-                                + "\t" + item.get("text") + "\t" + item.get("total"))
-                                .reduce((left, right) -> left + "\n" + right)
-                                .orElse("No inpayments found"));
+                        table(items, "No inpayments found", right("Number", "number"),
+                                left("Date", "date"), left("Text", "text"), right("Total", "total")));
                 return 0;
             } catch (Exception exception) { throw databaseFailure(exception); }
         }
@@ -1893,10 +1890,8 @@ public class BokfriCli implements Runnable {
                         .stream().map(BokfriCli::outpaymentDetails).toList();
                 root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", items.size(), "outpayments", items),
-                        items.stream().map(item -> item.get("number") + "\t" + item.get("date")
-                                + "\t" + item.get("text") + "\t" + item.get("total"))
-                                .reduce((left, right) -> left + "\n" + right)
-                                .orElse("No outpayments found"));
+                        table(items, "No outpayments found", right("Number", "number"),
+                                left("Date", "date"), left("Text", "text"), right("Total", "total")));
                 return 0;
             } catch (Exception exception) { throw databaseFailure(exception); }
         }
@@ -2138,10 +2133,9 @@ public class BokfriCli implements Runnable {
                 result.put("selection", selectedContext(context, company, year));
                 result.put("count", vouchers.size());
                 result.put("vouchers", vouchers);
-                String text = vouchers.stream().map(voucher -> voucher.get("number") + "\t"
-                        + voucher.get("date") + "\t" + voucher.get("description") + "\t"
-                        + voucher.get("debitTotal") + "\t" + voucher.get("creditTotal"))
-                        .reduce((left, right) -> left + "\n" + right).orElse("No vouchers found");
+                String text = table(vouchers, "No vouchers found", right("Number", "number"),
+                        left("Date", "date"), left("Description", "description"),
+                        right("Debit", "debitTotal"), right("Credit", "creditTotal"));
                 root.output(result, text);
                 return 0;
             } catch (Exception exception) {
