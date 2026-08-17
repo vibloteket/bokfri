@@ -18,6 +18,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   and accounting year and returns a failing exit code for incomplete or broken state.
 - Recreating the currently selected demo company now selects its replacement and
   current accounting year instead of leaving a stale selection.
+- `account list --filter TEXT` now filters the selected year's accounts by number
+  or description using case-insensitive substring matching.
 
 ## [1.1.0] - 2026-08-16
 

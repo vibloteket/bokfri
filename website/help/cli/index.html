@@ -189,6 +189,14 @@ bokfri invoice journal --from 2026-08-01 --to 2026-08-31 --commit</code></pre>
 <div class="guide-note"><strong>Undantag:</strong> <code>company use</code> och <code>year use</code> ändrar det sparade valet direkt. Kontrollera alltid kommandots <code>--help</code>.</div>
 </section>
 
+<section id="konton">
+<h2>Konton</h2>
+<p>Lista alla konton i valt bokföringsår eller filtrera listan skiftlägesokänsligt på kontonummer eller beskrivning:</p>
+<pre><code>bokfri account list
+bokfri account list --filter 193
+bokfri account list --filter bank</code></pre>
+</section>
+
 <section id="rapporter">
 <h2>Rapporter</h2>
 <p>Rapporter använder det valda bokföringsåret som säker standardperiod:</p>
@@ -399,8 +407,8 @@ bokfri customer schema &gt; customer.schema.json</code></pre>
 <div class="cli-table-wrap"><table class="cli-table">
 <thead><tr><th>Område</th><th>Kommandon</th></tr></thead>
 <tbody>
-<tr><td>System</td><td><code>version</code>, <code>paths</code>, <code>doctor</code></td></tr>
-<tr><td>Urval</td><td><code>context</code>, <code>company</code>, <code>account-plan</code>, <code>year</code>, <code>account</code></td></tr>
+<tr><td>System</td><td><code>version</code>, <code>status</code>, <code>database</code></td></tr>
+<tr><td>Urval</td><td><code>company</code>, <code>account-plan</code>, <code>year</code>, <code>account</code></td></tr>
 <tr><td>Rapporter</td><td><code>trial-balance</code>, <code>balance-sheet</code>, <code>income-statement</code>, <code>general-ledger</code>, <code>vat report</code></td></tr>
 <tr><td>Bokföring</td><td><code>voucher</code>, <code>opening-balance</code>, <code>vat settle</code></td></tr>
 <tr><td>Försäljning</td><td><code>customer</code>, <code>product</code>, <code>invoice</code>, <code>credit-invoice</code>, <code>inpayment</code></td></tr>

@@ -104,6 +104,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -626,29 +627,44 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List accounts for the selected year")
     static class AccountList implements Callable<Integer> {
         @CommandLine.ParentCommand AccountCommand command;
+        @Option(names = "--filter", description = "Filter by account number or description")
+        String filter;
+
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, true);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                List<Map<String, Object>> accounts = runtime.database().getAccounts().stream().map(account -> {
-                    Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("number", account.getNumber());
-                    item.put("description", account.getDescription());
-                    item.put("active", account.isActive());
-                    item.put("balanceAccount", se.swedsoft.bookkeeping.calc.math.SSAccountMath
-                            .isBalanceAccount(account, year));
-                    return item;
-                }).toList();
+                String normalizedFilter = filter == null ? null : filter.strip().toLowerCase(Locale.ROOT);
+                List<Map<String, Object>> accounts = runtime.database().getAccounts().stream()
+                        .filter(account -> normalizedFilter == null || normalizedFilter.isEmpty()
+                                || Integer.toString(account.getNumber()).contains(normalizedFilter)
+                                || Objects.toString(account.getDescription(), "")
+                                        .toLowerCase(Locale.ROOT).contains(normalizedFilter))
+                        .map(account -> {
+                            Map<String, Object> item = new LinkedHashMap<>();
+                            item.put("number", account.getNumber());
+                            item.put("description", account.getDescription());
+                            item.put("active", account.isActive());
+                            item.put("balanceAccount", se.swedsoft.bookkeeping.calc.math.SSAccountMath
+                                    .isBalanceAccount(account, year));
+                            return item;
+                        }).toList();
                 String text = accounts.stream().map(item -> item.get("number") + "\t"
                         + item.get("description"))
-                        .reduce((left, right) -> left + "\n" + right).orElse("No accounts found");
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse(filter == null || filter.isBlank()
+                                ? "No accounts found" : "No accounts found for \"" + filter + "\"");
                 Map<String, Object> selected = context.asMap();
                 selected.put("companyName", company.getName());
                 selected.put("yearFrom", year.getLocalFrom().toString());
                 selected.put("yearTo", year.getLocalTo().toString());
-                root.output(Map.of("selection", selected, "accounts", accounts), text);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("selection", selected);
+                result.put("filter", filter);
+                result.put("accounts", accounts);
+                root.output(result, text);
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);

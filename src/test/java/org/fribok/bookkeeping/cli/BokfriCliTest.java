@@ -241,6 +241,43 @@ class BokfriCliTest {
     }
 
     @Test
+    void accountListFiltersByNumberAndDescription() throws Exception {
+        Path data = temporaryDirectory.resolve("data");
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        int yearId = new ObjectMapper().readTree(years.stdout()).path("years").get(0).path("id").asInt();
+
+        Result byNumber = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json", "account", "list", "--filter", "193");
+        Result byDescription = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json", "account", "list", "--filter", "BANK");
+        Result noMatches = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json", "account", "list", "--filter", "no-such-account");
+
+        JsonNode numberJson = new ObjectMapper().readTree(byNumber.stdout());
+        JsonNode descriptionJson = new ObjectMapper().readTree(byDescription.stdout());
+        JsonNode noMatchesJson = new ObjectMapper().readTree(noMatches.stdout());
+        assertThat(byNumber.exitCode()).isZero();
+        assertThat(numberJson.path("filter").asText()).isEqualTo("193");
+        assertThat(numberJson.path("accounts")).isNotEmpty();
+        assertThat(numberJson.path("accounts")).allMatch(account ->
+                Integer.toString(account.path("number").asInt()).contains("193"));
+        assertThat(byDescription.exitCode()).isZero();
+        assertThat(descriptionJson.path("accounts")).isNotEmpty();
+        assertThat(descriptionJson.path("accounts")).allMatch(account ->
+                account.path("description").asText().toLowerCase(java.util.Locale.ROOT).contains("bank"));
+        assertThat(noMatches.exitCode()).isZero();
+        assertThat(noMatchesJson.path("accounts")).isEmpty();
+    }
+
+    @Test
     void databaseStatusReportsCurrentFormat() throws Exception {
         Path data = temporaryDirectory.resolve("current-data");
         execute("--data-dir", data.toString(), "company", "list");
