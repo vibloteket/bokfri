@@ -98,9 +98,9 @@ public final class CliSmokeTest {
         cli("year", "use", Integer.toString(yearId)).success();
         Result status = cli("--format", "json", "status");
         status.success();
-        require(status.stdout.contains("\"company\":{\"id\":" + companyId),
+        require(status.stdout.contains("\"companyId\":" + companyId),
                 "current company was not selected");
-        require(status.stdout.contains("\"year\":{\"id\":" + yearId),
+        require(status.stdout.contains("\"yearId\":" + yearId),
                 "current accounting year was not selected");
     }
 
@@ -127,9 +127,9 @@ public final class CliSmokeTest {
         cli("year", "use", Integer.toString(yearId)).success();
         Result status = cli("--format", "json", "status");
         status.success();
-        require(status.stdout.contains("\"company\":{\"id\":" + companyId),
+        require(status.stdout.contains("\"companyId\":" + companyId),
                 "created company was not selected");
-        require(status.stdout.contains("\"year\":{\"id\":" + yearId),
+        require(status.stdout.contains("\"yearId\":" + yearId),
                 "created accounting year was not selected");
 
         Files.writeString(temporary.resolve("created-company.txt"), Integer.toString(companyId));
@@ -754,7 +754,7 @@ public final class CliSmokeTest {
                 "year", "use", Integer.toString(toYearId)).success();
         Result status = cli("--format", "json", "status");
         status.success();
-        require(status.stdout.contains("\"year\":{\"id\":" + toYearId),
+        require(status.stdout.contains("\"yearId\":" + toYearId),
                 "next accounting year was not selected");
 
         Result preview = cli("--format", "json", "opening-balance", "carry-forward",
