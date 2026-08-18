@@ -167,13 +167,17 @@ jobs:
         else
           RUNTIME="dist/$APP_NAME/lib/runtime"
         fi
-        test -f "$RUNTIME/release"
-        grep -F 'java.desktop' "$RUNTIME/release"
-        grep -F 'java.sql' "$RUNTIME/release"
-        grep -F 'java.management' "$RUNTIME/release"
-        grep -F 'java.compiler' "$RUNTIME/release"
-        grep -F 'java.naming' "$RUNTIME/release"
-        grep -F 'jdk.unsupported' "$RUNTIME/release"
+        RELEASE_FILE="$RUNTIME/release"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          RELEASE_FILE="$RUNTIME/release.txt"
+        fi
+        test -f "$RELEASE_FILE"
+        grep -F 'java.desktop' "$RELEASE_FILE"
+        grep -F 'java.sql' "$RELEASE_FILE"
+        grep -F 'java.management' "$RELEASE_FILE"
+        grep -F 'java.compiler' "$RELEASE_FILE"
+        grep -F 'java.naming' "$RELEASE_FILE"
+        grep -F 'jdk.unsupported' "$RELEASE_FILE"
 
         for command in javac javadoc jshell jconsole jdeps jlink jpackage; do
           test ! -e "$RUNTIME/bin/$command"
