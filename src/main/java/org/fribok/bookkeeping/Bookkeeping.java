@@ -109,14 +109,6 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION;
     }
 
-    static void configurePlatformMenuLayout(String osName) {
-        if (osName != null && osName.startsWith("Windows")) {
-            // Let Swing reserve an icon column only when a popup menu actually uses one.
-            UIManager.put("MenuItem.minimumTextOffset", 0);
-            UIManager.put("Menu.minimumTextOffset", 0);
-        }
-    }
-
     /**
      * The main method of the program.
      *
@@ -163,7 +155,6 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
         } catch (UnsupportedLookAndFeelException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
             LOG.error("Unexpected error", e);
         }
-        configurePlatformMenuLayout(System.getProperty("os.name"));
         UIManager.put("OptionPane.yesButtonText", "Ja");
         UIManager.put("OptionPane.noButtonText", "Nej");
         UIManager.put("OptionPane.cancelButtonText", "Avbryt");
