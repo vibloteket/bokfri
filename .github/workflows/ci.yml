@@ -162,15 +162,14 @@ jobs:
     - name: Verify minimal packaged runtime
       shell: bash
       run: |
-        if [[ "$RUNNER_OS" == "macOS" ]]; then
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          RUNTIME="dist/$APP_NAME/runtime"
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
           RUNTIME="dist/$APP_NAME.app/Contents/runtime/Contents/Home"
         else
           RUNTIME="dist/$APP_NAME/lib/runtime"
         fi
         RELEASE_FILE="$RUNTIME/release"
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          RELEASE_FILE="$RUNTIME/release.txt"
-        fi
         test -f "$RELEASE_FILE"
         grep -F 'java.desktop' "$RELEASE_FILE"
         grep -F 'java.sql' "$RELEASE_FILE"
