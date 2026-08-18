@@ -216,6 +216,11 @@ bokfri income-statement --format json
 bokfri balance-sheet
 bokfri general-ledger --account 1930
 bokfri account balance 1930</code></pre>
+<p>Rapporter som också finns som utskrifter i det grafiska gränssnittet kan skrivas till samma Jasper-baserade PDF:</p>
+<pre><code>bokfri income-statement --output resultatrapport.pdf
+bokfri balance-sheet --output balansrapport.pdf
+bokfri general-ledger --account 1930 --output huvudbok-1930.pdf</code></pre>
+<p><code>--format text|json</code> styr fortfarande svaret på standardutmatningen. <code>--output</code> skapar PDF-filen och <code>--overwrite</code> krävs för att ersätta en befintlig fil.</p>
 <p>För en delperiod måste både <code>--from</code> och <code>--to</code> anges. Punktdatum anges med <code>--date</code>. Datum måste ligga inom valt bokföringsår.</p>
 <pre><code>bokfri income-statement --from 2026-01-01 --to 2026-03-31
 bokfri balance-sheet --date 2026-03-31</code></pre>
@@ -245,7 +250,7 @@ bokfri invoice show 42
 bokfri invoice pdf 42 --output faktura-42.pdf
 bokfri invoice journal --from 2026-08-01 --to 2026-08-31
 bokfri invoice journal --from 2026-08-01 --to 2026-08-31 --commit</code></pre>
-<p>PDF-kommandot ändrar inte fakturans status. En befintlig fil skrivs bara över med <code>--overwrite</code>. Standardspråket är <code>sv-SE</code>.</p>
+<p>PDF-kommandot ändrar inte fakturans status. En befintlig fil skrivs bara över med <code>--overwrite</code>. Standardspråket är <code>sv-SE</code>. Kreditfakturor exporteras på samma sätt med <code>bokfri credit-invoice pdf 7 --output kreditfaktura-7.pdf</code>.</p>
 
 <h3>Kreditfakturor och inbetalningar</h3>
 <pre><code>bokfri credit-invoice validate --file credit-invoice.json
@@ -319,6 +324,14 @@ bokfri opening-balance show
 bokfri opening-balance carry-forward --from-year-id 12
 bokfri opening-balance carry-forward --from-year-id 12 --commit</code></pre>
 <p><code>carry-forward</code> överför bara balanskonton från källåret till det valda året.</p>
+</section>
+
+<section id="verifikationsutskrifter">
+<h2>Verifikationsutskrifter</h2>
+<pre><code>bokfri voucher list --output verifikationer.pdf
+bokfri voucher list --from 2026-07-01 --to 2026-07-31 --output juli.pdf
+bokfri voucher show 12 --output verifikation-12.pdf</code></pre>
+<p>Filtrering med <code>--from</code>, <code>--to</code> och <code>--limit</code> gäller både listresultatet och PDF-filen.</p>
 </section>
 
 <section id="moms">

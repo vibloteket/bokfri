@@ -23,6 +23,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Human-readable CLI lists and financial reports now use shared content-sized columns,
   headings, and right-aligned numbers instead of inconsistent tab stops. JSON output
   remains unchanged for integrations.
+- CLI commands backed by GUI reports can now write the same Jasper reports as PDF:
+  balance sheet, income statement, general ledger, voucher lists, individual vouchers,
+  and credit invoices. `--format text|json` still controls stdout, while `--output`
+  creates the PDF and `--overwrite` protects existing files.
 
 ## [1.1.0] - 2026-08-16
 

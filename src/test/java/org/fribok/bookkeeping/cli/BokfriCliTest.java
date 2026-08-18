@@ -174,7 +174,7 @@ class BokfriCliTest {
         List<List<String>> paths = new ArrayList<>();
         collectCommandPaths(new CommandLine(new BokfriCli()), List.of(), paths);
 
-        assertThat(paths).hasSize(111);
+        assertThat(paths).hasSize(112);
         for (List<String> path : paths) {
             for (String helpOption : List.of("--help", "-h")) {
                 List<String> arguments = new ArrayList<>(path);
@@ -343,6 +343,61 @@ class BokfriCliTest {
         assertThat(BokfriCli.decimal(new BigDecimal("10.543210"))).isEqualTo("10.543210");
         assertThat(BokfriCli.money(null)).isNull();
         assertThat(BokfriCli.decimal(null)).isNull();
+    }
+
+    @Test
+    void guiReportsCanBeExportedAsPdfWithoutChangingJsonOutputMode() throws Exception {
+        Path config = temporaryDirectory.resolve("pdf-cli.yaml");
+        Path data = temporaryDirectory.resolve("pdf-data");
+        Result demo = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "demo", "recreate", "--commit");
+        int companyId = new ObjectMapper().readTree(demo.stdout()).path("companyId").asInt();
+        Result years = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode yearRows = new ObjectMapper().readTree(years.stdout()).path("years");
+        int yearId = 0;
+        for (JsonNode year : yearRows) {
+            if ("2026-07-01".equals(year.path("from").asText())) {
+                yearId = year.path("id").asInt();
+            }
+        }
+        assertThat(yearId).isPositive();
+        String[] context = {"--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+        Path balance = temporaryDirectory.resolve("balance.pdf");
+        Path resultPdf = temporaryDirectory.resolve("result.pdf");
+        Path ledger = temporaryDirectory.resolve("ledger.pdf");
+        Path vouchers = temporaryDirectory.resolve("vouchers.pdf");
+        Path voucher = temporaryDirectory.resolve("voucher.pdf");
+
+        Result balanceResult = execute(concat(context, "balance-sheet", "--output", balance.toString()));
+        Result incomeResult = execute(concat(context, "income-statement", "--output", resultPdf.toString()));
+        Result ledgerResult = execute(concat(context, "general-ledger", "--account", "1930",
+                "--output", ledger.toString()));
+        Result vouchersResult = execute(concat(context, "voucher", "list", "--limit", "1",
+                "--output", vouchers.toString()));
+        assertThat(vouchersResult.exitCode()).as(vouchersResult.stderr()).isZero();
+        int voucherNumber = new ObjectMapper().readTree(vouchersResult.stdout())
+                .path("vouchers").get(0).path("number").asInt();
+        Result voucherResult = execute(concat(context, "voucher", "show",
+                Integer.toString(voucherNumber), "--output", voucher.toString()));
+
+        for (Result cliResult : List.of(balanceResult, incomeResult, ledgerResult,
+                vouchersResult, voucherResult)) {
+            assertThat(cliResult.exitCode()).isZero();
+            JsonNode json = new ObjectMapper().readTree(cliResult.stdout());
+            assertThat(json.path("output").asText()).endsWith(".pdf");
+            assertThat(json.path("bytes").asLong()).isGreaterThan(1_000);
+        }
+        for (Path pdf : List.of(balance, resultPdf, ledger, vouchers, voucher)) {
+            assertThat(Files.readAllBytes(pdf)).startsWith((byte) '%', (byte) 'P', (byte) 'D',
+                    (byte) 'F', (byte) '-');
+        }
+        Result duplicate = execute(concat(context, "balance-sheet", "--output", balance.toString()));
+        assertThat(duplicate.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(duplicate.stderr()).at("/error/code").asText())
+                .isEqualTo("OUTPUT_EXISTS");
     }
 
     @Test

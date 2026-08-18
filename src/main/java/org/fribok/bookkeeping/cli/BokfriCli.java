@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import net.sf.jasperreports.engine.JasperExportManager;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
@@ -93,6 +94,13 @@ import se.swedsoft.bookkeeping.data.common.SSDefaultAccount;
 import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
 import se.swedsoft.bookkeeping.data.system.SSDBConfig;
 import se.swedsoft.bookkeeping.importexport.sie.util.SIEType;
+import se.swedsoft.bookkeeping.print.SSPrinter;
+import se.swedsoft.bookkeeping.print.report.SSBalancePrinter;
+import se.swedsoft.bookkeeping.print.report.SSMainBookPrinter;
+import se.swedsoft.bookkeeping.print.report.SSResultPrinter;
+import se.swedsoft.bookkeeping.print.report.SSVoucherListPrinter;
+import se.swedsoft.bookkeeping.print.report.SSVoucherPrinter;
+import se.swedsoft.bookkeeping.print.report.sales.SSCreditinvoicePrinter;
 
 import java.io.File;
 import java.io.IOException;
@@ -696,6 +704,10 @@ public class BokfriCli implements Runnable {
     static class BalanceSheetCommand implements Callable<Integer> {
         @CommandLine.ParentCommand BokfriCli root;
         @Option(names = "--date") java.time.LocalDate date;
+        @Option(names = "--output", description = "Write the GUI balance report as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite", description = "Replace an existing output file")
+        boolean overwrite;
         public Integer call() {
             return withReport(root, (service, context, year) -> {
                 java.time.LocalDate selectedDate = date == null ? year.getLocalTo() : date;
@@ -708,6 +720,10 @@ public class BokfriCli implements Runnable {
                 result.put("currentResult", money(report.currentResult()));
                 result.put("difference", money(report.difference()));
                 result.put("selection", context);
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSBalancePrinter(year, year.getLocalFrom(),
+                            selectedDate), output, overwrite));
+                }
                 return result;
             }, BokfriCli::balanceSheetText);
         }
@@ -718,6 +734,10 @@ public class BokfriCli implements Runnable {
         @CommandLine.ParentCommand BokfriCli root;
         @Option(names = "--from") java.time.LocalDate from;
         @Option(names = "--to") java.time.LocalDate to;
+        @Option(names = "--output", description = "Write the GUI income statement as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite", description = "Replace an existing output file")
+        boolean overwrite;
         public Integer call() {
             return withReport(root, (service, context, year) -> {
                 ReportPeriod period = reportPeriod(year, from, to);
@@ -728,6 +748,10 @@ public class BokfriCli implements Runnable {
                 result.put("rows", incomeStatementRows(report.rows()));
                 result.put("result", money(report.result()));
                 result.put("selection", context);
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSResultPrinter(year, period.from(), period.to(),
+                            false, false), output, overwrite));
+                }
                 return result;
             }, BokfriCli::incomeStatementText);
         }
@@ -739,6 +763,10 @@ public class BokfriCli implements Runnable {
         @Option(names = "--account", required = true) int account;
         @Option(names = "--from") java.time.LocalDate from;
         @Option(names = "--to") java.time.LocalDate to;
+        @Option(names = "--output", description = "Write the GUI general ledger as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite", description = "Replace an existing output file")
+        boolean overwrite;
         public Integer call() {
             return withReport(root, (service, context, year) -> {
                 ReportPeriod period = reportPeriod(year, from, to);
@@ -752,6 +780,15 @@ public class BokfriCli implements Runnable {
                 result.put("rows", ledgerRows(report.rows()));
                 result.put("closing", money(report.closing()));
                 result.put("selection", context);
+                if (output != null) {
+                    SSAccount selectedAccount = year.getAccounts().stream()
+                            .filter(item -> item.getNumber() == account).findFirst()
+                            .orElseThrow(() -> new CliException("ACCOUNT_NOT_FOUND",
+                                    "No account has number " + account));
+                    addPdf(result, exportPdf(new SSMainBookPrinter(year, selectedAccount,
+                            selectedAccount, period.from(), period.to(), null, null),
+                            output, overwrite));
+                }
                 return result;
             }, BokfriCli::generalLedgerText);
         }
@@ -793,7 +830,7 @@ public class BokfriCli implements Runnable {
     @FunctionalInterface
     interface ReportOperation {
         Map<String, Object> run(FinancialReportService service, Map<String, Object> context,
-                SSNewAccountingYear year);
+                SSNewAccountingYear year) throws Exception;
     }
 
     @FunctionalInterface
@@ -867,6 +904,37 @@ public class BokfriCli implements Runnable {
         return table(List.of(result), "", right("Account", "account"),
                 left("Description", "description"), left("Date", "date"),
                 right("Balance", "balance"));
+    }
+
+    private static java.nio.file.Path exportPdf(SSPrinter printer, java.nio.file.Path output,
+            boolean overwrite) throws Exception {
+        java.nio.file.Path resolved = output.toAbsolutePath().normalize();
+        if (Files.exists(resolved) && !overwrite) {
+            throw new java.nio.file.FileAlreadyExistsException(resolved.toString());
+        }
+        if (resolved.getParent() != null) {
+            Files.createDirectories(resolved.getParent());
+        }
+        printer.generateReport();
+        JasperExportManager.exportReportToPdfFile(printer.getPrinter(), resolved.toString());
+        return resolved;
+    }
+
+    private static void addPdf(Map<String, Object> result, java.nio.file.Path output)
+            throws IOException {
+        result.put("output", output.toString());
+        result.put("bytes", Files.size(output));
+    }
+
+    private static List<SSVoucher> filteredVouchers(List<SSVoucher> vouchers,
+            java.time.LocalDate from, java.time.LocalDate to, Integer limit) {
+        java.util.stream.Stream<SSVoucher> filtered = vouchers.stream()
+                .filter(voucher -> from == null || !voucher.getLocalDate().isBefore(from))
+                .filter(voucher -> to == null || !voucher.getLocalDate().isAfter(to));
+        if (limit != null) {
+            filtered = filtered.limit(limit);
+        }
+        return filtered.toList();
     }
 
     private static String table(List<? extends Map<String, ?>> rows, String emptyMessage,
@@ -1699,7 +1767,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "credit-invoice", description = "Credit booked customer invoices",
-            subcommands = {CreditInvoiceList.class, CreditInvoiceShow.class,
+            subcommands = {CreditInvoiceList.class, CreditInvoiceShow.class, CreditInvoicePdf.class,
                     CreditInvoiceValidate.class, CreditInvoiceCreate.class, CreditInvoiceJournal.class,
                     CliInputSchemas.CreditInvoice.class})
     static class CreditInvoiceCommand extends CliCommand implements Runnable {
@@ -1715,6 +1783,39 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "show") static class CreditInvoiceShow implements Callable<Integer> {
         @CommandLine.ParentCommand CreditInvoiceCommand command; @Parameters(index="0") int number;
         public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSCreditInvoice i=new CreditInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("CREDIT_INVOICE_NOT_FOUND","No credit invoice has number "+number));Map<String,Object>x=creditInvoiceDetails(i);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Credit invoice "+number+" for invoice "+i.getCreditingNr());return 0;}catch(CliException e){throw e;}catch(Exception e){throw databaseFailure(e);}}
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "pdf",
+            description = "Generate a PDF for an existing credit invoice")
+    static class CreditInvoicePdf implements Callable<Integer> {
+        @CommandLine.ParentCommand CreditInvoiceCommand command;
+        @Parameters(index = "0", description = "Credit invoice number") int number;
+        @Option(names = "--output", required = true, description = "Destination PDF file")
+        java.nio.file.Path output;
+        @Option(names = "--language", defaultValue = "sv-SE", description = "Document language")
+        String language;
+        @Option(names = "--overwrite", description = "Replace an existing output file")
+        boolean overwrite;
+
+        public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                runtime.database().init(false);
+                SSCreditInvoice invoice = new CreditInvoiceService(runtime.database()).find(number)
+                        .orElseThrow(() -> new CliException("CREDIT_INVOICE_NOT_FOUND",
+                                "No credit invoice has number " + number));
+                Map<String, Object> result = creditInvoiceDetails(invoice);
+                result.put("selection", selectedCompanyContext(context, company));
+                addPdf(result, exportPdf(new SSCreditinvoicePrinter(invoice,
+                        java.util.Locale.forLanguageTag(language)), output, overwrite));
+                root.output(result, "Created credit invoice PDF " + result.get("output"));
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
     }
 
     abstract static class CreditInvoiceOperation implements Callable<Integer> {
@@ -2111,6 +2212,10 @@ public class BokfriCli implements Runnable {
         java.time.LocalDate to;
         @Option(names = "--limit", description = "Maximum results; by default all are returned")
         Integer limit;
+        @Option(names = "--output", description = "Write the GUI voucher list as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite", description = "Replace an existing output file")
+        boolean overwrite;
 
         @Override public Integer call() {
             if (limit != null && limit < 1) {
@@ -2133,6 +2238,12 @@ public class BokfriCli implements Runnable {
                 result.put("selection", selectedContext(context, company, year));
                 result.put("count", vouchers.size());
                 result.put("vouchers", vouchers);
+                if (output != null) {
+                    List<SSVoucher> selectedVouchers = filteredVouchers(service.list(), from, to, limit);
+                    SSVoucherListPrinter printer = new SSVoucherListPrinter(
+                            new java.util.ArrayList<>(selectedVouchers));
+                    addPdf(result, exportPdf(printer, output, overwrite));
+                }
                 String text = table(vouchers, "No vouchers found", right("Number", "number"),
                         left("Date", "date"), left("Description", "description"),
                         right("Debit", "debitTotal"), right("Credit", "creditTotal"));
@@ -2149,6 +2260,10 @@ public class BokfriCli implements Runnable {
         @CommandLine.ParentCommand VoucherCommand command;
         @Parameters(index = "0", description = "Voucher number")
         int number;
+        @Option(names = "--output", description = "Write the GUI voucher as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite", description = "Replace an existing output file")
+        boolean overwrite;
 
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -2161,6 +2276,11 @@ public class BokfriCli implements Runnable {
                         new CliException("VOUCHER_NOT_FOUND", "No voucher has number " + number));
                 Map<String, Object> result = voucherDetails(voucher);
                 result.put("selection", selectedContext(context, company, year));
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSVoucherPrinter(voucher,
+                            se.swedsoft.bookkeeping.gui.util.SSBundle.getBundle()
+                                    .getString("voucherreport.title")), output, overwrite));
+                }
                 root.output(result, voucherDetailsText(voucher));
                 return 0;
             } catch (Exception exception) {
@@ -3115,6 +3235,10 @@ public class BokfriCli implements Runnable {
     private static CliException databaseFailure(Exception exception) {
         if (exception instanceof CliException cliException) {
             return cliException;
+        }
+        if (exception instanceof java.nio.file.FileAlreadyExistsException fileExists) {
+            return new CliException("OUTPUT_EXISTS",
+                    "Output file already exists: " + fileExists.getFile(), exception);
         }
         if (exception instanceof org.fribok.bookkeeping.dataformat.DataMigrationRequiredException) {
             return new CliException("DATABASE_MIGRATION_REQUIRED",
