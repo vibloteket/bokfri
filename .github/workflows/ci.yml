@@ -159,6 +159,34 @@ jobs:
         test -f "$CLI_LAUNCHER"
         java scripts/CliSmokeTest.java "$CLI_LAUNCHER"
 
+    - name: Verify minimal packaged runtime
+      shell: bash
+      run: |
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          RUNTIME="dist/$APP_NAME.app/Contents/runtime/Contents/Home"
+        else
+          RUNTIME="dist/$APP_NAME/lib/runtime"
+        fi
+        test -f "$RUNTIME/release"
+        grep -F 'java.desktop' "$RUNTIME/release"
+        grep -F 'java.sql' "$RUNTIME/release"
+        grep -F 'java.management' "$RUNTIME/release"
+        grep -F 'java.compiler' "$RUNTIME/release"
+        grep -F 'java.naming' "$RUNTIME/release"
+        grep -F 'jdk.unsupported' "$RUNTIME/release"
+
+        for command in javac javadoc jshell jconsole jdeps jlink jpackage; do
+          test ! -e "$RUNTIME/bin/$command"
+          test ! -e "$RUNTIME/bin/$command.exe"
+        done
+
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          APP_IMAGE="dist/$APP_NAME.app"
+        else
+          APP_IMAGE="dist/$APP_NAME"
+        fi
+        du -sh "$RUNTIME" "$APP_IMAGE"
+
     - name: Prepare Windows CLI command
       if: runner.os == 'Windows'
       shell: pwsh

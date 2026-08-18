@@ -93,6 +93,25 @@
           <input>${project.build.directory}</input>
           <mainJar>${project.build.finalName}-jar-with-dependencies.jar</mainJar>
           <mainClass>org.fribok.bookkeeping.Launcher</mainClass>
+          <!--
+            Keep the bundled runtime intentionally small. These top-level modules cover:
+            Swing/AWT and printing (java.desktop), HSQLDB (java.sql), memory monitoring
+            (java.management), Jasper report compilation (java.compiler), Logback's JNDI
+            support (java.naming), and legacy/reflection-based dependencies (jdk.unsupported).
+            jlink includes their transitive modules automatically.
+          -->
+          <addModules>
+            <module>java.desktop</module>
+            <module>java.sql</module>
+            <module>java.management</module>
+            <module>java.compiler</module>
+            <module>java.naming</module>
+            <module>jdk.unsupported</module>
+          </addModules>
+          <additionalOptions>
+            <option>--jlink-options</option>
+            <option>--strip-native-commands --strip-debug --no-man-pages --no-header-files --compress=zip-6</option>
+          </additionalOptions>
           <launchers>
             <launcher>
               <name>${jpackage.cliName}</name>
