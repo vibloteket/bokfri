@@ -110,6 +110,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -602,15 +603,27 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                List<Map<String, Object>> years = runtime.database().getYearsForCompany(company).stream().map(year -> {
-                    Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("id", year.getId());
-                    item.put("from", year.getLocalFrom().toString());
-                    item.put("to", year.getLocalTo().toString());
-                    return item;
+                List<Map<String, Object>> years = runtime.database().getYearsForCompany(company).stream()
+                        .sorted(Comparator.comparing(SSNewAccountingYear::getLocalFrom)
+                                .thenComparing(SSNewAccountingYear::getLocalTo)
+                                .thenComparing(SSNewAccountingYear::getId)
+                                .reversed())
+                        .map(year -> {
+                            Map<String, Object> item = new LinkedHashMap<>();
+                            item.put("selected", Objects.equals(context.yearId(), year.getId()));
+                            item.put("id", year.getId());
+                            item.put("from", year.getLocalFrom().toString());
+                            item.put("to", year.getLocalTo().toString());
+                            return item;
+                        }).toList();
+                List<Map<String, Object>> displayYears = years.stream().map(year -> {
+                    Map<String, Object> row = new LinkedHashMap<>(year);
+                    row.put("marker", Boolean.TRUE.equals(year.get("selected")) ? "*" : "");
+                    return row;
                 }).toList();
-                String text = table(years, "No accounting years found",
-                        left("Id", "id"), left("From", "from"), left("To", "to"));
+                String text = table(displayYears, "No accounting years found",
+                        left("Selected", "marker"), left("Id", "id"),
+                        left("From", "from"), left("To", "to"));
                 Map<String, Object> selected = context.asMap();
                 selected.put("companyName", company.getName());
                 root.output(Map.of("selection", selected, "years", years), text);

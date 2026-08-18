@@ -29,7 +29,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -166,10 +165,7 @@ public class SSAccountingYearFrame extends SSDefaultTableFrame {
         iModel = new SSSystemYearDataModel();
 
         // Get the objects.
-        List<SSNewAccountingYear> iYears = SSDB.getInstance().getYears();
-
-        Collections.sort(iYears, (o1, o2) -> o1.getLocalFrom().compareTo(o2.getLocalFrom()));
-        iModel.setObjects(iYears);
+        iModel.setObjects(sortNewestFirst(SSDB.getInstance().getYears()));
 
         iTable = new SSTable();
         iTable.setDefaultRenderer(LocalDate.class, new SSDateCellRenderer());
@@ -372,8 +368,17 @@ public class SSAccountingYearFrame extends SSDefaultTableFrame {
         updateFrame();
     }
 
+    static List<SSNewAccountingYear> sortNewestFirst(List<SSNewAccountingYear> years) {
+        return years.stream()
+                .sorted(Comparator.comparing(SSNewAccountingYear::getLocalFrom)
+                        .thenComparing(SSNewAccountingYear::getLocalTo)
+                        .thenComparing(SSNewAccountingYear::getId)
+                        .reversed())
+                .toList();
+    }
+
     public void updateFrame() {
-        iModel.setObjects(SSDB.getInstance().getYears());
+        iModel.setObjects(sortNewestFirst(SSDB.getInstance().getYears()));
         SSDB.getInstance().notifyListeners("YEAR", SSDB.getInstance().getCurrentYear(),
                 null);
     }

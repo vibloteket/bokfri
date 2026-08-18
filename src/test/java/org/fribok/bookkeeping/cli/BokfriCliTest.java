@@ -346,6 +346,38 @@ class BokfriCliTest {
     }
 
     @Test
+    void yearListShowsNewestFirstAndMarksTheSelectedYear() throws Exception {
+        Path config = temporaryDirectory.resolve("year-list.config");
+        Path data = temporaryDirectory.resolve("year-list-data");
+        Result demo = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "demo", "recreate", "--commit");
+        int companyId = new ObjectMapper().readTree(demo.stdout()).path("companyId").asInt();
+        Result initialList = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode initialYears = new ObjectMapper().readTree(initialList.stdout()).path("years");
+        int selectedYearId = initialYears.get(1).path("id").asInt();
+        execute("--config", config.toString(), "--data-dir", data.toString(),
+                "company", "use", Integer.toString(companyId));
+        execute("--config", config.toString(), "--data-dir", data.toString(),
+                "year", "use", Integer.toString(selectedYearId));
+
+        Result jsonList = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "year", "list");
+        Result textList = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "year", "list");
+
+        JsonNode years = new ObjectMapper().readTree(jsonList.stdout()).path("years");
+        assertThat(years).hasSize(2);
+        assertThat(years.get(0).path("from").asText()).isEqualTo("2026-07-01");
+        assertThat(years.get(1).path("from").asText()).isEqualTo("2025-07-01");
+        assertThat(years.get(0).path("selected").asBoolean()).isFalse();
+        assertThat(years.get(1).path("selected").asBoolean()).isTrue();
+        assertThat(years.get(0).has("marker")).isFalse();
+        assertThat(textList.stdout()).contains("Selected  Id", "*         " + selectedYearId,
+                "2026-07-01", "2025-07-01");
+    }
+
+    @Test
     void guiReportsCanBeExportedAsPdfWithoutChangingJsonOutputMode() throws Exception {
         Path config = temporaryDirectory.resolve("pdf-cli.yaml");
         Path data = temporaryDirectory.resolve("pdf-data");
