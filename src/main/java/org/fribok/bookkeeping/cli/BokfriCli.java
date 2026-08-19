@@ -172,6 +172,10 @@ public class BokfriCli implements Runnable {
             description = "Output format: ${COMPLETION-CANDIDATES}")
     OutputFormat format;
 
+    @Option(names = "--verbose", scope = CommandLine.ScopeType.INHERIT,
+            description = "Print diagnostic details for unexpected errors")
+    boolean verbose;
+
     @Override
     public void run() {
         throw new CommandLine.ParameterException(spec.commandLine(), "A command is required");
@@ -269,7 +273,8 @@ public class BokfriCli implements Runnable {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("application", Map.of("version", Version.APP_VERSION, "build", Version.APP_BUILD));
             result.put("paths", Map.of("dataDir", context.dataDir().toString(),
-                    "selectionConfig", parent.selectionFile().toString()));
+                    "selectionConfig", parent.selectionFile().toString(),
+                    "cliLog", CliLog.file(context.dataDir()).toString()));
 
             String state = "ready";
             String problem = null;
@@ -327,6 +332,7 @@ public class BokfriCli implements Runnable {
 
             String text = "Bokfri " + Version.APP_VERSION + " (built " + Version.APP_BUILD + ")"
                     + "\nData directory: " + context.dataDir()
+                    + "\nCLI log: " + CliLog.file(context.dataDir())
                     + "\nDatabase: " + databaseText
                     + "\nCompany: " + selectionText(context.companyId(), companyResult)
                     + "\nAccounting year: " + selectionText(context.yearId(), yearResult)
@@ -3278,9 +3284,22 @@ public class BokfriCli implements Runnable {
         commandLine.setOut(out);
         commandLine.setErr(err);
         commandLine.setExecutionExceptionHandler((exception, command, parseResult) -> {
-            CliException failure = exception instanceof CliException cliException
-                    ? cliException : new CliException("INTERNAL_ERROR", exception.getMessage(), exception);
+            boolean internal = !(exception instanceof CliException);
+            CliException failure = internal
+                    ? new CliException("INTERNAL_ERROR", "An unexpected error occurred.", exception)
+                    : (CliException) exception;
             BokfriCli root = (BokfriCli) command.getCommandSpec().root().userObject();
+            ResolvedContext context = root.resolveContext(false, false);
+            String diagnostic = null;
+            String logFailure = null;
+            if (internal) {
+                diagnostic = CliLog.diagnostic(context.dataDir(), args, exception);
+                try {
+                    CliLog.append(context.dataDir(), diagnostic);
+                } catch (java.io.IOException logException) {
+                    logFailure = logException.getMessage();
+                }
+            }
             if (root.format == OutputFormat.json) {
                 try {
                     Map<String, Object> error = new LinkedHashMap<>();
@@ -3289,14 +3308,35 @@ public class BokfriCli implements Runnable {
                     if (failure.getDetails() != null) {
                         error.put("details", failure.getDetails());
                     }
+                    if (internal) {
+                        error.put("logFile", CliLog.file(context.dataDir()).toString());
+                        if (root.verbose) {
+                            error.put("diagnostic", diagnostic);
+                        }
+                        if (logFailure != null) {
+                            error.put("logWriteError", logFailure);
+                        }
+                    }
                     err.println(jsonMapper().writeValueAsString(Map.of("error", error)));
                 } catch (JsonProcessingException jsonException) {
                     err.println(failure.getCode() + ": " + failure.getMessage());
                 }
             } else {
                 err.println(failure.getCode() + ": " + failure.getMessage());
+                if (internal) {
+                    err.println("Details were written to: " + CliLog.file(context.dataDir()));
+                    if (logFailure != null) {
+                        err.println("Could not write the log file: " + logFailure);
+                    }
+                    if (root.verbose) {
+                        err.println();
+                        err.print(diagnostic);
+                    } else {
+                        err.println("Run the command again with --verbose to print diagnostic details.");
+                    }
+                }
             }
-            return 1;
+            return internal ? 70 : 1;
         });
         return commandLine.execute(args);
     }

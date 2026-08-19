@@ -50,6 +50,8 @@ class BokfriCliTest {
         assertThat(statusJson.at("/selection/company/id").asInt()).isEqualTo(companyId);
         assertThat(statusJson.at("/selection/year/id").asInt()).isEqualTo(yearId);
         assertThat(statusJson.path("status").asText()).isEqualTo("ready");
+        assertThat(statusJson.at("/paths/cliLog").asText())
+                .isEqualTo(data.resolve("logs/bokfri-cli.log").toAbsolutePath().normalize().toString());
         assertThat(Files.readString(config)).contains("company=\"" + companyId + "\"")
                 .contains("year=\"" + yearId + "\"")
                 .contains("yearid=\"" + yearId + "\"");
@@ -502,6 +504,16 @@ class BokfriCliTest {
         String[] result = java.util.Arrays.copyOf(prefix, prefix.length + suffix.length);
         System.arraycopy(suffix, 0, result, prefix.length, suffix.length);
         return result;
+    }
+
+    @Test
+    void textStatusShowsEffectiveCliLogPath() {
+        Path data = temporaryDirectory.resolve("custom-data");
+
+        Result status = execute("--data-dir", data.toString(), "status");
+
+        assertThat(status.stdout()).contains("CLI log: "
+                + data.resolve("logs/bokfri-cli.log").toAbsolutePath().normalize());
     }
 
     private Result execute(String... arguments) {

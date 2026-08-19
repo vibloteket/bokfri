@@ -30,6 +30,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Human-readable CLI lists and financial reports now use shared content-sized columns,
   headings, and right-aligned numbers instead of inconsistent tab stops. JSON output
   remains unchanged for integrations.
+- `bokfri status` now reports the effective CLI log path. Unexpected CLI failures write
+  full diagnostics to `logs/bokfri-cli.log`, return exit code 70, and can print the same
+  details with `--verbose`; expected command errors remain concise and script-friendly.
 - CLI commands backed by GUI reports can now write the same Jasper reports as PDF:
   balance sheet, income statement, general ledger, voucher lists, individual vouchers,
   and credit invoices. `--format text|json` still controls stdout, while `--output`
