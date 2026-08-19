@@ -146,6 +146,31 @@ jobs:
           -Djpackage.macPackageIdentifier="$MAC_PACKAGE_IDENTIFIER" \
           -Djpackage.cliName="$CLI_NAME"
 
+    - name: Verify jpackage staging and app content
+      shell: bash
+      run: |
+        STAGING="target/jpackage-input"
+        EXPECTED_JAR=$(find "$STAGING" -maxdepth 1 -type f -name '*-jar-with-dependencies.jar' -print -quit)
+        test -n "$EXPECTED_JAR"
+        test "$(find "$STAGING" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" = "1"
+
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          APP_DIR="dist/$APP_NAME/app"
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+          APP_DIR="dist/$APP_NAME.app/Contents/app"
+        else
+          APP_DIR="dist/$APP_NAME/lib/app"
+        fi
+        test -d "$APP_DIR"
+        test "$(find "$APP_DIR" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" = "4"
+        test "$(find "$APP_DIR" -maxdepth 1 -type f -name '*-jar-with-dependencies.jar' | wc -l | tr -d ' ')" = "1"
+        test "$(find "$APP_DIR" -maxdepth 1 -type f -name '*.cfg' | wc -l | tr -d ' ')" = "2"
+        test -f "$APP_DIR/.jpackage.xml"
+        test ! -e "$APP_DIR/classes"
+        test ! -e "$APP_DIR/test-classes"
+        test -z "$(find "$APP_DIR" -maxdepth 1 -type f -name '*.jar' ! -name '*-jar-with-dependencies.jar' -print -quit)"
+        find "$STAGING" "$APP_DIR" -mindepth 1 -maxdepth 1 -print | sort
+
     - name: Run packaged launcher black-box test
       shell: bash
       run: |
