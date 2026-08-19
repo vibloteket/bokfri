@@ -3189,25 +3189,33 @@ public class BokfriCli implements Runnable {
     }
 
     private static String voucherDetailsText(SSVoucher voucher) {
-        StringBuilder text = new StringBuilder();
-        text.append("Voucher ").append(voucher.getNumber()).append('\n');
-        text.append("Date: ").append(voucher.getLocalDate()).append('\n');
-        text.append("Description: ").append(voucher.getDescription()).append('\n');
-        text.append("Account\tDescription\tDebit\tCredit\n");
+        List<Map<String, Object>> rows = new java.util.ArrayList<>();
         for (SSVoucherRow row : voucher.getRows()) {
             SSAccount account = row.getAccount();
-            text.append(row.getAccountNr()).append('\t')
-                    .append(account == null ? "" : account.getDescription()).append('\t')
-                    .append(row.getDebet() == null ? "" : money(row.getDebet()))
-                    .append('\t')
-                    .append(row.getCredit() == null ? "" : money(row.getCredit()))
-                    .append('\n');
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("account", row.getAccountNr());
+            item.put("description", account == null ? "" : account.getDescription());
+            item.put("debit", row.getDebet() == null ? "" : money(row.getDebet()));
+            item.put("credit", row.getCredit() == null ? "" : money(row.getCredit()));
+            rows.add(item);
         }
-        text.append("Total\t\t")
-                .append(money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher)))
-                .append('\t')
-                .append(money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher)));
-        return text.toString().stripTrailing();
+        Map<String, Object> total = new LinkedHashMap<>();
+        total.put("account", "Total");
+        total.put("description", "");
+        total.put("debit", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher)));
+        total.put("credit", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher)));
+        rows.add(total);
+
+        return "Voucher " + voucher.getNumber()
+                + "\nDate: " + voucher.getLocalDate()
+                + "\nDescription: " + voucher.getDescription()
+                + "\n" + voucherRowsText(rows);
+    }
+
+    static String voucherRowsText(List<? extends Map<String, ?>> rows) {
+        return table(rows, "No voucher rows",
+                left("Account", "account"), left("Description", "description"),
+                right("Debit", "debit"), right("Credit", "credit"));
     }
 
     private static Map<String, Object> voucherResult(ResolvedContext context,
