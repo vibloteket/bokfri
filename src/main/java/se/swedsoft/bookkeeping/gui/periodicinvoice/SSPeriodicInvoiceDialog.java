@@ -57,6 +57,9 @@ public class SSPeriodicInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSPeriodicInvoice iPeriodicInvoice1 = iPanel.getPeriodicInvoice();
 
                 SSDB.getInstance().addPeriodicInvoice(iPeriodicInvoice1);
@@ -119,6 +122,9 @@ public class SSPeriodicInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSPeriodicInvoice iPeriodicInvoice1 = iPanel.getPeriodicInvoice();
 
                 SSDB.getInstance().addPeriodicInvoice(iPeriodicInvoice1);
@@ -202,6 +208,9 @@ public class SSPeriodicInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSPeriodicInvoice iPeriodicInvoice = iPanel.getPeriodicInvoice();
 
                 if (iPeriodicInvoice.getCount() < iInvoiceCount) {
@@ -283,6 +292,9 @@ public class SSPeriodicInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSPeriodicInvoice iPeriodicInvoice1 = iPanel.getPeriodicInvoice();
 
                 SSDB.getInstance().addPeriodicInvoice(iPeriodicInvoice1);

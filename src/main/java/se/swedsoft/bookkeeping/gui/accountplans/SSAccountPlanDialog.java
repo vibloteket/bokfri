@@ -49,6 +49,9 @@ public class SSAccountPlanDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSAccountPlan iAccountPlan = iPanel.getAccountPlan();
 
                 List<SSAccountPlan> iPlans = SSDB.getInstance().getAccountPlans();
@@ -117,6 +120,9 @@ public class SSAccountPlanDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSAccountPlan iAccountPlan1 = iPanel.getAccountPlan();
 
                 List<SSAccountPlan> iPlans = SSDB.getInstance().getAccountPlans();
@@ -184,6 +190,9 @@ public class SSAccountPlanDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSAccountPlan iAccountPlan1 = iPanel.getAccountPlan();
 
                 List<SSAccountPlan> iPlans = SSDB.getInstance().getAccountPlans();
@@ -250,6 +259,9 @@ public class SSAccountPlanDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSAccountPlan iAccountPlan1 = iPanel.getAccountPlan();
 
                 SSNewAccountingYear iCurrentYear = SSDB.getInstance().getCurrentYear();

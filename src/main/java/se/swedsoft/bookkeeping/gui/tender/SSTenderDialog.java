@@ -57,6 +57,9 @@ public class SSTenderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSTender iTender1 = iPanel.getTender();
 
                 SSDB.getInstance().addTender(iTender1);
@@ -122,6 +125,9 @@ public class SSTenderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSTender iTender1 = iPanel.getTender();
 
                 SSDB.getInstance().updateTender(iTender1);
@@ -183,6 +189,9 @@ public class SSTenderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSTender iTender = iPanel.getTender();
 
                 SSDB.getInstance().addTender(iTender);

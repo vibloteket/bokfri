@@ -10,6 +10,7 @@ import se.swedsoft.bookkeeping.gui.util.SSButtonPanel;
 import se.swedsoft.bookkeeping.gui.util.SSInputVerifier;
 import se.swedsoft.bookkeeping.gui.util.components.SSTableComboBox;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSConfirmDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.model.SSVATCodeTableModel;
@@ -55,6 +56,11 @@ public class SSAddAccountDialog extends SSDialog {
         iButtonPanel.addOkActionListener(
                 e -> {
 
+                        if (!iInputVerifier.isValid()) {
+                            SSValidationDialog.showIfInvalid(this, "Kontot",
+                                    List.of("Kontonummer och beskrivning krävs."));
+                            return;
+                        }
                         SSAccount iAccount = new SSAccount();
 
                         try {
@@ -118,12 +124,6 @@ public class SSAddAccountDialog extends SSDialog {
 
         iInputVerifier.add(iAccountNr);
         iInputVerifier.add(iDescription);
-        iInputVerifier.addListener(new SSInputVerifier.SSVerifierListener() {
-            public void updated(SSInputVerifier iVerifier, boolean iValid) {
-                // JComponent iCurrent = iVerifier.getCurrentComponent();
-                iButtonPanel.getOkButton().setEnabled(iValid);
-            }
-        });
     }
 
     /**

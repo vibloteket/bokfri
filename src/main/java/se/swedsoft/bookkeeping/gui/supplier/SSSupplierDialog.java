@@ -52,6 +52,9 @@ public class SSSupplierDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplier iSupplier1 = iPanel.getSupplier();
 
                 if (iSupplier1.getOutpaymentNumber() == null) {
@@ -132,6 +135,9 @@ public class SSSupplierDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplier iSupplier = iPanel.getSupplier();
 
                 if (iSupplier.getOutpaymentNumber() == null) {
@@ -208,6 +214,9 @@ public class SSSupplierDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplier iSupplier1 = iPanel.getSupplier();
 
                 if (iSupplier1.getOutpaymentNumber() == null) {

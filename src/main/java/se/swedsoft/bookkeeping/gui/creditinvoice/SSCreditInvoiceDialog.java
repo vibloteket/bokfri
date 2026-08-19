@@ -55,6 +55,9 @@ public class SSCreditInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSCreditInvoice iInvoice1 = iPanel.getCreditInvoice();
 
                 SSDB.getInstance().updateCreditInvoice(iInvoice1);
@@ -145,6 +148,9 @@ public class SSCreditInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSCreditInvoice iInvoice = iPanel.getCreditInvoice();
 
                 SSDB.getInstance().addCreditInvoice(iInvoice);
@@ -222,6 +228,9 @@ public class SSCreditInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSCreditInvoice iInvoice = iPanel.getCreditInvoice();
 
                 SSDB.getInstance().addCreditInvoice(iInvoice);

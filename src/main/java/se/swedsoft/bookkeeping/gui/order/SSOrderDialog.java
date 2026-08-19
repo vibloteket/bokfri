@@ -57,6 +57,9 @@ public class SSOrderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSOrder iOrder = iPanel.getOrder();
 
                 SSDB.getInstance().addOrder(iOrder);
@@ -122,6 +125,9 @@ public class SSOrderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSOrder iOrder1 = iPanel.getOrder();
 
                 SSDB.getInstance().addOrder(iOrder1);
@@ -191,6 +197,9 @@ public class SSOrderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSOrder iOrder1 = iPanel.getOrder();
 
                 SSDB.getInstance().updateOrder(iOrder1);
@@ -258,6 +267,9 @@ public class SSOrderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSOrder iOrder1 = iPanel.getOrder();
 
                 iOrder1.doAutoIncrecement();

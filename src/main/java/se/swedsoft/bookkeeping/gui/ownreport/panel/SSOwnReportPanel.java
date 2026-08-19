@@ -22,6 +22,7 @@ import se.swedsoft.bookkeeping.gui.util.SSSelectionListener;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.components.SSTableComboBox;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.model.SSAccountTableModel;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
 import se.swedsoft.bookkeeping.gui.util.table.actions.SSDeleteAction;
@@ -87,11 +88,7 @@ public class SSOwnReportPanel {
 
         iInputVerifier = new SSInputVerifier();
         iInputVerifier.add(iName);
-        iInputVerifier.addListener(new SSInputVerifier.SSVerifierListener() {
-            public void updated(SSInputVerifier iVerifier, boolean iValid) {
-                iButtonPanel.getOkButton().setEnabled(iValid);
-            }
-        });
+
 
         iHeadingTable.setColorReadOnly(true);
         iHeadingTable.setColumnSortingEnabled(false);
@@ -324,7 +321,10 @@ public class SSOwnReportPanel {
     }
 
     public boolean isValid() {
-        return iName.getText().length() != 0;
+        if (iInputVerifier.isValid()) {
+            return true;
+        }
+        return SSValidationDialog.showIfInvalid(iPanel, "Rapporten", java.util.List.of("Namn saknas."));
     }
 
     /**

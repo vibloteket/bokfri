@@ -9,8 +9,8 @@ import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.customer.panel.SSCustomerPanel;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
-import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
@@ -51,13 +51,17 @@ public class SSCustomerDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSCustomer iCustomer = iPanel.getCustomer();
 
                 try {
                     new CustomerService(SSDB.getInstance()).create(iCustomer);
                 } catch (CustomerValidationException exception) {
-                    new SSErrorDialog(iMainFrame, "customerframe.duplicate",
-                            iCustomer.getNumber());
+                    SSValidationDialog.showIfInvalid(iDialog, "Kunden",
+                            exception.getResult().issues().stream()
+                                    .map(issue -> issue.message()).toList());
                     return;
                 }
 
@@ -111,6 +115,9 @@ public class SSCustomerDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSCustomer iCustomer1 = iPanel.getCustomer();
 
                 SSDB.getInstance().updateCustomer(iCustomer1);
@@ -170,13 +177,17 @@ public class SSCustomerDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSCustomer iCustomer1 = iPanel.getCustomer();
 
                 try {
                     new CustomerService(SSDB.getInstance()).create(iCustomer1);
                 } catch (CustomerValidationException exception) {
-                    new SSErrorDialog(iMainFrame, "customerframe.duplicate",
-                            iCustomer1.getNumber());
+                    SSValidationDialog.showIfInvalid(iDialog, "Kunden",
+                            exception.getResult().issues().stream()
+                                    .map(issue -> issue.message()).toList());
                     return;
                 }
 

@@ -13,6 +13,7 @@ import se.swedsoft.bookkeeping.gui.util.SSButtonPanel;
 import se.swedsoft.bookkeeping.gui.util.SSInputVerifier;
 import se.swedsoft.bookkeeping.gui.util.components.SSTableComboBox;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.graphics.SSIcon;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
 
@@ -194,11 +195,7 @@ public class SSAccountPlanPanel {
 
         iInputVerifier = new SSInputVerifier();
         iInputVerifier.add(iName);
-        iInputVerifier.addListener(new SSInputVerifier.SSVerifierListener() {
-            public void updated(SSInputVerifier iVerifier, boolean iValid) {
-                iButtonPanel.getOkButton().setEnabled(iValid);
-            }
-        });
+
 
         SwingUtilities.invokeLater(() -> iName.requestFocusInWindow());
 
@@ -314,7 +311,10 @@ public class SSAccountPlanPanel {
     }
 
     public boolean isValid() {
-        return iName.getText().length() != 0;
+        if (iInputVerifier.isValid()) {
+            return true;
+        }
+        return SSValidationDialog.showIfInvalid(iPanel, "Kontoplanen", java.util.List.of("Namn saknas."));
     }
 
     @Override

@@ -23,6 +23,7 @@ import se.swedsoft.bookkeeping.gui.util.components.SSEditableTableComboBox;
 import se.swedsoft.bookkeeping.gui.util.components.SSTableComboBox;
 import se.swedsoft.bookkeeping.gui.util.datechooser.SSDateChooser;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
 import se.swedsoft.bookkeeping.gui.util.model.SSCurrencyTableModel;
 import se.swedsoft.bookkeeping.gui.util.model.SSDeliveryTermTableModel;
@@ -210,13 +211,7 @@ public class SSPurchaseOrderPanel {
 
         iInputVerifier.add(iSupplier);
         iInputVerifier.add(iSupplierName);
-        iInputVerifier.addListener(new SSInputVerifier.SSVerifierListener() {
-            public void updated(SSInputVerifier iVerifier, boolean iValid) {
-                JComponent iCurrent = iVerifier.getCurrentComponent();
 
-                iButtonPanel.getOkButton().setEnabled(iValid);
-            }
-        });
 
         addKeyListeners();
     }
@@ -226,7 +221,10 @@ public class SSPurchaseOrderPanel {
      * @return
      */
     public boolean isValid() {
-        return iInputVerifier.isValid();
+        if (iInputVerifier.isValid()) {
+            return true;
+        }
+        return SSValidationDialog.showIfInvalid(iPanel, "Inköpsordern", java.util.List.of("Giltig leverantör och leverantörsnamn krävs."));
     }
 
     /**

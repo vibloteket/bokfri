@@ -37,6 +37,9 @@ public class SSOwnReportDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSOwnReport iOwnReport = iPanel.getOwnReport();
 
                 SSDB.getInstance().addOwnReport(iOwnReport);
@@ -88,6 +91,9 @@ public class SSOwnReportDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSOwnReport iOwnReport = iPanel.getOwnReport();
 
                 SSDB.getInstance().updateOwnReport(iOwnReport);

@@ -12,6 +12,7 @@ import se.swedsoft.bookkeeping.gui.util.SSInputVerifier;
 import se.swedsoft.bookkeeping.gui.util.components.SSEditableTableComboBox;
 import se.swedsoft.bookkeeping.gui.util.components.SSIntegerTextField;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.model.SSCurrencyTableModel;
 import se.swedsoft.bookkeeping.gui.util.model.SSDeliveryTermTableModel;
 import se.swedsoft.bookkeeping.gui.util.model.SSDeliveryWayTableModel;
@@ -93,11 +94,7 @@ public class SSSupplierPanel {
         iInputVerifier = new SSInputVerifier();
 
         iInputVerifier.add(iSupplierNr);
-        iInputVerifier.addListener(new SSInputVerifier.SSVerifierListener() {
-            public void updated(SSInputVerifier iVerifier, boolean iValid) {
-                iButtonPanel.getOkButton().setEnabled(iValid);
-            }
-        });
+
 
         addKeyListeners();
     }
@@ -108,7 +105,10 @@ public class SSSupplierPanel {
      */
 
     public boolean isValid() {
-        return iInputVerifier.isValid();
+        if (iInputVerifier.isValid()) {
+            return true;
+        }
+        return SSValidationDialog.showIfInvalid(iPanel, "Leverantören", java.util.List.of("Leverantörsnummer saknas."));
     }
 
     /**

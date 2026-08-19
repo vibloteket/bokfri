@@ -19,6 +19,7 @@ import se.swedsoft.bookkeeping.gui.util.components.SSEditableTableComboBox;
 import se.swedsoft.bookkeeping.gui.util.components.SSTableComboBox;
 import se.swedsoft.bookkeeping.gui.util.datechooser.SSDateChooser;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.model.SSCurrencyTableModel;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
 import se.swedsoft.bookkeeping.gui.util.table.actions.SSDeleteAction;
@@ -274,11 +275,7 @@ public class SSSupplierCreditInvoicePanel {
         iInputVerifier = new SSInputVerifier();
 
         iInputVerifier.add(iSupplier);
-        iInputVerifier.addListener(new SSInputVerifier.SSVerifierListener() {
-            public void updated(SSInputVerifier iVerifier, boolean iValid) {
-                iButtonPanel.getOkButton().setEnabled(iValid);
-            }
-        });
+
 
         addKeyListeners();
 
@@ -371,7 +368,10 @@ public class SSSupplierCreditInvoicePanel {
      * @return
      */
     public boolean isValid() {
-        return iInputVerifier.isValid();
+        if (iInputVerifier.isValid()) {
+            return true;
+        }
+        return SSValidationDialog.showIfInvalid(iPanel, "Leverantörskreditfakturan", java.util.List.of("Giltig leverantör krävs."));
     }
 
     public void addKeyListeners() {

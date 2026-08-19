@@ -16,6 +16,7 @@ import se.swedsoft.bookkeeping.gui.util.SSInputVerifier;
 import se.swedsoft.bookkeeping.gui.util.SSSelectionListener;
 import se.swedsoft.bookkeeping.gui.util.components.*;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.model.SSAccountTableModel;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.gui.util.model.SSTaxCodeTableModel;
@@ -265,11 +266,7 @@ public class SSProductPanel {
 
         iInputVerifier.add(iProductNr);
         iInputVerifier.add(iUnitprice);
-        iInputVerifier.addListener(new SSInputVerifier.SSVerifierListener() {
-            public void updated(SSInputVerifier iVerifier, boolean iValid) {
-                iButtonPanel.getOkButton().setEnabled(iValid);
-            }
-        });
+
 
         iDescriptions.addLocale(Locale.of("se"), "Svenska:");
         iDescriptions.addLocale(Locale.of("en"), "Engelska:");
@@ -299,7 +296,10 @@ public class SSProductPanel {
      * @return
      */
     public boolean isValid() {
-        return iInputVerifier.isValid();
+        if (iInputVerifier.isValid()) {
+            return true;
+        }
+        return SSValidationDialog.showIfInvalid(iPanel, "Produkten", java.util.List.of("Produktnummer och försäljningspris krävs."));
     }
 
     /**

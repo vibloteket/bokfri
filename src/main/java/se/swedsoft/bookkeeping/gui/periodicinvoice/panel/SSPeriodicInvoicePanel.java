@@ -20,6 +20,7 @@ import se.swedsoft.bookkeeping.gui.util.*;
 import se.swedsoft.bookkeeping.gui.util.components.*;
 import se.swedsoft.bookkeeping.gui.util.datechooser.SSDateChooser;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSInformationDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
 import se.swedsoft.bookkeeping.gui.util.model.SSCurrencyTableModel;
@@ -353,13 +354,7 @@ public class SSPeriodicInvoicePanel {
 
         iInputVerifier.add(iCustomer);
         iInputVerifier.add(iCustomerName);
-        iInputVerifier.addListener(new SSInputVerifier.SSVerifierListener() {
-            public void updated(SSInputVerifier iVerifier, boolean iValid) {
-                // JComponent iCurrent = iVerifier.getCurrentComponent();
 
-                iButtonPanel.getOkButton().setEnabled(iValid);
-            }
-        });
 
         iDate.addChangeListener(e -> {
 
@@ -512,7 +507,10 @@ public class SSPeriodicInvoicePanel {
      * @return
      */
     public boolean isValid() {
-        return iInputVerifier.isValid();
+        if (iInputVerifier.isValid()) {
+            return true;
+        }
+        return SSValidationDialog.showIfInvalid(iPanel, "Periodfakturan", java.util.List.of("Giltig kund och kundnamn krävs."));
     }
 
     /**

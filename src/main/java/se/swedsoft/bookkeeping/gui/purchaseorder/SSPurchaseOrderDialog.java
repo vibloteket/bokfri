@@ -55,6 +55,9 @@ public class SSPurchaseOrderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSPurchaseOrder iOrder = iPanel.getOrder();
 
                 SSDB.getInstance().addPurchaseOrder(iOrder);
@@ -119,6 +122,9 @@ public class SSPurchaseOrderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSPurchaseOrder iPurchaseOrder1 = iPanel.getOrder();
 
                 SSDB.getInstance().addPurchaseOrder(iPurchaseOrder1);
@@ -182,6 +188,9 @@ public class SSPurchaseOrderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSPurchaseOrder iOrder = iPanel.getOrder();
 
                 SSDB.getInstance().updatePurchaseOrder(iOrder);
@@ -251,6 +260,9 @@ public class SSPurchaseOrderDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSPurchaseOrder iOrder = iPanel.getOrder();
 
                 SSDB.getInstance().addPurchaseOrder(iOrder);

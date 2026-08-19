@@ -71,6 +71,9 @@ public class SSSupplierCreditInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplierCreditInvoice iSupplierCreditInvoice1 = iPanel.getSupplierCreditInvoice();
 
                 SSDB.getInstance().addSupplierCreditInvoice(iSupplierCreditInvoice1);
@@ -152,6 +155,9 @@ public class SSSupplierCreditInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplierCreditInvoice iSupplierCreditInvoice1 = iPanel.getSupplierCreditInvoice();
 
                 SSDB.getInstance().addSupplierCreditInvoice(iSupplierCreditInvoice1);
@@ -214,6 +220,9 @@ public class SSSupplierCreditInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplierCreditInvoice iSupplierCreditInvoice1 = iPanel.getSupplierCreditInvoice();
 
                 SSDB.getInstance().updateSupplierCreditInvoice(iSupplierCreditInvoice1);
@@ -287,6 +296,9 @@ public class SSSupplierCreditInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplierCreditInvoice iSupplierCreditInvoice1 = iPanel.getSupplierCreditInvoice();
 
                 SSDB.getInstance().addSupplierCreditInvoice(iSupplierCreditInvoice1);

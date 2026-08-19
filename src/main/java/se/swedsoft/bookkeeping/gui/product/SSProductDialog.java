@@ -9,8 +9,8 @@ import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.product.panel.SSProductPanel;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
-import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
@@ -51,13 +51,17 @@ public class SSProductDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSProduct iProduct = iPanel.getProduct();
 
                 try {
                     new ProductService(SSDB.getInstance()).create(iProduct);
                 } catch (ProductValidationException exception) {
-                    new SSErrorDialog(iMainFrame, "productframe.duplicate",
-                            iProduct.getNumber());
+                    SSValidationDialog.showIfInvalid(iDialog, "Produkten",
+                            exception.getResult().issues().stream()
+                                    .map(issue -> issue.message()).toList());
                     return;
                 }
 
@@ -113,6 +117,9 @@ public class SSProductDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSProduct iProduct1 = iPanel.getProduct();
 
                 SSDB.getInstance().updateProduct(iProduct1);
@@ -170,14 +177,18 @@ public class SSProductDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
 
                 SSProduct iProduct1 = iPanel.getProduct();
 
                 try {
                     new ProductService(SSDB.getInstance()).create(iProduct1);
                 } catch (ProductValidationException exception) {
-                    new SSErrorDialog(iMainFrame, "productframe.duplicate",
-                            iProduct1.getNumber());
+                    SSValidationDialog.showIfInvalid(iDialog, "Produkten",
+                            exception.getResult().issues().stream()
+                                    .map(issue -> issue.message()).toList());
                     return;
                 }
 
