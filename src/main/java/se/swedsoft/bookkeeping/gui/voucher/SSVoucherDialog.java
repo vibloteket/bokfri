@@ -14,6 +14,7 @@ import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSInformationDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.voucher.dialogs.SSAddAccountDialog;
 import se.swedsoft.bookkeeping.gui.voucher.dialogs.SSCopyReversedVoucherDialog;
 import se.swedsoft.bookkeeping.gui.voucher.panel.SSVoucherPanel;
@@ -38,6 +39,12 @@ import org.slf4j.LoggerFactory;
 public class SSVoucherDialog {    private static final Logger LOG = LoggerFactory.getLogger(SSVoucherDialog.class);
 
     private SSVoucherDialog() {}
+
+    private static boolean isValid(SSDialog dialog, SSVoucher voucher) {
+        var validation = new VoucherService(SSDB.getInstance()).validate(voucher);
+        return SSValidationDialog.showIfInvalid(dialog, "Verifikationen",
+                validation.issues().stream().map(issue -> SSValidationDialog.formatIssue(issue.row(), issue.message())).toList());
+    }
 
     private static void storeVoucherTemplate(SSMainFrame iMainFrame, SSVoucher iVoucher) {
         SSVoucherTemplate template = new SSVoucherTemplate(iVoucher);
@@ -75,6 +82,10 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                 e -> {
 
                         SSVoucher iVoucher = iPanel.getVoucher();
+
+                if (!isValid(iDialog, iVoucher)) {
+                    return;
+                }
 
                         if (!iPanel.getDate().isInCurrentAccountYear()) {
                             new SSErrorDialog(new JFrame(), "voucherpanel.badyear");
@@ -136,6 +147,10 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                 }
                 SSVoucher iVoucher = iPanel.getVoucher();
 
+                if (!isValid(iDialog, iVoucher)) {
+                    return;
+                }
+
                 new VoucherService(SSDB.getInstance()).create(iVoucher);
 
                 if (pModel != null) {
@@ -171,6 +186,9 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
 
                         SSVoucher iVoucher1 = iPanel.getVoucher();
 
+                        if (!isValid(iDialog, iVoucher1)) {
+                            return;
+                        }
                         if (!iPanel.getDate().isInCurrentAccountYear()) {
                             new SSErrorDialog(new JFrame(), "voucherpanel.badyear");
                             iPanel.setVoucher(iVoucher1, true, true);
@@ -227,6 +245,10 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                     return;
                 }
                 SSVoucher iVoucher = iPanel.getVoucher();
+
+                if (!isValid(iDialog, iVoucher)) {
+                    return;
+                }
 
                 SSDB.getInstance().updateVoucher(iVoucher);
 
@@ -289,6 +311,9 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
 
                         SSVoucher iVoucher1 = iPanel.getVoucher();
 
+                        if (!isValid(iDialog, iVoucher1)) {
+                            return;
+                        }
                         if (!iPanel.getDate().isInCurrentAccountYear()) {
                             new SSErrorDialog(new JFrame(), "voucherpanel.badyear");
                             iPanel.setVoucher(iVoucher1, false, false);
@@ -350,6 +375,10 @@ public class SSVoucherDialog {    private static final Logger LOG = LoggerFactor
                     return;
                 }
                 SSVoucher iVoucher = iPanel.getVoucher();
+
+                if (!isValid(iDialog, iVoucher)) {
+                    return;
+                }
 
                 new VoucherService(SSDB.getInstance()).create(iVoucher);
 

@@ -2,6 +2,7 @@ package se.swedsoft.bookkeeping.gui.supplierinvoice.panel;
 
 
 import se.swedsoft.bookkeeping.calc.math.SSPurchaseOrderMath;
+import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidator;
 import se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath;
 import se.swedsoft.bookkeeping.data.*;
 import se.swedsoft.bookkeeping.data.common.SSCurrency;
@@ -21,6 +22,7 @@ import se.swedsoft.bookkeeping.gui.util.components.SSTableComboBox;
 import se.swedsoft.bookkeeping.gui.util.datechooser.SSDateChooser;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.model.SSCurrencyTableModel;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
 import se.swedsoft.bookkeeping.gui.util.table.actions.SSDeleteAction;
@@ -303,11 +305,6 @@ public class SSSupplierInvoicePanel implements ActionListener {
         iInputVerifier = new SSInputVerifier();
 
         iInputVerifier.add(iSupplier);
-        iInputVerifier.addListener(new SSInputVerifier.SSVerifierListener() {
-            public void updated(SSInputVerifier iVerifier, boolean iValid) {
-                iButtonPanel.getOkButton().setEnabled(iValid);
-            }
-        });
         iInputVerifier.update();
 
         addKeyListeners();
@@ -421,7 +418,9 @@ public class SSSupplierInvoicePanel implements ActionListener {
      * @return
      */
     public boolean isValid() {
-        return iInputVerifier.isValid();
+        var validation = SupplierInvoiceValidator.validate(getSupplierInvoice());
+        return SSValidationDialog.showIfInvalid(iPanel, "Leverantörsfakturan",
+                validation.issues().stream().map(issue -> SSValidationDialog.formatIssue(issue.row(), issue.message())).toList());
     }
 
     /**

@@ -2,6 +2,7 @@ package se.swedsoft.bookkeeping.gui.inpayment;
 
 
 import org.fribok.bookkeeping.service.inpayment.InpaymentService;
+import org.fribok.bookkeeping.service.inpayment.InpaymentValidationException;
 import se.swedsoft.bookkeeping.data.SSInpayment;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
@@ -10,6 +11,7 @@ import se.swedsoft.bookkeeping.gui.invoice.SSInvoiceFrame;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 
 import javax.swing.*;
@@ -47,7 +49,14 @@ public class SSInpaymentDialog {
 
                 SSInpayment iInpayment = iPanel.getInpayment();
 
-                SSDB.getInstance().updateInpayment(iInpayment);
+                try {
+                    new InpaymentService(SSDB.getInstance()).update(iInpayment);
+                } catch (InpaymentValidationException exception) {
+                    SSValidationDialog.showIfInvalid(iDialog, "Inbetalningen",
+                            exception.getResult().issues().stream()
+                                    .map(issue -> SSValidationDialog.formatIssue(issue.row(), issue.message())).toList());
+                    return;
+                }
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();
@@ -106,8 +115,15 @@ public class SSInpaymentDialog {
         final ActionListener iSaveAction = e -> {
 
                 SSInpayment iInpayment1 = iPanel.getInpayment();
+                try {
 
                 new InpaymentService(SSDB.getInstance()).create(iInpayment1);
+                } catch (InpaymentValidationException exception) {
+                    SSValidationDialog.showIfInvalid(iDialog, "Inbetalningen",
+                            exception.getResult().issues().stream()
+                                    .map(issue -> SSValidationDialog.formatIssue(issue.row(), issue.message())).toList());
+                    return;
+                }
                 SSInvoiceFrame.fireTableDataChanged();
 
                 if (pModel != null) {
@@ -169,8 +185,15 @@ public class SSInpaymentDialog {
         final ActionListener iSaveAction = e -> {
 
                 SSInpayment iInpayment1 = iPanel.getInpayment();
+                try {
 
                 new InpaymentService(SSDB.getInstance()).create(iInpayment1);
+                } catch (InpaymentValidationException exception) {
+                    SSValidationDialog.showIfInvalid(iDialog, "Inbetalningen",
+                            exception.getResult().issues().stream()
+                                    .map(issue -> SSValidationDialog.formatIssue(issue.row(), issue.message())).toList());
+                    return;
+                }
 
                 SSInvoiceFrame.fireTableDataChanged();
 

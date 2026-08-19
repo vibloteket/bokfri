@@ -42,12 +42,22 @@ public final class InpaymentService {
     }
 
     public SSInpayment create(SSInpayment inpayment) {
+        requireValid(inpayment);
+        database.addInpayment(inpayment);
+        return inpayment;
+    }
+
+    public SSInpayment update(SSInpayment inpayment) {
+        requireValid(inpayment);
+        database.updateInpayment(inpayment);
+        return inpayment;
+    }
+
+    private void requireValid(SSInpayment inpayment) {
         InpaymentValidationResult validation = validate(inpayment);
         if (!validation.valid()) {
             throw new InpaymentValidationException(validation);
         }
-        database.addInpayment(inpayment);
-        return inpayment;
     }
 
     public InpaymentJournalPlan planJournal(LocalDate from, LocalDate to) {

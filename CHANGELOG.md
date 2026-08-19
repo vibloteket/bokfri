@@ -13,6 +13,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- Transaction dialogs now show all validation problems when customer invoices,
+  supplier invoices, payments, or vouchers cannot be saved, instead of appearing
+  to ignore the OK button.
 - Replaced the overlapping `paths`, `doctor`, `company current`, and `year current`
   CLI commands with one `bokfri status` overview that validates the selected company
   and accounting year and returns a failing exit code for incomplete or broken state.

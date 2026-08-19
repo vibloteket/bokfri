@@ -54,6 +54,9 @@ public class SSSupplierInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplierInvoice iSupplierInvoice1 = iPanel.getSupplierInvoice();
 
                 new SupplierInvoiceService(SSDB.getInstance()).create(iSupplierInvoice1);
@@ -114,6 +117,9 @@ public class SSSupplierInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplierInvoice iSupplierInvoice1 = iPanel.getSupplierInvoice();
 
                 SSDB.getInstance().updateSupplierInvoice(iSupplierInvoice1);
@@ -188,6 +194,9 @@ public class SSSupplierInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplierInvoice iSupplierInvoice = iPanel.getSupplierInvoice();
 
                 new SupplierInvoiceService(SSDB.getInstance()).create(iSupplierInvoice);
@@ -269,6 +278,9 @@ public class SSSupplierInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSSupplierInvoice iSupplierInvoice1 = iPanel.getSupplierInvoice();
 
                 new SupplierInvoiceService(SSDB.getInstance()).create(iSupplierInvoice1);

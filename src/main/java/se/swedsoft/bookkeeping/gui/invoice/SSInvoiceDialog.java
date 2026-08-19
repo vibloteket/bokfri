@@ -57,6 +57,9 @@ public class SSInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSInvoice iInvoice = iPanel.getInvoice();
 
                 new InvoiceService(SSDB.getInstance()).create(iInvoice);
@@ -122,6 +125,9 @@ public class SSInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSInvoice iInvoice1 = iPanel.getInvoice();
 
                 new InvoiceService(SSDB.getInstance()).update(iInvoice1);
@@ -194,6 +200,9 @@ public class SSInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSInvoice iInvoice1 = iPanel.getInvoice();
 
                 new InvoiceService(SSDB.getInstance()).create(iInvoice1);
@@ -271,6 +280,9 @@ public class SSInvoiceDialog {
 
         final ActionListener iSaveAction = e -> {
 
+                if (!iPanel.isValid()) {
+                    return;
+                }
                 SSInvoice iInvoice1 = iPanel.getInvoice();
 
                 new InvoiceService(SSDB.getInstance()).create(iInvoice1);

@@ -2,7 +2,7 @@ package se.swedsoft.bookkeeping.gui.outpayment;
 
 
 import org.fribok.bookkeeping.service.outpayment.OutpaymentService;
-import org.fribok.bookkeeping.service.outpayment.OutpaymentService;
+import org.fribok.bookkeeping.service.outpayment.OutpaymentValidationException;
 import se.swedsoft.bookkeeping.data.SSOutpayment;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
@@ -11,6 +11,7 @@ import se.swedsoft.bookkeeping.gui.supplierinvoice.SSSupplierInvoiceFrame;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
@@ -52,8 +53,15 @@ public class SSOutpaymentDialog {
         final ActionListener iSaveAction = e -> {
 
                 SSOutpayment iOutpayment1 = iPanel.getOutpayment();
+                try {
 
                 new OutpaymentService(SSDB.getInstance()).create(iOutpayment1);
+                } catch (OutpaymentValidationException exception) {
+                    SSValidationDialog.showIfInvalid(iDialog, "Utbetalningen",
+                            exception.getResult().issues().stream()
+                                    .map(issue -> SSValidationDialog.formatIssue(issue.row(), issue.message())).toList());
+                    return;
+                }
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();
@@ -113,8 +121,15 @@ public class SSOutpaymentDialog {
         final ActionListener iSaveAction = e -> {
 
                 SSOutpayment iOutpayment1 = iPanel.getOutpayment();
+                try {
 
                 new OutpaymentService(SSDB.getInstance()).create(iOutpayment1);
+                } catch (OutpaymentValidationException exception) {
+                    SSValidationDialog.showIfInvalid(iDialog, "Utbetalningen",
+                            exception.getResult().issues().stream()
+                                    .map(issue -> SSValidationDialog.formatIssue(issue.row(), issue.message())).toList());
+                    return;
+                }
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();
@@ -173,7 +188,14 @@ public class SSOutpaymentDialog {
 
                 SSOutpayment iOutpayment = iPanel.getOutpayment();
 
-                SSDB.getInstance().updateOutpayment(iOutpayment);
+                try {
+                    new OutpaymentService(SSDB.getInstance()).update(iOutpayment);
+                } catch (OutpaymentValidationException exception) {
+                    SSValidationDialog.showIfInvalid(iDialog, "Utbetalningen",
+                            exception.getResult().issues().stream()
+                                    .map(issue -> SSValidationDialog.formatIssue(issue.row(), issue.message())).toList());
+                    return;
+                }
 
                 if (pModel != null) {
                     pModel.fireTableDataChanged();

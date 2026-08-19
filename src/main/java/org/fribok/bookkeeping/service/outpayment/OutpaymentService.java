@@ -42,12 +42,22 @@ public final class OutpaymentService {
     }
 
     public SSOutpayment create(SSOutpayment outpayment) {
+        requireValid(outpayment);
+        database.addOutpayment(outpayment);
+        return outpayment;
+    }
+
+    public SSOutpayment update(SSOutpayment outpayment) {
+        requireValid(outpayment);
+        database.updateOutpayment(outpayment);
+        return outpayment;
+    }
+
+    private void requireValid(SSOutpayment outpayment) {
         OutpaymentValidationResult validation = validate(outpayment);
         if (!validation.valid()) {
             throw new OutpaymentValidationException(validation);
         }
-        database.addOutpayment(outpayment);
-        return outpayment;
     }
 
     public OutpaymentJournalPlan planJournal(LocalDate from, LocalDate to) {

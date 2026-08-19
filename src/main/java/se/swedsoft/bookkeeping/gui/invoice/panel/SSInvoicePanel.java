@@ -23,6 +23,7 @@ import se.swedsoft.bookkeeping.gui.util.datechooser.SSDateChooser;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSInformationDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSValidationDialog;
 import se.swedsoft.bookkeeping.gui.util.model.SSCurrencyTableModel;
 import se.swedsoft.bookkeeping.gui.util.model.SSDeliveryTermTableModel;
 import se.swedsoft.bookkeeping.gui.util.model.SSDeliveryWayTableModel;
@@ -370,13 +371,6 @@ public class SSInvoicePanel {
         iInputVerifier = new SSInputVerifier();
         iInputVerifier.add(iCustomer);
         iInputVerifier.add(iCustomerName);
-        iInputVerifier.addListener(new SSInputVerifier.SSVerifierListener() {
-            public void updated(SSInputVerifier iVerifier, boolean iValid) {
-                // JComponent iCurrent = iVerifier.getCurrentComponent();
-
-                iButtonPanel.getOkButton().setEnabled(iValid);
-            }
-        });
         iSavecustomerandproducts.setSelected(true);
         addKeyListeners();
     }
@@ -497,16 +491,9 @@ public class SSInvoicePanel {
      * @return
      */
     public boolean isValid() {
-        if (!iInputVerifier.isValid()) {
-            return false;
-        }
         var validation = InvoiceValidator.validate(getInvoice(), SSDB.getInstance().getAccounts());
-        if (!validation.valid()) {
-            JOptionPane.showMessageDialog(iPanel, validation.issues().get(0).message(),
-                    "Ogiltig fakturarad", JOptionPane.WARNING_MESSAGE);
-            return false;
-        }
-        return true;
+        return SSValidationDialog.showIfInvalid(iPanel, "Fakturan", validation.issues().stream()
+                .map(issue -> SSValidationDialog.formatIssue(issue.row(), issue.message())).toList());
     }
 
     /**
