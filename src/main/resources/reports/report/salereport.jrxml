@@ -10,7 +10,7 @@
     <field name="product.description"  class="java.lang.String"/>
 
 
-    <field name="product.count"    class="java.lang.Integer"/>
+    <field name="product.count"    class="java.math.BigDecimal"/>
     <field name="product.monthly"  class="java.math.BigDecimal"/>
     <field name="product.weekly"   class="java.math.BigDecimal"/>
 
@@ -148,12 +148,12 @@
             <!-- Row #2 -->
 
             <!-- Period sales -->
-            <textField isBlankWhenNull="true">
+            <textField isBlankWhenNull="true" pattern="#,##0.##">
                 <reportElement x="20" y="14" width="80" height="14"/>
                 <textElement textAlignment="Left">
                     <font size="8"/>
                 </textElement>
-                <textFieldExpression class="java.lang.Integer">
+                <textFieldExpression class="java.math.BigDecimal">
                     <![CDATA[$F{product.count}]]>
                 </textFieldExpression>
             </textField>

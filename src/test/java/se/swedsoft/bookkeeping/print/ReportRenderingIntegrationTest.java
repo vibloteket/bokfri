@@ -17,6 +17,7 @@ import se.swedsoft.bookkeeping.data.common.SSCurrency;
 import se.swedsoft.bookkeeping.data.common.SSTaxCode;
 import se.swedsoft.bookkeeping.data.system.SSDBTestFixture;
 import se.swedsoft.bookkeeping.print.report.SSProjectsPrinter;
+import se.swedsoft.bookkeeping.print.report.SSSaleReportPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSInpaymentjournalPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSOutpaymentjournalPrinter;
 import org.fribok.bookkeeping.service.invoice.InvoiceService;
@@ -51,6 +52,15 @@ class ReportRenderingIntegrationTest {
     void projectReportPreviewImageContainsRenderedContent() throws Exception {
         SSProjectsPrinter printer = new SSProjectsPrinter(List.of(
                 new SSNewProject("P-1", "Preview project", "Ensures report pages are not blank")));
+
+        assertPreviewImageContainsRenderedContent(printer);
+    }
+
+    @Test
+    void saleReportAcceptsDecimalProductCounts() throws Exception {
+        SSSaleReportPrinter printer = new SSSaleReportPrinter(
+                LocalDate.of(2020, 1, 1), LocalDate.of(2030, 12, 31),
+                SSSaleReportPrinter.SortingMode.Product, true);
 
         assertPreviewImageContainsRenderedContent(printer);
     }

@@ -6,7 +6,7 @@
 
     <field name="product.number"          class="java.lang.String"/>
     <field name="product.description"     class="java.lang.String"/>
-    <field name="product.count"           class="java.lang.Integer"/>
+    <field name="product.count"           class="java.math.BigDecimal"/>
 
     <field name="product.unitprice"          class="java.math.BigDecimal"/>
     <field name="product.unit"               class="java.lang.String"/>
@@ -15,7 +15,7 @@
 
     <variable name="totalweight" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
         <variableExpression>
-            <![CDATA[$F{product.weight}.multiply( new BigDecimal( $F{product.count}.doubleValue() ) )]]>
+            <![CDATA[$F{product.weight}.multiply( $F{product.count} )]]>
         </variableExpression>
         <initialValueExpression>
             <![CDATA[new BigDecimal(0.0)]]>
@@ -24,7 +24,7 @@
 
     <variable name="totalvolume" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
         <variableExpression>
-            <![CDATA[$F{product.volume}.multiply( new BigDecimal( $F{product.count}.doubleValue() ) )]]>
+            <![CDATA[$F{product.volume}.multiply( $F{product.count} )]]>
         </variableExpression>
         <initialValueExpression>
             <![CDATA[new BigDecimal(0.0)]]>
@@ -56,7 +56,7 @@
 
 
             <!-- Description -->
-            <textField isBlankWhenNull="true">
+            <textField isBlankWhenNull="true" pattern="#,##0.##">
                 <reportElement x="80" y="2" width="90" height="12"/>
                 <textElement textAlignment="Left">
                     <font size="8"/>
@@ -115,7 +115,7 @@
                 <textElement textAlignment="Right">
                     <font size="8" isBold="false"/>
                 </textElement>
-                <textFieldExpression class="java.lang.Integer">
+                <textFieldExpression class="java.math.BigDecimal">
                     <![CDATA[$F{product.count}]]>
                 </textFieldExpression>
             </textField>

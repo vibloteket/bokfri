@@ -33,6 +33,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - `bokfri status` now reports the effective CLI log path. Unexpected CLI failures write
   full diagnostics to `logs/bokfri-cli.log`, return exit code 70, and can print the same
   details with `--verbose`; expected command errors remain concise and script-friendly.
+- Sales, delivery-note, and picking-list reports now accept decimal product quantities
+  and preserve exact decimal arithmetic when calculating total weight and volume.
 - CLI commands backed by GUI reports can now write the same Jasper reports as PDF:
   balance sheet, income statement, general ledger, voucher lists, individual vouchers,
   and credit invoices. `--format text|json` still controls stdout, while `--output`
