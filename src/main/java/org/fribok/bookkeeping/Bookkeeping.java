@@ -15,6 +15,7 @@ import org.fribok.bookkeeping.dataformat.DataMigrationService;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.data.util.SSConfig;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSUnexpectedErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.frame.SSFrameManager;
 import se.swedsoft.bookkeeping.gui.util.graphics.SSIcon;
 
@@ -91,10 +92,8 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
                 }
             }
             LOG.error("Failed to start local database", e);
-            JOptionPane.showMessageDialog(null,
-                    "Bokfri kunde inte öppna databasen. Ingen data har ändrats.\n\n"
-                            + e.getMessage(),
-                    "Databasen kunde inte öppnas", JOptionPane.ERROR_MESSAGE);
+            SSUnexpectedErrorDialog.showDialog(null, "Databasen kunde inte öppnas",
+                    "Bokfri kunde inte öppna databasen. Ingen data har ändrats.", e);
             return false;
         }
     }
@@ -115,6 +114,12 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
      * @param args The arguments to the program.
      */
     public static void main(String[] args) {
+        Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
+            LOG.error("Uncaught exception on thread " + thread.getName(), error);
+            SwingUtilities.invokeLater(() -> SSUnexpectedErrorDialog.showDialog(
+                    SSMainFrame.getInstance(), "Ett oväntat fel har inträffat",
+                    error.getMessage(), error));
+        });
         if (args.length > 0 && args[0].equals("--version")) {
             LOG.info(Version.APP_TITLE + " " + Version.APP_VERSION);
             return;

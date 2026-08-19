@@ -13,6 +13,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- GUI logs now live below Bokfri's platform data directory, keeping release and development
+  logs separate. The About dialog shows the log path and can open its folder or copy the path.
+  Unexpected technical errors provide copyable diagnostics, full stack traces, and a direct
+  link to the log folder while ordinary validation messages remain concise.
 - GUI forms now keep their OK buttons actionable and explain missing or invalid
   input when saving, instead of silently disabling the action. Structured validators
   show all detected problems for customers, products, invoices, payments, and vouchers.

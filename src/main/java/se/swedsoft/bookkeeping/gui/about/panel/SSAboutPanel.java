@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.gui.about.panel;
 
 
+import org.fribok.bookkeeping.app.LogFile;
 import org.fribok.bookkeeping.app.Version;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.util.BrowserLaunch;
@@ -9,6 +10,7 @@ import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +29,7 @@ public class SSAboutPanel {    private static final Logger LOG = LoggerFactory.g
 
     private JEditorPane iEditorPane;
 
-    private static final Dimension ABOUT_TEXT_SIZE = new Dimension(460, 270);
+    private static final Dimension ABOUT_TEXT_SIZE = new Dimension(560, 340);
 
     /**
      *
@@ -42,6 +44,12 @@ public class SSAboutPanel {    private static final Logger LOG = LoggerFactory.g
         iText = iText.replace("{TITLE}", Version.APP_TITLE);
         iText = iText.replace("{VERSION}", Version.APP_VERSION);
         iText = iText.replace("{BUILD}", Version.APP_BUILD);
+        String logPath = html(LogFile.file().getAbsolutePath());
+        iText = iText.replace("</center></html>",
+                "<br><br><b>Loggfil</b><br>" + logPath
+                        + "<br><a href=\"bokfri:open-log\">Öppna loggmapp</a> · "
+                        + "<a href=\"bokfri:copy-log-path\">Kopiera sökväg</a>"
+                        + "</center></html>");
 
         iEditorPane.setText(iText);
 
@@ -53,7 +61,14 @@ public class SSAboutPanel {    private static final Logger LOG = LoggerFactory.g
                         : e.getEventType().toString();
 
                 if (iEventName.equals("ACTIVATED")) {
-                    BrowserLaunch.openURL(e.getURL());
+                    if ("bokfri:open-log".equals(e.getDescription())) {
+                        openLogDirectory();
+                    } else if ("bokfri:copy-log-path".equals(e.getDescription())) {
+                        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(
+                                new StringSelection(LogFile.file().getAbsolutePath()), null);
+                    } else if (e.getURL() != null) {
+                        BrowserLaunch.openURL(e.getURL());
+                    }
                 }
                 if (iEventName.equals("ENTERED")) {
                     iEditorPane.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -64,6 +79,20 @@ public class SSAboutPanel {    private static final Logger LOG = LoggerFactory.g
 
             }
         });
+    }
+
+    private void openLogDirectory() {
+        try {
+            LogFile.openDirectory();
+        } catch (Exception exception) {
+            LOG.error("Could not open log directory", exception);
+            JOptionPane.showMessageDialog(iPanel, exception.getMessage(),
+                    "Kunde inte öppna loggmappen", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private static String html(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     /**

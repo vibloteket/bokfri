@@ -30,7 +30,7 @@ import se.swedsoft.bookkeeping.gui.supplier.SSSupplierFrame;
 import se.swedsoft.bookkeeping.gui.suppliercreditinvoice.SSSupplierCreditInvoiceFrame;
 import se.swedsoft.bookkeeping.gui.supplierinvoice.SSSupplierInvoiceFrame;
 import se.swedsoft.bookkeeping.gui.tender.SSTenderFrame;
-import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
+import se.swedsoft.bookkeeping.gui.util.dialogs.SSUnexpectedErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSInitDialog;
 import se.swedsoft.bookkeeping.gui.util.frame.SSFrameManager;
 import se.swedsoft.bookkeeping.gui.voucher.SSVoucherFrame;
@@ -394,8 +394,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         File iDbDir = new File(Path.get(Path.USER_DATA), "db");
         File iPropFile = new File(iDbDir, "JFSDB.properties");
@@ -506,8 +506,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iCompanies;
     }
@@ -538,8 +538,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -587,8 +587,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -610,8 +610,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -780,8 +780,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -807,8 +807,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                 try {
                     iConnection.rollback();
                 } catch (SQLException ignored) {}
-                SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                        e.getMessage());
+                SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
             }
         }
         return iYears;
@@ -836,8 +836,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                 try {
                     iConnection.rollback();
                 } catch (SQLException ignored) {}
-                SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                        e.getMessage());
+                SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
             }
         }
         return iYears;
@@ -870,8 +870,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -919,8 +919,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -948,8 +948,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -978,8 +978,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1043,8 +1043,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                 try {
                     iConnection.rollback();
                 } catch (SQLException ignored) {}
-                SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                        e.getMessage());
+                SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
             }
         }
         return Optional.empty();
@@ -1137,8 +1137,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iVouchers;
     }
@@ -1180,8 +1180,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iVoucherList;
     }
@@ -1212,8 +1212,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -1245,8 +1245,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -1288,8 +1288,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1318,8 +1318,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return 0;
     }
@@ -1344,8 +1344,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1368,8 +1368,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1398,8 +1398,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iVoucherTemplates;
     }
@@ -1434,8 +1434,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -1472,8 +1472,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1496,8 +1496,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1538,8 +1538,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iAccountPlans;
     }
@@ -1569,8 +1569,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -1613,8 +1613,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1638,8 +1638,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1661,8 +1661,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1684,8 +1684,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iUnits;
     }
@@ -1708,8 +1708,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1732,8 +1732,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1755,8 +1755,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1785,8 +1785,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iCurrencies;
     }
@@ -1811,8 +1811,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.of(iUpdatedCurrency);
     }
@@ -1835,8 +1835,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1859,8 +1859,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1882,8 +1882,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1912,8 +1912,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iDeliveryWays;
     }
@@ -1936,8 +1936,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1960,8 +1960,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -1983,8 +1983,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2013,8 +2013,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iDeliveryTerms;
     }
@@ -2037,8 +2037,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2061,8 +2061,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2084,8 +2084,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2114,8 +2114,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iPaymentTerms;
     }
@@ -2138,8 +2138,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2162,8 +2162,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2185,8 +2185,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2215,8 +2215,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iResultUnits;
     }
@@ -2250,8 +2250,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -2285,8 +2285,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -2321,8 +2321,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -2349,8 +2349,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2374,8 +2374,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2398,8 +2398,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2428,8 +2428,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iProjects;
     }
@@ -2462,8 +2462,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -2496,8 +2496,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -2532,8 +2532,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -2560,8 +2560,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2585,8 +2585,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -2609,8 +2609,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -3856,8 +3856,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iProducts;
     }
@@ -3890,8 +3890,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -3924,8 +3924,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -3968,8 +3968,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -3996,8 +3996,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4021,8 +4021,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4045,8 +4045,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4095,8 +4095,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iCustomers;
     }
@@ -4129,8 +4129,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -4163,8 +4163,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -4207,8 +4207,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -4235,8 +4235,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4260,8 +4260,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4284,8 +4284,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4334,8 +4334,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iSuppliers;
     }
@@ -4365,8 +4365,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -4409,8 +4409,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -4434,8 +4434,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4459,8 +4459,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4483,8 +4483,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4535,8 +4535,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iAutoDists;
     }
@@ -4566,8 +4566,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -4610,8 +4610,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -4635,8 +4635,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4661,8 +4661,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4688,8 +4688,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4739,8 +4739,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iTenders;
     }
@@ -4770,8 +4770,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -4815,8 +4815,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -4865,8 +4865,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4890,8 +4890,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4914,8 +4914,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -4960,8 +4960,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iOrders;
     }
@@ -4991,8 +4991,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -5035,8 +5035,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -5085,8 +5085,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5110,8 +5110,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5134,8 +5134,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5185,8 +5185,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iInvoices;
     }
@@ -5216,8 +5216,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -5260,8 +5260,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -5310,8 +5310,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5335,8 +5335,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5359,8 +5359,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5410,8 +5410,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iInpayments;
     }
@@ -5441,8 +5441,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -5491,8 +5491,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5516,8 +5516,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5540,8 +5540,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5589,8 +5589,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iOutpayments;
     }
@@ -5620,8 +5620,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -5670,8 +5670,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5695,8 +5695,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5719,8 +5719,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5770,8 +5770,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iCreditInvoices;
     }
@@ -5801,8 +5801,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -5845,8 +5845,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -5895,8 +5895,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5920,8 +5920,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5944,8 +5944,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -5995,8 +5995,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iPeriodicInvoices;
     }
@@ -6027,8 +6027,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -6077,8 +6077,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6102,8 +6102,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6126,8 +6126,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6177,8 +6177,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iPurchaseOrders;
     }
@@ -6208,8 +6208,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -6252,8 +6252,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -6302,8 +6302,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6327,8 +6327,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6351,8 +6351,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6402,8 +6402,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iSupplierInvoices;
     }
@@ -6434,8 +6434,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -6478,8 +6478,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -6528,8 +6528,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6553,8 +6553,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6577,8 +6577,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6629,8 +6629,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iSupplierCreditInvoices;
     }
@@ -6661,8 +6661,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -6711,8 +6711,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6736,8 +6736,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6760,8 +6760,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6810,8 +6810,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iInventories;
     }
@@ -6841,8 +6841,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -6891,8 +6891,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6916,8 +6916,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6940,8 +6940,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -6990,8 +6990,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iIndeliveries;
     }
@@ -7021,8 +7021,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -7071,8 +7071,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -7096,8 +7096,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -7120,8 +7120,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -7170,8 +7170,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iOutdeliveries;
     }
@@ -7201,8 +7201,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -7251,8 +7251,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -7276,8 +7276,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -7300,8 +7300,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -7345,8 +7345,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return iOwnReports;
     }
@@ -7379,8 +7379,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -7413,8 +7413,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Optional.empty();
     }
@@ -7457,8 +7457,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
         return Collections.emptyList();
     }
@@ -7507,8 +7507,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -7532,8 +7532,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 
@@ -7556,8 +7556,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             try {
                 iConnection.rollback();
             } catch (SQLException ignored) {}
-            SSErrorDialog.showDialog(SSMainFrame.getInstance(), "SQL Error",
-                    e.getMessage());
+            SSUnexpectedErrorDialog.showDialog(SSMainFrame.getInstance(), "Databasfel",
+                    "Bokfri kunde inte slutföra databasåtgärden.", e);
         }
     }
 

@@ -12,9 +12,9 @@
 
     <!-- Rolling file appender: DEBUG and above -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${user.home}/.bokfri/logs/bokfri.log</file>
+        <file>${bokfri.logDir:-${user.home}/.bokfri/logs}/bokfri.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${user.home}/.bokfri/logs/bokfri.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <fileNamePattern>${bokfri.logDir:-${user.home}/.bokfri/logs}/bokfri.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <maxFileSize>10MB</maxFileSize>
             <maxHistory>30</maxHistory>
             <totalSizeCap>100MB</totalSizeCap>

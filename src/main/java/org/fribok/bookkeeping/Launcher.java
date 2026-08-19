@@ -1,5 +1,6 @@
 package org.fribok.bookkeeping;
 
+import org.fribok.bookkeeping.app.LogFile;
 import org.fribok.bookkeeping.cli.BokfriCli;
 
 /** Selects the graphical application or the headless CLI before logging starts. */
@@ -8,6 +9,7 @@ public final class Launcher {
 
     public static void main(String[] args) {
         if (args.length == 0) {
+            LogFile.configure();
             Bookkeeping.main(args);
             return;
         }
