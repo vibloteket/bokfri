@@ -64,6 +64,19 @@ class CliTableFormatterTest {
     }
 
     @Test
+    void selectionTableKeepsBlankMarkerSpaceInTheHeader() {
+        String result = BokfriCli.selectionTable(List.of(
+                        Map.of("selected", false, "id", 54, "from", "2025-07-01"),
+                        Map.of("selected", true, "id", 55, "from", "2026-07-01")),
+                "No rows", left("Id", "id"), left("From", "from"));
+
+        assertThat(result).isEqualTo("""
+                  Id  From
+                  54  2025-07-01
+                * 55  2026-07-01""");
+    }
+
+    @Test
     void returnsEmptyMessageWithoutHeaders() {
         assertThat(CliTableFormatter.format(List.of(), "No rows", left("Name", "name")))
                 .isEqualTo("No rows");

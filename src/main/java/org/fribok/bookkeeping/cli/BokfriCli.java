@@ -489,13 +489,15 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 List<Map<String, Object>> companies = runtime.database().getCompanies().stream().map(company -> {
                     Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("selected", Objects.equals(context.companyId(), company.getId()));
                     item.put("id", company.getId());
                     item.put("name", company.getName());
                     item.put("corporateId", company.getCorporateID());
                     return item;
                 }).toList();
-                String text = table(companies, "No companies found",
-                        left("Id", "id"), left("Name", "name"), left("Corporate id", "corporateId"));
+                String text = selectionTable(companies, "No companies found",
+                        left("Id", "id"), left("Name", "name"),
+                        left("Corporate id", "corporateId"));
                 root.output(Map.of("selection", context.asMap(), "companies", companies), text);
                 return 0;
             } catch (Exception exception) {
@@ -622,14 +624,8 @@ public class BokfriCli implements Runnable {
                             item.put("to", year.getLocalTo().toString());
                             return item;
                         }).toList();
-                List<Map<String, Object>> displayYears = years.stream().map(year -> {
-                    Map<String, Object> row = new LinkedHashMap<>(year);
-                    row.put("marker", Boolean.TRUE.equals(year.get("selected")) ? "*" : "");
-                    return row;
-                }).toList();
-                String text = table(displayYears, "No accounting years found",
-                        left("Selected", "marker"), left("Id", "id"),
-                        left("From", "from"), left("To", "to"));
+                String text = selectionTable(years, "No accounting years found",
+                        left("Id", "id"), left("From", "from"), left("To", "to"));
                 Map<String, Object> selected = context.asMap();
                 selected.put("companyName", company.getName());
                 root.output(Map.of("selection", selected, "years", years), text);
@@ -959,6 +955,21 @@ public class BokfriCli implements Runnable {
     private static String table(List<? extends Map<String, ?>> rows, String emptyMessage,
             CliTableFormatter.Column... columns) {
         return CliTableFormatter.format(rows, emptyMessage, columns);
+    }
+
+    static String selectionTable(List<? extends Map<String, ?>> rows, String emptyMessage,
+            CliTableFormatter.Column... columns) {
+        if (rows.isEmpty()) {
+            return emptyMessage;
+        }
+        String[] lines = table(rows, emptyMessage, columns).split("\\R", -1);
+        StringBuilder result = new StringBuilder("  ").append(lines[0]);
+        for (int index = 0; index < rows.size(); index++) {
+            result.append('\n')
+                    .append(Boolean.TRUE.equals(rows.get(index).get("selected")) ? "* " : "  ")
+                    .append(lines[index + 1]);
+        }
+        return result.toString();
     }
 
     private static CliTableFormatter.Column left(String heading, String key) {

@@ -348,6 +348,33 @@ class BokfriCliTest {
     }
 
     @Test
+    void companyListMarksTheSelectedCompanyCompactly() throws Exception {
+        Path config = temporaryDirectory.resolve("company-list.config");
+        Path data = temporaryDirectory.resolve("company-list-data");
+        Result demo = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "demo", "recreate", "--commit");
+        int selectedCompanyId = new ObjectMapper().readTree(demo.stdout()).path("companyId").asInt();
+        execute("--config", config.toString(), "--data-dir", data.toString(),
+                "company", "use", Integer.toString(selectedCompanyId));
+
+        Result jsonList = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "company", "list");
+        Result textList = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "company", "list");
+
+        JsonNode companies = new ObjectMapper().readTree(jsonList.stdout()).path("companies");
+        assertThat(companies).anySatisfy(company -> {
+            assertThat(company.path("id").asInt()).isEqualTo(selectedCompanyId);
+            assertThat(company.path("selected").asBoolean()).isTrue();
+            assertThat(company.has("marker")).isFalse();
+        });
+        // The test harness trims captured output; selectionTable has a focused test for
+        // the two leading header spaces that align it with the unselected rows.
+        assertThat(textList.stdout()).startsWith("Id  Name")
+                .contains("* " + selectedCompanyId + "   Bokfri Demo AB");
+    }
+
+    @Test
     void yearListShowsNewestFirstAndMarksTheSelectedYear() throws Exception {
         Path config = temporaryDirectory.resolve("year-list.config");
         Path data = temporaryDirectory.resolve("year-list-data");
@@ -375,8 +402,11 @@ class BokfriCliTest {
         assertThat(years.get(0).path("selected").asBoolean()).isFalse();
         assertThat(years.get(1).path("selected").asBoolean()).isTrue();
         assertThat(years.get(0).has("marker")).isFalse();
-        assertThat(textList.stdout()).contains("Selected  Id", "*         " + selectedYearId,
-                "2026-07-01", "2025-07-01");
+        // The test harness trims captured output; selectionTable has a focused test for
+        // the two leading header spaces that align it with the unselected rows.
+        assertThat(textList.stdout()).startsWith("Id  From        To")
+                .contains("* " + selectedYearId + "   2025-07-01  2026-06-30",
+                        "2026-07-01");
     }
 
     @Test
