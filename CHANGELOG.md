@@ -12,6 +12,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-08-20
+
 ### Changed
 - GUI logs now live below Bokfri's platform data directory, keeping release and development
   logs separate. The About dialog shows the log path and can open its folder or copy the path.
@@ -25,6 +27,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   and accounting year and returns a failing exit code for incomplete or broken state.
 - Recreating the currently selected demo company now selects its replacement and
   current accounting year instead of leaving a stale selection.
+- Accounting years are sorted newest first in the GUI and CLI, and the selected
+  company and year are marked consistently in CLI lists.
 - `account list --filter TEXT` now filters the selected year's accounts by number
   or description using case-insensitive substring matching.
 - `company list` and `year list` now mark the effective selection consistently with
@@ -41,6 +45,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   balance sheet, income statement, general ledger, voucher lists, individual vouchers,
   and credit invoices. `--format text|json` still controls stdout, while `--output`
   creates the PDF and `--overwrite` protects existing files.
+- Installers now bundle a compressed, minimal Java runtime and stage only the production
+  fat JAR for `jpackage`. Release artifacts are about 30–35% smaller than in 1.1.0.
+- Removed the unused Jackson YAML dependency and its transitive SnakeYAML dependency.
 
 ## [1.1.0] - 2026-08-16
 
