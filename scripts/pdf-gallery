@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+action=${1:-}
+output=${2:-target/pdf-gallery}
+baselines=${3:-scripts/pdf-gallery-baselines}
+
+case "$action" in
+  generate)
+    [[ $# -le 2 ]] || { echo "Usage: ./scripts/pdf-gallery generate [output-directory]" >&2; exit 2; }
+    mvn -q -DskipTests package dependency:build-classpath \
+      -Dmdep.includeScope=test \
+      -Dmdep.outputFile=target/pdf-gallery-classpath.txt
+    jar=$(find target -maxdepth 1 -type f -name '*-jar-with-dependencies.jar' -print -quit)
+    [[ -n "$jar" ]] || { echo "Could not find the assembled Bokfri JAR in target/" >&2; exit 1; }
+    classpath="$jar:$(cat target/pdf-gallery-classpath.txt)"
+    java -Djava.awt.headless=true -cp "$classpath" scripts/PdfGallery.java "$jar" "$output"
+    ;;
+  compare|approve)
+    [[ $# -le 3 ]] || { echo "Usage: ./scripts/pdf-gallery $action [gallery] [baselines]" >&2; exit 2; }
+    java scripts/PdfGalleryImages.java "$action" "$output" "$baselines"
+    ;;
+  *)
+    echo "Usage: ./scripts/pdf-gallery generate|compare|approve [gallery] [baselines]" >&2
+    exit 2
+    ;;
+esac

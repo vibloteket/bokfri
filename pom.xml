@@ -470,7 +470,13 @@
       <version>1.5.12</version>
       <scope>compile</scope>
     </dependency>
-    <!-- test dependencies -->
+    <!-- PDF gallery rendering and test dependencies -->
+    <dependency>
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>3.0.5</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>

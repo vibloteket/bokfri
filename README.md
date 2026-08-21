@@ -113,8 +113,19 @@ mvn clean install
 ```
 
 Det skapar bland annat den körbara allt-i-ett-JAR-filen i `target/`.
-JAR-filens exakta namn följer versionen i `pom.xml`. Den aktuella versionen kan
-köras från projektroten med:
+JAR-filens exakta namn följer versionen i `pom.xml`. Ett deterministiskt
+PDF-galleri för rapportregressioner kan genereras och jämföras med:
+
+```sh
+./scripts/pdf-gallery generate
+./scripts/pdf-gallery compare
+```
+
+Galleriet hamnar i `target/pdf-gallery/`; `index.html` visar de renderade
+sidorna. En avsiktlig visuell förändring kan godkännas med
+`./scripts/pdf-gallery approve`, men det kommandot körs aldrig av CI.
+
+Den aktuella versionen kan köras från projektroten med:
 
 ```sh
 java -jar target/bokfri-1.1.2-SNAPSHOT-jar-with-dependencies.jar
