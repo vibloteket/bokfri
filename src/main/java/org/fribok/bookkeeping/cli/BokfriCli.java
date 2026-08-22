@@ -96,6 +96,7 @@ import se.swedsoft.bookkeeping.data.system.SSDBConfig;
 import se.swedsoft.bookkeeping.importexport.sie.util.SIEType;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 import se.swedsoft.bookkeeping.print.report.SSBalancePrinter;
+import se.swedsoft.bookkeeping.print.report.SSCustomerListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSMainBookPrinter;
 import se.swedsoft.bookkeeping.print.report.SSResultPrinter;
 import se.swedsoft.bookkeeping.print.report.SSVoucherListPrinter;
@@ -1258,18 +1259,29 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List customers")
     static class CustomerList implements Callable<Integer> {
         @CommandLine.ParentCommand CustomerCommand command;
+        @Option(names = "--output", description = "Write the GUI customer list as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite", description = "Replace an existing output file")
+        boolean overwrite;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 CustomerService service = new CustomerService(runtime.database());
-                List<Map<String, Object>> customers = service.list().stream()
+                List<SSCustomer> listedCustomers = service.list();
+                List<Map<String, Object>> customers = listedCustomers.stream()
                         .map(BokfriCli::customerSummary).toList();
-                root.output(Map.of("selection", selectedCompanyContext(context, company),
-                                "count", customers.size(), "customers", customers),
-                        table(customers, "No customers found", left("Number", "number"),
-                                left("Name", "name"), left("Email", "email")));
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("selection", selectedCompanyContext(context, company));
+                result.put("count", customers.size());
+                result.put("customers", customers);
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSCustomerListPrinter(
+                            new java.util.ArrayList<>(listedCustomers)), output, overwrite));
+                }
+                root.output(result, table(customers, "No customers found",
+                        left("Number", "number"), left("Name", "name"), left("Email", "email")));
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
