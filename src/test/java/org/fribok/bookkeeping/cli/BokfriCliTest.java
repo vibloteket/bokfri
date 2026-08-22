@@ -434,6 +434,7 @@ class BokfriCliTest {
         Path ledger = temporaryDirectory.resolve("ledger.pdf");
         Path vouchers = temporaryDirectory.resolve("vouchers.pdf");
         Path voucher = temporaryDirectory.resolve("voucher.pdf");
+        Path customers = temporaryDirectory.resolve("customers.pdf");
 
         Result balanceResult = execute(concat(context, "balance-sheet", "--output", balance.toString()));
         Result incomeResult = execute(concat(context, "income-statement", "--output", resultPdf.toString()));
@@ -446,15 +447,17 @@ class BokfriCliTest {
                 .path("vouchers").get(0).path("number").asInt();
         Result voucherResult = execute(concat(context, "voucher", "show",
                 Integer.toString(voucherNumber), "--output", voucher.toString()));
+        Result customerResult = execute(concat(context, "customer", "list",
+                "--output", customers.toString()));
 
         for (Result cliResult : List.of(balanceResult, incomeResult, ledgerResult,
-                vouchersResult, voucherResult)) {
+                vouchersResult, voucherResult, customerResult)) {
             assertThat(cliResult.exitCode()).isZero();
             JsonNode json = new ObjectMapper().readTree(cliResult.stdout());
             assertThat(json.path("output").asText()).endsWith(".pdf");
             assertThat(json.path("bytes").asLong()).isGreaterThan(1_000);
         }
-        for (Path pdf : List.of(balance, resultPdf, ledger, vouchers, voucher)) {
+        for (Path pdf : List.of(balance, resultPdf, ledger, vouchers, voucher, customers)) {
             assertThat(Files.readAllBytes(pdf)).startsWith((byte) '%', (byte) 'P', (byte) 'D',
                     (byte) 'F', (byte) '-');
         }
