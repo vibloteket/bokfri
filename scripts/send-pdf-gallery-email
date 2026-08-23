@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+required=(SMTP_SERVER SMTP_PORT SMTP_USERNAME SMTP_PASSWORD EMAIL_FROM EMAIL_TO GALLERY_DIR)
+for name in "${required[@]}"; do
+  if [[ -z ${!name:-} ]]; then
+    echo "Skipping PDF gallery email: $name is not configured."
+    exit 0
+  fi
+done
+
+if [[ ! -d $GALLERY_DIR ]]; then
+  echo "PDF gallery directory does not exist: $GALLERY_DIR" >&2
+  exit 1
+fi
+
+mapfile -t attachments < <(find "$GALLERY_DIR" -mindepth 2 -maxdepth 2 -type f \
+  \( -name '*.pdf' -o -name 'page-*.png' \) ! -name '*-diff.png' | sort)
+if [[ ${#attachments[@]} -eq 0 ]]; then
+  echo "PDF gallery contains no PDF or page images." >&2
+  exit 1
+fi
+
+message=$(mktemp)
+trap 'rm -f "$message"' EXIT
+boundary="bokfri-gallery-$(date +%s)-${RANDOM}"
+subject=${EMAIL_SUBJECT:-Bokfri PDF gallery}
+actions_url=${ACTIONS_URL:-}
+pr_url=${PR_URL:-}
+commit=${COMMIT_SHA:-unknown}
+
+{
+  printf 'From: Bokfri CI <%s>\r\n' "$EMAIL_FROM"
+  printf 'To: %s\r\n' "$EMAIL_TO"
+  printf 'Subject: %s\r\n' "$subject"
+  printf 'MIME-Version: 1.0\r\n'
+  printf 'Content-Type: multipart/mixed; boundary="%s"\r\n' "$boundary"
+  printf '\r\n--%s\r\n' "$boundary"
+  printf 'Content-Type: text/plain; charset=UTF-8\r\n'
+  printf 'Content-Transfer-Encoding: 8bit\r\n\r\n'
+  printf 'Bokfri PDF gallery generated successfully.\r\n\r\n'
+  printf 'Reports:\r\n'
+  find "$GALLERY_DIR" -mindepth 2 -maxdepth 2 -type f -name '*.pdf' -printf -- '- %h\n' \
+    | sed "s#- $GALLERY_DIR/##" | sort -u | sed 's/$/\r/'
+  printf '\r\nCommit: %s\r\n' "$commit"
+  [[ -z $pr_url ]] || printf 'Pull request: %s\r\n' "$pr_url"
+  [[ -z $actions_url ]] || printf 'GitHub Actions: %s\r\n' "$actions_url"
+  printf '\r\nThe generated PDFs and page images are attached.\r\n'
+
+  for attachment in "${attachments[@]}"; do
+    relative=${attachment#"$GALLERY_DIR"/}
+    filename=${relative//\//-}
+    case "$attachment" in
+      *.pdf) content_type='application/pdf' ;;
+      *.png) content_type='image/png' ;;
+    esac
+    printf '\r\n--%s\r\n' "$boundary"
+    printf 'Content-Type: %s; name="%s"\r\n' "$content_type" "$filename"
+    printf 'Content-Disposition: attachment; filename="%s"\r\n' "$filename"
+    printf 'Content-Transfer-Encoding: base64\r\n\r\n'
+    base64 -w 76 "$attachment" | sed 's/$/\r/'
+  done
+  printf '\r\n--%s--\r\n' "$boundary"
+} > "$message"
+
+curl --fail-with-body --silent --show-error \
+  --url "smtp://${SMTP_SERVER}:${SMTP_PORT}" \
+  --ssl-reqd \
+  --user "${SMTP_USERNAME}:${SMTP_PASSWORD}" \
+  --mail-from "$EMAIL_FROM" \
+  --mail-rcpt "$EMAIL_TO" \
+  --upload-file "$message"
+
+echo "Sent PDF gallery email to $EMAIL_TO with ${#attachments[@]} attachments."
