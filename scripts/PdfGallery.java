@@ -49,6 +49,7 @@ public final class PdfGallery {
         try {
             int invoiceNumber = generateInvoiceScenario();
             generateCustomerListScenario();
+            generateGeneralLedgerScenario(invoiceNumber);
             writeIndex(invoiceNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
@@ -129,6 +130,31 @@ public final class PdfGallery {
         renderPages(pdf, scenario);
     }
 
+    private static void generateGeneralLedgerScenario(int invoiceNumber) throws Exception {
+        Result journal = cliInYear("invoice", "journal", "--from", "2026-03-15",
+                "--to", "2026-03-15", "--commit");
+        require(journal.stdout().contains("\"invoiceNumbers\":[" + invoiceNumber + "]"),
+                "Invoice journal does not contain gallery invoice " + invoiceNumber);
+        require(journal.stdout().contains("\"committed\":true"),
+                "Invoice journal was not committed");
+
+        Result bookedInvoice = cliInYear("invoice", "show", Integer.toString(invoiceNumber));
+        require(bookedInvoice.stdout().contains("\"entered\":true"),
+                "Gallery invoice was not marked as entered");
+
+        Path scenario = output.resolve("general-ledger-3001");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("general-ledger-3001.pdf");
+        Result ledger = cliInYear("general-ledger", "--account", "3001",
+                "--from", "2026-01-01", "--to", "2026-12-31", "--output", pdf.toString());
+        require(ledger.stdout().contains("\"account\":3001"),
+                "General ledger output does not describe account 3001");
+        require(!ledger.stdout().contains("\"rows\":[]"),
+                "General ledger for account 3001 contains no transactions");
+        verifyPdf(pdf, List.of("3001", "Fakturajournal", "281.25"));
+        renderPages(pdf, scenario);
+    }
+
     private static void verifyPdf(Path pdf, List<String> expectedText) throws Exception {
         require(Files.size(pdf) > 1_000, "PDF is unexpectedly small: " + pdf);
         byte[] signature = Files.readAllBytes(pdf);
@@ -154,12 +180,12 @@ public final class PdfGallery {
 
     private static void renderPages(Path pdf, Path scenario) throws Exception {
         try (PDDocument document = Loader.loadPDF(pdf.toFile())) {
-            require(document.getNumberOfPages() > 0, "Invoice PDF has no pages");
+            require(document.getNumberOfPages() > 0, "PDF has no pages: " + pdf);
             PDFRenderer renderer = new PDFRenderer(document);
             for (int page = 0; page < document.getNumberOfPages(); page++) {
                 BufferedImage image = renderer.renderImageWithDPI(page, 144, ImageType.RGB);
                 require(countNonWhitePixels(image) > 1_000,
-                        "Rendered invoice page " + (page + 1) + " is blank");
+                        "Rendered page " + (page + 1) + " is blank: " + pdf);
                 ImageIO.write(image, "png", scenario.resolve("page-" + (page + 1) + ".png").toFile());
             }
         }
@@ -186,7 +212,11 @@ public final class PdfGallery {
                 <article><h2>Faktura %d</h2><p><a href="invoice/invoice.pdf">Öppna PDF</a></p>
                 <img src="invoice/page-1.png" alt="Faktura %d, sida 1"></article>
                 <article><h2>Kundlista</h2><p><a href="customer-list/customer-list.pdf">Öppna PDF</a></p>
-                <img src="customer-list/page-1.png" alt="Kundlista, sida 1"></article></main></html>
+                <img src="customer-list/page-1.png" alt="Kundlista, sida 1"></article>
+                <article><h2>Huvudbok – konto 3001</h2>
+                <p><a href="general-ledger-3001/general-ledger-3001.pdf">Öppna PDF</a></p>
+                <img src="general-ledger-3001/page-1.png" alt="Huvudbok konto 3001, sida 1"></article>
+                </main></html>
                 """.formatted(invoiceNumber, invoiceNumber), StandardCharsets.UTF_8);
     }
 
@@ -218,7 +248,11 @@ public final class PdfGallery {
 
     private static Result run(List<String> arguments) throws Exception {
         java.util.ArrayList<String> command = new java.util.ArrayList<>();
-        if (jarLauncher) { command.add("java"); command.add("-jar"); }
+        if (jarLauncher) {
+            command.add("java");
+            command.add("-Dbokfri.reportDate=2026-03-15");
+            command.add("-jar");
+        }
         command.add(launcher.toString());
         command.add("--config"); command.add(config.toString());
         command.add("--data-dir"); command.add(data.toString());
