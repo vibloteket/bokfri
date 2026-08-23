@@ -40,8 +40,12 @@ commit=${COMMIT_SHA:-unknown}
   printf 'Content-Transfer-Encoding: 8bit\r\n\r\n'
   printf 'Bokfri PDF gallery generated successfully.\r\n\r\n'
   printf 'Reports:\r\n'
-  find "$GALLERY_DIR" -mindepth 2 -maxdepth 2 -type f -name '*.pdf' -printf -- '- %h\n' \
-    | sed "s#- $GALLERY_DIR/##" | sort -u | sed 's/$/\r/'
+  for attachment in "${attachments[@]}"; do
+    if [[ $attachment == *.pdf ]]; then
+      report=${attachment#"$GALLERY_DIR"/}
+      printf -- '- %s\r\n' "${report%/*}"
+    fi
+  done
   printf '\r\nCommit: %s\r\n' "$commit"
   [[ -z $pr_url ]] || printf 'Pull request: %s\r\n' "$pr_url"
   [[ -z $actions_url ]] || printf 'GitHub Actions: %s\r\n' "$actions_url"
