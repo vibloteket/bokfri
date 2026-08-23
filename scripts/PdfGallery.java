@@ -75,12 +75,28 @@ public final class PdfGallery {
         Path customer = json("customer.json", """
                 {
                   "number": "K100",
-                  "name": "Exempelkund XYZ AB",
+                  "name": "Exempelkund ÅÄÖ AB",
+                  "registrationNumber": "559999-5678",
+                  "vatNumber": "SE559999567801",
                   "email": "faktura@example.invalid",
+                  "phone": "+46 8 123 45 67",
+                  "ourContact": "Anna Åström",
+                  "yourContact": "Émile Öberg",
                   "invoiceAddress": {
+                    "name": "Exempelkund ÅÄÖ AB",
                     "address1": "Testgatan 15",
+                    "address2": "Ekonomiavdelningen",
                     "postalCode": "123 45",
-                    "city": "Testköping"
+                    "city": "Testköping",
+                    "country": "Sverige"
+                  },
+                  "deliveryAddress": {
+                    "name": "Exempelkund ÅÄÖ – Lager & Gods",
+                    "address1": "Leveransvägen 27",
+                    "address2": "Port B, lastkaj 4",
+                    "postalCode": "987 65",
+                    "city": "Åmål",
+                    "country": "Sverige"
                   }
                 }
                 """);
@@ -104,8 +120,18 @@ public final class PdfGallery {
                   "date": "2026-03-15",
                   "dueDate": "2026-04-14",
                   "yourOrderNumber": "ORDER-XYZ",
-                  "text": "Deterministisk gallerifaktura",
-                  "rows": [{"productNumber":"P100","quantity":"2.25"}]
+                  "text": "Deterministisk gallerifaktura – tack för ert köp!",
+                  "rows": [
+                    {"productNumber":"P100","quantity":"2.25"},
+                    {
+                      "description":"Konsulttjänst – åäö & analys",
+                      "quantity":"0.5","unitPrice":"80.00","vatRate":"25","salesAccount":3001
+                    },
+                    {
+                      "description":"Mycket litet belopp","quantity":"1","unitPrice":"0.01",
+                      "vatRate":"25","salesAccount":3001
+                    }
+                  ]
                 }
                 """);
         int invoiceNumber = firstInt(
@@ -116,7 +142,9 @@ public final class PdfGallery {
         Path pdf = scenario.resolve("invoice.pdf");
         cliInYear("invoice", "pdf", Integer.toString(invoiceNumber),
                 "--output", pdf.toString()).success();
-        verifyPdf(pdf, List.of("K100", "Galleriartikel decimal", "2.25", "ORDER-XYZ"));
+        verifyPdf(pdf, List.of("K100", "Exempelkund ÅÄÖ AB",
+                "Leveransvägen 27", "lastkaj 4", "Galleriartikel decimal", "2.25", "0.5",
+                "Mycket litet belopp", "ORDER-XYZ"));
         renderPages(pdf, scenario);
         return invoiceNumber;
     }
@@ -126,7 +154,8 @@ public final class PdfGallery {
         Files.createDirectories(scenario);
         Path pdf = scenario.resolve("customer-list.pdf");
         cliInYear("customer", "list", "--output", pdf.toString()).success();
-        verifyPdf(pdf, List.of("K100", "Exempelkund XYZ AB"));
+        verifyPdf(pdf, List.of("K100", "Exempelkund ÅÄÖ AB",
+                "559999-5678", "+46 8 123 45 67"));
         renderPages(pdf, scenario);
     }
 
@@ -151,7 +180,7 @@ public final class PdfGallery {
                 "General ledger output does not describe account 3001");
         require(!ledger.stdout().contains("\"rows\":[]"),
                 "General ledger for account 3001 contains no transactions");
-        verifyPdf(pdf, List.of("3001", "Fakturajournal", "281.25"));
+        verifyPdf(pdf, List.of("3001", "Fakturajournal", "321.26"));
         renderPages(pdf, scenario);
     }
 
