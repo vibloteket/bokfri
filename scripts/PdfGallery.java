@@ -47,14 +47,16 @@ public final class PdfGallery {
         Files.createDirectories(data);
 
         try {
-            generateInvoiceScenario();
+            int invoiceNumber = generateInvoiceScenario();
+            generateCustomerListScenario();
+            writeIndex(invoiceNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
             deleteRecursively(work);
         }
     }
 
-    private static void generateInvoiceScenario() throws Exception {
+    private static int generateInvoiceScenario() throws Exception {
         int planId = firstInt(cli("account-plan", "list").stdout(), "id");
         Path company = json("company.json", """
                 {
@@ -115,15 +117,24 @@ public final class PdfGallery {
                 "--output", pdf.toString()).success();
         verifyPdf(pdf, List.of("K100", "Galleriartikel decimal", "2.25", "ORDER-XYZ"));
         renderPages(pdf, scenario);
-        writeIndex(invoiceNumber, scenario);
+        return invoiceNumber;
+    }
+
+    private static void generateCustomerListScenario() throws Exception {
+        Path scenario = output.resolve("customer-list");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("customer-list.pdf");
+        cliInYear("customer", "list", "--output", pdf.toString()).success();
+        verifyPdf(pdf, List.of("K100", "Exempelkund XYZ AB"));
+        renderPages(pdf, scenario);
     }
 
     private static void verifyPdf(Path pdf, List<String> expectedText) throws Exception {
-        require(Files.size(pdf) > 1_000, "Invoice PDF is unexpectedly small");
+        require(Files.size(pdf) > 1_000, "PDF is unexpectedly small: " + pdf);
         byte[] signature = Files.readAllBytes(pdf);
         require(signature.length >= 5 && signature[0] == '%' && signature[1] == 'P'
                         && signature[2] == 'D' && signature[3] == 'F' && signature[4] == '-',
-                "Invoice output does not have a PDF signature");
+                "Output does not have a PDF signature: " + pdf);
 
         PdfReader reader = new PdfReader(pdf.toString());
         StringBuilder text = new StringBuilder();
@@ -164,16 +175,18 @@ public final class PdfGallery {
         return count;
     }
 
-    private static void writeIndex(int invoiceNumber, Path scenario) throws IOException {
+    private static void writeIndex(int invoiceNumber) throws IOException {
         Files.writeString(output.resolve("index.html"), """
                 <!doctype html>
                 <html lang="sv"><meta charset="utf-8"><title>Bokfri PDF gallery</title>
                 <style>body{font:16px system-ui;margin:2rem;background:#f5f5f5;color:#222}
-                article{max-width:900px;margin:auto;background:white;padding:2rem;box-shadow:0 2px 12px #bbb}
+                main{max-width:900px;margin:auto}article{background:white;padding:2rem;margin:2rem 0;box-shadow:0 2px 12px #bbb}
                 img{max-width:100%%;border:1px solid #ccc}</style>
-                <article><h1>Bokfri PDF gallery</h1><h2>Faktura %d</h2>
-                <p><a href="invoice/invoice.pdf">Öppna PDF</a></p>
-                <img src="invoice/page-1.png" alt="Faktura %d, sida 1"></article></html>
+                <main><h1>Bokfri PDF gallery</h1>
+                <article><h2>Faktura %d</h2><p><a href="invoice/invoice.pdf">Öppna PDF</a></p>
+                <img src="invoice/page-1.png" alt="Faktura %d, sida 1"></article>
+                <article><h2>Kundlista</h2><p><a href="customer-list/customer-list.pdf">Öppna PDF</a></p>
+                <img src="customer-list/page-1.png" alt="Kundlista, sida 1"></article></main></html>
                 """.formatted(invoiceNumber, invoiceNumber), StandardCharsets.UTF_8);
     }
 

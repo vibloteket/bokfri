@@ -60,6 +60,23 @@ jobs:
         path: target/pdf-gallery/
         if-no-files-found: warn
 
+    - name: Email PDF gallery
+      if: runner.os == 'Linux' && success()
+      continue-on-error: true
+      env:
+        SMTP_SERVER: ${{ vars.GALLERY_SMTP_SERVER }}
+        SMTP_PORT: ${{ vars.GALLERY_SMTP_PORT }}
+        SMTP_USERNAME: ${{ vars.GALLERY_SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.GALLERY_EMAIL_PASSWORD }}
+        EMAIL_FROM: ${{ vars.GALLERY_EMAIL_FROM }}
+        EMAIL_TO: ${{ vars.GALLERY_EMAIL_TO }}
+        GALLERY_DIR: target/pdf-gallery
+        EMAIL_SUBJECT: Bokfri PDF gallery - PR #${{ github.event.pull_request.number }}
+        PR_URL: ${{ github.event.pull_request.html_url }}
+        ACTIONS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        COMMIT_SHA: ${{ github.sha }}
+      run: ./scripts/send-pdf-gallery-email
+
     - name: Upload coverage report
       if: runner.os == 'Linux'
       uses: actions/upload-artifact@v7
