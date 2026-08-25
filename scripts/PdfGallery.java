@@ -49,9 +49,10 @@ public final class PdfGallery {
         try {
             int invoiceNumber = generateInvoiceScenario();
             int longInvoiceNumber = generateMultipageInvoiceScenario();
+            int amountsInvoiceNumber = generateAmountsInvoiceScenario();
             generateCustomerListScenario();
             generateGeneralLedgerScenario(invoiceNumber);
-            writeIndex(invoiceNumber, longInvoiceNumber);
+            writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
             deleteRecursively(work);
@@ -184,6 +185,50 @@ public final class PdfGallery {
         return invoiceNumber;
     }
 
+    private static int generateAmountsInvoiceScenario() throws Exception {
+        Path invoiceInput = json("amounts-invoice.json", """
+                {
+                  "customerNumber":"K100",
+                  "date":"2026-05-10",
+                  "dueDate":"2026-06-09",
+                  "yourOrderNumber":"ORDER-AMOUNTS",
+                  "text":"Belopps- och momsgränser",
+                  "rows":[
+                    {"description":"Minsta belopp 25 %","quantity":"1","unitPrice":"0.01",
+                     "vatRate":"25","salesAccount":3001},
+                    {"description":"Stort belopp med rabatt","quantity":"1","unitPrice":"1234567.89",
+                     "discount":"12.5","vatRate":"25","salesAccount":3001},
+                    {"description":"Halvtimme med 12 % moms","quantity":"0.5","unitPrice":"199.95",
+                     "vatRate":"12","salesAccount":3001},
+                    {"description":"Kvartsenhet med 6 % moms","quantity":"2.25","unitPrice":"9.99",
+                     "vatRate":"6","salesAccount":3001}
+                  ]
+                }
+                """);
+        Result created = cliInYear("invoice", "create", "--file", invoiceInput.toString());
+        int invoiceNumber = firstInt(created.stdout(), "number");
+        require(created.stdout().contains("\"rowCount\":4"),
+                "Amounts invoice does not contain four rows");
+        require(created.stdout().contains("\"net\":\"1080369.37\""),
+                "Amounts invoice has an unexpected net total");
+        require(created.stdout().contains("\"vat\":\"270075.07\""),
+                "Amounts invoice has an unexpected VAT total");
+        require(created.stdout().contains("\"total\":\"1350444.00\""),
+                "Amounts invoice has an unexpected total");
+
+        Path scenario = output.resolve("invoice-amounts");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("invoice-amounts.pdf");
+        cliInYear("invoice", "pdf", Integer.toString(invoiceNumber),
+                "--output", pdf.toString()).success();
+        verifyPdf(pdf, List.of("ORDER-AMOUNTS", "Minsta belopp", "Stort belopp",
+                "246,90", "12,50", "Halvtimme", "Kvartsenhet", "Moms 25%", "Moms 12%", "Moms 6%",
+                "270", "061,73", "12,00", "1,35"));
+        int pages = renderPages(pdf, scenario);
+        require(pages == 1, "Amounts invoice unexpectedly rendered " + pages + " pages");
+        return invoiceNumber;
+    }
+
     private static void generateCustomerListScenario() throws Exception {
         Path scenario = output.resolve("customer-list");
         Files.createDirectories(scenario);
@@ -283,7 +328,8 @@ public final class PdfGallery {
         return count;
     }
 
-    private static void writeIndex(int invoiceNumber, int longInvoiceNumber) throws IOException {
+    private static void writeIndex(int invoiceNumber, int longInvoiceNumber,
+            int amountsInvoiceNumber) throws IOException {
         String multipageImages;
         try (Stream<Path> paths = Files.list(output.resolve("invoice-multipage"))) {
             multipageImages = paths.filter(path -> path.getFileName().toString().matches("page-[0-9]+\\.png"))
@@ -304,13 +350,17 @@ public final class PdfGallery {
                 <article><h2>Flersidig faktura %d</h2>
                 <p><a href="invoice-multipage/invoice-multipage.pdf">Öppna PDF</a></p>
                 %s</article>
+                <article><h2>Beloppsfaktura %d</h2>
+                <p><a href="invoice-amounts/invoice-amounts.pdf">Öppna PDF</a></p>
+                <img src="invoice-amounts/page-1.png" alt="Beloppsfaktura, sida 1"></article>
                 <article><h2>Kundlista</h2><p><a href="customer-list/customer-list.pdf">Öppna PDF</a></p>
                 <img src="customer-list/page-1.png" alt="Kundlista, sida 1"></article>
                 <article><h2>Huvudbok – konto 3001</h2>
                 <p><a href="general-ledger-3001/general-ledger-3001.pdf">Öppna PDF</a></p>
                 <img src="general-ledger-3001/page-1.png" alt="Huvudbok konto 3001, sida 1"></article>
                 </main></html>
-                """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages),
+                """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages,
+                        amountsInvoiceNumber),
                 StandardCharsets.UTF_8);
     }
 
