@@ -82,6 +82,32 @@ class ReportRenderingIntegrationTest {
     }
 
     @Test
+    void multipageInvoicePrintsTotalsOnlyOnLastPage() throws Exception {
+        SSInvoice invoice = invoice();
+        invoice.getRows().clear();
+        for (int rowNumber = 1; rowNumber <= 45; rowNumber++) {
+            SSSaleRow row = new SSSaleRow();
+            row.setDescription("Multipage row " + rowNumber);
+            row.setQuantity(1);
+            row.setUnitprice(new BigDecimal(rowNumber));
+            row.setTaxCode(SSTaxCode.TAXRATE_1);
+            invoice.getRows().add(row);
+        }
+        SSInvoicePrinter printer = new SSInvoicePrinter(invoice, Locale.forLanguageTag("sv-SE"));
+
+        printer.generateReport();
+
+        JasperPrint print = printer.getPrinter();
+        assertThat(print.getPages()).hasSizeGreaterThanOrEqualTo(2);
+        List<PrintedText> firstPage = printedTextOnPage(print, 0);
+        List<PrintedText> lastPage = printedTextOnPage(print, print.getPages().size() - 1);
+        assertThat(firstPage.stream().map(PrintedText::text)).doesNotContain("Nettosumma", "ATT BETALA");
+        assertThat(lastPage.stream().map(PrintedText::text)).contains("Nettosumma", "ATT BETALA");
+        assertThat(allPrintedText(print).stream().map(PrintedText::text))
+                .contains("Multipage row 1", "Multipage row 45");
+    }
+
+    @Test
     void invoiceServiceExportsHeadlessPdf() throws Exception {
         Path output = Files.createTempFile("bokfri-invoice-", ".pdf");
         Files.delete(output);
@@ -157,6 +183,12 @@ class ReportRenderingIntegrationTest {
         List<PrintedText> text = new ArrayList<>();
 
         print.getPages().forEach(page -> collectPrintedText(page.getElements(), text, 0, 0));
+        return text;
+    }
+
+    private static List<PrintedText> printedTextOnPage(JasperPrint print, int pageIndex) {
+        List<PrintedText> text = new ArrayList<>();
+        collectPrintedText(print.getPages().get(pageIndex).getElements(), text, 0, 0);
         return text;
     }
 

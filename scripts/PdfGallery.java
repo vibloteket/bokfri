@@ -48,9 +48,10 @@ public final class PdfGallery {
 
         try {
             int invoiceNumber = generateInvoiceScenario();
+            int longInvoiceNumber = generateMultipageInvoiceScenario();
             generateCustomerListScenario();
             generateGeneralLedgerScenario(invoiceNumber);
-            writeIndex(invoiceNumber);
+            writeIndex(invoiceNumber, longInvoiceNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
             deleteRecursively(work);
@@ -149,6 +150,40 @@ public final class PdfGallery {
         return invoiceNumber;
     }
 
+    private static int generateMultipageInvoiceScenario() throws Exception {
+        StringBuilder rows = new StringBuilder();
+        for (int row = 1; row <= 45; row++) {
+            if (row > 1) rows.append(',');
+            rows.append("""
+                    {"description":"Flersidig rad %02d – stabil sidbrytning",
+                     "quantity":"1","unitPrice":"%d.00","vatRate":"25","salesAccount":3001}
+                    """.formatted(row, row));
+        }
+        Path invoiceInput = json("multipage-invoice.json", """
+                {
+                  "customerNumber":"K100",
+                  "date":"2026-04-20",
+                  "dueDate":"2026-05-20",
+                  "yourOrderNumber":"ORDER-MULTIPAGE",
+                  "text":"Flersidig faktura med 45 deterministiska rader",
+                  "rows":[%s]
+                }
+                """.formatted(rows));
+        int invoiceNumber = firstInt(cliInYear("invoice", "create", "--file",
+                invoiceInput.toString()).stdout(), "number");
+
+        Path scenario = output.resolve("invoice-multipage");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("invoice-multipage.pdf");
+        cliInYear("invoice", "pdf", Integer.toString(invoiceNumber),
+                "--output", pdf.toString()).success();
+        verifyPdf(pdf, List.of("ORDER-MULTIPAGE", "Flersidig rad 01", "Flersidig rad 45"));
+        verifyMultipageInvoiceText(pdf);
+        int pages = renderPages(pdf, scenario);
+        require(pages >= 2, "Multipage invoice rendered only " + pages + " page(s)");
+        return invoiceNumber;
+    }
+
     private static void generateCustomerListScenario() throws Exception {
         Path scenario = output.resolve("customer-list");
         Files.createDirectories(scenario);
@@ -184,6 +219,22 @@ public final class PdfGallery {
         renderPages(pdf, scenario);
     }
 
+    private static void verifyMultipageInvoiceText(Path pdf) throws Exception {
+        PdfReader reader = new PdfReader(pdf.toString());
+        try {
+            require(reader.getNumberOfPages() >= 2, "Multipage invoice PDF has fewer than two pages");
+            PdfTextExtractor extractor = new PdfTextExtractor(reader);
+            String firstPage = extractor.getTextFromPage(1);
+            String lastPage = extractor.getTextFromPage(reader.getNumberOfPages());
+            require(!firstPage.contains("ATT BETALA"),
+                    "Multipage invoice shows totals on its first page");
+            require(lastPage.contains("ATT BETALA"),
+                    "Multipage invoice lacks totals on its last page");
+        } finally {
+            reader.close();
+        }
+    }
+
     private static void verifyPdf(Path pdf, List<String> expectedText) throws Exception {
         require(Files.size(pdf) > 1_000, "PDF is unexpectedly small: " + pdf);
         byte[] signature = Files.readAllBytes(pdf);
@@ -207,16 +258,18 @@ public final class PdfGallery {
         Files.writeString(pdf.getParent().resolve("text.txt"), text, StandardCharsets.UTF_8);
     }
 
-    private static void renderPages(Path pdf, Path scenario) throws Exception {
+    private static int renderPages(Path pdf, Path scenario) throws Exception {
         try (PDDocument document = Loader.loadPDF(pdf.toFile())) {
-            require(document.getNumberOfPages() > 0, "PDF has no pages: " + pdf);
+            int pages = document.getNumberOfPages();
+            require(pages > 0, "PDF has no pages: " + pdf);
             PDFRenderer renderer = new PDFRenderer(document);
-            for (int page = 0; page < document.getNumberOfPages(); page++) {
+            for (int page = 0; page < pages; page++) {
                 BufferedImage image = renderer.renderImageWithDPI(page, 144, ImageType.RGB);
                 require(countNonWhitePixels(image) > 1_000,
                         "Rendered page " + (page + 1) + " is blank: " + pdf);
                 ImageIO.write(image, "png", scenario.resolve("page-" + (page + 1) + ".png").toFile());
             }
+            return pages;
         }
     }
 
@@ -230,7 +283,15 @@ public final class PdfGallery {
         return count;
     }
 
-    private static void writeIndex(int invoiceNumber) throws IOException {
+    private static void writeIndex(int invoiceNumber, int longInvoiceNumber) throws IOException {
+        String multipageImages;
+        try (Stream<Path> paths = Files.list(output.resolve("invoice-multipage"))) {
+            multipageImages = paths.filter(path -> path.getFileName().toString().matches("page-[0-9]+\\.png"))
+                    .sorted().map(path -> "<img src=\"invoice-multipage/" + path.getFileName()
+                            + "\" alt=\"Flersidig faktura, "
+                            + path.getFileName().toString().replace("page-", "sida ").replace(".png", "")
+                            + "\">").collect(java.util.stream.Collectors.joining("\n"));
+        }
         Files.writeString(output.resolve("index.html"), """
                 <!doctype html>
                 <html lang="sv"><meta charset="utf-8"><title>Bokfri PDF gallery</title>
@@ -240,13 +301,17 @@ public final class PdfGallery {
                 <main><h1>Bokfri PDF gallery</h1>
                 <article><h2>Faktura %d</h2><p><a href="invoice/invoice.pdf">Öppna PDF</a></p>
                 <img src="invoice/page-1.png" alt="Faktura %d, sida 1"></article>
+                <article><h2>Flersidig faktura %d</h2>
+                <p><a href="invoice-multipage/invoice-multipage.pdf">Öppna PDF</a></p>
+                %s</article>
                 <article><h2>Kundlista</h2><p><a href="customer-list/customer-list.pdf">Öppna PDF</a></p>
                 <img src="customer-list/page-1.png" alt="Kundlista, sida 1"></article>
                 <article><h2>Huvudbok – konto 3001</h2>
                 <p><a href="general-ledger-3001/general-ledger-3001.pdf">Öppna PDF</a></p>
                 <img src="general-ledger-3001/page-1.png" alt="Huvudbok konto 3001, sida 1"></article>
                 </main></html>
-                """.formatted(invoiceNumber, invoiceNumber), StandardCharsets.UTF_8);
+                """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages),
+                StandardCharsets.UTF_8);
     }
 
     private static Path json(String name, String content) throws IOException {
