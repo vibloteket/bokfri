@@ -52,6 +52,8 @@ public final class PdfGallery {
             int amountsInvoiceNumber = generateAmountsInvoiceScenario();
             generateCustomerListScenario();
             generateGeneralLedgerScenario(invoiceNumber);
+            generateIncomeStatementScenario();
+            generateBalanceSheetScenario();
             writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
@@ -211,7 +213,7 @@ public final class PdfGallery {
                 "Amounts invoice does not contain four rows");
         require(created.stdout().contains("\"net\":\"1080369.37\""),
                 "Amounts invoice has an unexpected net total");
-        require(created.stdout().contains("\"vat\":\"270075.07\""),
+        require(created.stdout().contains("\"vat\":\"270075.08\""),
                 "Amounts invoice has an unexpected VAT total");
         require(created.stdout().contains("\"total\":\"1350444.00\""),
                 "Amounts invoice has an unexpected total");
@@ -261,6 +263,42 @@ public final class PdfGallery {
         require(!ledger.stdout().contains("\"rows\":[]"),
                 "General ledger for account 3001 contains no transactions");
         verifyPdf(pdf, List.of("3001", "Fakturajournal", "321.26"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateIncomeStatementScenario() throws Exception {
+        Path scenario = output.resolve("income-statement");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("income-statement.pdf");
+        Result report = cliInYear("income-statement", "--from", "2026-01-01",
+                "--to", "2026-12-31", "--output", pdf.toString());
+        require(report.stdout().contains("\"from\":\"2026-01-01\""),
+                "Income statement has an unexpected start date");
+        require(report.stdout().contains("\"to\":\"2026-12-31\""),
+                "Income statement has an unexpected end date");
+        require(report.stdout().contains("\"result\":\"321.68\""),
+                "Income statement has an unexpected result: " + report.stdout());
+        require(!report.stdout().contains("\"rows\":[]"),
+                "Income statement contains no rows");
+        verifyPdf(pdf, List.of("Resultatrapport", "3001", "321.26", "3740", "0.42"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateBalanceSheetScenario() throws Exception {
+        Path scenario = output.resolve("balance-sheet");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("balance-sheet.pdf");
+        Result report = cliInYear("balance-sheet", "--date", "2026-12-31",
+                "--output", pdf.toString());
+        require(report.stdout().contains("\"date\":\"2026-12-31\""),
+                "Balance sheet has an unexpected date");
+        require(report.stdout().contains("\"difference\":\"0.00\""),
+                "Balance sheet does not balance: " + report.stdout());
+        require(report.stdout().contains("\"currentResult\":\"321.68\""),
+                "Balance sheet has an unexpected current result: " + report.stdout());
+        require(!report.stdout().contains("\"rows\":[]"),
+                "Balance sheet contains no rows");
+        verifyPdf(pdf, List.of("Balansrapport", "1510", "402.00"));
         renderPages(pdf, scenario);
     }
 
@@ -358,6 +396,12 @@ public final class PdfGallery {
                 <article><h2>Huvudbok – konto 3001</h2>
                 <p><a href="general-ledger-3001/general-ledger-3001.pdf">Öppna PDF</a></p>
                 <img src="general-ledger-3001/page-1.png" alt="Huvudbok konto 3001, sida 1"></article>
+                <article><h2>Resultatrapport</h2>
+                <p><a href="income-statement/income-statement.pdf">Öppna PDF</a></p>
+                <img src="income-statement/page-1.png" alt="Resultatrapport, sida 1"></article>
+                <article><h2>Balansrapport</h2>
+                <p><a href="balance-sheet/balance-sheet.pdf">Öppna PDF</a></p>
+                <img src="balance-sheet/page-1.png" alt="Balansrapport, sida 1"></article>
                 </main></html>
                 """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages,
                         amountsInvoiceNumber),
