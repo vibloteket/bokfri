@@ -46,10 +46,15 @@ public abstract class SSPrinter {
         iReport = new SSReport();
 
         iReport.addParameter("company", SSDB.getInstance().getCurrentCompany().getName());
-        addParameter("reportdate", SSDateUtil.today());
+        addParameter("reportdate", reportDate());
 
         iReport.addParameter("lastvoucher", SSVoucherMath.getMaxNumber());
 
+    }
+
+    static LocalDate reportDate() {
+        String configured = System.getProperty("bokfri.reportDate");
+        return configured == null ? SSDateUtil.today() : LocalDate.parse(configured);
     }
 
     /**

@@ -50,7 +50,7 @@ public class SSInvoicePrinter extends SSPrinter {
 
         setDetail("sales/invoice.jrxml");
         setColumnHeader("sales/invoice.jrxml");
-        setColumnFooter("sales/invoice.jrxml");
+        setSummary("sales/invoice.jrxml");
 
         addParameters();
     }

@@ -48,8 +48,13 @@ public final class PdfGallery {
 
         try {
             int invoiceNumber = generateInvoiceScenario();
+            int longInvoiceNumber = generateMultipageInvoiceScenario();
+            int amountsInvoiceNumber = generateAmountsInvoiceScenario();
             generateCustomerListScenario();
-            writeIndex(invoiceNumber);
+            generateGeneralLedgerScenario(invoiceNumber);
+            generateIncomeStatementScenario();
+            generateBalanceSheetScenario();
+            writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
             deleteRecursively(work);
@@ -74,12 +79,28 @@ public final class PdfGallery {
         Path customer = json("customer.json", """
                 {
                   "number": "K100",
-                  "name": "Exempelkund XYZ AB",
+                  "name": "Exempelkund ÅÄÖ AB",
+                  "registrationNumber": "559999-5678",
+                  "vatNumber": "SE559999567801",
                   "email": "faktura@example.invalid",
+                  "phone": "+46 8 123 45 67",
+                  "ourContact": "Anna Åström",
+                  "yourContact": "Émile Öberg",
                   "invoiceAddress": {
+                    "name": "Exempelkund ÅÄÖ AB",
                     "address1": "Testgatan 15",
+                    "address2": "Ekonomiavdelningen",
                     "postalCode": "123 45",
-                    "city": "Testköping"
+                    "city": "Testköping",
+                    "country": "Sverige"
+                  },
+                  "deliveryAddress": {
+                    "name": "Exempelkund ÅÄÖ – Lager & Gods",
+                    "address1": "Leveransvägen 27",
+                    "address2": "Port B, lastkaj 4",
+                    "postalCode": "987 65",
+                    "city": "Åmål",
+                    "country": "Sverige"
                   }
                 }
                 """);
@@ -103,8 +124,18 @@ public final class PdfGallery {
                   "date": "2026-03-15",
                   "dueDate": "2026-04-14",
                   "yourOrderNumber": "ORDER-XYZ",
-                  "text": "Deterministisk gallerifaktura",
-                  "rows": [{"productNumber":"P100","quantity":"2.25"}]
+                  "text": "Deterministisk gallerifaktura – tack för ert köp!",
+                  "rows": [
+                    {"productNumber":"P100","quantity":"2.25"},
+                    {
+                      "description":"Konsulttjänst – åäö & analys",
+                      "quantity":"0.5","unitPrice":"80.00","vatRate":"25","salesAccount":3001
+                    },
+                    {
+                      "description":"Mycket litet belopp","quantity":"1","unitPrice":"0.01",
+                      "vatRate":"25","salesAccount":3001
+                    }
+                  ]
                 }
                 """);
         int invoiceNumber = firstInt(
@@ -115,8 +146,88 @@ public final class PdfGallery {
         Path pdf = scenario.resolve("invoice.pdf");
         cliInYear("invoice", "pdf", Integer.toString(invoiceNumber),
                 "--output", pdf.toString()).success();
-        verifyPdf(pdf, List.of("K100", "Galleriartikel decimal", "2.25", "ORDER-XYZ"));
+        verifyPdf(pdf, List.of("K100", "Exempelkund ÅÄÖ AB",
+                "Leveransvägen 27", "lastkaj 4", "Galleriartikel decimal", "2.25", "0.5",
+                "Mycket litet belopp", "ORDER-XYZ"));
         renderPages(pdf, scenario);
+        return invoiceNumber;
+    }
+
+    private static int generateMultipageInvoiceScenario() throws Exception {
+        StringBuilder rows = new StringBuilder();
+        for (int row = 1; row <= 45; row++) {
+            if (row > 1) rows.append(',');
+            rows.append("""
+                    {"description":"Flersidig rad %02d – stabil sidbrytning",
+                     "quantity":"1","unitPrice":"%d.00","vatRate":"25","salesAccount":3001}
+                    """.formatted(row, row));
+        }
+        Path invoiceInput = json("multipage-invoice.json", """
+                {
+                  "customerNumber":"K100",
+                  "date":"2026-04-20",
+                  "dueDate":"2026-05-20",
+                  "yourOrderNumber":"ORDER-MULTIPAGE",
+                  "text":"Flersidig faktura med 45 deterministiska rader",
+                  "rows":[%s]
+                }
+                """.formatted(rows));
+        int invoiceNumber = firstInt(cliInYear("invoice", "create", "--file",
+                invoiceInput.toString()).stdout(), "number");
+
+        Path scenario = output.resolve("invoice-multipage");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("invoice-multipage.pdf");
+        cliInYear("invoice", "pdf", Integer.toString(invoiceNumber),
+                "--output", pdf.toString()).success();
+        verifyPdf(pdf, List.of("ORDER-MULTIPAGE", "Flersidig rad 01", "Flersidig rad 45"));
+        verifyMultipageInvoiceText(pdf);
+        int pages = renderPages(pdf, scenario);
+        require(pages >= 2, "Multipage invoice rendered only " + pages + " page(s)");
+        return invoiceNumber;
+    }
+
+    private static int generateAmountsInvoiceScenario() throws Exception {
+        Path invoiceInput = json("amounts-invoice.json", """
+                {
+                  "customerNumber":"K100",
+                  "date":"2026-05-10",
+                  "dueDate":"2026-06-09",
+                  "yourOrderNumber":"ORDER-AMOUNTS",
+                  "text":"Belopps- och momsgränser",
+                  "rows":[
+                    {"description":"Minsta belopp 25 %","quantity":"1","unitPrice":"0.01",
+                     "vatRate":"25","salesAccount":3001},
+                    {"description":"Stort belopp med rabatt","quantity":"1","unitPrice":"1234567.89",
+                     "discount":"12.5","vatRate":"25","salesAccount":3001},
+                    {"description":"Halvtimme med 12 % moms","quantity":"0.5","unitPrice":"199.95",
+                     "vatRate":"12","salesAccount":3001},
+                    {"description":"Kvartsenhet med 6 % moms","quantity":"2.25","unitPrice":"9.99",
+                     "vatRate":"6","salesAccount":3001}
+                  ]
+                }
+                """);
+        Result created = cliInYear("invoice", "create", "--file", invoiceInput.toString());
+        int invoiceNumber = firstInt(created.stdout(), "number");
+        require(created.stdout().contains("\"rowCount\":4"),
+                "Amounts invoice does not contain four rows");
+        require(created.stdout().contains("\"net\":\"1080369.37\""),
+                "Amounts invoice has an unexpected net total");
+        require(created.stdout().contains("\"vat\":\"270075.08\""),
+                "Amounts invoice has an unexpected VAT total");
+        require(created.stdout().contains("\"total\":\"1350444.00\""),
+                "Amounts invoice has an unexpected total");
+
+        Path scenario = output.resolve("invoice-amounts");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("invoice-amounts.pdf");
+        cliInYear("invoice", "pdf", Integer.toString(invoiceNumber),
+                "--output", pdf.toString()).success();
+        verifyPdf(pdf, List.of("ORDER-AMOUNTS", "Minsta belopp", "Stort belopp",
+                "246,90", "12,50", "Halvtimme", "Kvartsenhet", "Moms 25%", "Moms 12%", "Moms 6%",
+                "270", "061,73", "12,00", "1,35"));
+        int pages = renderPages(pdf, scenario);
+        require(pages == 1, "Amounts invoice unexpectedly rendered " + pages + " pages");
         return invoiceNumber;
     }
 
@@ -125,8 +236,86 @@ public final class PdfGallery {
         Files.createDirectories(scenario);
         Path pdf = scenario.resolve("customer-list.pdf");
         cliInYear("customer", "list", "--output", pdf.toString()).success();
-        verifyPdf(pdf, List.of("K100", "Exempelkund XYZ AB"));
+        verifyPdf(pdf, List.of("K100", "Exempelkund ÅÄÖ AB",
+                "559999-5678", "+46 8 123 45 67"));
         renderPages(pdf, scenario);
+    }
+
+    private static void generateGeneralLedgerScenario(int invoiceNumber) throws Exception {
+        Result journal = cliInYear("invoice", "journal", "--from", "2026-03-15",
+                "--to", "2026-03-15", "--commit");
+        require(journal.stdout().contains("\"invoiceNumbers\":[" + invoiceNumber + "]"),
+                "Invoice journal does not contain gallery invoice " + invoiceNumber);
+        require(journal.stdout().contains("\"committed\":true"),
+                "Invoice journal was not committed");
+
+        Result bookedInvoice = cliInYear("invoice", "show", Integer.toString(invoiceNumber));
+        require(bookedInvoice.stdout().contains("\"entered\":true"),
+                "Gallery invoice was not marked as entered");
+
+        Path scenario = output.resolve("general-ledger-3001");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("general-ledger-3001.pdf");
+        Result ledger = cliInYear("general-ledger", "--account", "3001",
+                "--from", "2026-01-01", "--to", "2026-12-31", "--output", pdf.toString());
+        require(ledger.stdout().contains("\"account\":3001"),
+                "General ledger output does not describe account 3001");
+        require(!ledger.stdout().contains("\"rows\":[]"),
+                "General ledger for account 3001 contains no transactions");
+        verifyPdf(pdf, List.of("3001", "Fakturajournal", "321.26"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateIncomeStatementScenario() throws Exception {
+        Path scenario = output.resolve("income-statement");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("income-statement.pdf");
+        Result report = cliInYear("income-statement", "--from", "2026-01-01",
+                "--to", "2026-12-31", "--output", pdf.toString());
+        require(report.stdout().contains("\"from\":\"2026-01-01\""),
+                "Income statement has an unexpected start date");
+        require(report.stdout().contains("\"to\":\"2026-12-31\""),
+                "Income statement has an unexpected end date");
+        require(report.stdout().contains("\"result\":\"321.68\""),
+                "Income statement has an unexpected result: " + report.stdout());
+        require(!report.stdout().contains("\"rows\":[]"),
+                "Income statement contains no rows");
+        verifyPdf(pdf, List.of("Resultatrapport", "3001", "321.26", "3740", "0.42"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateBalanceSheetScenario() throws Exception {
+        Path scenario = output.resolve("balance-sheet");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("balance-sheet.pdf");
+        Result report = cliInYear("balance-sheet", "--date", "2026-12-31",
+                "--output", pdf.toString());
+        require(report.stdout().contains("\"date\":\"2026-12-31\""),
+                "Balance sheet has an unexpected date");
+        require(report.stdout().contains("\"difference\":\"0.00\""),
+                "Balance sheet does not balance: " + report.stdout());
+        require(report.stdout().contains("\"currentResult\":\"321.68\""),
+                "Balance sheet has an unexpected current result: " + report.stdout());
+        require(!report.stdout().contains("\"rows\":[]"),
+                "Balance sheet contains no rows");
+        verifyPdf(pdf, List.of("Balansrapport", "1510", "402.00"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void verifyMultipageInvoiceText(Path pdf) throws Exception {
+        PdfReader reader = new PdfReader(pdf.toString());
+        try {
+            require(reader.getNumberOfPages() >= 2, "Multipage invoice PDF has fewer than two pages");
+            PdfTextExtractor extractor = new PdfTextExtractor(reader);
+            String firstPage = extractor.getTextFromPage(1);
+            String lastPage = extractor.getTextFromPage(reader.getNumberOfPages());
+            require(!firstPage.contains("ATT BETALA"),
+                    "Multipage invoice shows totals on its first page");
+            require(lastPage.contains("ATT BETALA"),
+                    "Multipage invoice lacks totals on its last page");
+        } finally {
+            reader.close();
+        }
     }
 
     private static void verifyPdf(Path pdf, List<String> expectedText) throws Exception {
@@ -152,16 +341,18 @@ public final class PdfGallery {
         Files.writeString(pdf.getParent().resolve("text.txt"), text, StandardCharsets.UTF_8);
     }
 
-    private static void renderPages(Path pdf, Path scenario) throws Exception {
+    private static int renderPages(Path pdf, Path scenario) throws Exception {
         try (PDDocument document = Loader.loadPDF(pdf.toFile())) {
-            require(document.getNumberOfPages() > 0, "Invoice PDF has no pages");
+            int pages = document.getNumberOfPages();
+            require(pages > 0, "PDF has no pages: " + pdf);
             PDFRenderer renderer = new PDFRenderer(document);
-            for (int page = 0; page < document.getNumberOfPages(); page++) {
+            for (int page = 0; page < pages; page++) {
                 BufferedImage image = renderer.renderImageWithDPI(page, 144, ImageType.RGB);
                 require(countNonWhitePixels(image) > 1_000,
-                        "Rendered invoice page " + (page + 1) + " is blank");
+                        "Rendered page " + (page + 1) + " is blank: " + pdf);
                 ImageIO.write(image, "png", scenario.resolve("page-" + (page + 1) + ".png").toFile());
             }
+            return pages;
         }
     }
 
@@ -175,7 +366,16 @@ public final class PdfGallery {
         return count;
     }
 
-    private static void writeIndex(int invoiceNumber) throws IOException {
+    private static void writeIndex(int invoiceNumber, int longInvoiceNumber,
+            int amountsInvoiceNumber) throws IOException {
+        String multipageImages;
+        try (Stream<Path> paths = Files.list(output.resolve("invoice-multipage"))) {
+            multipageImages = paths.filter(path -> path.getFileName().toString().matches("page-[0-9]+\\.png"))
+                    .sorted().map(path -> "<img src=\"invoice-multipage/" + path.getFileName()
+                            + "\" alt=\"Flersidig faktura, "
+                            + path.getFileName().toString().replace("page-", "sida ").replace(".png", "")
+                            + "\">").collect(java.util.stream.Collectors.joining("\n"));
+        }
         Files.writeString(output.resolve("index.html"), """
                 <!doctype html>
                 <html lang="sv"><meta charset="utf-8"><title>Bokfri PDF gallery</title>
@@ -185,9 +385,27 @@ public final class PdfGallery {
                 <main><h1>Bokfri PDF gallery</h1>
                 <article><h2>Faktura %d</h2><p><a href="invoice/invoice.pdf">Öppna PDF</a></p>
                 <img src="invoice/page-1.png" alt="Faktura %d, sida 1"></article>
+                <article><h2>Flersidig faktura %d</h2>
+                <p><a href="invoice-multipage/invoice-multipage.pdf">Öppna PDF</a></p>
+                %s</article>
+                <article><h2>Beloppsfaktura %d</h2>
+                <p><a href="invoice-amounts/invoice-amounts.pdf">Öppna PDF</a></p>
+                <img src="invoice-amounts/page-1.png" alt="Beloppsfaktura, sida 1"></article>
                 <article><h2>Kundlista</h2><p><a href="customer-list/customer-list.pdf">Öppna PDF</a></p>
-                <img src="customer-list/page-1.png" alt="Kundlista, sida 1"></article></main></html>
-                """.formatted(invoiceNumber, invoiceNumber), StandardCharsets.UTF_8);
+                <img src="customer-list/page-1.png" alt="Kundlista, sida 1"></article>
+                <article><h2>Huvudbok – konto 3001</h2>
+                <p><a href="general-ledger-3001/general-ledger-3001.pdf">Öppna PDF</a></p>
+                <img src="general-ledger-3001/page-1.png" alt="Huvudbok konto 3001, sida 1"></article>
+                <article><h2>Resultatrapport</h2>
+                <p><a href="income-statement/income-statement.pdf">Öppna PDF</a></p>
+                <img src="income-statement/page-1.png" alt="Resultatrapport, sida 1"></article>
+                <article><h2>Balansrapport</h2>
+                <p><a href="balance-sheet/balance-sheet.pdf">Öppna PDF</a></p>
+                <img src="balance-sheet/page-1.png" alt="Balansrapport, sida 1"></article>
+                </main></html>
+                """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages,
+                        amountsInvoiceNumber),
+                StandardCharsets.UTF_8);
     }
 
     private static Path json(String name, String content) throws IOException {
@@ -218,7 +436,11 @@ public final class PdfGallery {
 
     private static Result run(List<String> arguments) throws Exception {
         java.util.ArrayList<String> command = new java.util.ArrayList<>();
-        if (jarLauncher) { command.add("java"); command.add("-jar"); }
+        if (jarLauncher) {
+            command.add("java");
+            command.add("-Dbokfri.reportDate=2026-03-15");
+            command.add("-jar");
+        }
         command.add(launcher.toString());
         command.add("--config"); command.add(config.toString());
         command.add("--data-dir"); command.add(data.toString());

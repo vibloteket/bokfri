@@ -116,6 +116,7 @@ public class SSSaleMath {
             }
         }
 
+        iTaxSum.replaceAll((taxCode, sum) -> sum.setScale(2, RoundingMode.HALF_UP));
         return iTaxSum;
     }
 

@@ -15,9 +15,9 @@ if [[ ! -d $GALLERY_DIR ]]; then
 fi
 
 mapfile -t attachments < <(find "$GALLERY_DIR" -mindepth 2 -maxdepth 2 -type f \
-  \( -name '*.pdf' -o -name 'page-*.png' \) ! -name '*-diff.png' | sort)
+  -name 'page-*.png' ! -name '*-diff.png' | sort)
 if [[ ${#attachments[@]} -eq 0 ]]; then
-  echo "PDF gallery contains no PDF or page images." >&2
+  echo "PDF gallery contains no page images." >&2
   exit 1
 fi
 
@@ -40,24 +40,24 @@ commit=${COMMIT_SHA:-unknown}
   printf 'Content-Transfer-Encoding: 8bit\r\n\r\n'
   printf 'Bokfri PDF gallery generated successfully.\r\n\r\n'
   printf 'Reports:\r\n'
+  previous_report=''
   for attachment in "${attachments[@]}"; do
-    if [[ $attachment == *.pdf ]]; then
-      report=${attachment#"$GALLERY_DIR"/}
-      printf -- '- %s\r\n' "${report%/*}"
+    report=${attachment#"$GALLERY_DIR"/}
+    report=${report%/*}
+    if [[ $report != "$previous_report" ]]; then
+      printf -- '- %s\r\n' "$report"
+      previous_report=$report
     fi
   done
   printf '\r\nCommit: %s\r\n' "$commit"
   [[ -z $pr_url ]] || printf 'Pull request: %s\r\n' "$pr_url"
   [[ -z $actions_url ]] || printf 'GitHub Actions: %s\r\n' "$actions_url"
-  printf '\r\nThe generated PDFs and page images are attached.\r\n'
+  printf '\r\nThe rendered page images are attached. PDFs remain available in the GitHub artifact.\r\n'
 
   for attachment in "${attachments[@]}"; do
     relative=${attachment#"$GALLERY_DIR"/}
     filename=${relative//\//-}
-    case "$attachment" in
-      *.pdf) content_type='application/pdf' ;;
-      *.png) content_type='image/png' ;;
-    esac
+    content_type='image/png'
     printf '\r\n--%s\r\n' "$boundary"
     printf 'Content-Type: %s; name="%s"\r\n' "$content_type" "$filename"
     printf 'Content-Disposition: attachment; filename="%s"\r\n' "$filename"

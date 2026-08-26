@@ -62,7 +62,7 @@
 
             <!-- Count -->
             <textField isBlankWhenNull="true">
-                <reportElement x="320" y="2" width="60" height="12"/>
+                <reportElement x="315" y="2" width="60" height="12"/>
                 <textElement textAlignment="Right">
                     <font size="8"/>
                 </textElement>
@@ -73,7 +73,7 @@
 
             <!-- Discount -->
             <textField isBlankWhenNull="true">
-                <reportElement x="380" y="2" width="60" height="12">
+                <reportElement x="375" y="2" width="55" height="12">
                     <printWhenExpression>
                         <![CDATA[$P{invoice.hasdiscount}]]>
                     </printWhenExpression>
@@ -88,7 +88,7 @@
 
             <!-- Sum -->
             <textField isBlankWhenNull="true">
-                <reportElement x="450" y="2" width="50" height="12"/>
+                <reportElement x="435" y="2" width="65" height="12"/>
                 <textElement textAlignment="Right">
                     <font size="8"/>
                 </textElement>
@@ -140,7 +140,7 @@
 
             <!-- Count -->
             <textField isBlankWhenNull="true">
-                <reportElement x="320" y="0" width="40" height="12"/>
+                <reportElement x="315" y="0" width="40" height="12"/>
                 <textElement textAlignment="Right">
                     <font size="8" isBold="false"/>
                 </textElement>
@@ -151,7 +151,7 @@
 
             <!-- Unit -->
             <textField isBlankWhenNull="true">
-                <reportElement x="362" y="0" width="18" height="12"/>
+                <reportElement x="357" y="0" width="18" height="12"/>
                 <textElement textAlignment="Left">
                     <font size="8" isBold="false"/>
                 </textElement>
@@ -163,7 +163,7 @@
 
             <!-- Discount -->
             <textField  isBlankWhenNull="true" pattern="#,##0.00">
-                <reportElement x="380" y="0" width="50" height="12"/>
+                <reportElement x="375" y="0" width="48" height="12"/>
                 <textElement textAlignment="Right">
                     <font size="8" isBold="false"/>
                 </textElement>
@@ -174,7 +174,7 @@
 
             <!-- % -->
             <textField  isBlankWhenNull="true">
-                <reportElement x="432" y="0" width="10" height="12"/>
+                <reportElement x="425" y="0" width="10" height="12"/>
                 <textElement textAlignment="Left">
                     <font size="8" isBold="false"/>
                 </textElement>
@@ -186,7 +186,7 @@
 
             <!-- Row sum  -->
             <textField  isBlankWhenNull="true" pattern="#,##0.00">
-                <reportElement x="450" y="0" width="50" height="12"/>
+                <reportElement x="435" y="0" width="65" height="12"/>
                 <textElement textAlignment="Right">
                     <font size="8" isBold="false"/>
                 </textElement>
