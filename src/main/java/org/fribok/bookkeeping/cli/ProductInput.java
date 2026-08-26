@@ -23,6 +23,8 @@ public class ProductInput {
     private String resultUnit;
     private Boolean stockProduct;
     private Boolean expired;
+    private BigDecimal weight;
+    private BigDecimal volume;
 
     public int getSchemaVersion() { return schemaVersion; }
     public void setSchemaVersion(int schemaVersion) { this.schemaVersion = schemaVersion; }
@@ -46,4 +48,8 @@ public class ProductInput {
     public void setStockProduct(Boolean stockProduct) { this.stockProduct = stockProduct; }
     public Boolean getExpired() { return expired; }
     public void setExpired(Boolean expired) { this.expired = expired; }
+    public BigDecimal getWeight() { return weight; }
+    public void setWeight(BigDecimal weight) { this.weight = weight; }
+    public BigDecimal getVolume() { return volume; }
+    public void setVolume(BigDecimal volume) { this.volume = volume; }
 }
