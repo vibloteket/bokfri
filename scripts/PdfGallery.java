@@ -159,7 +159,7 @@ public final class PdfGallery {
         cliInYear("invoice", "pdf", Integer.toString(invoiceNumber),
                 "--output", pdf.toString()).success();
         verifyPdf(pdf, List.of("K100", "Exempelkund ÅÄÖ AB",
-                "Leveransvägen 27", "lastkaj 4", "Galleriartikel decimal", "2.25", "0.5",
+                "Leveransvägen 27", "lastkaj 4", "Galleriartikel decimal", "2.25st", "0.5",
                 "Mycket litet belopp", "ORDER-XYZ"));
         renderPages(pdf, scenario);
         return invoiceNumber;
@@ -328,6 +328,9 @@ public final class PdfGallery {
         int voucherNumber = firstInt(journal.stdout(), "voucherNumber");
         verifyPdf(pdf, List.of("Fakturajournal", "K100", "Exempelkund ÅÄÖ AB",
                 "1510", "3001", "2611", "3740"));
+        String journalText = extractPdfText(pdf);
+        require(journalText.indexOf("3001") < journalText.indexOf("Total summa"),
+                "Invoice journal totals appear before the final voucher row");
         renderPages(pdf, scenario);
 
         Result bookedInvoice = cliInYear("invoice", "show", Integer.toString(invoiceNumber));
@@ -371,7 +374,8 @@ public final class PdfGallery {
             require(voucher.stdout().contains("\"account\":" + account),
                     "Voucher lacks account " + account);
         }
-        verifyPdf(pdf, List.of("Fakturajournal", "1510", "3001", "2611", "3740"));
+        verifyPdf(pdf, List.of("Verifikation", "Fakturajournal", "1510", "3001", "2611", "3740"));
+        verifyPdfLacks(pdf, List.of("Preview voucher"));
         renderPages(pdf, scenario);
     }
 

@@ -528,7 +528,7 @@
 
                 <!-- Total weight-->
                 <textField>
-                    <reportElement x="293" y="1" width="77" height="12"/>
+                    <reportElement x="293" y="1" width="100" height="9"/>
                     <textElement textAlignment="Left">
                         <font size="7"/>
                     </textElement>
@@ -538,7 +538,7 @@
                 </textField>
 
                 <textField pattern="#,##0.000" isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="290" y="10" width="77" height="14"/>
+                    <reportElement x="300" y="11" width="67" height="12"/>
                     <textElement textAlignment="Right">
                         <font size="10"/>
                     </textElement>
@@ -548,7 +548,7 @@
                 </textField>
 
                 <textField>
-                    <reportElement x="370" y="10" width="29" height="14"/>
+                    <reportElement x="370" y="11" width="29" height="12"/>
                     <textElement textAlignment="Left">
                         <font size="10"/>
                     </textElement>
@@ -565,7 +565,7 @@
 
                 <!-- Total volume-->
                 <textField>
-                    <reportElement x="403" y="1" width="77" height="12"/>
+                    <reportElement x="403" y="1" width="100" height="9"/>
                     <textElement textAlignment="Left">
                         <font size="7"/>
                     </textElement>
@@ -575,7 +575,7 @@
                 </textField>
 
                 <textField pattern="#,##0.000" isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="400" y="10" width="77" height="14"/>
+                    <reportElement x="410" y="11" width="67" height="12"/>
                     <textElement textAlignment="Right">
                         <font size="10"/>
                     </textElement>
@@ -585,7 +585,7 @@
                 </textField>
 
                 <textField>
-                    <reportElement x="480" y="10" width="30" height="14"/>
+                    <reportElement x="480" y="11" width="30" height="12"/>
                     <textElement textAlignment="Left">
                         <font size="10"/>
                     </textElement>

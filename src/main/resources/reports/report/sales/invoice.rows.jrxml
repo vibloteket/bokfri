@@ -62,7 +62,7 @@
 
             <!-- Count -->
             <textField isBlankWhenNull="true">
-                <reportElement x="315" y="2" width="60" height="12"/>
+                <reportElement x="315" y="2" width="40" height="12"/>
                 <textElement textAlignment="Right">
                     <font size="8"/>
                 </textElement>

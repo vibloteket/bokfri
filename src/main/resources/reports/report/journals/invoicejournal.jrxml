@@ -184,7 +184,7 @@
 
             <!-- Order rows -->
             <subreport isUsingCache="false">
-                <reportElement x="0" y="12" width="555" height="0" isPrintWhenDetailOverflows="true"/>
+                <reportElement x="0" y="12" width="555" height="14" isPrintWhenDetailOverflows="true"/>
 
                 <subreportParameter name="invoice.customernr">
                     <subreportParameterExpression>
@@ -202,7 +202,7 @@
             </subreport>
 
             <frame>
-                <reportElement x="0" y="12" width="555" height="50" positionType="Float"/>
+                <reportElement x="0" y="14" width="555" height="50" positionType="Float"/>
                 <line>
                     <reportElement x="80" y="0" width="450" height="1"/>
                 </line>
