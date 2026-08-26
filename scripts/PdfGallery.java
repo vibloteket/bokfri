@@ -51,10 +51,14 @@ public final class PdfGallery {
             int longInvoiceNumber = generateMultipageInvoiceScenario();
             int amountsInvoiceNumber = generateAmountsInvoiceScenario();
             generateCustomerListScenario();
-            generateGeneralLedgerScenario(invoiceNumber);
+            int voucherNumber = generateInvoiceJournalScenario(invoiceNumber);
+            generateVoucherScenario(voucherNumber);
+            generateVoucherListScenario(voucherNumber);
+            generateGeneralLedgerScenario();
             generateIncomeStatementScenario();
             generateBalanceSheetScenario();
-            writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber);
+            generateVatReportScenario();
+            writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber, voucherNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
             deleteRecursively(work);
@@ -241,18 +245,66 @@ public final class PdfGallery {
         renderPages(pdf, scenario);
     }
 
-    private static void generateGeneralLedgerScenario(int invoiceNumber) throws Exception {
+    private static int generateInvoiceJournalScenario(int invoiceNumber) throws Exception {
+        Path scenario = output.resolve("invoice-journal");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("invoice-journal.pdf");
         Result journal = cliInYear("invoice", "journal", "--from", "2026-03-15",
-                "--to", "2026-03-15", "--commit");
+                "--to", "2026-03-15", "--output", pdf.toString(), "--commit");
         require(journal.stdout().contains("\"invoiceNumbers\":[" + invoiceNumber + "]"),
                 "Invoice journal does not contain gallery invoice " + invoiceNumber);
+        require(journal.stdout().contains("\"debitTotal\":\"402.00\""),
+                "Invoice journal has an unexpected debit total: " + journal.stdout());
+        require(journal.stdout().contains("\"creditTotal\":\"402.00\""),
+                "Invoice journal does not balance: " + journal.stdout());
         require(journal.stdout().contains("\"committed\":true"),
                 "Invoice journal was not committed");
+        int voucherNumber = firstInt(journal.stdout(), "voucherNumber");
+        verifyPdf(pdf, List.of("Fakturajournal", "K100", "Exempelkund ÅÄÖ AB",
+                "1510", "3001", "2611", "3740"));
+        renderPages(pdf, scenario);
 
         Result bookedInvoice = cliInYear("invoice", "show", Integer.toString(invoiceNumber));
         require(bookedInvoice.stdout().contains("\"entered\":true"),
                 "Gallery invoice was not marked as entered");
+        return voucherNumber;
+    }
 
+    private static void generateVoucherScenario(int voucherNumber) throws Exception {
+        Path scenario = output.resolve("voucher");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("voucher.pdf");
+        Result voucher = cliInYear("voucher", "show", Integer.toString(voucherNumber),
+                "--output", pdf.toString());
+        require(voucher.stdout().contains("\"debitTotal\":\"402.00\""),
+                "Voucher has an unexpected debit total: " + voucher.stdout());
+        require(voucher.stdout().contains("\"creditTotal\":\"402.00\""),
+                "Voucher does not balance: " + voucher.stdout());
+        for (String account : List.of("1510", "3001", "2611", "3740")) {
+            require(voucher.stdout().contains("\"account\":" + account),
+                    "Voucher lacks account " + account);
+        }
+        verifyPdf(pdf, List.of("Fakturajournal", "1510", "3001", "2611", "3740"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateVoucherListScenario(int voucherNumber) throws Exception {
+        Path scenario = output.resolve("voucher-list");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("voucher-list.pdf");
+        Result vouchers = cliInYear("voucher", "list", "--from", "2026-03-15",
+                "--to", "2026-03-15", "--output", pdf.toString());
+        require(vouchers.stdout().contains("\"number\":" + voucherNumber),
+                "Voucher list lacks invoice journal voucher " + voucherNumber);
+        require(vouchers.stdout().contains("\"debitTotal\":\"402.00\""),
+                "Voucher list has an unexpected debit total: " + vouchers.stdout());
+        require(vouchers.stdout().contains("\"creditTotal\":\"402.00\""),
+                "Voucher list does not balance: " + vouchers.stdout());
+        verifyPdf(pdf, List.of("Fakturajournal", "1510", "3001", "2611", "3740"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateGeneralLedgerScenario() throws Exception {
         Path scenario = output.resolve("general-ledger-3001");
         Files.createDirectories(scenario);
         Path pdf = scenario.resolve("general-ledger-3001.pdf");
@@ -281,6 +333,24 @@ public final class PdfGallery {
         require(!report.stdout().contains("\"rows\":[]"),
                 "Income statement contains no rows");
         verifyPdf(pdf, List.of("Resultatrapport", "3001", "321.26", "3740", "0.42"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateVatReportScenario() throws Exception {
+        Path scenario = output.resolve("vat-report");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("vat-report.pdf");
+        Result report = cliInYear("vat", "report", "--from", "2026-01-01",
+                "--to", "2026-12-31", "--output", pdf.toString());
+        require(report.stdout().contains("\"number\":5")
+                        && report.stdout().contains("\"amount\":\"321.00\""),
+                "VAT report has an unexpected taxable-sales box: " + report.stdout());
+        require(report.stdout().contains("\"number\":10")
+                        && report.stdout().contains("\"amount\":\"80.00\""),
+                "VAT report has an unexpected output-VAT box: " + report.stdout());
+        require(report.stdout().contains("\"vatToPayOrRefund\":\"80.00\""),
+                "VAT report has an unexpected VAT result: " + report.stdout());
+        verifyPdf(pdf, List.of("Momsrapport", "321", "80"));
         renderPages(pdf, scenario);
     }
 
@@ -367,7 +437,7 @@ public final class PdfGallery {
     }
 
     private static void writeIndex(int invoiceNumber, int longInvoiceNumber,
-            int amountsInvoiceNumber) throws IOException {
+            int amountsInvoiceNumber, int voucherNumber) throws IOException {
         String multipageImages;
         try (Stream<Path> paths = Files.list(output.resolve("invoice-multipage"))) {
             multipageImages = paths.filter(path -> path.getFileName().toString().matches("page-[0-9]+\\.png"))
@@ -393,6 +463,15 @@ public final class PdfGallery {
                 <img src="invoice-amounts/page-1.png" alt="Beloppsfaktura, sida 1"></article>
                 <article><h2>Kundlista</h2><p><a href="customer-list/customer-list.pdf">Öppna PDF</a></p>
                 <img src="customer-list/page-1.png" alt="Kundlista, sida 1"></article>
+                <article><h2>Fakturajournal</h2>
+                <p><a href="invoice-journal/invoice-journal.pdf">Öppna PDF</a></p>
+                <img src="invoice-journal/page-1.png" alt="Fakturajournal, sida 1"></article>
+                <article><h2>Verifikation %d</h2>
+                <p><a href="voucher/voucher.pdf">Öppna PDF</a></p>
+                <img src="voucher/page-1.png" alt="Verifikation %d, sida 1"></article>
+                <article><h2>Verifikationslista</h2>
+                <p><a href="voucher-list/voucher-list.pdf">Öppna PDF</a></p>
+                <img src="voucher-list/page-1.png" alt="Verifikationslista, sida 1"></article>
                 <article><h2>Huvudbok – konto 3001</h2>
                 <p><a href="general-ledger-3001/general-ledger-3001.pdf">Öppna PDF</a></p>
                 <img src="general-ledger-3001/page-1.png" alt="Huvudbok konto 3001, sida 1"></article>
@@ -402,9 +481,12 @@ public final class PdfGallery {
                 <article><h2>Balansrapport</h2>
                 <p><a href="balance-sheet/balance-sheet.pdf">Öppna PDF</a></p>
                 <img src="balance-sheet/page-1.png" alt="Balansrapport, sida 1"></article>
+                <article><h2>Momsrapport</h2>
+                <p><a href="vat-report/vat-report.pdf">Öppna PDF</a></p>
+                <img src="vat-report/page-1.png" alt="Momsrapport, sida 1"></article>
                 </main></html>
                 """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages,
-                        amountsInvoiceNumber),
+                        amountsInvoiceNumber, voucherNumber, voucherNumber),
                 StandardCharsets.UTF_8);
     }
 

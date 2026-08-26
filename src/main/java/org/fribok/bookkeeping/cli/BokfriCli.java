@@ -99,8 +99,10 @@ import se.swedsoft.bookkeeping.print.report.SSBalancePrinter;
 import se.swedsoft.bookkeeping.print.report.SSCustomerListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSMainBookPrinter;
 import se.swedsoft.bookkeeping.print.report.SSResultPrinter;
+import se.swedsoft.bookkeeping.print.report.SSVATReport2015Printer;
 import se.swedsoft.bookkeeping.print.report.SSVoucherListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSVoucherPrinter;
+import se.swedsoft.bookkeeping.print.report.journals.SSInvoicejournalPrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSCreditinvoicePrinter;
 
 import java.io.File;
@@ -1678,6 +1680,10 @@ public class BokfriCli implements Runnable {
         @Option(names = "--to", required = true) java.time.LocalDate to;
         @Option(names = "--commit", description = "Persist the voucher and mark invoices entered")
         boolean commit;
+        @Option(names = "--output", description = "Write the invoice journal as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite", description = "Replace an existing output file")
+        boolean overwrite;
 
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -1695,6 +1701,11 @@ public class BokfriCli implements Runnable {
                 Map<String, Object> result = invoiceJournalDetails(plan);
                 result.put("committed", commit);
                 result.put("selection", selectedContext(context, company, year));
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSInvoicejournalPrinter(
+                            new java.util.ArrayList<>(plan.invoices()), plan.journalNumber(), plan.to()),
+                            output, overwrite));
+                }
                 if (commit) {
                     InvoiceJournalResult committed = service.commitJournal(plan);
                     result.put("voucherNumber", committed.voucherNumber());
@@ -2169,6 +2180,10 @@ public class BokfriCli implements Runnable {
         @CommandLine.ParentCommand VatCommand command;
         @Option(names = "--from") java.time.LocalDate from;
         @Option(names = "--to") java.time.LocalDate to;
+        @Option(names = "--output", description = "Write the VAT report as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite", description = "Replace an existing output file")
+        boolean overwrite;
 
         public Integer call() {
             BokfriCli root = command.parent;
@@ -2195,6 +2210,10 @@ public class BokfriCli implements Runnable {
                 result.put("boxes", vatBoxes(report.boxes()));
                 result.put("vatToPayOrRefund", money(report.vatToPayOrRefund()));
                 result.put("selection", selectedContext(context, company, year));
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSVATReport2015Printer(
+                            year, selectedFrom, selectedTo, 1), output, overwrite));
+                }
                 root.output(result, "VAT report " + selectedFrom + " - " + selectedTo
                         + "\nVAT to pay/refund: " + report.vatToPayOrRefund());
                 return 0;

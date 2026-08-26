@@ -120,12 +120,27 @@ SETTLEMENT_VAT_OVERRIDES = {
     3740: "A",
 }
 
+# These standard sales accounts encode their VAT treatment in their official
+# BAS names. They must be explicit because the historical Bokfri plans do not
+# agree sufficiently for the generator's conservative inheritance rule.
+STANDARD_SALES_VAT_OVERRIDES = {
+    3001: "MP1",
+    3002: "MP2",
+    3003: "MP3",
+    3004: "MF",
+}
+
 VAT_OVERRIDES = {
-    "ink2_ab": {**SETTLEMENT_VAT_OVERRIDES, 3100: "", 3630: "", 3910: "", 3920: ""},
-    "ink2_ef": {**SETTLEMENT_VAT_OVERRIDES, 3100: "", 3630: "", 3910: "", 3920: ""},
-    "ink3": {**SETTLEMENT_VAT_OVERRIDES, 3100: "", 3630: "", 3910: "", 3920: ""},
-    "ink4": {**SETTLEMENT_VAT_OVERRIDES, 3100: "", 3630: "", 3910: "", 3920: ""},
-    "ne": {**SETTLEMENT_VAT_OVERRIDES, 3100: "", 3630: "", 3910: "", 3920: ""},
+    "ink2_ab": {**SETTLEMENT_VAT_OVERRIDES, **STANDARD_SALES_VAT_OVERRIDES,
+                3100: "", 3630: "", 3910: "", 3920: ""},
+    "ink2_ef": {**SETTLEMENT_VAT_OVERRIDES, **STANDARD_SALES_VAT_OVERRIDES,
+                3100: "", 3630: "", 3910: "", 3920: ""},
+    "ink3": {**SETTLEMENT_VAT_OVERRIDES, **STANDARD_SALES_VAT_OVERRIDES,
+             3100: "", 3630: "", 3910: "", 3920: ""},
+    "ink4": {**SETTLEMENT_VAT_OVERRIDES, **STANDARD_SALES_VAT_OVERRIDES,
+             3100: "", 3630: "", 3910: "", 3920: ""},
+    "ne": {**SETTLEMENT_VAT_OVERRIDES, **STANDARD_SALES_VAT_OVERRIDES,
+           3100: "", 3630: "", 3910: "", 3920: ""},
     "ne_k1": {**SETTLEMENT_VAT_OVERRIDES, 3100: "MF"},
 }
 

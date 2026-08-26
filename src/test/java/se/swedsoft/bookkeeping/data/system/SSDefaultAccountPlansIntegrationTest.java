@@ -65,6 +65,16 @@ class SSDefaultAccountPlansIntegrationTest {
     }
 
     @Test
+    void standardSalesAccountsHaveVatReportCodes() {
+        SSAccountPlan limitedCompany = findPlan("BAS 2026 - Aktiebolag");
+
+        assertThat(limitedCompany.getAccount(3001).getVATCode()).isEqualTo("MP1");
+        assertThat(limitedCompany.getAccount(3002).getVATCode()).isEqualTo("MP2");
+        assertThat(limitedCompany.getAccount(3003).getVATCode()).isEqualTo("MP3");
+        assertThat(limitedCompany.getAccount(3004).getVATCode()).isEqualTo("MF");
+    }
+
+    @Test
     void importingDefaultsAgainIsIdempotent() {
         int countBefore = SSDB.getInstance().getAccountPlans().size();
 
