@@ -86,6 +86,19 @@ public class SSOrder extends SSSale {
     }
 
     /**
+     * Creates a transient order-shaped sales document from another sale.
+     *
+     * @param sale source sale
+     */
+    public SSOrder(SSSale sale) {
+        super(sale);
+        if (sale instanceof SSInvoice invoice) {
+            iYourOrderNumber = invoice.getYourOrderNumber();
+        }
+        iCurrencyRate = iCurrency == null ? BigDecimal.ONE : iCurrency.getExchangeRate();
+    }
+
+    /**
      *  Creates an order based on a tender
      *
      * @param iTender

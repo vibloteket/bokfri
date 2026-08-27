@@ -15,6 +15,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ### Changed
 - The CLI can export customer-invoice journals and VAT reports as PDF with the
   same `--output` and `--overwrite` behavior as other report commands.
+- Invoice PDF export supports the OCR variant, delivery notes with or without
+  prices, and picking lists; the sales report is also available headlessly.
+- Customer inpayment journals and lists, accounts receivable, and customer-claim
+  reports can now be exported headlessly and are covered before and after payment.
 - The deterministic PDF gallery now covers the invoice journal, its committed
   voucher, the voucher list, and the VAT report with semantic balance and VAT-box checks.
 - BAS 2026 standard sales accounts 3001–3004 now carry the VAT report codes implied
