@@ -380,6 +380,9 @@ public final class PdfGallery {
         require(journal.stdout().contains("\"creditTotal\":\"302.00\""),
                 "Inpayment journal does not balance: " + journal.stdout());
         verifyPdf(journalPdf, List.of("Inbetalningsjournal", "1510", "1930", "302.00"));
+        String journalText = extractPdfText(journalPdf);
+        require(journalText.indexOf("1930") < journalText.indexOf("Summa redovisningsvaluta"),
+                "Inpayment journal total appears before the final account row");
         renderPages(journalPdf, journalScenario);
     }
 
