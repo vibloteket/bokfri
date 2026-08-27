@@ -66,6 +66,7 @@ public final class PdfGallery {
             generateIncomeStatementScenario();
             generateBalanceSheetScenario();
             generateVatReportScenario();
+            generatePayablesScenarios();
             writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber, voucherNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
@@ -509,6 +510,113 @@ public final class PdfGallery {
         renderPages(pdf, scenario);
     }
 
+    private static void generatePayablesScenarios() throws Exception {
+        Path supplier = json("supplier.json", """
+                {
+                  "number":"L100","name":"Exempelleverantör ÅÄÖ AB",
+                  "registrationNumber":"556677-8899","email":"ekonomi@leverantor.invalid",
+                  "bankgiro":"5555-0200",
+                  "address":{"address1":"Leverantörsgatan 8","postalCode":"111 22",
+                             "city":"Göteborg","country":"Sverige"}
+                }
+                """);
+        cliInYear("supplier", "create", "--file", supplier.toString()).success();
+        Path invoice = json("supplier-invoice.json", """
+                {
+                  "supplierNumber":"L100","date":"2026-06-01","dueDate":"2026-07-01",
+                  "reference":"LEV-2026-001","vat":"200.00","rounding":"0.00",
+                  "rows":[{"description":"Kontorsmaterial för galleri","quantity":1,
+                           "unitPrice":"800.00","account":6110}]
+                }
+                """);
+        Result created = cliInYear("supplier-invoice", "create", "--file", invoice.toString());
+        int invoiceNumber = firstInt(created.stdout(), "number");
+        require(created.stdout().contains("\"total\":\"1000.00\""),
+                "Supplier invoice has an unexpected total: " + created.stdout());
+
+        Path journalScenario = output.resolve("supplier-invoice-journal");
+        Files.createDirectories(journalScenario);
+        Path journalPdf = journalScenario.resolve("supplier-invoice-journal.pdf");
+        Result journal = cliInYear("supplier-invoice", "journal", "--from", "2026-06-01",
+                "--to", "2026-06-01", "--output", journalPdf.toString(), "--commit");
+        require(journal.stdout().contains("\"debitTotal\":\"1000.00\"")
+                        && journal.stdout().contains("\"creditTotal\":\"1000.00\""),
+                "Supplier invoice journal does not balance: " + journal.stdout());
+        verifyPdf(journalPdf, List.of("Leverantörsfakturajournal", "L100", "2440", "2641", "6110"));
+        require(extractPdfText(journalPdf).indexOf("6110")
+                        < extractPdfText(journalPdf).indexOf("Summa redovisningsvaluta"),
+                "Supplier invoice journal total appears before the final account row");
+        renderPages(journalPdf, journalScenario);
+
+        generatePayablesReport("accounts-payable-before-settlement", "accounts-payable",
+                "2026-06-02", List.of("L100", "Exempelleverantör ÅÄÖ AB", "1,000.00"));
+        generatePayablesReport("supplier-debts-before-settlement", "supplier-debts",
+                "2026-06-02", List.of("L100", "Exempelleverantör ÅÄÖ AB", "1,000.00"));
+
+        Path credit = json("supplier-credit-invoice.json", """
+                {"supplierInvoiceNumber":%d,"date":"2026-06-10","amount":"250.00"}
+                """.formatted(invoiceNumber));
+        Result creditCreated = cliInYear("supplier-credit-invoice", "create", "--file", credit.toString());
+        require(creditCreated.stdout().contains("\"total\":\"250.00\""),
+                "Supplier credit invoice has an unexpected total: " + creditCreated.stdout());
+        Path creditScenario = output.resolve("supplier-credit-invoice-journal");
+        Files.createDirectories(creditScenario);
+        Path creditPdf = creditScenario.resolve("supplier-credit-invoice-journal.pdf");
+        Result creditJournal = cliInYear("supplier-credit-invoice", "journal", "--from", "2026-06-10",
+                "--to", "2026-06-10", "--output", creditPdf.toString(), "--commit");
+        require(creditJournal.stdout().contains("\"debitTotal\":\"250.00\"")
+                        && creditJournal.stdout().contains("\"creditTotal\":\"250.00\""),
+                "Supplier credit journal does not balance: " + creditJournal.stdout());
+        verifyPdf(creditPdf, List.of("kreditfakturajournal", "L100", "2440", "2641", "6110"));
+        require(extractPdfText(creditPdf).indexOf("6110")
+                        < extractPdfText(creditPdf).indexOf("Summa redovisningsvaluta"),
+                "Supplier credit journal total appears before the final account row");
+        renderPages(creditPdf, creditScenario);
+
+        Path payment = json("outpayment.json", """
+                {"date":"2026-07-01","text":"Slutbetalning av leverantörsfaktura",
+                 "rows":[{"invoiceNumber":%d,"amount":"750.00","currencyRate":"1.00"}]}
+                """.formatted(invoiceNumber));
+        Result paymentCreated = cliInYear("outpayment", "create", "--file", payment.toString());
+        require(paymentCreated.stdout().contains("\"total\":\"750.00\""),
+                "Outpayment has an unexpected total: " + paymentCreated.stdout());
+        Path listScenario = output.resolve("outpayment-list");
+        Files.createDirectories(listScenario);
+        Path listPdf = listScenario.resolve("outpayment-list.pdf");
+        cliInYear("outpayment", "pdf-list", "--output", listPdf.toString()).success();
+        verifyPdf(listPdf, List.of("Utbetalningslista", "Slutbetalning av leverantörsfaktura", "750.00"));
+        renderPages(listPdf, listScenario);
+
+        Path paymentJournalScenario = output.resolve("outpayment-journal");
+        Files.createDirectories(paymentJournalScenario);
+        Path paymentJournalPdf = paymentJournalScenario.resolve("outpayment-journal.pdf");
+        Result paymentJournal = cliInYear("outpayment", "journal", "--from", "2026-07-01",
+                "--to", "2026-07-01", "--output", paymentJournalPdf.toString(), "--commit");
+        require(paymentJournal.stdout().contains("\"debitTotal\":\"750.00\"")
+                        && paymentJournal.stdout().contains("\"creditTotal\":\"750.00\""),
+                "Outpayment journal does not balance: " + paymentJournal.stdout());
+        verifyPdf(paymentJournalPdf, List.of("Utbetalningsjournal", "1930", "2440", "750.00"));
+        require(extractPdfText(paymentJournalPdf).indexOf("1930")
+                        < extractPdfText(paymentJournalPdf).indexOf("Summa redovisningsvaluta"),
+                "Outpayment journal total appears before the final account row");
+        renderPages(paymentJournalPdf, paymentJournalScenario);
+
+        generatePayablesReport("accounts-payable-after-settlement", "accounts-payable",
+                "2026-07-02", List.of("0.00"));
+        generatePayablesReport("supplier-debts-after-settlement", "supplier-debts",
+                "2026-07-02", List.of("0.00"));
+    }
+
+    private static void generatePayablesReport(String scenarioName, String command,
+            String date, List<String> expected) throws Exception {
+        Path scenario = output.resolve(scenarioName);
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve(scenarioName + ".pdf");
+        cliInYear(command, "--date", date, "--output", pdf.toString()).success();
+        verifyPdf(pdf, expected);
+        renderPages(pdf, scenario);
+    }
+
     private static void generateBalanceSheetScenario() throws Exception {
         Path scenario = output.resolve("balance-sheet");
         Files.createDirectories(scenario);
@@ -687,6 +795,30 @@ public final class PdfGallery {
                 <article><h2>Momsrapport</h2>
                 <p><a href="vat-report/vat-report.pdf">Öppna PDF</a></p>
                 <img src="vat-report/page-1.png" alt="Momsrapport, sida 1"></article>
+                <article><h2>Leverantörsfakturajournal</h2>
+                <p><a href="supplier-invoice-journal/supplier-invoice-journal.pdf">Öppna PDF</a></p>
+                <img src="supplier-invoice-journal/page-1.png" alt="Leverantörsfakturajournal"></article>
+                <article><h2>Leverantörsreskontra före reglering</h2>
+                <p><a href="accounts-payable-before-settlement/accounts-payable-before-settlement.pdf">Öppna PDF</a></p>
+                <img src="accounts-payable-before-settlement/page-1.png" alt="Leverantörsreskontra före reglering"></article>
+                <article><h2>Leverantörsskuld före reglering</h2>
+                <p><a href="supplier-debts-before-settlement/supplier-debts-before-settlement.pdf">Öppna PDF</a></p>
+                <img src="supplier-debts-before-settlement/page-1.png" alt="Leverantörsskuld före reglering"></article>
+                <article><h2>Leverantörskreditfakturajournal</h2>
+                <p><a href="supplier-credit-invoice-journal/supplier-credit-invoice-journal.pdf">Öppna PDF</a></p>
+                <img src="supplier-credit-invoice-journal/page-1.png" alt="Leverantörskreditfakturajournal"></article>
+                <article><h2>Utbetalningslista</h2>
+                <p><a href="outpayment-list/outpayment-list.pdf">Öppna PDF</a></p>
+                <img src="outpayment-list/page-1.png" alt="Utbetalningslista"></article>
+                <article><h2>Utbetalningsjournal</h2>
+                <p><a href="outpayment-journal/outpayment-journal.pdf">Öppna PDF</a></p>
+                <img src="outpayment-journal/page-1.png" alt="Utbetalningsjournal"></article>
+                <article><h2>Leverantörsreskontra efter reglering</h2>
+                <p><a href="accounts-payable-after-settlement/accounts-payable-after-settlement.pdf">Öppna PDF</a></p>
+                <img src="accounts-payable-after-settlement/page-1.png" alt="Leverantörsreskontra efter reglering"></article>
+                <article><h2>Leverantörsskuld efter reglering</h2>
+                <p><a href="supplier-debts-after-settlement/supplier-debts-after-settlement.pdf">Öppna PDF</a></p>
+                <img src="supplier-debts-after-settlement/page-1.png" alt="Leverantörsskuld efter reglering"></article>
                 </main></html>
                 """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages,
                         amountsInvoiceNumber, voucherNumber, voucherNumber),

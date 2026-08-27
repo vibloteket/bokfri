@@ -176,7 +176,7 @@ public class SSSupplierInvoicejournalPrinter extends SSPrinter {
         public SSVoucherPrinter() {
             setMargins(0, 0, 0, 0);
 
-            setDetail("journals/invoicejournal.rows.jrxml");
+            setDetail("journals/supplierinvoicejournal.rows.jrxml");
             // setSummary("journals/invoicejournal.rows.jrxml");
 
             iModel = new SSDefaultTableModel<>() {
