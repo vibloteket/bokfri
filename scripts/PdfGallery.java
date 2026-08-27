@@ -67,6 +67,7 @@ public final class PdfGallery {
             generateBalanceSheetScenario();
             generateVatReportScenario();
             generatePayablesScenarios();
+            generateDocumentRegisterScenarios();
             writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber, voucherNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
@@ -332,6 +333,7 @@ public final class PdfGallery {
         int voucherNumber = firstInt(journal.stdout(), "voucherNumber");
         verifyPdf(pdf, List.of("Fakturajournal", "K100", "Exempelkund ÅÄÖ AB",
                 "1510", "3001", "2611", "3740"));
+        verifyPdfLacks(pdf, List.of("null"));
         String journalText = extractPdfText(pdf);
         require(journalText.indexOf("3001") < journalText.indexOf("Total summa"),
                 "Invoice journal totals appear before the final voucher row");
@@ -543,6 +545,7 @@ public final class PdfGallery {
                         && journal.stdout().contains("\"creditTotal\":\"1000.00\""),
                 "Supplier invoice journal does not balance: " + journal.stdout());
         verifyPdf(journalPdf, List.of("Leverantörsfakturajournal", "L100", "2440", "2641", "6110"));
+        verifyPdfLacks(journalPdf, List.of("null"));
         require(extractPdfText(journalPdf).indexOf("6110")
                         < extractPdfText(journalPdf).indexOf("Summa redovisningsvaluta"),
                 "Supplier invoice journal total appears before the final account row");
@@ -568,6 +571,7 @@ public final class PdfGallery {
                         && creditJournal.stdout().contains("\"creditTotal\":\"250.00\""),
                 "Supplier credit journal does not balance: " + creditJournal.stdout());
         verifyPdf(creditPdf, List.of("kreditfakturajournal", "L100", "2440", "2641", "6110"));
+        verifyPdfLacks(creditPdf, List.of("null"));
         require(extractPdfText(creditPdf).indexOf("6110")
                         < extractPdfText(creditPdf).indexOf("Summa redovisningsvaluta"),
                 "Supplier credit journal total appears before the final account row");
@@ -615,6 +619,37 @@ public final class PdfGallery {
         cliInYear(command, "--date", date, "--output", pdf.toString()).success();
         verifyPdf(pdf, expected);
         renderPages(pdf, scenario);
+    }
+
+    private static void generateDocumentRegisterScenarios() throws Exception {
+        generateDocumentRegister("invoice-list", new String[]{"invoice", "list"},
+                List.of("Fakturalista", "K100", "Exempelkund ÅÄÖ AB", "402.00"));
+        generateDocumentRegister("credit-invoice-list", new String[]{"credit-invoice", "list"},
+                List.of("Kreditfakturalista", "K100", "Exempelkund ÅÄÖ AB", "100.00"));
+        generateDocumentRegister("supplier-list", new String[]{"supplier", "list"},
+                List.of("L100", "Exempelleverantör ÅÄÖ AB"));
+        generateDocumentRegister("supplier-invoice-list", new String[]{"supplier-invoice", "list"},
+                List.of("Leverantörsfakturalista", "L100", "Exempelleverantör ÅÄÖ AB", "1,000.00"));
+        generateDocumentRegister("supplier-credit-invoice-list",
+                new String[]{"supplier-credit-invoice", "list"},
+                List.of("Leverantörskreditfakturalista", "L100", "250.00"));
+    }
+
+    private static void generateDocumentRegister(String scenarioName, String[] command,
+            List<String> expected) throws Exception {
+        Path scenario = output.resolve(scenarioName);
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve(scenarioName + ".pdf");
+        java.util.ArrayList<String> arguments = new java.util.ArrayList<>(List.of(command));
+        arguments.add("--output"); arguments.add(pdf.toString());
+        cliInYear(arguments.toArray(String[]::new)).success();
+        verifyPdf(pdf, expected);
+        int pages = renderPages(pdf, scenario);
+        if (scenarioName.equals("invoice-list")) {
+            require(pages >= 3, "Invoice list does not exercise multipage layout: " + pages);
+        } else {
+            require(pages == 1, scenarioName + " unexpectedly rendered " + pages + " pages");
+        }
     }
 
     private static void generateBalanceSheetScenario() throws Exception {
@@ -819,6 +854,18 @@ public final class PdfGallery {
                 <article><h2>Leverantörsskuld efter reglering</h2>
                 <p><a href="supplier-debts-after-settlement/supplier-debts-after-settlement.pdf">Öppna PDF</a></p>
                 <img src="supplier-debts-after-settlement/page-1.png" alt="Leverantörsskuld efter reglering"></article>
+                <article><h2>Fakturalista</h2><p><a href="invoice-list/invoice-list.pdf">Öppna PDF</a></p>
+                <img src="invoice-list/page-1.png" alt="Fakturalista, sida 1">
+                <img src="invoice-list/page-2.png" alt="Fakturalista, sida 2">
+                <img src="invoice-list/page-3.png" alt="Fakturalista, sida 3"></article>
+                <article><h2>Kreditfakturalista</h2><p><a href="credit-invoice-list/credit-invoice-list.pdf">Öppna PDF</a></p>
+                <img src="credit-invoice-list/page-1.png" alt="Kreditfakturalista"></article>
+                <article><h2>Leverantörslista</h2><p><a href="supplier-list/supplier-list.pdf">Öppna PDF</a></p>
+                <img src="supplier-list/page-1.png" alt="Leverantörslista"></article>
+                <article><h2>Leverantörsfakturalista</h2><p><a href="supplier-invoice-list/supplier-invoice-list.pdf">Öppna PDF</a></p>
+                <img src="supplier-invoice-list/page-1.png" alt="Leverantörsfakturalista"></article>
+                <article><h2>Leverantörskreditfakturalista</h2><p><a href="supplier-credit-invoice-list/supplier-credit-invoice-list.pdf">Öppna PDF</a></p>
+                <img src="supplier-credit-invoice-list/page-1.png" alt="Leverantörskreditfakturalista"></article>
                 </main></html>
                 """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages,
                         amountsInvoiceNumber, voucherNumber, voucherNumber),

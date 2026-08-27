@@ -111,7 +111,7 @@ public class SSInvoicejournalPrinter extends SSPrinter {
 
                 case 4:
                     value = iInvoice.getCurrency() == null
-                            ? null
+                            ? ""
                             : iInvoice.getCurrency().getName();
                     break;
 

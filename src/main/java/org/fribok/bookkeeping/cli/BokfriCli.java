@@ -100,13 +100,18 @@ import se.swedsoft.bookkeeping.print.SSPrinter;
 import se.swedsoft.bookkeeping.print.report.SSAccountsPayablePrinter;
 import se.swedsoft.bookkeeping.print.report.SSAccountsRecievablePrinter;
 import se.swedsoft.bookkeeping.print.report.SSBalancePrinter;
+import se.swedsoft.bookkeeping.print.report.SSCreditInvoiceListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSCustomerclaimPrinter;
 import se.swedsoft.bookkeeping.print.report.SSCustomerListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSInpaymentListPrinter;
+import se.swedsoft.bookkeeping.print.report.SSInvoiceListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSMainBookPrinter;
 import se.swedsoft.bookkeeping.print.report.SSOutpaymentListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSResultPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSaleReportPrinter;
+import se.swedsoft.bookkeeping.print.report.SSSupplierCreditInvoiceListPrinter;
+import se.swedsoft.bookkeeping.print.report.SSSupplierInvoiceListPrinter;
+import se.swedsoft.bookkeeping.print.report.SSSupplierListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSVATReport2015Printer;
 import se.swedsoft.bookkeeping.print.report.SSVoucherListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSupplierdebtPrinter;
@@ -1638,15 +1643,26 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List suppliers")
     static class SupplierList implements Callable<Integer> {
         @CommandLine.ParentCommand SupplierCommand command;
+        @Option(names = "--output", description = "Write the supplier list as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                List<Map<String, Object>> suppliers = new SupplierService(runtime.database()).list()
-                        .stream().map(BokfriCli::supplierDetails).toList();
-                root.output(Map.of("selection", selectedCompanyContext(context, company),
-                                "count", suppliers.size(), "suppliers", suppliers),
+                List<SSSupplier> listedSuppliers = new SupplierService(runtime.database()).list();
+                List<Map<String, Object>> suppliers = listedSuppliers.stream()
+                        .map(BokfriCli::supplierDetails).toList();
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("selection", selectedCompanyContext(context, company));
+                result.put("count", suppliers.size());
+                result.put("suppliers", suppliers);
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSSupplierListPrinter(
+                            new java.util.ArrayList<>(listedSuppliers)), output, overwrite));
+                }
+                root.output(result,
                         table(suppliers, "No suppliers found", left("Number", "number"),
                                 left("Name", "name"), left("Email", "email")));
                 return 0;
@@ -1719,7 +1735,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name="supplier-invoice",description="Inspect, create, and book supplier invoices",subcommands={SupplierInvoiceList.class,SupplierInvoiceShow.class,SupplierInvoiceJournal.class,SupplierInvoiceValidate.class,SupplierInvoiceCreate.class,CliInputSchemas.SupplierInvoice.class})
     static class SupplierInvoiceCommand extends CliCommand implements Runnable {@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"A supplier-invoice command is required");}}
-    @Command(mixinStandardHelpOptions = true, name="list") static class SupplierInvoiceList implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> x=new SupplierInvoiceService(r.database()).list().stream().map(BokfriCli::supplierInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"count",x.size(),"supplierInvoices",x),table(x,"No supplier invoices found",right("Number","number"),left("Date","date"),left("Supplier","supplierName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="list") static class SupplierInvoiceList implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--output")java.nio.file.Path output;@Option(names="--overwrite")boolean overwrite;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<SSSupplierInvoice> items=new SupplierInvoiceService(r.database()).list();List<Map<String,Object>> x=items.stream().map(BokfriCli::supplierInvoiceDetails).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("count",x.size());result.put("supplierInvoices",x);if(output!=null)addPdf(result,exportPdf(new SSSupplierInvoiceListPrinter(new java.util.ArrayList<>(items)),output,overwrite));root.output(result,table(x,"No supplier invoices found",right("Number","number"),left("Date","date"),left("Supplier","supplierName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
     @Command(mixinStandardHelpOptions = true, name="show") static class SupplierInvoiceShow implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Parameters(index="0")int number;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierInvoice i=new SupplierInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+number));Map<String,Object>x=supplierInvoiceDetails(i);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Supplier invoice "+number+"\nSupplier: "+i.getSupplierName()+"\nTotal: "+x.get("total"));return 0;}catch(Exception e){throw databaseFailure(e);}}}
     abstract static class SupplierInvoiceOperation implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierInvoiceInput input=readSupplierInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SSSupplierInvoice i=toSupplierInvoice(input,r);SupplierInvoiceService s=new SupplierInvoiceService(r.database());var v=s.validate(i);if(!v.valid())throw supplierInvoiceValidationFailure(v);Map<String,Object>x=supplierInvoiceDetails(i);x.put("number",s.nextNumber());x.put("dryRun",!persist());x.put("created",persist());x.put("selection",selectedContext(c,co,y));if(persist()){s.create(i);x.put("number",i.getNumber());}root.output(x,persist()?"Created supplier invoice "+i.getNumber():"Supplier invoice is valid; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
     @Command(mixinStandardHelpOptions = true, name="validate") static class SupplierInvoiceValidate extends SupplierInvoiceOperation{boolean persist(){return false;}}
@@ -1739,7 +1755,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "list")
     static class SupplierCreditInvoiceList implements Callable<Integer> {
         @CommandLine.ParentCommand SupplierCreditInvoiceCommand command;
-        public Integer call() { BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new SupplierCreditInvoiceService(r.database()).list().stream().map(BokfriCli::supplierCreditInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"supplierCreditInvoices",rows,"count",rows.size()),table(rows,"No supplier credit invoices found",right("Number","number"),left("Date","date"),left("Supplier","supplierName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);} }
+        @Option(names="--output") java.nio.file.Path output; @Option(names="--overwrite") boolean overwrite; public Integer call() { BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<SSSupplierCreditInvoice> items=new SupplierCreditInvoiceService(r.database()).list();List<Map<String,Object>> rows=items.stream().map(BokfriCli::supplierCreditInvoiceDetails).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("supplierCreditInvoices",rows);result.put("count",rows.size());if(output!=null)addPdf(result,exportPdf(new SSSupplierCreditInvoiceListPrinter(new java.util.ArrayList<>(items)),output,overwrite));root.output(result,table(rows,"No supplier credit invoices found",right("Number","number"),left("Date","date"),left("Supplier","supplierName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);} }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "show")
@@ -1785,16 +1801,27 @@ public class BokfriCli implements Runnable {
         @CommandLine.ParentCommand InvoiceCommand command;
         @Option(names = "--from") java.time.LocalDate from;
         @Option(names = "--to") java.time.LocalDate to;
+        @Option(names = "--output", description = "Write the invoice list as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 runtime.database().init(false);
-                List<Map<String, Object>> invoices = new InvoiceService(runtime.database())
-                        .list(from, to).stream().map(BokfriCli::invoiceSummary).toList();
-                root.output(Map.of("selection", selectedCompanyContext(context, company),
-                                "count", invoices.size(), "invoices", invoices),
+                List<SSInvoice> listedInvoices = new InvoiceService(runtime.database()).list(from, to);
+                List<Map<String, Object>> invoices = listedInvoices.stream()
+                        .map(BokfriCli::invoiceSummary).toList();
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("selection", selectedCompanyContext(context, company));
+                result.put("count", invoices.size());
+                result.put("invoices", invoices);
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSInvoiceListPrinter(
+                            new java.util.ArrayList<>(listedInvoices)), output, overwrite));
+                }
+                root.output(result,
                         table(invoices, "No invoices found", right("Number", "number"),
                                 left("Date", "date"), left("Customer", "customerName"),
                                 right("Total", "total")));
@@ -2055,7 +2082,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "list") static class CreditInvoiceList implements Callable<Integer> {
         @CommandLine.ParentCommand CreditInvoiceCommand command;
-        public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<Map<String,Object>> rows=new CreditInvoiceService(r.database()).list().stream().map(BokfriCli::creditInvoiceDetails).toList();root.output(Map.of("selection",selectedCompanyContext(c,co),"creditInvoices",rows,"count",rows.size()),table(rows,"No credit invoices found",right("Number","number"),left("Date","date"),left("Customer","customerName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}
+        @Option(names="--output") java.nio.file.Path output; @Option(names="--overwrite") boolean overwrite; public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<SSCreditInvoice> items=new CreditInvoiceService(r.database()).list();List<Map<String,Object>> rows=items.stream().map(BokfriCli::creditInvoiceDetails).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("creditInvoices",rows);result.put("count",rows.size());if(output!=null)addPdf(result,exportPdf(new SSCreditInvoiceListPrinter(new java.util.ArrayList<>(items)),output,overwrite));root.output(result,table(rows,"No credit invoices found",right("Number","number"),left("Date","date"),left("Customer","customerName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}
     }
 
     @Command(mixinStandardHelpOptions = true, name = "show") static class CreditInvoiceShow implements Callable<Integer> {

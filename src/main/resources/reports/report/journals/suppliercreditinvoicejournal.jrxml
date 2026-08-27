@@ -168,7 +168,7 @@
 
 
             <!-- Invoice currency -->
-            <textField>
+            <textField isBlankWhenNull="true">
                 <reportElement x="450" y="0" width="80" height="14"/>
                 <textElement  textAlignment="Right">
                     <font size="8" isBold="true"/>
