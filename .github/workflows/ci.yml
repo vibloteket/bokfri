@@ -71,10 +71,10 @@ jobs:
         EMAIL_FROM: ${{ vars.GALLERY_EMAIL_FROM }}
         EMAIL_TO: ${{ vars.GALLERY_EMAIL_TO }}
         GALLERY_DIR: target/pdf-gallery
-        EMAIL_SUBJECT: Bokfri PDF gallery - PR #${{ github.event.pull_request.number }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
         PR_URL: ${{ github.event.pull_request.html_url }}
         ACTIONS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        COMMIT_SHA: ${{ github.sha }}
+        COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
       run: ./scripts/send-pdf-gallery-email
 
     - name: Upload coverage report

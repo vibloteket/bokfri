@@ -24,10 +24,12 @@ fi
 message=$(mktemp)
 trap 'rm -f "$message"' EXIT
 boundary="bokfri-gallery-$(date +%s)-${RANDOM}"
-subject=${EMAIL_SUBJECT:-Bokfri PDF gallery}
 actions_url=${ACTIONS_URL:-}
 pr_url=${PR_URL:-}
 commit=${COMMIT_SHA:-unknown}
+short_commit=${commit:0:7}
+pr_number=${PR_NUMBER:-unknown}
+subject=${EMAIL_SUBJECT:-[Bokfri PDF] PR #${pr_number} - ${short_commit}}
 
 {
   printf 'From: Bokfri CI <%s>\r\n' "$EMAIL_FROM"
