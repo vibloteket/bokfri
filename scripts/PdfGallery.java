@@ -649,7 +649,7 @@ public final class PdfGallery {
         }
     }
 
-    private static void generateBalanceSheetScenario throws Exception {
+    private static void generateBalanceSheetScenario() throws Exception {
         Path scenario = output.resolve("balance-sheet");
         Files.createDirectories(scenario);
         Path pdf = scenario.resolve("balance-sheet.pdf");
