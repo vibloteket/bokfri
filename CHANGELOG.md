@@ -21,6 +21,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   reports can now be exported headlessly and are covered before and after payment.
 - Supplier invoice and credit-invoice journals, outpayment journals and lists,
   accounts payable, and supplier-debt reports can now be exported headlessly.
+- Customer and supplier invoice registers, credit-invoice registers, and the
+  supplier register can now be exported as PDF from their CLI list commands.
+- Customer and supplier invoice registers, credit-invoice registers, and the
+  supplier register can now be exported as PDF from their CLI list commands.
 - The deterministic PDF gallery now covers the invoice journal, its committed
   voucher, the voucher list, and the VAT report with semantic balance and VAT-box checks.
 - BAS 2026 standard sales accounts 3001–3004 now carry the VAT report codes implied
