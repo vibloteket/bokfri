@@ -48,10 +48,15 @@ public final class PdfGallery {
 
         try {
             int invoiceNumber = generateInvoiceScenario();
+            generateOcrInvoiceScenario(invoiceNumber);
+            generateDeliveryNoteScenarios(invoiceNumber);
+            generatePickingListScenario(invoiceNumber);
+            generateSalesReportScenario();
             int longInvoiceNumber = generateMultipageInvoiceScenario();
             int amountsInvoiceNumber = generateAmountsInvoiceScenario();
             generateCustomerListScenario();
             int voucherNumber = generateInvoiceJournalScenario(invoiceNumber);
+            generateCreditInvoiceScenario(invoiceNumber);
             generateVoucherScenario(voucherNumber);
             generateVoucherListScenario(voucherNumber);
             generateGeneralLedgerScenario();
@@ -71,7 +76,8 @@ public final class PdfGallery {
                 {
                   "name": "Galleri AB",
                   "corporateId": "559999-1234",
-                  "email": "ekonomi@galleri.invalid"
+                  "email": "ekonomi@galleri.invalid",
+                  "bankgiro": "5555-0100"
                 }
                 """);
         companyId = firstInt(cli("company", "create", "--file", company.toString()).stdout(), "id");
@@ -117,7 +123,9 @@ public final class PdfGallery {
                   "sellingPrice": "125.00",
                   "vatRate": "25",
                   "salesAccount": 3001,
-                  "stockProduct": false
+                  "stockProduct": false,
+                  "weight": "1.25",
+                  "volume": "0.75"
                 }
                 """);
         cliInYear("product", "create", "--file", product.toString()).success();
@@ -151,10 +159,68 @@ public final class PdfGallery {
         cliInYear("invoice", "pdf", Integer.toString(invoiceNumber),
                 "--output", pdf.toString()).success();
         verifyPdf(pdf, List.of("K100", "Exempelkund ÅÄÖ AB",
-                "Leveransvägen 27", "lastkaj 4", "Galleriartikel decimal", "2.25", "0.5",
+                "Leveransvägen 27", "lastkaj 4", "Galleriartikel decimal", "2.25st", "0.5",
                 "Mycket litet belopp", "ORDER-XYZ"));
         renderPages(pdf, scenario);
         return invoiceNumber;
+    }
+
+    private static void generateOcrInvoiceScenario(int invoiceNumber) throws Exception {
+        Path scenario = output.resolve("invoice-ocr");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("invoice-ocr.pdf");
+        Result invoice = cliInYear("invoice", "pdf", Integer.toString(invoiceNumber),
+                "--ocr", "--ocr-background", "--output", pdf.toString());
+        require(invoice.stdout().contains("\"ocr\":true"),
+                "OCR invoice output does not identify the OCR variant");
+        require(invoice.stdout().contains("\"ocrNumber\":\""),
+                "OCR invoice output lacks an OCR number");
+        verifyPdf(pdf, List.of("K100", "Exempelkund ÅÄÖ AB", "5555-0100",
+                "Galleriartikel decimal", "ATT BETALA"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateDeliveryNoteScenarios(int invoiceNumber) throws Exception {
+        for (boolean hidePrices : List.of(false, true)) {
+            String name = hidePrices ? "delivery-note-without-prices" : "delivery-note";
+            Path scenario = output.resolve(name);
+            Files.createDirectories(scenario);
+            Path pdf = scenario.resolve(name + ".pdf");
+            java.util.ArrayList<String> arguments = new java.util.ArrayList<>(List.of(
+                    "invoice", "delivery-note", Integer.toString(invoiceNumber),
+                    "--output", pdf.toString()));
+            if (hidePrices) arguments.add("--hide-unit-price");
+            cliInYear(arguments.toArray(String[]::new)).success();
+            List<String> expected = new java.util.ArrayList<>(List.of("FÖLJESEDEL", "K100",
+                    "Leveransvägen 27", "Galleriartikel decimal", "2.25"));
+            if (!hidePrices) expected.add("125,00");
+            verifyPdf(pdf, expected);
+            if (hidePrices) {
+                verifyPdfLacks(pdf, List.of("125,00", "281,25"));
+            }
+            renderPages(pdf, scenario);
+        }
+    }
+
+    private static void generatePickingListScenario(int invoiceNumber) throws Exception {
+        Path scenario = output.resolve("picking-list");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("picking-list.pdf");
+        cliInYear("invoice", "picking-list", Integer.toString(invoiceNumber),
+                "--output", pdf.toString()).success();
+        verifyPdf(pdf, List.of("PLOCKLISTA", "K100", "Galleriartikel decimal", "2.25",
+                "2,812", "1,688"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateSalesReportScenario() throws Exception {
+        Path scenario = output.resolve("sales-report");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("sales-report.pdf");
+        cliInYear("sales-report", "--from", "2026-01-01", "--to", "2026-12-31",
+                "--output", pdf.toString()).success();
+        verifyPdf(pdf, List.of("Försäljningsrapport", "P100", "Galleriartikel decimal", "2.25"));
+        renderPages(pdf, scenario);
     }
 
     private static int generateMultipageInvoiceScenario() throws Exception {
@@ -262,12 +328,36 @@ public final class PdfGallery {
         int voucherNumber = firstInt(journal.stdout(), "voucherNumber");
         verifyPdf(pdf, List.of("Fakturajournal", "K100", "Exempelkund ÅÄÖ AB",
                 "1510", "3001", "2611", "3740"));
+        String journalText = extractPdfText(pdf);
+        require(journalText.indexOf("3001") < journalText.indexOf("Total summa"),
+                "Invoice journal totals appear before the final voucher row");
         renderPages(pdf, scenario);
 
         Result bookedInvoice = cliInYear("invoice", "show", Integer.toString(invoiceNumber));
         require(bookedInvoice.stdout().contains("\"entered\":true"),
                 "Gallery invoice was not marked as entered");
         return voucherNumber;
+    }
+
+    private static void generateCreditInvoiceScenario(int invoiceNumber) throws Exception {
+        Path input = json("credit-invoice.json", """
+                {"invoiceNumber":%d,"date":"2026-03-20","amount":"100.00"}
+                """.formatted(invoiceNumber));
+        Result created = cliInYear("credit-invoice", "create", "--file", input.toString());
+        int creditInvoiceNumber = firstInt(created.stdout(), "number");
+        require(created.stdout().contains("\"creditingInvoiceNumber\":" + invoiceNumber),
+                "Credit invoice does not refer to invoice " + invoiceNumber);
+        require(created.stdout().contains("\"total\":\"100.00\""),
+                "Credit invoice has an unexpected total: " + created.stdout());
+
+        Path scenario = output.resolve("credit-invoice");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("credit-invoice.pdf");
+        cliInYear("credit-invoice", "pdf", Integer.toString(creditInvoiceNumber),
+                "--output", pdf.toString()).success();
+        verifyPdf(pdf, List.of("KREDITFAKTURA", "K100", "Exempelkund ÅÄÖ AB",
+                "Galleriartikel decimal", "100,00"));
+        renderPages(pdf, scenario);
     }
 
     private static void generateVoucherScenario(int voucherNumber) throws Exception {
@@ -284,7 +374,8 @@ public final class PdfGallery {
             require(voucher.stdout().contains("\"account\":" + account),
                     "Voucher lacks account " + account);
         }
-        verifyPdf(pdf, List.of("Fakturajournal", "1510", "3001", "2611", "3740"));
+        verifyPdf(pdf, List.of("Verifikation", "Fakturajournal", "1510", "3001", "2611", "3740"));
+        verifyPdfLacks(pdf, List.of("Preview voucher"));
         renderPages(pdf, scenario);
     }
 
@@ -388,6 +479,13 @@ public final class PdfGallery {
         }
     }
 
+    private static void verifyPdfLacks(Path pdf, List<String> forbiddenText) throws Exception {
+        String text = extractPdfText(pdf);
+        for (String forbidden : forbiddenText) {
+            require(!text.contains(forbidden), "PDF contains forbidden text: " + forbidden);
+        }
+    }
+
     private static void verifyPdf(Path pdf, List<String> expectedText) throws Exception {
         require(Files.size(pdf) > 1_000, "PDF is unexpectedly small: " + pdf);
         byte[] signature = Files.readAllBytes(pdf);
@@ -395,6 +493,14 @@ public final class PdfGallery {
                         && signature[2] == 'D' && signature[3] == 'F' && signature[4] == '-',
                 "Output does not have a PDF signature: " + pdf);
 
+        String text = extractPdfText(pdf);
+        for (String expected : expectedText) {
+            require(text.contains(expected), "PDF lacks expected text: " + expected);
+        }
+        Files.writeString(pdf.getParent().resolve("text.txt"), text, StandardCharsets.UTF_8);
+    }
+
+    private static String extractPdfText(Path pdf) throws Exception {
         PdfReader reader = new PdfReader(pdf.toString());
         StringBuilder text = new StringBuilder();
         try {
@@ -405,10 +511,7 @@ public final class PdfGallery {
         } finally {
             reader.close();
         }
-        for (String expected : expectedText) {
-            require(text.toString().contains(expected), "PDF lacks expected text: " + expected);
-        }
-        Files.writeString(pdf.getParent().resolve("text.txt"), text, StandardCharsets.UTF_8);
+        return text.toString();
     }
 
     private static int renderPages(Path pdf, Path scenario) throws Exception {
@@ -455,6 +558,24 @@ public final class PdfGallery {
                 <main><h1>Bokfri PDF gallery</h1>
                 <article><h2>Faktura %d</h2><p><a href="invoice/invoice.pdf">Öppna PDF</a></p>
                 <img src="invoice/page-1.png" alt="Faktura %d, sida 1"></article>
+                <article><h2>OCR-faktura</h2>
+                <p><a href="invoice-ocr/invoice-ocr.pdf">Öppna PDF</a></p>
+                <img src="invoice-ocr/page-1.png" alt="OCR-faktura, sida 1"></article>
+                <article><h2>Följesedel med priser</h2>
+                <p><a href="delivery-note/delivery-note.pdf">Öppna PDF</a></p>
+                <img src="delivery-note/page-1.png" alt="Följesedel med priser, sida 1"></article>
+                <article><h2>Följesedel utan priser</h2>
+                <p><a href="delivery-note-without-prices/delivery-note-without-prices.pdf">Öppna PDF</a></p>
+                <img src="delivery-note-without-prices/page-1.png" alt="Följesedel utan priser, sida 1"></article>
+                <article><h2>Plocklista</h2>
+                <p><a href="picking-list/picking-list.pdf">Öppna PDF</a></p>
+                <img src="picking-list/page-1.png" alt="Plocklista, sida 1"></article>
+                <article><h2>Försäljningsrapport</h2>
+                <p><a href="sales-report/sales-report.pdf">Öppna PDF</a></p>
+                <img src="sales-report/page-1.png" alt="Försäljningsrapport, sida 1"></article>
+                <article><h2>Kreditfaktura</h2>
+                <p><a href="credit-invoice/credit-invoice.pdf">Öppna PDF</a></p>
+                <img src="credit-invoice/page-1.png" alt="Kreditfaktura, sida 1"></article>
                 <article><h2>Flersidig faktura %d</h2>
                 <p><a href="invoice-multipage/invoice-multipage.pdf">Öppna PDF</a></p>
                 %s</article>

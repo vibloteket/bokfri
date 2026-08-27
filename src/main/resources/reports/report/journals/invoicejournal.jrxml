@@ -122,7 +122,7 @@
 
 
     <detail>
-        <band height="75" isSplitAllowed="true">
+        <band height="170" isSplitAllowed="true">
 
 
             <!-- Invoice number -->
@@ -184,12 +184,25 @@
 
             <!-- Order rows -->
             <subreport isUsingCache="false">
-                <reportElement x="0" y="12" width="555" height="0" isPrintWhenDetailOverflows="true"/>
+                <reportElement x="0" y="12" width="555" height="158" isPrintWhenDetailOverflows="true"/>
 
                 <subreportParameter name="invoice.customernr">
                     <subreportParameterExpression>
                         <![CDATA[$F{invoice.number}]]>
                     </subreportParameterExpression>
+                </subreportParameter>
+
+                <subreportParameter name="invoice.sum">
+                    <subreportParameterExpression><![CDATA[$F{invoice.sum}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="invoice.tax">
+                    <subreportParameterExpression><![CDATA[$F{invoice.tax}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="invoice.currencyrate">
+                    <subreportParameterExpression><![CDATA[$F{invoice.currencyrate}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="invoice.localsum">
+                    <subreportParameterExpression><![CDATA[$F{invoice.localsum}]]></subreportParameterExpression>
                 </subreportParameter>
 
                 <dataSourceExpression>
@@ -201,98 +214,7 @@
                 </subreportExpression>
             </subreport>
 
-            <frame>
-                <reportElement x="0" y="12" width="555" height="50" positionType="Float"/>
-                <line>
-                    <reportElement x="80" y="0" width="450" height="1"/>
-                </line>
 
-                <!-- Invoice sum -->
-                <textField>
-                    <reportElement x="350" y="0" width="120" height="12"/>
-                    <textElement  textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{invoicejournal.sum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00">
-                    <reportElement x="470" y="0" width="60" height="12"/>
-                    <textElement  textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{invoice.sum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Invoice tax sum -->
-                <textField>
-                    <reportElement x="350" y="12" width="120" height="12"/>
-                    <textElement  textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{invoicejournal.tax}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00">
-                    <reportElement x="470" y="12" width="60" height="12"/>
-                    <textElement  textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{invoice.tax}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Invoice currency rate -->
-                <textField>
-                    <reportElement x="350" y="24" width="120" height="12"/>
-                    <textElement  textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{invoicejournal.currencyrate}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00000">
-                    <reportElement x="470" y="24" width="60" height="12"/>
-                    <textElement  textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{invoice.currencyrate}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Invoice local sum -->
-                <textField>
-                    <reportElement x="350" y="36" width="120" height="12"/>
-                    <textElement  textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{invoicejournal.totalsum}]]>
-                    </textFieldExpression>
-                </textField>
-                <textField pattern="#,##0.00">
-                    <reportElement x="470" y="36" width="60" height="12"/>
-                    <textElement  textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{invoice.localsum}]]>
-                    </textFieldExpression>
-                </textField>
-
-            </frame>
 
         </band>
     </detail>

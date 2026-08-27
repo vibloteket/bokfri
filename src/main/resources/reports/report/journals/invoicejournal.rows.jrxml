@@ -5,6 +5,10 @@
 <jasperReport name="InvoiceJournalRows" resourceBundle="book">
 
     <parameter name="invoice.number" class="java.lang.Integer"/>
+    <parameter name="invoice.sum" class="java.math.BigDecimal"/>
+    <parameter name="invoice.tax" class="java.math.BigDecimal"/>
+    <parameter name="invoice.currencyrate" class="java.math.BigDecimal"/>
+    <parameter name="invoice.localsum" class="java.math.BigDecimal"/>
 
     <field name="row.account"          class="java.lang.Integer"/>
     <field name="row.description"      class="java.lang.String"/>
@@ -25,6 +29,41 @@
         <initialValueExpression>new BigDecimal(0.0) </initialValueExpression>
     </variable>
 
+
+    <group name="invoiceTotals" minHeightToStartNewPage="100">
+        <groupExpression><![CDATA[$P{invoice.number}]]></groupExpression>
+        <groupFooter>
+        <band height="80" isSplitAllowed="false">
+            <!-- Voucher debit/credit totals, always after the final account row. -->
+            <line><reportElement x="80" y="0" width="450" height="1"/></line>
+            <textField>
+                <reportElement x="80" y="2" width="250" height="12"/>
+                <textElement><font size="8"/></textElement>
+                <textFieldExpression><![CDATA[$R{invoicejournal.sum}]]></textFieldExpression>
+            </textField>
+            <textField pattern="#,##0.00">
+                <reportElement x="370" y="2" width="80" height="12"/>
+                <textElement textAlignment="Right"><font size="8"/></textElement>
+                <textFieldExpression class="java.math.BigDecimal"><![CDATA[$V{debet.sum}]]></textFieldExpression>
+            </textField>
+            <textField pattern="#,##0.00">
+                <reportElement x="450" y="2" width="80" height="12"/>
+                <textElement textAlignment="Right"><font size="8"/></textElement>
+                <textFieldExpression class="java.math.BigDecimal"><![CDATA[$V{credet.sum}]]></textFieldExpression>
+            </textField>
+
+            <!-- Invoice totals belong to the subreport so they cannot overlap its rows. -->
+            <textField><reportElement x="350" y="18" width="120" height="12"/><textElement><font size="8"/></textElement><textFieldExpression><![CDATA[$R{invoicejournal.sum}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="470" y="18" width="60" height="12"/><textElement textAlignment="Right"><font size="8"/></textElement><textFieldExpression class="java.math.BigDecimal"><![CDATA[$P{invoice.sum}]]></textFieldExpression></textField>
+            <textField><reportElement x="350" y="33" width="120" height="12"/><textElement><font size="8"/></textElement><textFieldExpression><![CDATA[$R{invoicejournal.tax}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="470" y="33" width="60" height="12"/><textElement textAlignment="Right"><font size="8"/></textElement><textFieldExpression class="java.math.BigDecimal"><![CDATA[$P{invoice.tax}]]></textFieldExpression></textField>
+            <textField><reportElement x="350" y="48" width="120" height="12"/><textElement><font size="8"/></textElement><textFieldExpression><![CDATA[$R{invoicejournal.currencyrate}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00000"><reportElement x="470" y="48" width="60" height="12"/><textElement textAlignment="Right"><font size="8"/></textElement><textFieldExpression class="java.math.BigDecimal"><![CDATA[$P{invoice.currencyrate}]]></textFieldExpression></textField>
+            <textField><reportElement x="350" y="63" width="120" height="12"/><textElement><font size="8"/></textElement><textFieldExpression><![CDATA[$R{invoicejournal.totalsum}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="470" y="63" width="60" height="12"/><textElement textAlignment="Right"><font size="8"/></textElement><textFieldExpression class="java.math.BigDecimal"><![CDATA[$P{invoice.localsum}]]></textFieldExpression></textField>
+        </band>
+        </groupFooter>
+    </group>
 
     <detail>
         <band height="12" isSplitAllowed="true">
@@ -105,48 +144,7 @@
         </band>
     </detail>
 
-    <summary>
-        <band height="12" isSplitAllowed="false">
-            <line>
-                <reportElement x="80" y="0" width="450" height="1"/>
-            </line>
 
-            <textField>
-                <reportElement x="80" y="0" width="250" height="12"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$R{invoicejournal.sum}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Debet -->
-            <textField pattern="#,##0.00">
-                <reportElement x="370" y="0" width="80" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$V{debet.sum}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Credet -->
-            <textField pattern="#,##0.00">
-                <reportElement x="470" y="0" width="80" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$V{credet.sum}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </summary>
 
 
 </jasperReport>
