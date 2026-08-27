@@ -56,7 +56,10 @@ public final class PdfGallery {
             int amountsInvoiceNumber = generateAmountsInvoiceScenario();
             generateCustomerListScenario();
             int voucherNumber = generateInvoiceJournalScenario(invoiceNumber);
+            generateReceivablesBeforePaymentScenario();
             generateCreditInvoiceScenario(invoiceNumber);
+            generateInpaymentScenarios(invoiceNumber);
+            generateReceivablesAfterPaymentScenario();
             generateVoucherScenario(voucherNumber);
             generateVoucherListScenario(voucherNumber);
             generateGeneralLedgerScenario();
@@ -339,6 +342,67 @@ public final class PdfGallery {
         return voucherNumber;
     }
 
+    private static void generateReceivablesBeforePaymentScenario() throws Exception {
+        generateReceivablesReport("accounts-receivable-before-payment", "accounts-receivable",
+                "2026-03-16", List.of("K100", "Exempelkund ÅÄÖ AB", "402.00"));
+        generateReceivablesReport("customer-claims-before-payment", "customer-claims",
+                "2026-03-16", List.of("K100", "Exempelkund ÅÄÖ AB", "402.00"));
+    }
+
+    private static void generateInpaymentScenarios(int invoiceNumber) throws Exception {
+        Path input = json("inpayment.json", """
+                {
+                  "date":"2026-04-14",
+                  "text":"Full betalning av gallerifaktura",
+                  "rows":[{"invoiceNumber":%d,"amount":"302.00","currencyRate":"1.00"}]
+                }
+                """.formatted(invoiceNumber));
+        Result created = cliInYear("inpayment", "create", "--file", input.toString());
+        int inpaymentNumber = firstInt(created.stdout(), "number");
+        require(created.stdout().contains("\"total\":\"302.00\""),
+                "Inpayment has an unexpected total: " + created.stdout());
+
+        Path listScenario = output.resolve("inpayment-list");
+        Files.createDirectories(listScenario);
+        Path listPdf = listScenario.resolve("inpayment-list.pdf");
+        cliInYear("inpayment", "pdf-list", "--output", listPdf.toString()).success();
+        verifyPdf(listPdf, List.of("Inbetalnings nr", Integer.toString(inpaymentNumber),
+                "Full betalning av gallerifaktura", "302.00"));
+        renderPages(listPdf, listScenario);
+
+        Path journalScenario = output.resolve("inpayment-journal");
+        Files.createDirectories(journalScenario);
+        Path journalPdf = journalScenario.resolve("inpayment-journal.pdf");
+        Result journal = cliInYear("inpayment", "journal", "--from", "2026-04-14",
+                "--to", "2026-04-14", "--output", journalPdf.toString(), "--commit");
+        require(journal.stdout().contains("\"debitTotal\":\"302.00\""),
+                "Inpayment journal has an unexpected debit total: " + journal.stdout());
+        require(journal.stdout().contains("\"creditTotal\":\"302.00\""),
+                "Inpayment journal does not balance: " + journal.stdout());
+        verifyPdf(journalPdf, List.of("Inbetalningsjournal", "1510", "1930", "302.00"));
+        String journalText = extractPdfText(journalPdf);
+        require(journalText.indexOf("1930") < journalText.indexOf("Summa redovisningsvaluta"),
+                "Inpayment journal total appears before the final account row");
+        renderPages(journalPdf, journalScenario);
+    }
+
+    private static void generateReceivablesAfterPaymentScenario() throws Exception {
+        generateReceivablesReport("accounts-receivable-after-payment", "accounts-receivable",
+                "2026-04-15", List.of("0.00"));
+        generateReceivablesReport("customer-claims-after-payment", "customer-claims",
+                "2026-04-15", List.of("0.00"));
+    }
+
+    private static void generateReceivablesReport(String scenarioName, String command,
+            String date, List<String> expected) throws Exception {
+        Path scenario = output.resolve(scenarioName);
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve(scenarioName + ".pdf");
+        cliInYear(command, "--date", date, "--output", pdf.toString()).success();
+        verifyPdf(pdf, expected);
+        renderPages(pdf, scenario);
+    }
+
     private static void generateCreditInvoiceScenario(int invoiceNumber) throws Exception {
         Path input = json("credit-invoice.json", """
                 {"invoiceNumber":%d,"date":"2026-03-20","amount":"100.00"}
@@ -587,6 +651,24 @@ public final class PdfGallery {
                 <article><h2>Fakturajournal</h2>
                 <p><a href="invoice-journal/invoice-journal.pdf">Öppna PDF</a></p>
                 <img src="invoice-journal/page-1.png" alt="Fakturajournal, sida 1"></article>
+                <article><h2>Kundreskontra före betalning</h2>
+                <p><a href="accounts-receivable-before-payment/accounts-receivable-before-payment.pdf">Öppna PDF</a></p>
+                <img src="accounts-receivable-before-payment/page-1.png" alt="Kundreskontra före betalning"></article>
+                <article><h2>Kundfordran före betalning</h2>
+                <p><a href="customer-claims-before-payment/customer-claims-before-payment.pdf">Öppna PDF</a></p>
+                <img src="customer-claims-before-payment/page-1.png" alt="Kundfordran före betalning"></article>
+                <article><h2>Inbetalningslista</h2>
+                <p><a href="inpayment-list/inpayment-list.pdf">Öppna PDF</a></p>
+                <img src="inpayment-list/page-1.png" alt="Inbetalningslista"></article>
+                <article><h2>Inbetalningsjournal</h2>
+                <p><a href="inpayment-journal/inpayment-journal.pdf">Öppna PDF</a></p>
+                <img src="inpayment-journal/page-1.png" alt="Inbetalningsjournal"></article>
+                <article><h2>Kundreskontra efter betalning</h2>
+                <p><a href="accounts-receivable-after-payment/accounts-receivable-after-payment.pdf">Öppna PDF</a></p>
+                <img src="accounts-receivable-after-payment/page-1.png" alt="Kundreskontra efter betalning"></article>
+                <article><h2>Kundfordran efter betalning</h2>
+                <p><a href="customer-claims-after-payment/customer-claims-after-payment.pdf">Öppna PDF</a></p>
+                <img src="customer-claims-after-payment/page-1.png" alt="Kundfordran efter betalning"></article>
                 <article><h2>Verifikation %d</h2>
                 <p><a href="voucher/voucher.pdf">Öppna PDF</a></p>
                 <img src="voucher/page-1.png" alt="Verifikation %d, sida 1"></article>

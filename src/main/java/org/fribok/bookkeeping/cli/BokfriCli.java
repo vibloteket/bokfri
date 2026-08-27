@@ -97,14 +97,18 @@ import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
 import se.swedsoft.bookkeeping.data.system.SSDBConfig;
 import se.swedsoft.bookkeeping.importexport.sie.util.SIEType;
 import se.swedsoft.bookkeeping.print.SSPrinter;
+import se.swedsoft.bookkeeping.print.report.SSAccountsRecievablePrinter;
 import se.swedsoft.bookkeeping.print.report.SSBalancePrinter;
+import se.swedsoft.bookkeeping.print.report.SSCustomerclaimPrinter;
 import se.swedsoft.bookkeeping.print.report.SSCustomerListPrinter;
+import se.swedsoft.bookkeeping.print.report.SSInpaymentListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSMainBookPrinter;
 import se.swedsoft.bookkeeping.print.report.SSResultPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSaleReportPrinter;
 import se.swedsoft.bookkeeping.print.report.SSVATReport2015Printer;
 import se.swedsoft.bookkeeping.print.report.SSVoucherListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSVoucherPrinter;
+import se.swedsoft.bookkeeping.print.report.journals.SSInpaymentjournalPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSInvoicejournalPrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSCreditinvoicePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSDeliverynotePrinter;
@@ -143,6 +147,8 @@ import java.util.concurrent.Callable;
             BokfriCli.BalanceSheetCommand.class,
             BokfriCli.IncomeStatementCommand.class,
             BokfriCli.GeneralLedgerCommand.class,
+            BokfriCli.AccountsReceivableCommand.class,
+            BokfriCli.CustomerClaimsCommand.class,
             BokfriCli.SalesReportCommand.class,
             BokfriCli.OpeningBalanceCommand.class,
             BokfriCli.BackupCommand.class,
@@ -722,6 +728,56 @@ public class BokfriCli implements Runnable {
                 result.put("selection", context);
                 return result;
             }, BokfriCli::trialBalanceText);
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "accounts-receivable",
+            description = "Generate the customer accounts-receivable report")
+    static class AccountsReceivableCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names = "--date", required = true) java.time.LocalDate date;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                java.nio.file.Path pdf = exportPdf(new SSAccountsRecievablePrinter(date), output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("date", date);
+                result.put("output", pdf.toString());
+                result.put("bytes", Files.size(pdf));
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created accounts-receivable PDF " + pdf);
+                return 0;
+            } catch (Exception exception) { throw databaseFailure(exception); }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "customer-claims",
+            description = "Generate the outstanding customer-claims report")
+    static class CustomerClaimsCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names = "--date", required = true) java.time.LocalDate date;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                java.nio.file.Path pdf = exportPdf(new SSCustomerclaimPrinter(date), output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("date", date);
+                result.put("output", pdf.toString());
+                result.put("bytes", Files.size(pdf));
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created customer-claims PDF " + pdf);
+                return 0;
+            } catch (Exception exception) { throw databaseFailure(exception); }
         }
     }
 
@@ -1996,7 +2052,8 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "inpayment", description = "Inspect, create, and book customer inpayments",
             subcommands = {InpaymentList.class, InpaymentShow.class, InpaymentJournal.class,
-                    InpaymentValidate.class, InpaymentCreate.class, CliInputSchemas.Inpayment.class})
+                    InpaymentPdfList.class, InpaymentValidate.class, InpaymentCreate.class,
+                    CliInputSchemas.Inpayment.class})
     static class InpaymentCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -2019,6 +2076,30 @@ public class BokfriCli implements Runnable {
                                 "count", items.size(), "inpayments", items),
                         table(items, "No inpayments found", right("Number", "number"),
                                 left("Date", "date"), left("Text", "text"), right("Total", "total")));
+                return 0;
+            } catch (Exception exception) { throw databaseFailure(exception); }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "pdf-list",
+            description = "Generate the customer inpayment list as PDF")
+    static class InpaymentPdfList implements Callable<Integer> {
+        @CommandLine.ParentCommand InpaymentCommand command;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                java.nio.file.Path pdf = exportPdf(new SSInpaymentListPrinter(), output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("output", pdf.toString());
+                result.put("bytes", Files.size(pdf));
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created inpayment-list PDF " + pdf);
                 return 0;
             } catch (Exception exception) { throw databaseFailure(exception); }
         }
@@ -2099,6 +2180,9 @@ public class BokfriCli implements Runnable {
         @Option(names = "--from", required = true) java.time.LocalDate from;
         @Option(names = "--to", required = true) java.time.LocalDate to;
         @Option(names = "--commit") boolean commit;
+        @Option(names = "--output", description = "Write the inpayment journal as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, true);
@@ -2115,6 +2199,11 @@ public class BokfriCli implements Runnable {
                 Map<String, Object> result = inpaymentJournalDetails(plan);
                 result.put("committed", commit);
                 result.put("selection", selectedContext(context, company, year));
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSInpaymentjournalPrinter(
+                            new java.util.ArrayList<>(plan.inpayments()), plan.journalNumber(), plan.to()),
+                            output, overwrite));
+                }
                 if (commit) {
                     InpaymentJournalResult committed = service.commitJournal(plan);
                     result.put("voucherNumber", committed.voucherNumber());
