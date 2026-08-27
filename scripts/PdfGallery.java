@@ -333,6 +333,7 @@ public final class PdfGallery {
         int voucherNumber = firstInt(journal.stdout(), "voucherNumber");
         verifyPdf(pdf, List.of("Fakturajournal", "K100", "Exempelkund ÅÄÖ AB",
                 "1510", "3001", "2611", "3740"));
+        verifyPdfLacks(pdf, List.of("null"));
         String journalText = extractPdfText(pdf);
         require(journalText.indexOf("3001") < journalText.indexOf("Total summa"),
                 "Invoice journal totals appear before the final voucher row");
@@ -544,6 +545,7 @@ public final class PdfGallery {
                         && journal.stdout().contains("\"creditTotal\":\"1000.00\""),
                 "Supplier invoice journal does not balance: " + journal.stdout());
         verifyPdf(journalPdf, List.of("Leverantörsfakturajournal", "L100", "2440", "2641", "6110"));
+        verifyPdfLacks(journalPdf, List.of("null"));
         require(extractPdfText(journalPdf).indexOf("6110")
                         < extractPdfText(journalPdf).indexOf("Summa redovisningsvaluta"),
                 "Supplier invoice journal total appears before the final account row");
@@ -569,6 +571,7 @@ public final class PdfGallery {
                         && creditJournal.stdout().contains("\"creditTotal\":\"250.00\""),
                 "Supplier credit journal does not balance: " + creditJournal.stdout());
         verifyPdf(creditPdf, List.of("kreditfakturajournal", "L100", "2440", "2641", "6110"));
+        verifyPdfLacks(creditPdf, List.of("null"));
         require(extractPdfText(creditPdf).indexOf("6110")
                         < extractPdfText(creditPdf).indexOf("Summa redovisningsvaluta"),
                 "Supplier credit journal total appears before the final account row");
