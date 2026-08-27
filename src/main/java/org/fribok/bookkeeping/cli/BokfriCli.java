@@ -97,18 +97,24 @@ import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
 import se.swedsoft.bookkeeping.data.system.SSDBConfig;
 import se.swedsoft.bookkeeping.importexport.sie.util.SIEType;
 import se.swedsoft.bookkeeping.print.SSPrinter;
+import se.swedsoft.bookkeeping.print.report.SSAccountsPayablePrinter;
 import se.swedsoft.bookkeeping.print.report.SSAccountsRecievablePrinter;
 import se.swedsoft.bookkeeping.print.report.SSBalancePrinter;
 import se.swedsoft.bookkeeping.print.report.SSCustomerclaimPrinter;
 import se.swedsoft.bookkeeping.print.report.SSCustomerListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSInpaymentListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSMainBookPrinter;
+import se.swedsoft.bookkeeping.print.report.SSOutpaymentListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSResultPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSaleReportPrinter;
 import se.swedsoft.bookkeeping.print.report.SSVATReport2015Printer;
 import se.swedsoft.bookkeeping.print.report.SSVoucherListPrinter;
+import se.swedsoft.bookkeeping.print.report.SSSupplierdebtPrinter;
 import se.swedsoft.bookkeeping.print.report.SSVoucherPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSInpaymentjournalPrinter;
+import se.swedsoft.bookkeeping.print.report.journals.SSOutpaymentjournalPrinter;
+import se.swedsoft.bookkeeping.print.report.journals.SSSupplierInvoicejournalPrinter;
+import se.swedsoft.bookkeeping.print.report.journals.SSSuppliercreditinvoicejournalPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSInvoicejournalPrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSCreditinvoicePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSDeliverynotePrinter;
@@ -149,6 +155,8 @@ import java.util.concurrent.Callable;
             BokfriCli.GeneralLedgerCommand.class,
             BokfriCli.AccountsReceivableCommand.class,
             BokfriCli.CustomerClaimsCommand.class,
+            BokfriCli.AccountsPayableCommand.class,
+            BokfriCli.SupplierDebtsCommand.class,
             BokfriCli.SalesReportCommand.class,
             BokfriCli.OpeningBalanceCommand.class,
             BokfriCli.BackupCommand.class,
@@ -776,6 +784,54 @@ public class BokfriCli implements Runnable {
                 result.put("bytes", Files.size(pdf));
                 result.put("selection", selectedContext(context, company, year));
                 root.output(result, "Created customer-claims PDF " + pdf);
+                return 0;
+            } catch (Exception exception) { throw databaseFailure(exception); }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "accounts-payable",
+            description = "Generate the supplier accounts-payable report")
+    static class AccountsPayableCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names = "--date", required = true) java.time.LocalDate date;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                java.nio.file.Path pdf = exportPdf(new SSAccountsPayablePrinter(date), output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("date", date); result.put("output", pdf.toString());
+                result.put("bytes", Files.size(pdf));
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created accounts-payable PDF " + pdf);
+                return 0;
+            } catch (Exception exception) { throw databaseFailure(exception); }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "supplier-debts",
+            description = "Generate the outstanding supplier-debts report")
+    static class SupplierDebtsCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names = "--date", required = true) java.time.LocalDate date;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                java.nio.file.Path pdf = exportPdf(new SSSupplierdebtPrinter(date), output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("date", date); result.put("output", pdf.toString());
+                result.put("bytes", Files.size(pdf));
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created supplier-debts PDF " + pdf);
                 return 0;
             } catch (Exception exception) { throw databaseFailure(exception); }
         }
@@ -1668,7 +1724,7 @@ public class BokfriCli implements Runnable {
     abstract static class SupplierInvoiceOperation implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierInvoiceInput input=readSupplierInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SSSupplierInvoice i=toSupplierInvoice(input,r);SupplierInvoiceService s=new SupplierInvoiceService(r.database());var v=s.validate(i);if(!v.valid())throw supplierInvoiceValidationFailure(v);Map<String,Object>x=supplierInvoiceDetails(i);x.put("number",s.nextNumber());x.put("dryRun",!persist());x.put("created",persist());x.put("selection",selectedContext(c,co,y));if(persist()){s.create(i);x.put("number",i.getNumber());}root.output(x,persist()?"Created supplier invoice "+i.getNumber():"Supplier invoice is valid; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
     @Command(mixinStandardHelpOptions = true, name="validate") static class SupplierInvoiceValidate extends SupplierInvoiceOperation{boolean persist(){return false;}}
     @Command(mixinStandardHelpOptions = true, name="create") static class SupplierInvoiceCreate extends SupplierInvoiceOperation{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
-    @Command(mixinStandardHelpOptions = true, name="journal") static class SupplierInvoiceJournal implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierInvoiceService s=new SupplierInvoiceService(r.database());SupplierInvoiceJournalPlan p=s.planJournal(from,to);if(p.invoices().isEmpty())throw new CliException("SUPPLIER_INVOICE_JOURNAL_EMPTY","No unbooked supplier invoices exist in the selected period");Map<String,Object>x=supplierInvoiceJournalDetails(p);x.put("committed",commit);x.put("selection",selectedContext(c,co,y));if(commit)x.put("voucherNumber",s.commitJournal(p).voucherNumber());root.output(x,commit?"Committed supplier invoice journal "+p.journalNumber():"Supplier invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="journal") static class SupplierInvoiceJournal implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;@Option(names="--output")java.nio.file.Path output;@Option(names="--overwrite")boolean overwrite;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierInvoiceService s=new SupplierInvoiceService(r.database());SupplierInvoiceJournalPlan p=s.planJournal(from,to);if(p.invoices().isEmpty())throw new CliException("SUPPLIER_INVOICE_JOURNAL_EMPTY","No unbooked supplier invoices exist in the selected period");Map<String,Object>x=supplierInvoiceJournalDetails(p);x.put("committed",commit);x.put("selection",selectedContext(c,co,y));if(output!=null)addPdf(x,exportPdf(new SSSupplierInvoicejournalPrinter(new java.util.ArrayList<>(p.invoices()),p.journalNumber(),p.to()),output,overwrite));if(commit)x.put("voucherNumber",s.commitJournal(p).voucherNumber());root.output(x,commit?"Committed supplier invoice journal "+p.journalNumber():"Supplier invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "supplier-credit-invoice", description = "Credit booked supplier invoices",
             subcommands = {SupplierCreditInvoiceList.class, SupplierCreditInvoiceShow.class,
@@ -1708,7 +1764,9 @@ public class BokfriCli implements Runnable {
         @Option(names="--from",required=true) java.time.LocalDate from;
         @Option(names="--to",required=true) java.time.LocalDate to;
         @Option(names="--commit") boolean commit;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierCreditInvoiceService service=new SupplierCreditInvoiceService(r.database());SupplierCreditInvoiceJournalPlan plan=service.planJournal(from,to);if(plan.invoices().isEmpty())throw new CliException("SUPPLIER_CREDIT_INVOICE_JOURNAL_EMPTY","No unbooked supplier credit invoices exist in the selected period");Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",plan.journalNumber());x.put("supplierCreditInvoiceNumbers",plan.invoices().stream().map(SSSupplierCreditInvoice::getNumber).toList());x.put("debitTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher())));x.put("creditTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher())));x.put("committed",commit);if(commit)x.put("voucherNumber",service.commitJournal(plan).voucherNumber());x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Supplier credit-invoice journal committed":"Supplier credit-invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);} }
+        @Option(names="--output") java.nio.file.Path output;
+        @Option(names="--overwrite") boolean overwrite;
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierCreditInvoiceService service=new SupplierCreditInvoiceService(r.database());SupplierCreditInvoiceJournalPlan plan=service.planJournal(from,to);if(plan.invoices().isEmpty())throw new CliException("SUPPLIER_CREDIT_INVOICE_JOURNAL_EMPTY","No unbooked supplier credit invoices exist in the selected period");Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",plan.journalNumber());x.put("supplierCreditInvoiceNumbers",plan.invoices().stream().map(SSSupplierCreditInvoice::getNumber).toList());x.put("debitTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher())));x.put("creditTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher())));x.put("committed",commit);if(output!=null)addPdf(x,exportPdf(new SSSuppliercreditinvoicejournalPrinter(new java.util.ArrayList<>(plan.invoices()),plan.journalNumber(),plan.to()),output,overwrite));if(commit)x.put("voucherNumber",service.commitJournal(plan).voucherNumber());x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Supplier credit-invoice journal committed":"Supplier credit-invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);} }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "invoice", description = "Inspect and create customer invoices",
@@ -2223,7 +2281,8 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "outpayment", description = "Inspect, create, and book supplier outpayments",
             subcommands = {OutpaymentList.class, OutpaymentShow.class, OutpaymentJournal.class,
-                    OutpaymentValidate.class, OutpaymentCreate.class, CliInputSchemas.Outpayment.class})
+                    OutpaymentPdfList.class, OutpaymentValidate.class, OutpaymentCreate.class,
+                    CliInputSchemas.Outpayment.class})
     static class OutpaymentCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -2246,6 +2305,29 @@ public class BokfriCli implements Runnable {
                                 "count", items.size(), "outpayments", items),
                         table(items, "No outpayments found", right("Number", "number"),
                                 left("Date", "date"), left("Text", "text"), right("Total", "total")));
+                return 0;
+            } catch (Exception exception) { throw databaseFailure(exception); }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "pdf-list",
+            description = "Generate the supplier outpayment list as PDF")
+    static class OutpaymentPdfList implements Callable<Integer> {
+        @CommandLine.ParentCommand OutpaymentCommand command;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                java.nio.file.Path pdf = exportPdf(new SSOutpaymentListPrinter(), output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("output", pdf.toString()); result.put("bytes", Files.size(pdf));
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created outpayment-list PDF " + pdf);
                 return 0;
             } catch (Exception exception) { throw databaseFailure(exception); }
         }
@@ -2326,6 +2408,8 @@ public class BokfriCli implements Runnable {
         @Option(names = "--from", required = true) java.time.LocalDate from;
         @Option(names = "--to", required = true) java.time.LocalDate to;
         @Option(names = "--commit") boolean commit;
+        @Option(names = "--output") java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, true);
@@ -2342,6 +2426,11 @@ public class BokfriCli implements Runnable {
                 Map<String, Object> result = outpaymentJournalDetails(plan);
                 result.put("committed", commit);
                 result.put("selection", selectedContext(context, company, year));
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSOutpaymentjournalPrinter(
+                            new java.util.ArrayList<>(plan.outpayments()), plan.journalNumber(), plan.to()),
+                            output, overwrite));
+                }
                 if (commit) {
                     OutpaymentJournalResult committed = service.commitJournal(plan);
                     result.put("voucherNumber", committed.voucherNumber());

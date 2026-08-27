@@ -115,7 +115,7 @@
 
 
     <detail>
-        <band height="39" isSplitAllowed="true">
+        <band height="55" isSplitAllowed="true">
 
 
             <!-- outpayment number -->
@@ -155,7 +155,7 @@
 
             <!-- Order rows -->
             <subreport isUsingCache="false">
-                <reportElement x="0" y="12" width="555" height="0" isPrintWhenDetailOverflows="true"/>
+                <reportElement x="0" y="12" width="555" height="43" isPrintWhenDetailOverflows="true"/>
 
                 <subreportParameter name="outpayment.number">
                     <subreportParameterExpression>
@@ -173,35 +173,7 @@
 
             </subreport>
 
-            <frame>
-                <reportElement x="0" y="12" width="555" height="14" positionType="Float"/>
-                <line>
-                    <reportElement x="80" y="0" width="450" height="1"/>
-                </line>
 
-                <!-- outpayment sum -->
-                <textField>
-                    <reportElement x="350" y="0" width="120" height="12"/>
-                    <textElement  textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{outpaymentjournal.totalsum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00">
-                    <reportElement x="470" y="0" width="60" height="12"/>
-                    <textElement  textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{outpayment.sum}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-            </frame>
 
 
 

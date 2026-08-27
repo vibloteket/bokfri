@@ -119,7 +119,7 @@
 
 
     <detail>
-        <band height="75" isSplitAllowed="true">
+        <band height="90" isSplitAllowed="true">
 
 
             <!-- Invoice number -->
@@ -181,7 +181,7 @@
 
             <!-- Order rows -->
             <subreport isUsingCache="false">
-                <reportElement x="0" y="12" width="555" height="0" isPrintWhenDetailOverflows="true"/>
+                <reportElement x="0" y="12" width="555" height="70" isPrintWhenDetailOverflows="true"/>
 
                 <subreportParameter name="suppliercreditinvoice.suppliernr">
                     <subreportParameterExpression>
@@ -200,98 +200,7 @@
 
             </subreport>
 
-            <frame>
-                <reportElement x="0" y="12" width="555" height="50" positionType="Float"/>
-                <line>
-                    <reportElement x="80" y="0" width="450" height="1"/>
-                </line>
 
-                <!-- Invoice sum -->
-                <textField>
-                    <reportElement x="350" y="0" width="120" height="12"/>
-                    <textElement  textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{suppliercreditinvoicejournal.sum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00">
-                    <reportElement x="470" y="0" width="60" height="12"/>
-                    <textElement  textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{suppliercreditinvoice.sum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Invoice tax sum -->
-                <textField>
-                    <reportElement x="350" y="12" width="120" height="12"/>
-                    <textElement  textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{suppliercreditinvoicejournal.tax}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00">
-                    <reportElement x="470" y="12" width="60" height="12"/>
-                    <textElement  textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{suppliercreditinvoice.tax}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Invoice currency rate -->
-                <textField>
-                    <reportElement x="350" y="24" width="120" height="12"/>
-                    <textElement  textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{suppliercreditinvoicejournal.currencyrate}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00000">
-                    <reportElement x="470" y="24" width="60" height="12"/>
-                    <textElement  textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{suppliercreditinvoice.currencyrate}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Invoice local sum -->
-                <textField>
-                    <reportElement x="350" y="36" width="120" height="12"/>
-                    <textElement  textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{suppliercreditinvoicejournal.totalsum}]]>
-                    </textFieldExpression>
-                </textField>
-                <textField pattern="#,##0.00">
-                    <reportElement x="470" y="36" width="60" height="12"/>
-                    <textElement  textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{suppliercreditinvoice.localsum}]]>
-                    </textFieldExpression>
-                </textField>
-
-            </frame>
 
 
 
