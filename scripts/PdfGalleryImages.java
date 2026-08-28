@@ -87,7 +87,11 @@ public final class PdfGalleryImages {
         Path resultDirectory = currentPath.getParent();
         String pageName = currentPath.getFileName().toString().replace(".png", "");
         Path diffPath = resultDirectory.resolve(pageName + "-diff.png");
-        ImageIO.write(diff, "png", diffPath.toFile());
+        if (changed > 0) {
+            ImageIO.write(diff, "png", diffPath.toFile());
+        } else {
+            Files.deleteIfExists(diffPath);
+        }
         long pixels = (long) current.getWidth() * current.getHeight();
         double percentage = 100.0 * changed / pixels;
         String result = "image=" + currentPath.getFileName() + System.lineSeparator()
