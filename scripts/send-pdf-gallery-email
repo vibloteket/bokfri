@@ -14,12 +14,36 @@ if [[ ! -d $GALLERY_DIR ]]; then
   exit 1
 fi
 
-mapfile -t attachments < <(find "$GALLERY_DIR" -mindepth 2 -maxdepth 2 -type f \
-  -name 'page-*.png' ! -name '*-diff.png' | sort)
-if [[ ${#attachments[@]} -eq 0 ]]; then
+mapfile -t reports < <(find "$GALLERY_DIR" -mindepth 2 -maxdepth 2 -type f \
+  -name 'page-*.png' ! -name '*-diff.png' -printf '%h\n' | sort -u)
+if [[ ${#reports[@]} -eq 0 ]]; then
   echo "PDF gallery contains no page images." >&2
   exit 1
 fi
+
+attachments=()
+report_summaries=()
+for report_dir in "${reports[@]}"; do
+  mapfile -t pages < <(find "$report_dir" -maxdepth 1 -type f -name 'page-*.png' \
+    -printf '%f\n' | sort -V)
+  page_count=${#pages[@]}
+  selected_pages=()
+  if ((page_count <= 3)); then
+    selected_pages=("${pages[@]}")
+  else
+    middle=$(((page_count + 1) / 2))
+    selected_pages=("${pages[0]}" "${pages[middle - 1]}" "${pages[page_count - 1]}")
+  fi
+  report=${report_dir#"$GALLERY_DIR"/}
+  selected_numbers=()
+  for page in "${selected_pages[@]}"; do
+    attachments+=("$report_dir/$page")
+    number=${page#page-}
+    selected_numbers+=("${number%.png}")
+  done
+  selected_text=$(IFS=,; printf '%s' "${selected_numbers[*]}")
+  report_summaries+=("$report|$page_count|$selected_text")
+done
 
 message=$(mktemp)
 trap 'rm -f "$message"' EXIT
@@ -41,20 +65,20 @@ subject=${EMAIL_SUBJECT:-[Bokfri PDF] PR #${pr_number} - ${short_commit}}
   printf 'Content-Type: text/plain; charset=UTF-8\r\n'
   printf 'Content-Transfer-Encoding: 8bit\r\n\r\n'
   printf 'Bokfri PDF gallery generated successfully.\r\n\r\n'
-  printf 'Reports:\r\n'
-  previous_report=''
-  for attachment in "${attachments[@]}"; do
-    report=${attachment#"$GALLERY_DIR"/}
-    report=${report%/*}
-    if [[ $report != "$previous_report" ]]; then
-      printf -- '- %s\r\n' "$report"
-      previous_report=$report
+  printf 'Reports and attached pages:\r\n'
+  for summary in "${report_summaries[@]}"; do
+    IFS='|' read -r report page_count selected_text <<< "$summary"
+    if ((page_count <= 3)); then
+      printf -- '- %s: all %d page(s) attached\r\n' "$report" "$page_count"
+    else
+      printf -- '- %s: %d pages; attached pages %s\r\n' \
+        "$report" "$page_count" "$selected_text"
     fi
   done
   printf '\r\nCommit: %s\r\n' "$commit"
   [[ -z $pr_url ]] || printf 'Pull request: %s\r\n' "$pr_url"
   [[ -z $actions_url ]] || printf 'GitHub Actions: %s\r\n' "$actions_url"
-  printf '\r\nThe rendered page images are attached. PDFs remain available in the GitHub artifact.\r\n'
+  printf '\r\nAll PDFs and rendered pages remain available in the GitHub artifact.\r\n'
 
   for attachment in "${attachments[@]}"; do
     relative=${attachment#"$GALLERY_DIR"/}
