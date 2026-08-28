@@ -68,6 +68,7 @@ public final class PdfGallery {
             generateVatReportScenario();
             generatePayablesScenarios();
             generateDocumentRegisterScenarios();
+            generateReferenceReportScenarios();
             writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber, voucherNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
@@ -647,9 +648,33 @@ public final class PdfGallery {
         int pages = renderPages(pdf, scenario);
         if (scenarioName.equals("invoice-list")) {
             require(pages >= 3, "Invoice list does not exercise multipage layout: " + pages);
+        } else if (scenarioName.equals("account-plan")) {
+            require(pages >= 20, "Account plan does not exercise long-report pagination: " + pages);
         } else {
             require(pages == 1, scenarioName + " unexpectedly rendered " + pages + " pages");
         }
+    }
+
+    private static void generateReferenceReportScenarios() throws Exception {
+        generateDocumentRegister("product-list", new String[]{"product", "list"},
+                List.of("Produkter", "P100", "Galleriartikel decimal", "125.00"));
+        generateDocumentRegister("account-plan", new String[]{"account-plan", "pdf"},
+                List.of("Kontoplan", "1510", "Kundfordringar", "3001"));
+        generatePeriodReport("customer-revenue", "customer-revenue",
+                List.of("Kundomsättning", "K100", "Exempelkund ÅÄÖ AB", "1,081,645.71"));
+        generatePeriodReport("product-revenue", "product-revenue",
+                List.of("Produktomsättning", "P100", "Galleriartikel decimal", "211.29"));
+    }
+
+    private static void generatePeriodReport(String scenarioName, String command,
+            List<String> expected) throws Exception {
+        Path scenario = output.resolve(scenarioName);
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve(scenarioName + ".pdf");
+        cliInYear(command, "--from", "2026-01-01", "--to", "2026-12-31",
+                "--output", pdf.toString()).success();
+        verifyPdf(pdf, expected);
+        renderPages(pdf, scenario);
     }
 
     private static void generateBalanceSheetScenario() throws Exception {
@@ -866,6 +891,14 @@ public final class PdfGallery {
                 <img src="supplier-invoice-list/page-1.png" alt="Leverantörsfakturalista"></article>
                 <article><h2>Leverantörskreditfakturalista</h2><p><a href="supplier-credit-invoice-list/supplier-credit-invoice-list.pdf">Öppna PDF</a></p>
                 <img src="supplier-credit-invoice-list/page-1.png" alt="Leverantörskreditfakturalista"></article>
+                <article><h2>Produktlista</h2><p><a href="product-list/product-list.pdf">Öppna PDF</a></p>
+                <img src="product-list/page-1.png" alt="Produktlista"></article>
+                <article><h2>Kontoplan</h2><p><a href="account-plan/account-plan.pdf">Öppna PDF</a></p>
+                <img src="account-plan/page-1.png" alt="Kontoplan, sida 1"></article>
+                <article><h2>Kundomsättning</h2><p><a href="customer-revenue/customer-revenue.pdf">Öppna PDF</a></p>
+                <img src="customer-revenue/page-1.png" alt="Kundomsättning"></article>
+                <article><h2>Produktomsättning</h2><p><a href="product-revenue/product-revenue.pdf">Öppna PDF</a></p>
+                <img src="product-revenue/page-1.png" alt="Produktomsättning"></article>
                 </main></html>
                 """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages,
                         amountsInvoiceNumber, voucherNumber, voucherNumber),

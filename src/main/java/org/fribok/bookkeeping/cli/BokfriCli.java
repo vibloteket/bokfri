@@ -99,14 +99,18 @@ import se.swedsoft.bookkeeping.importexport.sie.util.SIEType;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 import se.swedsoft.bookkeeping.print.report.SSAccountsPayablePrinter;
 import se.swedsoft.bookkeeping.print.report.SSAccountsRecievablePrinter;
+import se.swedsoft.bookkeeping.print.report.SSAccountPlanPrinter;
 import se.swedsoft.bookkeeping.print.report.SSBalancePrinter;
 import se.swedsoft.bookkeeping.print.report.SSCreditInvoiceListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSCustomerclaimPrinter;
 import se.swedsoft.bookkeeping.print.report.SSCustomerListPrinter;
+import se.swedsoft.bookkeeping.print.report.SSCustomerRevenuePrinter;
 import se.swedsoft.bookkeeping.print.report.SSInpaymentListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSInvoiceListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSMainBookPrinter;
 import se.swedsoft.bookkeeping.print.report.SSOutpaymentListPrinter;
+import se.swedsoft.bookkeeping.print.report.SSProductListPrinter;
+import se.swedsoft.bookkeeping.print.report.SSProductRevenuePrinter;
 import se.swedsoft.bookkeeping.print.report.SSResultPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSaleReportPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSupplierCreditInvoiceListPrinter;
@@ -162,6 +166,8 @@ import java.util.concurrent.Callable;
             BokfriCli.CustomerClaimsCommand.class,
             BokfriCli.AccountsPayableCommand.class,
             BokfriCli.SupplierDebtsCommand.class,
+            BokfriCli.CustomerRevenueCommand.class,
+            BokfriCli.ProductRevenueCommand.class,
             BokfriCli.SalesReportCommand.class,
             BokfriCli.OpeningBalanceCommand.class,
             BokfriCli.BackupCommand.class,
@@ -594,9 +600,16 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(mixinStandardHelpOptions = true, name="account-plan",description="Inspect available account plans",subcommands=AccountPlanList.class)
+    @Command(mixinStandardHelpOptions = true, name="account-plan",description="Inspect available account plans",subcommands={AccountPlanList.class,AccountPlanPdf.class})
     static class AccountPlanCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An account-plan command is required");}}
     @Command(mixinStandardHelpOptions = true, name="list") static class AccountPlanList implements Callable<Integer>{@CommandLine.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),table(plans,"No account plans found",right("Id","id"),left("Name","name"),right("Assessment year","assessmentYear"),right("Accounts","accountCount")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
+
+    @Command(mixinStandardHelpOptions = true, name="pdf", description="Generate the selected accounting year's account plan as PDF")
+    static class AccountPlanPdf implements Callable<Integer> {
+        @CommandLine.ParentCommand AccountPlanCommand command;
+        @Option(names="--output",required=true) java.nio.file.Path output;
+        @Option(names="--overwrite") boolean overwrite;
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSAccountPlanPrinter(y.getAccountPlan()),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("accountPlan",y.getAccountPlan().getName());x.put("selection",selectedContext(c,co,y));root.output(x,"Created account-plan PDF "+pdf);return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "year", description = "Inspect, create, and select accounting years",
             subcommands = {YearList.class, YearUse.class, YearCreate.class,
@@ -841,6 +854,26 @@ public class BokfriCli implements Runnable {
             } catch (Exception exception) { throw databaseFailure(exception); }
         }
     }
+
+    @Command(mixinStandardHelpOptions = true, name = "customer-revenue",
+            description = "Generate customer revenue for a period")
+    static class CustomerRevenueCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names="--from",required=true) java.time.LocalDate from;
+        @Option(names="--to",required=true) java.time.LocalDate to;
+        @Option(names="--output",required=true) java.nio.file.Path output;
+        @Option(names="--overwrite") boolean overwrite;
+        public Integer call(){ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSCustomerRevenuePrinter(new java.util.ArrayList<>(r.database().getCustomers()),from,to),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("selection",selectedContext(c,co,y));root.output(x,"Created customer-revenue PDF "+pdf);return 0;}catch(Exception e){throw databaseFailure(e);}}}
+
+    @Command(mixinStandardHelpOptions = true, name = "product-revenue",
+            description = "Generate product revenue for a period")
+    static class ProductRevenueCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names="--from",required=true) java.time.LocalDate from;
+        @Option(names="--to",required=true) java.time.LocalDate to;
+        @Option(names="--output",required=true) java.nio.file.Path output;
+        @Option(names="--overwrite") boolean overwrite;
+        public Integer call(){ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSProductRevenuePrinter(new java.util.ArrayList<>(r.database().getProducts()),from,to),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("selection",selectedContext(c,co,y));root.output(x,"Created product-revenue PDF "+pdf);return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "sales-report",
             description = "Generate the sales report for a period")
@@ -1536,16 +1569,26 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List products")
     static class ProductList implements Callable<Integer> {
         @CommandLine.ParentCommand ProductCommand command;
+        @Option(names = "--output", description = "Write the product list as PDF")
+        java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 ProductService service = new ProductService(runtime.database());
-                List<Map<String, Object>> products = service.list().stream()
+                List<SSProduct> listedProducts = service.list();
+                List<Map<String, Object>> products = listedProducts.stream()
                         .map(BokfriCli::productDetails).toList();
-                root.output(Map.of("selection", selectedCompanyContext(context, company),
-                                "count", products.size(), "products", products),
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("selection", selectedCompanyContext(context, company));
+                result.put("count", products.size()); result.put("products", products);
+                if (output != null) {
+                    addPdf(result, exportPdf(new SSProductListPrinter(
+                            new java.util.ArrayList<>(listedProducts)), output, overwrite));
+                }
+                root.output(result,
                         table(products, "No products found", left("Number", "number"),
                                 left("Description", "description"), right("Selling price", "sellingPrice")));
                 return 0;
