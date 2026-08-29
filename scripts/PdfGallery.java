@@ -67,6 +67,7 @@ public final class PdfGallery {
             generateBalanceSheetScenario();
             generateVatReportScenario();
             generatePayablesScenarios();
+            generateAccountingControlScenarios();
             generateDocumentRegisterScenarios();
             generateReferenceReportScenarios();
             writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber, voucherNumber);
@@ -513,6 +514,21 @@ public final class PdfGallery {
         renderPages(pdf, scenario);
     }
 
+    private static void generateAccountingControlScenarios() throws Exception {
+        Path vatScenario = output.resolve("vat-control");
+        Files.createDirectories(vatScenario);
+        Path vatPdf = vatScenario.resolve("vat-control.pdf");
+        cliInYear("vat", "control", "--from", "2026-01-01", "--to", "2026-12-31",
+                "--start-voucher", "1", "--output", vatPdf.toString()).success();
+        verifyPdf(vatPdf, List.of("Momskontroll", "321", "80"));
+        renderPages(vatPdf, vatScenario);
+
+        generatePeriodReport("sale-values", "sale-values",
+                List.of("Försäljningsvärden", "2026-03", "1,081,645.71"));
+        generatePeriodReport("supplier-revenue", "supplier-revenue",
+                List.of("Leverantörsomsättning", "L100", "Exempelleverantör ÅÄÖ AB", "600.00"));
+    }
+
     private static void generatePayablesScenarios() throws Exception {
         Path supplier = json("supplier.json", """
                 {
@@ -855,6 +871,12 @@ public final class PdfGallery {
                 <article><h2>Momsrapport</h2>
                 <p><a href="vat-report/vat-report.pdf">Öppna PDF</a></p>
                 <img src="vat-report/page-1.png" alt="Momsrapport, sida 1"></article>
+                <article><h2>Momskontroll</h2><p><a href="vat-control/vat-control.pdf">Öppna PDF</a></p>
+                <img src="vat-control/page-1.png" alt="Momskontroll"></article>
+                <article><h2>Försäljningsvärden</h2><p><a href="sale-values/sale-values.pdf">Öppna PDF</a></p>
+                <img src="sale-values/page-1.png" alt="Försäljningsvärden"></article>
+                <article><h2>Leverantörsomsättning</h2><p><a href="supplier-revenue/supplier-revenue.pdf">Öppna PDF</a></p>
+                <img src="supplier-revenue/page-1.png" alt="Leverantörsomsättning"></article>
                 <article><h2>Leverantörsfakturajournal</h2>
                 <p><a href="supplier-invoice-journal/supplier-invoice-journal.pdf">Öppna PDF</a></p>
                 <img src="supplier-invoice-journal/page-1.png" alt="Leverantörsfakturajournal"></article>

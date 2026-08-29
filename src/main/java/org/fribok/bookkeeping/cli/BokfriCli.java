@@ -113,9 +113,12 @@ import se.swedsoft.bookkeeping.print.report.SSProductListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSProductRevenuePrinter;
 import se.swedsoft.bookkeeping.print.report.SSResultPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSaleReportPrinter;
+import se.swedsoft.bookkeeping.print.report.SSSalevaluesPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSupplierCreditInvoiceListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSupplierInvoiceListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSupplierListPrinter;
+import se.swedsoft.bookkeeping.print.report.SSSupplierRevenuePrinter;
+import se.swedsoft.bookkeeping.print.report.SSVATControl2015Printer;
 import se.swedsoft.bookkeeping.print.report.SSVATReport2015Printer;
 import se.swedsoft.bookkeeping.print.report.SSVoucherListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSSupplierdebtPrinter;
@@ -168,6 +171,8 @@ import java.util.concurrent.Callable;
             BokfriCli.SupplierDebtsCommand.class,
             BokfriCli.CustomerRevenueCommand.class,
             BokfriCli.ProductRevenueCommand.class,
+            BokfriCli.SaleValuesCommand.class,
+            BokfriCli.SupplierRevenueCommand.class,
             BokfriCli.SalesReportCommand.class,
             BokfriCli.OpeningBalanceCommand.class,
             BokfriCli.BackupCommand.class,
@@ -874,6 +879,26 @@ public class BokfriCli implements Runnable {
         @Option(names="--output",required=true) java.nio.file.Path output;
         @Option(names="--overwrite") boolean overwrite;
         public Integer call(){ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSProductRevenuePrinter(new java.util.ArrayList<>(r.database().getProducts()),from,to),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("selection",selectedContext(c,co,y));root.output(x,"Created product-revenue PDF "+pdf);return 0;}catch(Exception e){throw databaseFailure(e);}}}
+
+    @Command(mixinStandardHelpOptions = true, name = "sale-values",
+            description = "Generate monthly sales values")
+    static class SaleValuesCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names="--from",required=true) java.time.LocalDate from;
+        @Option(names="--to",required=true) java.time.LocalDate to;
+        @Option(names="--output",required=true) java.nio.file.Path output;
+        @Option(names="--overwrite") boolean overwrite;
+        public Integer call(){ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSSalevaluesPrinter(from,to),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("selection",selectedContext(c,co,y));root.output(x,"Created sale-values PDF "+pdf);return 0;}catch(Exception e){throw databaseFailure(e);}}}
+
+    @Command(mixinStandardHelpOptions = true, name = "supplier-revenue",
+            description = "Generate supplier revenue for a period")
+    static class SupplierRevenueCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand BokfriCli root;
+        @Option(names="--from",required=true) java.time.LocalDate from;
+        @Option(names="--to",required=true) java.time.LocalDate to;
+        @Option(names="--output",required=true) java.nio.file.Path output;
+        @Option(names="--overwrite") boolean overwrite;
+        public Integer call(){ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSSupplierRevenuePrinter(new java.util.ArrayList<>(r.database().getSuppliers()),from,to),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("selection",selectedContext(c,co,y));root.output(x,"Created supplier-revenue PDF "+pdf);return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "sales-report",
             description = "Generate the sales report for a period")
@@ -2519,7 +2544,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "vat", description = "Calculate and settle VAT",
-            subcommands = {VatReportCommand.class, VatSettle.class})
+            subcommands = {VatReportCommand.class, VatControlCommand.class, VatSettle.class})
     static class VatCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         public void run() {
@@ -2585,6 +2610,17 @@ public class BokfriCli implements Runnable {
             }
         }
     }
+
+    @Command(mixinStandardHelpOptions = true, name = "control",
+            description = "Generate the VAT control report")
+    static class VatControlCommand implements Callable<Integer> {
+        @CommandLine.ParentCommand VatCommand command;
+        @Option(names="--from") java.time.LocalDate from;
+        @Option(names="--to") java.time.LocalDate to;
+        @Option(names="--start-voucher",defaultValue="1") int startVoucher;
+        @Option(names="--output",required=true) java.nio.file.Path output;
+        @Option(names="--overwrite") boolean overwrite;
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());java.time.LocalDate selectedFrom=from==null?y.getLocalFrom():from;java.time.LocalDate selectedTo=to==null?y.getLocalTo():to;if((from==null)!=(to==null))throw new CliException("VAT_CONTROL_PERIOD_INVALID","Provide both --from and --to, or omit both");r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSVATControl2015Printer(y,selectedFrom,selectedTo,startVoucher),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("from",selectedFrom);x.put("to",selectedTo);x.put("startVoucher",startVoucher);x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("selection",selectedContext(c,co,y));root.output(x,"Created VAT control PDF "+pdf);return 0;}catch(CliException e){throw e;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "settle")
     static class VatSettle extends VatPeriodCommand {
