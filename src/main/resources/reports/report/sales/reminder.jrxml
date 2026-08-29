@@ -292,13 +292,13 @@
                 <box border="Thin" borderColor="#000000" topBorder="None" />
 
                 <line>
-                    <reportElement x="160" y="0" width="1" height="38"/>
+                    <reportElement x="127" y="0" width="1" height="38"/>
                     <graphicElement pen="Thin"/>
                 </line>
 
                 <!-- Remiderfee-->
                 <textField isBlankWhenNull="true">
-                    <reportElement x="163" y="3" width="74" height="10"/>
+                    <reportElement x="5" y="3" width="117" height="10"/>
                     <textElement textAlignment="Left">
                         <font size="7"/>
                     </textElement>
@@ -308,7 +308,7 @@
                 </textField>
 
                 <textField isBlankWhenNull="true" pattern="#,##0.00" >
-                    <reportElement x="160" y="20" width="67" height="14"/>
+                    <reportElement x="12" y="20" width="103" height="14"/>
                     <textElement textAlignment="Right">
                         <font size="10"/>
                     </textElement>
@@ -319,13 +319,13 @@
 
 
                 <line>
-                    <reportElement x="240" y="0" width="1" height="38"/>
+                    <reportElement x="254" y="0" width="1" height="38"/>
                     <graphicElement pen="Thin"/>
                 </line>
 
                 <!-- Rounding-->
                 <textField isBlankWhenNull="true">
-                    <reportElement x="243" y="3" width="74" height="10"/>
+                    <reportElement x="132" y="3" width="117" height="10"/>
                     <textElement textAlignment="Left">
                         <font size="7"/>
                     </textElement>
@@ -335,7 +335,7 @@
                 </textField>
 
                 <textField pattern="#,##0.00" isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="240" y="20" width="67" height="14"/>
+                    <reportElement x="139" y="20" width="103" height="14"/>
                     <textElement textAlignment="Right">
                         <font size="10"/>
                     </textElement>
@@ -347,13 +347,13 @@
 
 
                 <line>
-                    <reportElement x="320" y="0" width="1" height="38"/>
+                    <reportElement x="381" y="0" width="1" height="38"/>
                     <graphicElement pen="Thin"/>
                 </line>
 
                 <!-- Rounding-->
                 <textField isBlankWhenNull="true">
-                    <reportElement x="323" y="3" width="74" height="10"/>
+                    <reportElement x="259" y="3" width="117" height="10"/>
                     <textElement textAlignment="Left">
                         <font size="7"/>
                     </textElement>
@@ -363,7 +363,7 @@
                 </textField>
 
                 <textField pattern="#,##0.00" isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="320" y="20" width="67" height="14"/>
+                    <reportElement x="266" y="20" width="103" height="14"/>
                     <textElement textAlignment="Right">
                         <font size="10"/>
                     </textElement>
@@ -373,13 +373,13 @@
                 </textField>
 
                 <line>
-                    <reportElement x="400" y="0" width="1" height="38"/>
+                    <reportElement x="509" y="0" width="1" height="38"/>
                     <graphicElement pen="Thin"/>
                 </line>
 
                 <!-- Total sum-->
                 <textField isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="403" y="3" width="104" height="10"/>
+                    <reportElement x="386" y="3" width="117" height="10"/>
                     <textElement textAlignment="Left">
                         <font size="7" isBold="true"/>
                     </textElement>
@@ -389,7 +389,7 @@
                 </textField>
 
                 <textField pattern="#,##0.00" isBlankWhenNull="true"  evaluationTime="Report">
-                    <reportElement x="400" y="20" width="67" height="14"/>
+                    <reportElement x="393" y="20" width="82" height="14"/>
                     <textElement textAlignment="Right">
                         <font size="10"/>
                     </textElement>
@@ -399,7 +399,7 @@
                 </textField>
 
                 <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="483" y="20" width="27" height="14"/>
+                    <reportElement x="478" y="20" width="27" height="14"/>
                     <textElement textAlignment="Left">
                         <font size="10"/>
                     </textElement>
