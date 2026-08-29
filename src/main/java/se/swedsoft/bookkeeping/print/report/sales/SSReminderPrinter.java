@@ -32,6 +32,8 @@ public class SSReminderPrinter extends SSPrinter {
 
     private Integer iMaxReminders;
 
+    private java.time.LocalDate iReminderDate;
+
     /**
      *
      * @param iInvoices
@@ -39,9 +41,23 @@ public class SSReminderPrinter extends SSPrinter {
      * @param iLocale
      */
     public SSReminderPrinter(List<SSInvoice> iInvoices, SSCustomer iCustomer, Locale iLocale) {
+        this(iInvoices, iCustomer, iLocale, SSDateUtil.today());
+    }
+
+    /**
+     * Creates a reminder for an explicit date.
+     *
+     * @param iInvoices invoices included in the reminder
+     * @param iCustomer customer receiving the reminder
+     * @param iLocale report locale
+     * @param iReminderDate reminder date used for the report and overdue days
+     */
+    public SSReminderPrinter(List<SSInvoice> iInvoices, SSCustomer iCustomer, Locale iLocale,
+            java.time.LocalDate iReminderDate) {
         this.iInvoices = iInvoices;
         this.iCustomer = iCustomer;
         this.iLocale = iLocale;
+        this.iReminderDate = java.util.Objects.requireNonNull(iReminderDate);
 
         ResourceBundle iBundle = ResourceBundle.getBundle("reports.reminderreport",
                 iLocale);
@@ -82,8 +98,8 @@ public class SSReminderPrinter extends SSPrinter {
         SSSalePrinterUtils.addParametersForCompany(iCompany, this);
 
         // Sale parameters
-        addParameter("date", SSDateUtil.today());
-        addParameter("text", iCompany.getStandardText(SSStandardText.Reminder));
+        addParameter("date", iReminderDate);
+        addParameter("text", iCompany.getStandardText(SSStandardText.Reminder).orElse(""));
 
         if (iCustomer != null) {
 
@@ -278,15 +294,13 @@ public class SSReminderPrinter extends SSPrinter {
      * @param iInvoice the invoice to check
      * @return the number of delayed days, or 0 if no due date
      */
-    private static int getNumDelayedDays(SSInvoice iInvoice) {
+    private int getNumDelayedDays(SSInvoice iInvoice) {
         java.time.LocalDate dueLocalDate = iInvoice.getLocalDueDate();
 
         if (dueLocalDate == null) {
             return 0;
         }
-        java.time.LocalDate now = java.time.LocalDate.now();
-
-        return (int) java.time.temporal.ChronoUnit.DAYS.between(dueLocalDate, now);
+        return (int) java.time.temporal.ChronoUnit.DAYS.between(dueLocalDate, iReminderDate);
     }
 
     @Override

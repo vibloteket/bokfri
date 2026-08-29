@@ -70,6 +70,7 @@ public final class PdfGallery {
             generateAccountingControlScenarios();
             generateDocumentRegisterScenarios();
             generateReferenceReportScenarios();
+            generatePaymentReminderScenario();
             writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber, voucherNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
@@ -693,6 +694,37 @@ public final class PdfGallery {
         renderPages(pdf, scenario);
     }
 
+    private static void generatePaymentReminderScenario() throws Exception {
+        Path invoiceInput = json("reminder-invoice.json", """
+                {
+                  "customerNumber":"K100",
+                  "date":"2026-07-01",
+                  "dueDate":"2026-07-31",
+                  "yourOrderNumber":"ORDER-REMINDER",
+                  "text":"Förfallen faktura för betalningspåminnelse",
+                  "rows":[{"description":"Påminnelsetjänst","quantity":"1","unitPrice":"400.00",
+                           "vatRate":"25","salesAccount":3001}]
+                }
+                """);
+        int invoiceNumber = firstInt(cliInYear("invoice", "create", "--file",
+                invoiceInput.toString()).stdout(), "number");
+        Result journal = cliInYear("invoice", "journal", "--from", "2026-07-01",
+                "--to", "2026-07-01", "--commit");
+        require(journal.stdout().contains("\"invoiceNumbers\":[" + invoiceNumber + "]"),
+                "Reminder invoice was not committed by its journal");
+
+        Path scenario = output.resolve("payment-reminder");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("payment-reminder.pdf");
+        Result reminder = cliInYear("invoice", "reminder", Integer.toString(invoiceNumber),
+                "--date", "2026-08-15", "--output", pdf.toString());
+        require(reminder.stdout().contains("\"balance\":\"500.00\""),
+                "Payment reminder has an unexpected outstanding balance: " + reminder.stdout());
+        verifyPdf(pdf, List.of("Påminnelsedatum", "K100", "2026-07-31",
+                "15", "500,00", "TOTAL FORDRAN"));
+        renderPages(pdf, scenario);
+    }
+
     private static void generateBalanceSheetScenario() throws Exception {
         Path scenario = output.resolve("balance-sheet");
         Files.createDirectories(scenario);
@@ -921,6 +953,8 @@ public final class PdfGallery {
                 <img src="customer-revenue/page-1.png" alt="Kundomsättning"></article>
                 <article><h2>Produktomsättning</h2><p><a href="product-revenue/product-revenue.pdf">Öppna PDF</a></p>
                 <img src="product-revenue/page-1.png" alt="Produktomsättning"></article>
+                <article><h2>Betalningspåminnelse</h2><p><a href="payment-reminder/payment-reminder.pdf">Öppna PDF</a></p>
+                <img src="payment-reminder/page-1.png" alt="Betalningspåminnelse"></article>
                 </main></html>
                 """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages,
                         amountsInvoiceNumber, voucherNumber, voucherNumber),

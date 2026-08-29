@@ -132,6 +132,7 @@ import se.swedsoft.bookkeeping.print.report.sales.SSCreditinvoicePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSDeliverynotePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSOCRInvoicePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSPickingslipPrinter;
+import se.swedsoft.bookkeeping.print.report.sales.SSReminderPrinter;
 
 import java.io.File;
 import java.io.IOException;
@@ -1855,7 +1856,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "invoice", description = "Inspect and create customer invoices",
             subcommands = {InvoiceList.class, InvoiceShow.class, InvoicePdf.class,
-                    InvoiceDeliveryNote.class, InvoicePickingList.class, InvoiceJournal.class,
+                    InvoiceReminder.class, InvoiceDeliveryNote.class, InvoicePickingList.class, InvoiceJournal.class,
                     InvoiceValidate.class, InvoiceCreate.class, CliInputSchemas.Invoice.class})
     static class InvoiceCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
@@ -2027,6 +2028,57 @@ public class BokfriCli implements Runnable {
             } catch (Exception exception) {
                 throw databaseFailure(exception);
             }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "reminder",
+            description = "Generate a payment reminder for an outstanding invoice")
+    static class InvoiceReminder implements Callable<Integer> {
+        @CommandLine.ParentCommand InvoiceCommand command;
+        @Parameters(index = "0") int number;
+        @Option(names = "--date", required = true) java.time.LocalDate date;
+        @Option(names = "--language", defaultValue = "sv-SE") String language;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                SSInvoice invoice = new InvoiceService(runtime.database()).find(number)
+                        .orElseThrow(() -> new CliException("INVOICE_NOT_FOUND",
+                                "No invoice has number " + number));
+                java.math.BigDecimal balance = se.swedsoft.bookkeeping.calc.math.SSInvoiceMath
+                        .getSaldo(invoice);
+                if (!invoice.isEntered()) {
+                    throw new CliException("REMINDER_INVOICE_NOT_ENTERED",
+                            "Invoice " + number + " must be entered before a reminder is generated");
+                }
+                if (balance.signum() <= 0) {
+                    throw new CliException("REMINDER_INVOICE_SETTLED",
+                            "Invoice " + number + " has no outstanding balance");
+                }
+                if (invoice.getLocalDueDate() == null || !date.isAfter(invoice.getLocalDueDate())) {
+                    throw new CliException("REMINDER_INVOICE_NOT_OVERDUE",
+                            "Reminder date must be after the invoice due date");
+                }
+                SSCustomer customer = runtime.database().getCustomer(invoice.getCustomerNr())
+                        .orElseThrow(() -> new CliException("INVOICE_CUSTOMER_NOT_FOUND",
+                                "No customer has number " + invoice.getCustomerNr()));
+                java.nio.file.Path pdf = exportPdf(new SSReminderPrinter(List.of(invoice), customer,
+                        java.util.Locale.forLanguageTag(language), date), output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("invoiceNumber", number); result.put("date", date);
+                result.put("dueDate", invoice.getLocalDueDate()); result.put("balance", money(balance));
+                result.put("output", pdf.toString()); result.put("bytes", Files.size(pdf));
+                result.put("selection", selectedContext(context, company,
+                        runtime.database().getCurrentYear()));
+                root.output(result, "Created payment-reminder PDF " + pdf);
+                return 0;
+            } catch (CliException exception) { throw exception; }
+            catch (Exception exception) { throw databaseFailure(exception); }
         }
     }
 
