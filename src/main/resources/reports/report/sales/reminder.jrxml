@@ -249,16 +249,16 @@
 
 
     <detail>
-        <band isSplitAllowed="true" height="484">
+        <band isSplitAllowed="true" height="102">
 
             <!-- Subreport for the rows 385-->
             <frame>
-                <reportElement x="40" y="0" width="510" height="459" isPrintWhenDetailOverflows="true"/>
+                <reportElement x="40" y="0" width="510" height="28" isPrintWhenDetailOverflows="true"/>
 
                 <box border="Thin" borderColor="#000000"  topBorder="None" />
 
                 <subreport isUsingCache="false">
-                    <reportElement x="0" y="0" width="510" height="459" isPrintWhenDetailOverflows="true"/>
+                    <reportElement x="0" y="0" width="510" height="28" isPrintWhenDetailOverflows="true"/>
 
                     <parametersMapExpression>
                         <![CDATA[$P{REPORT_PARAMETERS_MAP}]]>
@@ -287,18 +287,18 @@
 
             <!-- Summary fields -->
             <frame>
-                <reportElement x="40" y="459" width="510" height="25" positionType="Float"/>
+                <reportElement x="40" y="40" width="510" height="38" positionType="Float"/>
 
                 <box border="Thin" borderColor="#000000" topBorder="None" />
 
                 <line>
-                    <reportElement x="160" y="0" width="1" height="25"/>
+                    <reportElement x="160" y="0" width="1" height="38"/>
                     <graphicElement pen="Thin"/>
                 </line>
 
                 <!-- Remiderfee-->
                 <textField isBlankWhenNull="true">
-                    <reportElement x="163" y="1" width="177" height="12"/>
+                    <reportElement x="163" y="3" width="74" height="10"/>
                     <textElement textAlignment="Left">
                         <font size="7"/>
                     </textElement>
@@ -308,7 +308,7 @@
                 </textField>
 
                 <textField isBlankWhenNull="true" pattern="#,##0.00" >
-                    <reportElement x="160" y="10" width="77" height="14"/>
+                    <reportElement x="160" y="20" width="67" height="14"/>
                     <textElement textAlignment="Right">
                         <font size="10"/>
                     </textElement>
@@ -319,13 +319,13 @@
 
 
                 <line>
-                    <reportElement x="240" y="0" width="1" height="25"/>
+                    <reportElement x="240" y="0" width="1" height="38"/>
                     <graphicElement pen="Thin"/>
                 </line>
 
                 <!-- Rounding-->
                 <textField isBlankWhenNull="true">
-                    <reportElement x="243" y="1" width="177" height="12"/>
+                    <reportElement x="243" y="3" width="74" height="10"/>
                     <textElement textAlignment="Left">
                         <font size="7"/>
                     </textElement>
@@ -335,7 +335,7 @@
                 </textField>
 
                 <textField pattern="#,##0.00" isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="240" y="10" width="77" height="14"/>
+                    <reportElement x="240" y="20" width="67" height="14"/>
                     <textElement textAlignment="Right">
                         <font size="10"/>
                     </textElement>
@@ -347,13 +347,13 @@
 
 
                 <line>
-                    <reportElement x="320" y="0" width="1" height="25"/>
+                    <reportElement x="320" y="0" width="1" height="38"/>
                     <graphicElement pen="Thin"/>
                 </line>
 
                 <!-- Rounding-->
                 <textField isBlankWhenNull="true">
-                    <reportElement x="323" y="1" width="177" height="12"/>
+                    <reportElement x="323" y="3" width="74" height="10"/>
                     <textElement textAlignment="Left">
                         <font size="7"/>
                     </textElement>
@@ -363,7 +363,7 @@
                 </textField>
 
                 <textField pattern="#,##0.00" isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="320" y="10" width="77" height="14"/>
+                    <reportElement x="320" y="20" width="67" height="14"/>
                     <textElement textAlignment="Right">
                         <font size="10"/>
                     </textElement>
@@ -373,13 +373,13 @@
                 </textField>
 
                 <line>
-                    <reportElement x="400" y="0" width="1" height="25"/>
+                    <reportElement x="400" y="0" width="1" height="38"/>
                     <graphicElement pen="Thin"/>
                 </line>
 
                 <!-- Total sum-->
                 <textField isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="403" y="1" width="80" height="12"/>
+                    <reportElement x="403" y="3" width="104" height="10"/>
                     <textElement textAlignment="Left">
                         <font size="7" isBold="true"/>
                     </textElement>
@@ -389,7 +389,7 @@
                 </textField>
 
                 <textField pattern="#,##0.00" isBlankWhenNull="true"  evaluationTime="Report">
-                    <reportElement x="400" y="10" width="77" height="14"/>
+                    <reportElement x="400" y="20" width="67" height="14"/>
                     <textElement textAlignment="Right">
                         <font size="10"/>
                     </textElement>
@@ -399,7 +399,7 @@
                 </textField>
 
                 <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="483" y="10" width="27" height="14"/>
+                    <reportElement x="483" y="20" width="27" height="14"/>
                     <textElement textAlignment="Left">
                         <font size="10"/>
                     </textElement>
