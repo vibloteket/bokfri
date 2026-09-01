@@ -67,7 +67,7 @@ public class SSReminderPrinter extends SSPrinter {
 
         setMargins(0, 0, 0, 0);
 
-        setPageHeader("sales/sale.header.jrxml");
+        setPageHeader("sales/reminder.header.jrxml");
         setPageFooter("sales/sale.footer.jrxml");
 
         setDetail("sales/reminder.jrxml");
@@ -137,8 +137,21 @@ public class SSReminderPrinter extends SSPrinter {
             addParameter("reminder.reminderfee",
                     iReminderfee.multiply(new BigDecimal(iMaxReminders)));
         } else {
-            addParameter("reminder.reminderfee", new BigDecimal(0));
+            addParameter("reminder.reminderfee", BigDecimal.ZERO);
         }
+
+        BigDecimal saldoSum = BigDecimal.ZERO;
+        BigDecimal interestSum = BigDecimal.ZERO;
+
+        for (SSInvoice invoice : iInvoices) {
+            BigDecimal saldo = SSInvoiceMath.getSaldo(invoice.getNumber());
+            int delayedDays = getNumDelayedDays(invoice);
+
+            saldoSum = saldoSum.add(saldo);
+            interestSum = interestSum.add(SSInvoiceMath.getInterestSum(invoice, saldo, delayedDays));
+        }
+        addParameter("reminder.saldo.sum", saldoSum);
+        addParameter("reminder.interest.sum", interestSum);
 
     }
 
@@ -192,6 +205,7 @@ public class SSReminderPrinter extends SSPrinter {
 
             setColumnHeader("sales/reminder.rows.jrxml");
             setDetail("sales/reminder.rows.jrxml");
+            setSummary("sales/reminder.rows.jrxml");
         }
 
         /**

@@ -85,7 +85,9 @@ public final class PdfGallery {
                   "name": "Galleri AB",
                   "corporateId": "559999-1234",
                   "email": "ekonomi@galleri.invalid",
-                  "bankgiro": "5555-0100"
+                  "bankgiro": "5555-0100",
+                  "reminderFee": "60.00",
+                  "delayInterest": "12.75"
                 }
                 """);
         companyId = firstInt(cli("company", "create", "--file", company.toString()).stdout(), "id");
@@ -720,8 +722,8 @@ public final class PdfGallery {
                 "--date", "2026-08-15", "--output", pdf.toString());
         require(reminder.stdout().contains("\"balance\":\"500.00\""),
                 "Payment reminder has an unexpected outstanding balance: " + reminder.stdout());
-        verifyPdf(pdf, List.of("Påminnelsedatum", "K100", "2026-07-31",
-                "15", "500,00", "TOTAL FORDRAN"));
+        verifyPdf(pdf, List.of("Påminnelsedatum", "K100", "2026-07-31", "15", "12,75 %",
+                "2,62", "60,00", "500,00", "562,62", "TOTAL FORDRAN"));
         renderPages(pdf, scenario);
     }
 

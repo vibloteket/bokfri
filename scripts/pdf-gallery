@@ -8,10 +8,11 @@ baselines=${3:-scripts/pdf-gallery-baselines}
 case "$action" in
   generate)
     [[ $# -le 2 ]] || { echo "Usage: ./scripts/pdf-gallery generate [output-directory]" >&2; exit 2; }
-    mvn -q -DskipTests package dependency:build-classpath \
+    mvn -q -DskipTests package assembly:single dependency:build-classpath \
       -Dmdep.includeScope=test \
       -Dmdep.outputFile=target/pdf-gallery-classpath.txt
-    jar=$(find target -maxdepth 1 -type f -name '*-jar-with-dependencies.jar' -print -quit)
+    jar=$(find target -maxdepth 1 -type f -name '*-jar-with-dependencies.jar' \
+      -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)
     [[ -n "$jar" ]] || { echo "Could not find the assembled Bokfri JAR in target/" >&2; exit 1; }
     classpath="$jar:$(cat target/pdf-gallery-classpath.txt)"
     java -Djava.awt.headless=true -cp "$classpath" scripts/PdfGallery.java "$jar" "$output"
