@@ -78,6 +78,7 @@ public final class PdfGallery {
             generateDocumentRegisterScenarios();
             generateReferenceReportScenarios();
             generatePaymentReminderScenario();
+            generateFinancialEdgeScenarios();
             writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber, voucherNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
@@ -843,6 +844,118 @@ public final class PdfGallery {
         renderPages(pdf, scenario);
     }
 
+    private static void generateFinancialEdgeScenarios() throws Exception {
+        int originalCompanyId = companyId;
+        int originalYearId = yearId;
+
+        try {
+            int planId = firstInt(cli("account-plan", "list").stdout(), "id");
+            Path company = json("edge-company.json", """
+                    {"name":"Kantfallsbolaget AB","corporateId":"559999-3579",
+                     "email":"edge@example.invalid","bankgiro":"5555-0300"}
+                    """);
+            companyId = firstInt(cli("company", "create", "--file", company.toString()).stdout(), "id");
+            Path year = json("edge-year.json", """
+                    {"from":"2026-01-01","to":"2026-12-31","accountPlanId":%d}
+                    """.formatted(planId));
+            yearId = firstInt(cliWithCompany("year", "create", "--file", year.toString()).stdout(), "id");
+
+            generatePeriodReport("income-statement-empty", "income-statement",
+                    "2026-01-01", "2026-01-31", List.of("Resultatrapport", "0.00"));
+            verifyPdfLacks(output.resolve("income-statement-empty/income-statement-empty.pdf"),
+                    List.of("null"));
+            generateDatedReport("balance-sheet-empty", "balance-sheet", "2026-01-31",
+                    List.of("Balansrapport", "0.00"));
+            verifyPdfLacks(output.resolve("balance-sheet-empty/balance-sheet-empty.pdf"),
+                    List.of("null"));
+
+            String longDescription = "Lång huvudboksbeskrivning som verifierar flera rader och stabil textplacering";
+            for (int number = 1; number <= 3; number++) {
+                Path voucher = json("edge-voucher-" + number + ".json", """
+                        {"date":"2026-02-%02d","description":"%s %d",
+                         "rows":[{"account":6110,"debit":"%d.00"},
+                                 {"account":1930,"credit":"%d.00"}]}
+                        """.formatted(number, longDescription, number, number * 100, number * 100));
+                cliInYear("voucher", "create", "--file", voucher.toString()).success();
+            }
+
+            generatePeriodReport("income-statement-negative", "income-statement",
+                    "2026-02-01", "2026-02-28", List.of("Resultatrapport", "6110", "-600.00"));
+            generateDatedReport("balance-sheet-negative", "balance-sheet", "2026-02-28",
+                    List.of("Balansrapport", "1930", "-600.00"));
+
+            Path ledgerScenario = output.resolve("general-ledger-long");
+            Files.createDirectories(ledgerScenario);
+            Path ledgerPdf = ledgerScenario.resolve("general-ledger-long.pdf");
+            Result ledger = cliInYear("general-ledger", "--account", "1930", "--from", "2026-02-01",
+                    "--to", "2026-02-28", "--output", ledgerPdf.toString());
+            require(ledger.stdout().contains("\"closing\":\"-600.00\""),
+                    "Edge ledger has an unexpected closing balance: " + ledger.stdout());
+            verifyPdf(ledgerPdf, List.of("Huvudbok", "1930", "Lång huvudboksbeskrivning som",
+                    "verifierar flera rader och stabil", "textplacering 1", "textplacering 2",
+                    "textplacering 3", "600.00"));
+            renderPages(ledgerPdf, ledgerScenario);
+
+            Path customer = json("edge-customer.json", """
+                    {"number":"EDGE-1","name":"Momskund AB",
+                     "invoiceAddress":{"name":"Momskund AB","address1":"Momsgatan 12",
+                     "postalCode":"123 45","city":"Testköping","country":"Sverige"}}
+                    """);
+            cliInYear("customer", "create", "--file", customer.toString()).success();
+            for (int rate : List.of(25, 12, 6)) {
+                int account = rate == 25 ? 3001 : rate == 12 ? 3002 : 3003;
+                Path invoice = json("edge-vat-" + rate + ".json", """
+                        {"customerNumber":"EDGE-1","date":"2026-03-%02d","dueDate":"2026-04-%02d",
+                         "rows":[{"description":"Moms %d procent","quantity":"1",
+                         "unitPrice":"100.00","vatRate":"%d","salesAccount":%d}]}
+                        """.formatted(rate, rate, rate, rate, account));
+                cliInYear("invoice", "create", "--file", invoice.toString()).success();
+            }
+            cliInYear("invoice", "journal", "--from", "2026-03-01", "--to", "2026-03-31",
+                    "--commit").success();
+
+            Path vatScenario = output.resolve("vat-report-multiple-rates");
+            Files.createDirectories(vatScenario);
+            Path vatPdf = vatScenario.resolve("vat-report-multiple-rates.pdf");
+            Result vat = cliInYear("vat", "report", "--from", "2026-03-01", "--to", "2026-03-31",
+                    "--output", vatPdf.toString());
+            require(vat.stdout().contains("\"number\":5")
+                            && vat.stdout().contains("\"number\":10")
+                            && vat.stdout().contains("\"number\":11")
+                            && vat.stdout().contains("\"number\":12"),
+                    "VAT edge report lacks one or more domestic VAT boxes: " + vat.stdout());
+            require(vat.stdout().contains("\"amount\":\"0.00\""),
+                    "VAT edge report does not expose explicit zero-value boxes: " + vat.stdout());
+            verifyPdf(vatPdf, List.of("Momsrapport", "MP1, MP2, MP3, PTOG", "300", "MP1", "25",
+                    "MP2", "12", "MP3", "6", "Försäljning när köparen är skattskyldig",
+                    "0", "Moms att betala eller få tillbaka", "43"));
+            renderPages(vatPdf, vatScenario);
+        } finally {
+            companyId = originalCompanyId;
+            yearId = originalYearId;
+        }
+    }
+
+    private static void generatePeriodReport(String scenarioName, String command, String from,
+            String to, List<String> expected) throws Exception {
+        Path scenario = output.resolve(scenarioName);
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve(scenarioName + ".pdf");
+        cliInYear(command, "--from", from, "--to", to, "--output", pdf.toString()).success();
+        verifyPdf(pdf, expected);
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateDatedReport(String scenarioName, String command, String date,
+            List<String> expected) throws Exception {
+        Path scenario = output.resolve(scenarioName);
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve(scenarioName + ".pdf");
+        cliInYear(command, "--date", date, "--output", pdf.toString()).success();
+        verifyPdf(pdf, expected);
+        renderPages(pdf, scenario);
+    }
+
     private static void generateBalanceSheetScenario() throws Exception {
         Path scenario = output.resolve("balance-sheet");
         Files.createDirectories(scenario);
@@ -1079,6 +1192,12 @@ public final class PdfGallery {
                 <img src="product-revenue/page-1.png" alt="Produktomsättning"></article>
                 <article><h2>Betalningspåminnelse</h2><p><a href="payment-reminder/payment-reminder.pdf">Öppna PDF</a></p>
                 <img src="payment-reminder/page-1.png" alt="Betalningspåminnelse"></article>
+                <article><h2>Tom resultatrapport</h2><p><a href="income-statement-empty/income-statement-empty.pdf">Öppna PDF</a></p><img src="income-statement-empty/page-1.png" alt="Tom resultatrapport"></article>
+                <article><h2>Tom balansrapport</h2><p><a href="balance-sheet-empty/balance-sheet-empty.pdf">Öppna PDF</a></p><img src="balance-sheet-empty/page-1.png" alt="Tom balansrapport"></article>
+                <article><h2>Negativ resultatrapport</h2><p><a href="income-statement-negative/income-statement-negative.pdf">Öppna PDF</a></p><img src="income-statement-negative/page-1.png" alt="Negativ resultatrapport"></article>
+                <article><h2>Negativ balansrapport</h2><p><a href="balance-sheet-negative/balance-sheet-negative.pdf">Öppna PDF</a></p><img src="balance-sheet-negative/page-1.png" alt="Negativ balansrapport"></article>
+                <article><h2>Huvudbok med långa texter</h2><p><a href="general-ledger-long/general-ledger-long.pdf">Öppna PDF</a></p><img src="general-ledger-long/page-1.png" alt="Huvudbok med långa texter"></article>
+                <article><h2>Momsrapport med flera momssatser</h2><p><a href="vat-report-multiple-rates/vat-report-multiple-rates.pdf">Öppna PDF</a></p><img src="vat-report-multiple-rates/page-1.png" alt="Momsrapport med flera momssatser"></article>
                 </main></html>
                 """.formatted(invoiceNumber, invoiceNumber, longInvoiceNumber, multipageImages,
                         amountsInvoiceNumber, voucherNumber, voucherNumber),

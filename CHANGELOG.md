@@ -29,6 +29,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   can now be exported headlessly and are included in the deterministic gallery.
 - VAT control, monthly sales values, and supplier revenue can now be exported
   headlessly and are covered by the deterministic gallery.
+- The deterministic gallery covers empty and negative financial reports, wrapped
+  long descriptions in the general ledger, and VAT reports with all domestic rates.
 - Outstanding entered invoices can now be exported as deterministic payment
   reminders for an explicit reminder date. Reminder PDFs use maintainable shared
   styles, vertically flowing invoice blocks, and non-overlapping totals.
