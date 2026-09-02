@@ -13,7 +13,12 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
+import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -48,6 +53,8 @@ public final class PdfGallery {
 
         try {
             int invoiceNumber = generateInvoiceScenario();
+            generateEnglishInvoiceScenario(invoiceNumber);
+            generateLogoInvoiceScenario();
             generateOcrInvoiceScenario(invoiceNumber);
             generateDeliveryNoteScenarios(invoiceNumber);
             generatePickingListScenario(invoiceNumber);
@@ -173,6 +180,115 @@ public final class PdfGallery {
                 "Mycket litet belopp", "ORDER-XYZ"));
         renderPages(pdf, scenario);
         return invoiceNumber;
+    }
+
+    private static void generateEnglishInvoiceScenario(int invoiceNumber) throws Exception {
+        Path scenario = output.resolve("invoice-english");
+        Files.createDirectories(scenario);
+        Path pdf = scenario.resolve("invoice-english.pdf");
+
+        cliInYear("invoice", "pdf", Integer.toString(invoiceNumber), "--language", "en-US",
+                "--output", pdf.toString()).success();
+        verifyPdf(pdf, List.of("INVOICE", "Invoice date", "Invoice number", "Delivery address",
+                "Product No", "Quantity", "Net sum", "TO PAY"));
+        verifyPdfLacks(pdf, List.of("FAKTURA", "Fakturadatum", "ATT BETALA"));
+        renderPages(pdf, scenario);
+    }
+
+    private static void generateLogoInvoiceScenario() throws Exception {
+        int originalCompanyId = companyId;
+        int originalYearId = yearId;
+        Path logo = work.resolve("gallery-logo.png");
+        writeGalleryLogo(logo);
+
+        try {
+            int planId = firstInt(cli("account-plan", "list").stdout(), "id");
+            Path company = json("logo-company.json", """
+                    {
+                      "name":"Logotypbolaget AB",
+                      "corporateId":"559999-2468",
+                      "email":"logo@example.invalid",
+                      "bankgiro":"5555-0200",
+                      "logotype":"%s"
+                    }
+                    """.formatted(logo.toString().replace("\\", "\\\\")));
+            companyId = firstInt(cli("company", "create", "--file", company.toString()).stdout(), "id");
+            Path year = json("logo-year.json", """
+                    {"from":"2026-01-01","to":"2026-12-31","accountPlanId":%d}
+                    """.formatted(planId));
+            yearId = firstInt(cliWithCompany("year", "create", "--file", year.toString()).stdout(), "id");
+
+            Path customer = json("logo-customer.json", """
+                    {"number":"LOGO-1","name":"Logotypkund AB",
+                     "invoiceAddress":{"name":"Logotypkund AB","address1":"Bildgatan 24",
+                     "postalCode":"123 45","city":"Testköping","country":"Sverige"}}
+                    """);
+            cliInYear("customer", "create", "--file", customer.toString()).success();
+            Path invoice = json("logo-invoice.json", """
+                    {"customerNumber":"LOGO-1","date":"2026-05-15","dueDate":"2026-06-14",
+                     "yourOrderNumber":"ORDER-LOGO",
+                     "rows":[{"description":"Faktura med deterministisk logotyp","quantity":"1",
+                     "unitPrice":"800.00","vatRate":"25","salesAccount":3001}]}
+                    """);
+            int invoiceNumber = firstInt(cliInYear("invoice", "create", "--file",
+                    invoice.toString()).stdout(), "number");
+
+            Path scenario = output.resolve("invoice-logo");
+            Files.createDirectories(scenario);
+            Path pdf = scenario.resolve("invoice-logo.pdf");
+            cliInYear("invoice", "pdf", Integer.toString(invoiceNumber),
+                    "--output", pdf.toString()).success();
+            verifyPdf(pdf, List.of("Logotypbolaget AB", "Logotypkund AB", "ORDER-LOGO",
+                    "Faktura med deterministisk logotyp", "800,00", "200,00"));
+            require(containsImage(pdf, 240, 60), "Logo invoice does not embed the deterministic logo");
+            renderPages(pdf, scenario);
+        } finally {
+            companyId = originalCompanyId;
+            yearId = originalYearId;
+        }
+    }
+
+    private static void writeGalleryLogo(Path logo) throws IOException {
+        BufferedImage image = new BufferedImage(240, 60, BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D graphics = image.createGraphics();
+        try {
+            graphics.setColor(java.awt.Color.WHITE);
+            graphics.fillRect(0, 0, 240, 60);
+            graphics.setColor(new java.awt.Color(22, 78, 99));
+            graphics.fillRoundRect(0, 0, 240, 60, 14, 14);
+            graphics.setColor(new java.awt.Color(250, 204, 21));
+            graphics.fillOval(14, 12, 36, 36);
+            graphics.setColor(java.awt.Color.WHITE);
+            graphics.fillRect(64, 15, 150, 8);
+            graphics.fillRect(64, 34, 110, 8);
+        } finally {
+            graphics.dispose();
+        }
+        ImageIO.write(image, "png", logo.toFile());
+    }
+
+    private static boolean containsImage(Path pdf, int width, int height) throws IOException {
+        try (PDDocument document = Loader.loadPDF(pdf.toFile())) {
+            for (var page : document.getPages()) {
+                if (containsImage(page.getResources(), width, height)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsImage(PDResources resources, int width, int height) throws IOException {
+        for (COSName name : resources.getXObjectNames()) {
+            PDXObject object = resources.getXObject(name);
+            if (object instanceof PDImageXObject image
+                    && image.getWidth() == width && image.getHeight() == height) {
+                return true;
+            }
+            if (object instanceof PDFormXObject form
+                    && containsImage(form.getResources(), width, height)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void generateOcrInvoiceScenario(int invoiceNumber) throws Exception {
@@ -840,6 +956,12 @@ public final class PdfGallery {
                 <main><h1>Bokfri PDF gallery</h1>
                 <article><h2>Faktura %d</h2><p><a href="invoice/invoice.pdf">Öppna PDF</a></p>
                 <img src="invoice/page-1.png" alt="Faktura %d, sida 1"></article>
+                <article><h2>Engelsk faktura</h2>
+                <p><a href="invoice-english/invoice-english.pdf">Öppna PDF</a></p>
+                <img src="invoice-english/page-1.png" alt="Engelsk faktura, sida 1"></article>
+                <article><h2>Faktura med logotyp</h2>
+                <p><a href="invoice-logo/invoice-logo.pdf">Öppna PDF</a></p>
+                <img src="invoice-logo/page-1.png" alt="Faktura med logotyp, sida 1"></article>
                 <article><h2>OCR-faktura</h2>
                 <p><a href="invoice-ocr/invoice-ocr.pdf">Öppna PDF</a></p>
                 <img src="invoice-ocr/page-1.png" alt="OCR-faktura, sida 1"></article>

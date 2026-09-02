@@ -17,6 +17,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   same `--output` and `--overwrite` behavior as other report commands.
 - Invoice PDF export supports the OCR variant, delivery notes with or without
   prices, and picking lists; the sales report is also available headlessly.
+- The deterministic gallery covers English invoices and invoices with an embedded
+  company logo; company JSON input accepts the existing optional logotype path.
 - Customer inpayment journals and lists, accounts receivable, and customer-claim
   reports can now be exported headlessly and are covered before and after payment.
 - Supplier invoice and credit-invoice journals, outpayment journals and lists,

@@ -212,6 +212,16 @@ class BokfriCliTest {
     }
 
     @Test
+    void companySchemaIncludesOptionalLogotypePath() throws Exception {
+        Result schema = execute("company", "schema");
+
+        assertThat(schema.exitCode()).isZero();
+        JsonNode result = new ObjectMapper().readTree(schema.stdout());
+        assertThat(result.at("/properties/logotype/type").asText()).isEqualTo("string");
+        assertThat(result.path("required")).extracting(JsonNode::asText).doesNotContain("logotype");
+    }
+
+    @Test
     void everyJsonInputCommandGeneratesDraft202012Schema() throws Exception {
         String[] commands = {"company", "year", "opening-balance", "customer", "product",
                 "supplier", "supplier-invoice", "supplier-credit-invoice", "invoice",
