@@ -20,6 +20,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,6 +40,7 @@ public class SSReportCache {    private static final Logger LOG = LoggerFactory.
     private static final File REPORT_DIR = new File(Path.get(Path.USER_DATA), "report");
     private static final File COMPILED_DIR = new File(REPORT_DIR, "compiled");
     private static final String REPORT_RESOURCE = "/reports/report/";
+    private static final String SHARED_STYLE_RESOURCE = REPORT_RESOURCE + "styles/bokfri.jrtx";
     private static final String CACHE_BUILD_SUFFIX = ".build";
 
     // The report cache with compiled report definitions.
@@ -99,8 +103,11 @@ public class SSReportCache {    private static final Logger LOG = LoggerFactory.
         String iReportResource = REPORT_RESOURCE + pReportName;
 
         try {
-            // If the report exists on disk for this exact application build, load it.
-            if (isCompiledReportCurrent(iCompiledFile)) {
+            byte[] reportSource = readResource(iReportResource);
+            String cacheSignature = cacheSignature(reportSource);
+
+            // Reuse a compiled report only when its build, source and shared styles match.
+            if (isCompiledReportCurrent(iCompiledFile, cacheSignature)) {
                 LOG.info("Loading precompiled report {} from disk...", iCompiledFile);
                 return loadCompiledReport(iCompiledFile);
             }
@@ -109,26 +116,20 @@ public class SSReportCache {    private static final Logger LOG = LoggerFactory.
                         iReportResource);
             }
 
-            // .. we need to recompile the report
             LOG.info("Compiling and saving report {} to disk...", iReportResource);
 
-            InputStream is = getClass().getResourceAsStream(iReportResource);
-
-            if (is == null) {
-                throw new FileNotFoundException(iReportResource);
-            }
-
-            JasperReport iReport = JasperCompileManager.compileReport(is);
-            saveCompiledReport(iCompiledFile, iReport);
+            JasperReport iReport = JasperCompileManager.compileReport(
+                    new java.io.ByteArrayInputStream(reportSource));
+            saveCompiledReport(iCompiledFile, iReport, cacheSignature);
 
             return iReport;
-        } catch (JRException ex) {
-            LOG.error("Unexpected error", ex);
+        } catch (JRException | IOException ex) {
+            throw new SSException("Could not compile report " + pReportName + ": "
+                    + ex.getLocalizedMessage());
         }
-        return null;
     }
 
-    private boolean isCompiledReportCurrent(File compiledFile) {
+    private boolean isCompiledReportCurrent(File compiledFile, String cacheSignature) {
         if (!compiledFile.exists()) {
             return false;
         }
@@ -139,13 +140,36 @@ public class SSReportCache {    private static final Logger LOG = LoggerFactory.
             return false;
         }
         try {
-            String cachedBuild = Files.readString(buildMarkerFile.toPath(), StandardCharsets.UTF_8).trim();
+            String cachedSignature = Files.readString(
+                    buildMarkerFile.toPath(), StandardCharsets.UTF_8).trim();
 
-            return Version.APP_BUILD.equals(cachedBuild);
+            return cacheSignature.equals(cachedSignature);
         } catch (IOException e) {
             LOG.error("Unexpected error", e);
         }
         return false;
+    }
+
+    private byte[] readResource(String resourceName) throws IOException {
+        try (InputStream input = getClass().getResourceAsStream(resourceName)) {
+            if (input == null) {
+                throw new FileNotFoundException(resourceName);
+            }
+            return input.readAllBytes();
+        }
+    }
+
+    private String cacheSignature(byte[] reportSource) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+            digest.update(Version.APP_BUILD.getBytes(StandardCharsets.UTF_8));
+            digest.update(reportSource);
+            digest.update(readResource(SHARED_STYLE_RESOURCE));
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
+        }
     }
 
     /**
@@ -178,7 +202,7 @@ public class SSReportCache {    private static final Logger LOG = LoggerFactory.
      *
      * @return The report
      */
-    private void saveCompiledReport(File pCompiledFile, JasperReport pReport) {
+    private void saveCompiledReport(File pCompiledFile, JasperReport pReport, String cacheSignature) {
         try {
             Files.createDirectories(pCompiledFile.getParentFile().toPath());
 
@@ -186,7 +210,7 @@ public class SSReportCache {    private static final Logger LOG = LoggerFactory.
                     new BufferedOutputStream(new FileOutputStream(pCompiledFile)))) {
                 iObjectOutputStream.writeObject(pReport);
             }
-            Files.writeString(getBuildMarkerFile(pCompiledFile).toPath(), Version.APP_BUILD,
+            Files.writeString(getBuildMarkerFile(pCompiledFile).toPath(), cacheSignature,
                     StandardCharsets.UTF_8);
         } catch (IOException e) {
             LOG.warn("Could not cache compiled report {}; using in-memory report", pCompiledFile, e);

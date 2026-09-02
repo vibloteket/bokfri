@@ -189,7 +189,8 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
      * @throws SSException
      */
     private void compileDesign() throws SSException {
-        List<JRStyle>    theStyles = new LinkedList<>();
+        List<JRStyle> theStyles = new LinkedList<>();
+        List<JRReportTemplate> theTemplates = new LinkedList<>();
 
         // Contains the fields from all subreports
         List<JRField>     theFields = new LinkedList<>();
@@ -205,14 +206,14 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
         // Page header
         if (iFields.containsKey(ReportField.PAGE_HEADER)) {
             iPageHeader = getField(ReportField.PAGE_HEADER, theFields, theParameters,
-                    theVariables, theGroups, theStyles);
+                    theVariables, theGroups, theStyles, theTemplates);
         }
         // Page footer
         JRBand iPageFooter = null;
 
         if (iFields.containsKey(ReportField.PAGE_FOOTER)) {
             iPageFooter = getField(ReportField.PAGE_FOOTER, theFields, theParameters,
-                    theVariables, theGroups, theStyles);
+                    theVariables, theGroups, theStyles, theTemplates);
         }
 
         // Column header
@@ -220,14 +221,14 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
 
         if (iFields.containsKey(ReportField.COLUMN_HEADER)) {
             iColumnHeader = getField(ReportField.COLUMN_HEADER, theFields, theParameters,
-                    theVariables, theGroups, theStyles);
+                    theVariables, theGroups, theStyles, theTemplates);
         }
         // Column footer
         JRBand iColumnFooter = null;
 
         if (iFields.containsKey(ReportField.COLUMN_FOOTER)) {
             iColumnFooter = getField(ReportField.COLUMN_FOOTER, theFields, theParameters,
-                    theVariables, theGroups, theStyles);
+                    theVariables, theGroups, theStyles, theTemplates);
         }
 
         // Detail
@@ -235,7 +236,7 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
 
         if (iFields.containsKey(ReportField.DETAIL)) {
             iDetail = getDetailField(theFields, theParameters, theVariables,
-                    theGroups, theStyles);
+                    theGroups, theStyles, theTemplates);
         }
 
         // Summary
@@ -243,7 +244,7 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
 
         if (iFields.containsKey(ReportField.SUMMARY)) {
             iSummary = getField(ReportField.SUMMARY, theFields, theParameters,
-                    theVariables, theGroups, theStyles);
+                    theVariables, theGroups, theStyles, theTemplates);
         }
 
         // Background
@@ -251,14 +252,14 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
 
         if (iFields.containsKey(ReportField.BACKGROUND)) {
             iBackground = getField(ReportField.BACKGROUND, theFields, theParameters,
-                    theVariables, theGroups, theStyles);
+                    theVariables, theGroups, theStyles, theTemplates);
         }
         // Last page footer
         JRBand iLastPageFooter = null;
 
         if (iFields.containsKey(ReportField.LAST_PAGE_FOOTER)) {
             iLastPageFooter = getField(ReportField.LAST_PAGE_FOOTER, theFields,
-                    theParameters, theVariables, theGroups, theStyles);
+                    theParameters, theVariables, theGroups, theStyles, theTemplates);
         }
 
         iDesign = new JasperDesign();
@@ -334,7 +335,13 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
 
         try {
 
-            // Add all fields to the design
+            for (JRReportTemplate template : theTemplates) {
+                if (!iDesign.getTemplatesList().contains(template)) {
+                    iDesign.addTemplate(template);
+                }
+            }
+
+            // Add all styles to the design
             for (JRStyle iStyle: theStyles) {
                 try {
                     iDesign.addStyle(iStyle);
@@ -402,7 +409,10 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
      * @return
      * @throws SSException
      */
-    private JRBand getField(ReportField pField, List<JRField> pFields, List<JRParameter> pParameters, List<JRVariable> pVariables, List<JRGroup> pGroups, List<JRStyle> pStyles) throws SSException {
+    private JRBand getField(ReportField pField, List<JRField> pFields,
+            List<JRParameter> pParameters, List<JRVariable> pVariables,
+            List<JRGroup> pGroups, List<JRStyle> pStyles,
+            List<JRReportTemplate> pTemplates) throws SSException {
 
         String pReportName = iFields.get(pField);
 
@@ -431,10 +441,12 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
                 pGroups.addAll(Arrays.asList(iReport.getGroups()));
             }
 
-            // Add all fonts
+            // Add all styles and external style templates.
             if (iReport.getStyles() != null) {
-
                 pStyles.addAll(Arrays.asList(iReport.getStyles()));
+            }
+            if (iReport.getTemplates() != null) {
+                pTemplates.addAll(Arrays.asList(iReport.getTemplates()));
             }
 
             switch (pField) {
@@ -481,7 +493,9 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
      * @return
      * @throws SSException
      */
-    private JRSection getDetailField(List<JRField> pFields, List<JRParameter> pParameters, List<JRVariable> pVariables, List<JRGroup> pGroups, List<JRStyle> pStyles) throws SSException {
+    private JRSection getDetailField(List<JRField> pFields, List<JRParameter> pParameters,
+            List<JRVariable> pVariables, List<JRGroup> pGroups, List<JRStyle> pStyles,
+            List<JRReportTemplate> pTemplates) throws SSException {
         String pReportName = iFields.get(ReportField.DETAIL);
 
         try {
@@ -509,12 +523,13 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
                 pGroups.addAll(Arrays.asList(iReport.getGroups()));
             }
 
-            // Add all fonts
+            // Add all styles and external style templates.
             if (iReport.getStyles() != null) {
-
                 pStyles.addAll(Arrays.asList(iReport.getStyles()));
             }
-
+            if (iReport.getTemplates() != null) {
+                pTemplates.addAll(Arrays.asList(iReport.getTemplates()));
+            }
 
             return iReport.getDetailSection();
         } catch (SSException ex) {

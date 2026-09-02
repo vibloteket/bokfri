@@ -3,6 +3,8 @@
 <!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
 
 <jasperReport name="Invoice">
+    <template><![CDATA["reports/report/styles/bokfri.jrtx"]]></template>
+
     <!--- Declared parameters in the report. -->
 
     <parameter name="title"      class="java.lang.String"/>
@@ -46,6 +48,8 @@
 
 
     <parameter name="reminder.reminderfee"       class="java.math.BigDecimal"/>
+    <parameter name="reminder.saldo.sum"        class="java.math.BigDecimal"/>
+    <parameter name="reminder.interest.sum"     class="java.math.BigDecimal"/>
 
 
 
@@ -249,169 +253,17 @@
 
 
     <detail>
-        <band isSplitAllowed="true" height="484">
-
-            <!-- Subreport for the rows 385-->
-            <frame>
-                <reportElement x="40" y="0" width="510" height="459" isPrintWhenDetailOverflows="true"/>
-
-                <box border="Thin" borderColor="#000000"  topBorder="None" />
-
-                <subreport isUsingCache="false">
-                    <reportElement x="0" y="0" width="510" height="459" isPrintWhenDetailOverflows="true"/>
-
-                    <parametersMapExpression>
-                        <![CDATA[$P{REPORT_PARAMETERS_MAP}]]>
-                    </parametersMapExpression>
-
-                    <subreportParameter name="REPORT_RESOURCE_BUNDLE">
-                        <subreportParameterExpression>
-                            <![CDATA[$P{REPORT_RESOURCE_BUNDLE}]]>
-                        </subreportParameterExpression>
-                    </subreportParameter>
-
-                    <dataSourceExpression>
-                        <![CDATA[$F{subreport.datasource}]]>
-                    </dataSourceExpression>
-
-                    <returnValue subreportVariable="delayfee.sum"  toVariable="delayfee.sum"/>
-                    <returnValue subreportVariable="saldo.sum"     toVariable="saldo.sum"/>
-
-                    <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                        <![CDATA[$P{subreport.report}]]>
-                    </subreportExpression>
-
-
-                </subreport>
-            </frame>
-
-            <!-- Summary fields -->
-            <frame>
-                <reportElement x="40" y="459" width="510" height="25" positionType="Float"/>
-
-                <box border="Thin" borderColor="#000000" topBorder="None" />
-
-                <line>
-                    <reportElement x="160" y="0" width="1" height="25"/>
-                    <graphicElement pen="Thin"/>
-                </line>
-
-                <!-- Remiderfee-->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="163" y="1" width="177" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="7"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{reminderreport.totalreminderfee}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true" pattern="#,##0.00" >
-                    <reportElement x="160" y="10" width="77" height="14"/>
-                    <textElement textAlignment="Right">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                         <![CDATA[$P{reminder.reminderfee}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <line>
-                    <reportElement x="240" y="0" width="1" height="25"/>
-                    <graphicElement pen="Thin"/>
-                </line>
-
-                <!-- Rounding-->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="243" y="1" width="177" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="7"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{reminderreport.delayfee}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="240" y="10" width="77" height="14"/>
-                    <textElement textAlignment="Right">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{delayfee.sum} == null ? new BigDecimal(0.0): $V{delayfee.sum}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-                <line>
-                    <reportElement x="320" y="0" width="1" height="25"/>
-                    <graphicElement pen="Thin"/>
-                </line>
-
-                <!-- Rounding-->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="323" y="1" width="177" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="7"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{reminderreport.saldosum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="320" y="10" width="77" height="14"/>
-                    <textElement textAlignment="Right">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{saldo.sum} == null ? new BigDecimal(0.0): $V{saldo.sum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <line>
-                    <reportElement x="400" y="0" width="1" height="25"/>
-                    <graphicElement pen="Thin"/>
-                </line>
-
-                <!-- Total sum-->
-                <textField isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="403" y="1" width="80" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="7" isBold="true"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{reminderreport.totalsum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true"  evaluationTime="Report">
-                    <reportElement x="400" y="10" width="77" height="14"/>
-                    <textElement textAlignment="Right">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{delayfee.sum}.add($V{saldo.sum}).add($P{reminder.reminderfee})]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="483" y="10" width="27" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{customer.currency}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-            </frame>
-
-
+        <band isSplitAllowed="true" height="162">
+            <!-- Rows and totals are owned by one report and therefore flow vertically. -->
+            <subreport isUsingCache="false">
+                <reportElement x="40" y="0" width="510" height="162"/>
+                <parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+                <subreportParameter name="REPORT_RESOURCE_BUNDLE">
+                    <subreportParameterExpression><![CDATA[$P{REPORT_RESOURCE_BUNDLE}]]></subreportParameterExpression>
+                </subreportParameter>
+                <dataSourceExpression><![CDATA[$F{subreport.datasource}]]></dataSourceExpression>
+                <subreportExpression class="net.sf.jasperreports.engine.JasperReport"><![CDATA[$P{subreport.report}]]></subreportExpression>
+            </subreport>
         </band>
     </detail>
 

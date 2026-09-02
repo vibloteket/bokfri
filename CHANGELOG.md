@@ -27,6 +27,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   can now be exported headlessly and are included in the deterministic gallery.
 - VAT control, monthly sales values, and supplier revenue can now be exported
   headlessly and are covered by the deterministic gallery.
+- Outstanding entered invoices can now be exported as deterministic payment
+  reminders for an explicit reminder date. Reminder PDFs use maintainable shared
+  styles, vertically flowing invoice blocks, and non-overlapping totals.
+- Report fragments now preserve external Jasper style templates, and compiled
+  report caches are invalidated when either their JRXML source or shared styles change.
 - The deterministic PDF gallery now covers the invoice journal, its committed
   voucher, the voucher list, and the VAT report with semantic balance and VAT-box checks.
 - BAS 2026 standard sales accounts 3001–3004 now carry the VAT report codes implied

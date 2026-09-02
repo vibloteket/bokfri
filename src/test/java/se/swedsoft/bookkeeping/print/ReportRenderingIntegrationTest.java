@@ -8,6 +8,8 @@ import net.sf.jasperreports.engine.JasperPrintManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import se.swedsoft.bookkeeping.calc.math.SSInvoiceMath;
+import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInpayment;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewProject;
@@ -24,12 +26,14 @@ import org.fribok.bookkeeping.service.invoice.InvoiceService;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.print.report.sales.SSInvoicePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSOCRInvoicePrinter;
+import se.swedsoft.bookkeeping.print.report.sales.SSReminderPrinter;
 
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.nio.file.Files;
@@ -144,6 +148,48 @@ class ReportRenderingIntegrationTest {
     }
 
     @Test
+    void paymentReminderKeepsDifficultInvoiceValuesInSeparateTextAreas() throws Exception {
+        SSInvoice invoice = invoice();
+        invoice.setOCRNumber("1234567890123456789012345");
+        invoice.setLocalDate(LocalDate.of(2023, 1, 1));
+        invoice.setLocalDueDate(LocalDate.of(2023, 1, 2));
+        invoice.setNumRemainders(11);
+        invoice.setDelayInterest(new BigDecimal("12.75"));
+
+        SSCustomer customer = new SSCustomer();
+        customer.setNumber("C-REMINDER");
+        customer.setName("Reminder Customer AB");
+        customer.setInvoiceCurrency(new SSCurrency("SEK", "Svenska kronor"));
+        customer.getInvoiceAddress().setName(customer.getName());
+
+        HashMap<Integer, BigDecimal> previousSaldos = SSInvoiceMath.iSaldoMap;
+
+        try {
+            SSInvoiceMath.iSaldoMap = new HashMap<>();
+            SSInvoiceMath.iSaldoMap.put(invoice.getNumber(), new BigDecimal("1234567.89"));
+            SSReminderPrinter printer = new SSReminderPrinter(List.of(invoice), customer,
+                    Locale.forLanguageTag("sv-SE"), LocalDate.of(2026, 5, 20));
+
+            assertPreviewImageContainsRenderedContent(printer);
+
+            List<PrintedText> printedText = allPrintedText(printer.getPrinter());
+            PrintedText sectionStart = findPrintedText(printedText, "Fakturauppgifter");
+            PrintedText total = findPrintedText(printedText, "TOTAL FORDRAN");
+            List<PrintedText> invoiceBlock = printedText.stream()
+                    .filter(text -> text.y() >= sectionStart.y() && text.bottom() <= total.y())
+                    .filter(text -> !text.text().isBlank())
+                    .toList();
+
+            assertThat(printedText.stream().map(PrintedText::text)
+                    .map(text -> text.replace('\u00a0', ' ')))
+                    .contains("1234567890123456789012345", "1234", "12,75 %", "1 234 567,89");
+            assertThat(overlappingTextPairs(invoiceBlock)).isEmpty();
+        } finally {
+            SSInvoiceMath.iSaldoMap = previousSaldos;
+        }
+    }
+
+    @Test
     void inpaymentJournalAcceptsFormattedDateFromItsDataModel() throws Exception {
         SSInpayment inpayment = new SSInpayment();
         inpayment.setNumber(1);
@@ -199,11 +245,28 @@ class ReportRenderingIntegrationTest {
             int y = offsetY + element.getY();
 
             if (element instanceof JRPrintText printText) {
-                text.add(new PrintedText(printText.getFullText(), x, y, element.getHeight()));
+                text.add(new PrintedText(printText.getFullText(), x, y,
+                        element.getWidth(), element.getHeight()));
             } else if (element instanceof JRPrintFrame frame) {
                 collectPrintedText(frame.getElements(), text, x, y);
             }
         }
+    }
+
+    private static List<String> overlappingTextPairs(List<PrintedText> printedText) {
+        List<String> overlaps = new ArrayList<>();
+
+        for (int firstIndex = 0; firstIndex < printedText.size(); firstIndex++) {
+            PrintedText first = printedText.get(firstIndex);
+            for (int secondIndex = firstIndex + 1; secondIndex < printedText.size(); secondIndex++) {
+                PrintedText second = printedText.get(secondIndex);
+
+                if (first.overlaps(second)) {
+                    overlaps.add(first.text() + " / " + second.text());
+                }
+            }
+        }
+        return overlaps;
     }
 
     private static PrintedText findPrintedText(List<PrintedText> printedText, String expected) {
@@ -213,9 +276,18 @@ class ReportRenderingIntegrationTest {
                 .orElseThrow(() -> new AssertionError("Missing printed text: " + expected));
     }
 
-    private record PrintedText(String text, int x, int y, int height) {
+    private record PrintedText(String text, int x, int y, int width, int height) {
+        int right() {
+            return x + width;
+        }
+
         int bottom() {
             return y + height;
+        }
+
+        boolean overlaps(PrintedText other) {
+            return x < other.right() && right() > other.x()
+                    && y < other.bottom() && bottom() > other.y();
         }
     }
 
