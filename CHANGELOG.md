@@ -25,6 +25,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   supplier register can now be exported as PDF from their CLI list commands.
 - Product lists, selected account plans, customer revenue, and product revenue
   can now be exported headlessly and are included in the deterministic gallery.
+- VAT control, monthly sales values, and supplier revenue can now be exported
+  headlessly and are covered by the deterministic gallery.
 - The deterministic PDF gallery now covers the invoice journal, its committed
   voucher, the voucher list, and the VAT report with semantic balance and VAT-box checks.
 - BAS 2026 standard sales accounts 3001–3004 now carry the VAT report codes implied
