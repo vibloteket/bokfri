@@ -4,7 +4,7 @@
 
 <jasperReport name="SimpleStatement" resourceBundle="book" >
 
-    <reportFont name="SansSerif" isDefault="true" fontName="SansSerif"></reportFont>
+    <reportFont name="SansSerif" isDefault="true" fontName="Bokfri Sans"></reportFont>
 
     <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
     <parameter name="Parameters" class="java.util.HashMap"/>

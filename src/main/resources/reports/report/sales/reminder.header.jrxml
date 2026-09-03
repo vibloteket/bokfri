@@ -32,7 +32,7 @@
             <textField isBlankWhenNull="true">
                 <reportElement x="280" y="20" width="270" height="20"/>
                 <textElement textAlignment="Right">
-                    <font fontName="SansSerif" size="16" isBold="true" pdfFontName="Helvetica"/>
+                    <font fontName="Bokfri Sans" size="16" isBold="true"/>
                 </textElement>
                 <textFieldExpression>
                     <![CDATA[$P{title}]]>

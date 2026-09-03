@@ -9,13 +9,17 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDFontDescriptor;
 import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
@@ -79,6 +83,7 @@ public final class PdfGallery {
             generateReferenceReportScenarios();
             generatePaymentReminderScenario();
             generateFinancialEdgeScenarios();
+            verifyGalleryFonts();
             writeIndex(invoiceNumber, longInvoiceNumber, amountsInvoiceNumber, voucherNumber);
             System.out.println("PDF gallery generated: " + output);
         } finally {
@@ -1037,6 +1042,55 @@ public final class PdfGallery {
                 ImageIO.write(image, "png", scenario.resolve("page-" + (page + 1) + ".png").toFile());
             }
             return pages;
+        }
+    }
+
+    private static void verifyGalleryFonts() throws Exception {
+        Set<String> galleryFamilies = new LinkedHashSet<>();
+        try (Stream<Path> files = Files.walk(output)) {
+            for (Path pdf : files.filter(path -> path.toString().endsWith(".pdf")).toList()) {
+                verifyPdfFonts(pdf, galleryFamilies);
+            }
+        }
+        require(galleryFamilies.contains("DejaVuSans"), "Gallery does not use bundled regular font");
+        require(galleryFamilies.contains("DejaVuSans-Bold"), "Gallery does not use bundled bold font");
+        require(galleryFamilies.contains("OCR-B"), "Gallery does not use bundled OCR-B font");
+    }
+
+    private static void verifyPdfFonts(Path pdf, Set<String> galleryFamilies) throws Exception {
+        require(Files.size(pdf) < 250_000,
+                "PDF exceeds the embedded-font size budget of 250 KB: " + pdf);
+        Set<String> documentFamilies = new LinkedHashSet<>();
+        try (PDDocument document = Loader.loadPDF(pdf.toFile())) {
+            for (var page : document.getPages()) {
+                collectFonts(page.getResources(), documentFamilies);
+            }
+        }
+        require(!documentFamilies.isEmpty(), "PDF contains no fonts: " + pdf);
+        for (String family : documentFamilies) {
+            require(family.startsWith("DejaVuSans") || family.equals("OCR-B"),
+                    "PDF contains unexpected font " + family + ": " + pdf);
+        }
+        if (!pdf.toString().contains("invoice-ocr")) {
+            require(!documentFamilies.contains("OCR-B"),
+                    "Non-OCR PDF embeds OCR-B: " + pdf);
+        }
+        galleryFamilies.addAll(documentFamilies);
+    }
+
+    private static void collectFonts(PDResources resources, Set<String> families) throws Exception {
+        if (resources == null) return;
+        for (COSName name : resources.getFontNames()) {
+            PDFont font = resources.getFont(name);
+            PDFontDescriptor descriptor = font.getFontDescriptor();
+            require(descriptor != null && (descriptor.getFontFile() != null
+                            || descriptor.getFontFile2() != null || descriptor.getFontFile3() != null),
+                    "PDF font is not embedded: " + font.getName());
+            families.add(font.getName().replaceFirst("^[A-Z]{6}\\+", ""));
+        }
+        for (COSName name : resources.getXObjectNames()) {
+            PDXObject object = resources.getXObject(name);
+            if (object instanceof PDFormXObject form) collectFonts(form.getResources(), families);
         }
     }
 

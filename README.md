@@ -127,7 +127,8 @@ sidorna. En avsiktlig visuell förändring kan godkännas med
 
 Rapportmallarnas enda källträd är `src/main/resources/reports/report/`.
 Se [rapportmallarnas beroendekarta](docs/report-templates.md) för hur Java-printers
-kopplas till JRXML-filer och hur kartan uppdateras.
+kopplas till JRXML-filer och hur kartan uppdateras. Fontkällor, licenser och inbäddning dokumenteras i
+[rapportfonter](docs/report-fonts.md).
 
 Den aktuella versionen kan köras från projektroten med:
 

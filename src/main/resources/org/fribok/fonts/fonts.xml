@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <fontFamilies>
-  <fontFamily name="OCRA">
-    <normal>org/fribok/fonts/OCRA.ttf</normal>
+  <fontFamily name="Bokfri Sans">
+    <normal>org/fribok/fonts/dejavu/DejaVuSans.ttf</normal>
+    <bold>org/fribok/fonts/dejavu/DejaVuSans-Bold.ttf</bold>
+    <italic>org/fribok/fonts/dejavu/DejaVuSans-Oblique.ttf</italic>
+    <boldItalic>org/fribok/fonts/dejavu/DejaVuSans-BoldOblique.ttf</boldItalic>
     <pdfEncoding>Identity-H</pdfEncoding>
     <pdfEmbedded>true</pdfEmbedded>
   </fontFamily>
   <fontFamily name="OCRB">
-    <normal>org/fribok/fonts/OCRB.ttf</normal>
+    <normal>org/fribok/fonts/ocrb/OCR-B.ttf</normal>
     <pdfEncoding>Identity-H</pdfEncoding>
     <pdfEmbedded>true</pdfEmbedded>
   </fontFamily>
