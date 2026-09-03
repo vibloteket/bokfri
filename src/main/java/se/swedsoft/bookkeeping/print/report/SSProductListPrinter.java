@@ -48,13 +48,8 @@ public class SSProductListPrinter extends SSPrinter {
         iStock = new SSStock(true);
 
         setPageHeader("header_period.jrxml");
-        // if (!SSVersion.app_title.contains("JFS Fakturering")) {
         setColumnHeader("productlist.jrxml");
         setDetail("productlist.jrxml");
-        // } else {
-        // setColumnHeader("productlist_fakt.jrxml");
-        // setDetail("productlist_fakt.jrxml");
-        // }
     }
 
     /**
