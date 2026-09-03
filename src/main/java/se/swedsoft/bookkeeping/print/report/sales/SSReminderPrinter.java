@@ -32,6 +32,8 @@ public class SSReminderPrinter extends SSPrinter {
 
     private Integer iMaxReminders;
 
+    private java.time.LocalDate iReminderDate;
+
     /**
      *
      * @param iInvoices
@@ -39,9 +41,23 @@ public class SSReminderPrinter extends SSPrinter {
      * @param iLocale
      */
     public SSReminderPrinter(List<SSInvoice> iInvoices, SSCustomer iCustomer, Locale iLocale) {
+        this(iInvoices, iCustomer, iLocale, SSDateUtil.today());
+    }
+
+    /**
+     * Creates a reminder for an explicit date.
+     *
+     * @param iInvoices invoices included in the reminder
+     * @param iCustomer customer receiving the reminder
+     * @param iLocale report locale
+     * @param iReminderDate reminder date used for the report and overdue days
+     */
+    public SSReminderPrinter(List<SSInvoice> iInvoices, SSCustomer iCustomer, Locale iLocale,
+            java.time.LocalDate iReminderDate) {
         this.iInvoices = iInvoices;
         this.iCustomer = iCustomer;
         this.iLocale = iLocale;
+        this.iReminderDate = java.util.Objects.requireNonNull(iReminderDate);
 
         ResourceBundle iBundle = ResourceBundle.getBundle("reports.reminderreport",
                 iLocale);
@@ -51,7 +67,7 @@ public class SSReminderPrinter extends SSPrinter {
 
         setMargins(0, 0, 0, 0);
 
-        setPageHeader("sales/sale.header.jrxml");
+        setPageHeader("sales/reminder.header.jrxml");
         setPageFooter("sales/sale.footer.jrxml");
 
         setDetail("sales/reminder.jrxml");
@@ -82,8 +98,8 @@ public class SSReminderPrinter extends SSPrinter {
         SSSalePrinterUtils.addParametersForCompany(iCompany, this);
 
         // Sale parameters
-        addParameter("date", SSDateUtil.today());
-        addParameter("text", iCompany.getStandardText(SSStandardText.Reminder));
+        addParameter("date", iReminderDate);
+        addParameter("text", iCompany.getStandardText(SSStandardText.Reminder).orElse(""));
 
         if (iCustomer != null) {
 
@@ -121,8 +137,21 @@ public class SSReminderPrinter extends SSPrinter {
             addParameter("reminder.reminderfee",
                     iReminderfee.multiply(new BigDecimal(iMaxReminders)));
         } else {
-            addParameter("reminder.reminderfee", new BigDecimal(0));
+            addParameter("reminder.reminderfee", BigDecimal.ZERO);
         }
+
+        BigDecimal saldoSum = BigDecimal.ZERO;
+        BigDecimal interestSum = BigDecimal.ZERO;
+
+        for (SSInvoice invoice : iInvoices) {
+            BigDecimal saldo = SSInvoiceMath.getSaldo(invoice.getNumber());
+            int delayedDays = getNumDelayedDays(invoice);
+
+            saldoSum = saldoSum.add(saldo);
+            interestSum = interestSum.add(SSInvoiceMath.getInterestSum(invoice, saldo, delayedDays));
+        }
+        addParameter("reminder.saldo.sum", saldoSum);
+        addParameter("reminder.interest.sum", interestSum);
 
     }
 
@@ -176,6 +205,7 @@ public class SSReminderPrinter extends SSPrinter {
 
             setColumnHeader("sales/reminder.rows.jrxml");
             setDetail("sales/reminder.rows.jrxml");
+            setSummary("sales/reminder.rows.jrxml");
         }
 
         /**
@@ -278,15 +308,13 @@ public class SSReminderPrinter extends SSPrinter {
      * @param iInvoice the invoice to check
      * @return the number of delayed days, or 0 if no due date
      */
-    private static int getNumDelayedDays(SSInvoice iInvoice) {
+    private int getNumDelayedDays(SSInvoice iInvoice) {
         java.time.LocalDate dueLocalDate = iInvoice.getLocalDueDate();
 
         if (dueLocalDate == null) {
             return 0;
         }
-        java.time.LocalDate now = java.time.LocalDate.now();
-
-        return (int) java.time.temporal.ChronoUnit.DAYS.between(dueLocalDate, now);
+        return (int) java.time.temporal.ChronoUnit.DAYS.between(dueLocalDate, iReminderDate);
     }
 
     @Override

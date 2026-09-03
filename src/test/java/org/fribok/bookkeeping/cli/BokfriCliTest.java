@@ -176,7 +176,7 @@ class BokfriCliTest {
         List<List<String>> paths = new ArrayList<>();
         collectCommandPaths(new CommandLine(new BokfriCli()), List.of(), paths);
 
-        assertThat(paths).hasSize(127);
+        assertThat(paths).hasSize(128);
         for (List<String> path : paths) {
             for (String helpOption : List.of("--help", "-h")) {
                 List<String> arguments = new ArrayList<>(path);
@@ -209,6 +209,16 @@ class BokfriCliTest {
                 .contains("account");
         assertThat(result.at("/properties/schemaVersion/const").asInt()).isEqualTo(1);
         assertThat(result.at("/properties/schemaVersion/default").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    void companySchemaIncludesOptionalLogotypePath() throws Exception {
+        Result schema = execute("company", "schema");
+
+        assertThat(schema.exitCode()).isZero();
+        JsonNode result = new ObjectMapper().readTree(schema.stdout());
+        assertThat(result.at("/properties/logotype/type").asText()).isEqualTo("string");
+        assertThat(result.path("required")).extracting(JsonNode::asText).doesNotContain("logotype");
     }
 
     @Test
