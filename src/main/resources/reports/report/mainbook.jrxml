@@ -313,7 +313,7 @@
                 </textFieldExpression>
             </textField>
 
-            <textField>
+            <textField isStretchWithOverflow="true">
                 <reportElement x="160" y="0" width="135" height="12" />
                 <textElement>
                     <font size="8"/>

@@ -15,6 +15,7 @@ public class CompanyInput {
     private String phone;
     private String contactPerson;
     private String bankgiro;
+    private String logotype;
     private String currency = "SEK";
     private String paymentTerms = "30";
     private String standardUnit = "st";
@@ -38,6 +39,8 @@ public class CompanyInput {
     public void setContactPerson(String value) { contactPerson = value; }
     public String getBankgiro() { return bankgiro; }
     public void setBankgiro(String value) { bankgiro = value; }
+    public String getLogotype() { return logotype; }
+    public void setLogotype(String value) { logotype = value; }
     public String getCurrency() { return currency; }
     public void setCurrency(String value) { currency = value; }
     public String getPaymentTerms() { return paymentTerms; }
