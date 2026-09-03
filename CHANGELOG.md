@@ -13,6 +13,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- Reports now use bundled, PDF-embedded DejaVu Sans fonts on every platform;
+  OCR invoices use a separately licensed and embedded OCR-B font.
 - Report templates now have one canonical source tree under Maven resources; the
   unused duplicate tree and checked-in compiled reports have been removed, and CI
   compiles every reachable JRXML template.

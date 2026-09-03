@@ -10,6 +10,7 @@ import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.util.SSDefaultJasperDataSource;
+import se.swedsoft.bookkeeping.print.util.SSReportFonts;
 import se.swedsoft.bookkeeping.util.SSDateUtil;
 
 import javax.swing.*;
@@ -34,6 +35,10 @@ import static se.swedsoft.bookkeeping.print.SSReport.ReportField.*;
  * $Id$
  */
 public abstract class SSPrinter {
+
+    static {
+        SSReportFonts.register();
+    }
 
     protected ResourceBundle iBundle = SSBundle.getBundle();
 

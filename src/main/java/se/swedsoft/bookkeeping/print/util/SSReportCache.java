@@ -24,6 +24,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -41,6 +42,13 @@ public class SSReportCache {    private static final Logger LOG = LoggerFactory.
     private static final File COMPILED_DIR = new File(REPORT_DIR, "compiled");
     private static final String REPORT_RESOURCE = "/reports/report/";
     private static final String SHARED_STYLE_RESOURCE = REPORT_RESOURCE + "styles/bokfri.jrtx";
+    private static final List<String> FONT_RESOURCES = List.of(
+            "/org/fribok/fonts/fonts.xml",
+            "/org/fribok/fonts/dejavu/DejaVuSans.ttf",
+            "/org/fribok/fonts/dejavu/DejaVuSans-Bold.ttf",
+            "/org/fribok/fonts/dejavu/DejaVuSans-Oblique.ttf",
+            "/org/fribok/fonts/dejavu/DejaVuSans-BoldOblique.ttf",
+            "/org/fribok/fonts/ocrb/OCR-B.ttf");
     private static final String CACHE_BUILD_SUFFIX = ".build";
 
     // The report cache with compiled report definitions.
@@ -166,6 +174,9 @@ public class SSReportCache {    private static final Logger LOG = LoggerFactory.
             digest.update(Version.APP_BUILD.getBytes(StandardCharsets.UTF_8));
             digest.update(reportSource);
             digest.update(readResource(SHARED_STYLE_RESOURCE));
+            for (String fontResource : FONT_RESOURCES) {
+                digest.update(readResource(fontResource));
+            }
             return HexFormat.of().formatHex(digest.digest());
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 is not available", e);
