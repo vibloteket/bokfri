@@ -13,6 +13,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- Report templates now have one canonical source tree under Maven resources; the
+  unused duplicate tree and checked-in compiled reports have been removed, and CI
+  compiles every reachable JRXML template.
 - The CLI can export customer-invoice journals and VAT reports as PDF with the
   same `--output` and `--overwrite` behavior as other report commands.
 - Invoice PDF export supports the OCR variant, delivery notes with or without

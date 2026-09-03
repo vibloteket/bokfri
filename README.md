@@ -125,6 +125,10 @@ Galleriet hamnar i `target/pdf-gallery/`; `index.html` visar de renderade
 sidorna. En avsiktlig visuell förändring kan godkännas med
 `./scripts/pdf-gallery approve`, men det kommandot körs aldrig av CI.
 
+Rapportmallarnas enda källträd är `src/main/resources/reports/report/`.
+Se [rapportmallarnas beroendekarta](docs/report-templates.md) för hur Java-printers
+kopplas till JRXML-filer och hur kartan uppdateras.
+
 Den aktuella versionen kan köras från projektroten med:
 
 ```sh
