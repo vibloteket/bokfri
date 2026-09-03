@@ -128,7 +128,7 @@
                         <font size="12" isBold="true"/>
                     </textElement>
                     <textFieldExpression>
-                        <![CDATA[$F{group.1.title}]]>
+                        <![CDATA[$F{group.1.title} == null ? "" : $F{group.1.title}]]>
                     </textFieldExpression>
                 </textField>
 
@@ -149,7 +149,7 @@
                         <font size="8" isBold="false"/>
                     </textElement>
                     <textFieldExpression class="java.lang.String">
-                        <![CDATA[$F{group.1.sumtitle}]]>
+                        <![CDATA[$F{group.1.sumtitle} == null ? "" : $F{group.1.sumtitle}]]>
                     </textFieldExpression>
                 </textField>
 
@@ -215,7 +215,7 @@
                         <font size="10" isBold="true"/>
                     </textElement>
                     <textFieldExpression>
-                        <![CDATA[$F{group.2.title}]]>
+                        <![CDATA[$F{group.2.title} == null ? "" : $F{group.2.title}]]>
                     </textFieldExpression>
                 </textField>
 
@@ -235,7 +235,7 @@
                         <font size="8" isBold="false"/>
                     </textElement>
                     <textFieldExpression class="java.lang.String">
-                        <![CDATA[$F{group.2.sumtitle}]]>
+                        <![CDATA[$F{group.2.sumtitle} == null ? "" : $F{group.2.sumtitle}]]>
                     </textFieldExpression>
                 </textField>
 
@@ -303,7 +303,7 @@
                         <font size="8" isBold="true"/>
                     </textElement>
                     <textFieldExpression>
-                        <![CDATA[$F{group.3.title}]]>
+                        <![CDATA[$F{group.3.title} == null ? "" : $F{group.3.title}]]>
                     </textFieldExpression>
                 </textField>
 
@@ -326,7 +326,7 @@
                         <font size="8" isBold="false"/>
                     </textElement>
                     <textFieldExpression class="java.lang.String">
-                        <![CDATA[$F{group.3.sumtitle}]]>
+                        <![CDATA[$F{group.3.sumtitle} == null ? "" : $F{group.3.sumtitle}]]>
                     </textFieldExpression>
                 </textField>
 
@@ -470,7 +470,7 @@
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{account.description}]]>
+                    <![CDATA[$F{account.description} == null ? "" : $F{account.description}]]>
                 </textFieldExpression>
             </textField>
 
