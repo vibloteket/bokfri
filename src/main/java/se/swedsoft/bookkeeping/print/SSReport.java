@@ -179,7 +179,7 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
 
         } catch (JRException e) {
             LOG.error("Unexpected error", e);
-            throw new SSException("Kunde inte skapa rapporten: " + e.getLocalizedMessage());
+            throw new SSException("Kunde inte skapa rapporten: " + e.getLocalizedMessage(), e);
         }
 
     }
@@ -476,10 +476,10 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
             return null;
         } catch (SSException ex) {
             throw ex;
-        } catch (Throwable ex) {
-            LOG.error("Unexpected error", ex);
+        } catch (RuntimeException ex) {
+            throw new SSException("Could not load report section " + pReportName + ": "
+                    + ex.getLocalizedMessage(), ex);
         }
-        return null;
     }
 
     /**
@@ -534,10 +534,10 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
             return iReport.getDetailSection();
         } catch (SSException ex) {
             throw ex;
-        } catch (Throwable ex) {
-            LOG.error("Unexpected error", ex);
+        } catch (RuntimeException ex) {
+            throw new SSException("Could not load report section " + pReportName + ": "
+                    + ex.getLocalizedMessage(), ex);
         }
-        return null;
     }
 
     /**

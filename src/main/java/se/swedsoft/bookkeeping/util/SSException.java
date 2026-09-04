@@ -22,6 +22,16 @@ public class SSException extends RuntimeException {
     }
 
     /**
+     * Creates an exception while preserving the underlying failure.
+     *
+     * @param pMessage The message
+     * @param pCause The underlying failure
+     */
+    public SSException(String pMessage, Throwable pCause) {
+        super(pMessage, pCause);
+    }
+
+    /**
      *
      * @param pBundleString The bundle
      */
