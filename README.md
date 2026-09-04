@@ -176,8 +176,9 @@ Bokfri är en vidareutveckling av [Fribok](https://fribok.org/) och
 moderniserar den befintliga Java-kodbasen. Bokfri börjar sin egen publika
 versionsserie vid 1.0.0.
 
-Planerat tekniskt arbete finns i [`MODERNIZATION.md`](MODERNIZATION.md), och
-användarnära förändringar dokumenteras i [`CHANGELOG.md`](CHANGELOG.md).
+Planerat tekniskt arbete hanteras som
+[GitHub-issues](https://github.com/vibloteket/bokfri/issues), och användarnära
+förändringar dokumenteras i [`CHANGELOG.md`](CHANGELOG.md).
 
 Fler tankar bakom Bokfri finns i Victor ”viblo” Blomqvists inlägg i
 SourceForge-tråden
