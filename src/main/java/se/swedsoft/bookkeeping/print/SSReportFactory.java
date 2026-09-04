@@ -2,7 +2,6 @@ package se.swedsoft.bookkeeping.print;
 
 
 import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.JasperExportManager;
 import org.fribok.bookkeeping.app.Path;
 import se.swedsoft.bookkeeping.calc.SSOCRNumber;
 import se.swedsoft.bookkeeping.calc.math.*;
@@ -1406,9 +1405,9 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
                         }
 
                                       try {
-                                          JasperExportManager.exportReportToPdfFile(iPrinter.getPrinter(),
-                                                  new File(PDF_FILE_DIR, iFileName).getPath());
-                                      } catch (JRException e) {
+                                          PdfReportExporter.export(iPrinter.getPrinter(),
+                                                  new File(PDF_FILE_DIR, iFileName).toPath(), true);
+                                      } catch (JRException | java.io.IOException e) {
                                           LOG.error("Unexpected error", e);
                                       }
                                       String iSubject = "Faktura " + iInvoice.getNumber() + " från "
@@ -1540,9 +1539,9 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
                             PDF_FILE_DIR.mkdirs();
                         }
                                       try {
-                                          JasperExportManager.exportReportToPdfFile(iPrinter.getPrinter(),
-                                                  new File(PDF_FILE_DIR, iFileName).getPath());
-                                      } catch (JRException e) {
+                                          PdfReportExporter.export(iPrinter.getPrinter(),
+                                                  new File(PDF_FILE_DIR, iFileName).toPath(), true);
+                                      } catch (JRException | java.io.IOException e) {
                                           LOG.error("Unexpected error", e);
                                       }
                                       String iSubject = "Kreditfaktura " + iCreditInvoice.getNumber()
@@ -1634,9 +1633,9 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
                         }
 
                                       try {
-                                          JasperExportManager.exportReportToPdfFile(iPrinter.getPrinter(),
-                                                  new File(PDF_FILE_DIR, iFileName).getPath());
-                                      } catch (JRException e) {
+                                          PdfReportExporter.export(iPrinter.getPrinter(),
+                                                  new File(PDF_FILE_DIR, iFileName).toPath(), true);
+                                      } catch (JRException | java.io.IOException e) {
                                           LOG.error("Unexpected error", e);
                                       }
                                       String iSubject = "Order " + iOrder.getNumber() + " från "
@@ -1732,9 +1731,9 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
                         }
 
                                       try {
-                                          JasperExportManager.exportReportToPdfFile(iPrinter.getPrinter(),
-                                                  new File(PDF_FILE_DIR, iFileName).getPath());
-                                      } catch (JRException e) {
+                                          PdfReportExporter.export(iPrinter.getPrinter(),
+                                                  new File(PDF_FILE_DIR, iFileName).toPath(), true);
+                                      } catch (JRException | java.io.IOException e) {
                                           LOG.error("Unexpected error", e);
                                       }
                                       String iSubject = "Offert " + iTender.getNumber() + " från "
@@ -1895,9 +1894,9 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
                         }
 
                                       try {
-                                          JasperExportManager.exportReportToPdfFile(iPrinter.getPrinter(),
-                                                  new File(PDF_FILE_DIR, iFileName).getPath());
-                                      } catch (JRException e) {
+                                          PdfReportExporter.export(iPrinter.getPrinter(),
+                                                  new File(PDF_FILE_DIR, iFileName).toPath(), true);
+                                      } catch (JRException | java.io.IOException e) {
                                           LOG.error("Unexpected error", e);
                                       }
                                       String iSubject = "Inköpsorder " + iPurchaseOrder.getNumber() + " från "
@@ -1978,9 +1977,9 @@ public class SSReportFactory {    private static final Logger LOG = LoggerFactor
                         }
 
                                       try {
-                                          JasperExportManager.exportReportToPdfFile(iPrinter.getPrinter(),
-                                                  new File(PDF_FILE_DIR, iFileName).getPath());
-                                      } catch (JRException e) {
+                                          PdfReportExporter.export(iPrinter.getPrinter(),
+                                                  new File(PDF_FILE_DIR, iFileName).toPath(), true);
+                                      } catch (JRException | java.io.IOException e) {
                                           LOG.error("Unexpected error", e);
                                       }
                                       String iSubject = "Förfrågan från "
