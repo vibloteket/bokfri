@@ -25,6 +25,8 @@ import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.pdfbox.text.TextPosition;
 
 /** Builds the deterministic PDF gallery through the assembled Bokfri CLI. */
 public final class PdfGallery {
@@ -330,6 +332,7 @@ public final class PdfGallery {
             if (hidePrices) {
                 verifyPdfLacks(pdf, List.of("125,00", "281,25"));
             }
+            verifyWeightVolumeLayout(pdf);
             renderPages(pdf, scenario);
         }
     }
@@ -342,6 +345,7 @@ public final class PdfGallery {
                 "--output", pdf.toString()).success();
         verifyPdf(pdf, List.of("PLOCKLISTA", "K100", "Galleriartikel decimal", "2.25",
                 "2,812", "1,688"));
+        verifyWeightVolumeLayout(pdf);
         renderPages(pdf, scenario);
     }
 
@@ -994,6 +998,65 @@ public final class PdfGallery {
             reader.close();
         }
     }
+
+    private static void verifyWeightVolumeLayout(Path pdf) throws Exception {
+        List<TextBounds> text = new java.util.ArrayList<>();
+        try (PDDocument document = Loader.loadPDF(pdf.toFile())) {
+            new PDFTextStripper() {
+                {
+                    setSortByPosition(true);
+                }
+
+                @Override
+                protected void writeString(String value, List<TextPosition> positions) {
+                    if (positions.isEmpty()) return;
+                    float left = Float.MAX_VALUE;
+                    float right = Float.MIN_VALUE;
+                    float top = Float.MAX_VALUE;
+                    float bottom = Float.MIN_VALUE;
+                    for (TextPosition position : positions) {
+                        left = Math.min(left, position.getXDirAdj());
+                        right = Math.max(right, position.getXDirAdj() + position.getWidthDirAdj());
+                        top = Math.min(top, position.getYDirAdj() - position.getHeightDir());
+                        bottom = Math.max(bottom, position.getYDirAdj());
+                    }
+                    text.add(new TextBounds(value.strip(), left, top, right, bottom));
+                }
+            }.getText(document);
+        }
+
+        TextBounds quantity = findTextBounds(text, "2.25");
+        TextBounds weightLabel = findTextBounds(text, "Total vikt");
+        TextBounds weight = findTextBounds(text, "2,812");
+        TextBounds weightUnit = findTextBounds(text, "kg");
+        TextBounds volumeLabel = findTextBounds(text, "Total volym");
+        TextBounds volume = findTextBounds(text, "1,688");
+        TextBounds volumeUnit = findTextBounds(text, "m3");
+
+        require(weightLabel.top() > quantity.bottom() + 20,
+                "Weight summary overlaps the product rows in " + pdf);
+        require(weightLabel.right() < weight.left() && weight.right() < weightUnit.left(),
+                "Weight label, value and unit are not separated in " + pdf);
+        require(volumeLabel.right() < volume.left() && volume.right() < volumeUnit.left(),
+                "Volume label, value and unit are not separated in " + pdf);
+        require(Math.abs(weightLabel.top() - weight.top()) < 3
+                        && Math.abs(weight.top() - weightUnit.top()) < 3,
+                "Weight fields do not share a row in " + pdf);
+        require(Math.abs(volumeLabel.top() - volume.top()) < 3
+                        && Math.abs(volume.top() - volumeUnit.top()) < 3,
+                "Volume fields do not share a row in " + pdf);
+        require(volumeLabel.top() > weightLabel.bottom() + 5,
+                "Weight and volume rows overlap in " + pdf);
+    }
+
+    private static TextBounds findTextBounds(List<TextBounds> text, String expected) {
+        return text.stream()
+                .filter(bounds -> bounds.text().equals(expected))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("PDF lacks positioned text: " + expected));
+    }
+
+    private record TextBounds(String text, float left, float top, float right, float bottom) {}
 
     private static void verifyPdfLacks(Path pdf, List<String> forbiddenText) throws Exception {
         String text = extractPdfText(pdf);

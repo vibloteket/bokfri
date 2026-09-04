@@ -513,50 +513,17 @@
                 </subreport>
             </frame>
 
-            <!-- Summary fields -->
-            <frame>
-                <reportElement x="40" y="397" width="510" height="40" positionType="Float"/>
-                <box border="Thin" borderColor="#000000" topBorder="None"/>
+            <!-- Compact summary in the reserved area below the product subreport. -->
+            <rectangle><reportElement x="280" y="397" width="270" height="40"/><graphicElement pen="Thin"/></rectangle>
+            <line><reportElement x="280" y="417" width="270" height="1"/><graphicElement pen="Thin"/></line>
 
-                <line>
-                    <reportElement x="255" y="0" width="1" height="40"/>
-                    <graphicElement pen="Thin"/>
-                </line>
+            <textField><reportElement x="290" y="401" width="90" height="12"/><textElement><font size="8"/></textElement><textFieldExpression><![CDATA[$R{deliverynotereport.totalweight}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.000" isBlankWhenNull="true" evaluationTime="Report"><reportElement x="385" y="400" width="105" height="14"/><textElement textAlignment="Right"><font size="10" isBold="true"/></textElement><textFieldExpression class="java.math.BigDecimal"><![CDATA[$V{totalweight}]]></textFieldExpression></textField>
+            <textField><reportElement x="500" y="400" width="40" height="14"/><textElement><font size="9"/></textElement><textFieldExpression><![CDATA[$P{company.weightunit}]]></textFieldExpression></textField>
 
-                <!-- Total weight: label above a wide value and a separate unit. -->
-                <textField>
-                    <reportElement x="10" y="3" width="235" height="12"/>
-                    <textElement textAlignment="Left"><font size="8" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA[$R{deliverynotereport.totalweight}]]></textFieldExpression>
-                </textField>
-                <textField pattern="#,##0.000" isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="10" y="18" width="185" height="17"/>
-                    <textElement textAlignment="Right"><font size="11" isBold="true"/></textElement>
-                    <textFieldExpression class="java.math.BigDecimal"><![CDATA[$V{totalweight}]]></textFieldExpression>
-                </textField>
-                <textField>
-                    <reportElement x="200" y="18" width="45" height="17"/>
-                    <textElement textAlignment="Left"><font size="10"/></textElement>
-                    <textFieldExpression><![CDATA[$P{company.weightunit}]]></textFieldExpression>
-                </textField>
-
-                <!-- Total volume: label above a wide value and a separate unit. -->
-                <textField>
-                    <reportElement x="265" y="3" width="235" height="12"/>
-                    <textElement textAlignment="Left"><font size="8" isBold="true"/></textElement>
-                    <textFieldExpression><![CDATA[$R{deliverynotereport.totalvolume}]]></textFieldExpression>
-                </textField>
-                <textField pattern="#,##0.000" isBlankWhenNull="true" evaluationTime="Report">
-                    <reportElement x="265" y="18" width="185" height="17"/>
-                    <textElement textAlignment="Right"><font size="11" isBold="true"/></textElement>
-                    <textFieldExpression class="java.math.BigDecimal"><![CDATA[$V{totalvolume}]]></textFieldExpression>
-                </textField>
-                <textField>
-                    <reportElement x="455" y="18" width="45" height="17"/>
-                    <textElement textAlignment="Left"><font size="10"/></textElement>
-                    <textFieldExpression><![CDATA[$P{company.volumeunit}]]></textFieldExpression>
-                </textField>
-            </frame>
+            <textField><reportElement x="290" y="421" width="90" height="12"/><textElement><font size="8"/></textElement><textFieldExpression><![CDATA[$R{deliverynotereport.totalvolume}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.000" isBlankWhenNull="true" evaluationTime="Report"><reportElement x="385" y="420" width="105" height="14"/><textElement textAlignment="Right"><font size="10" isBold="true"/></textElement><textFieldExpression class="java.math.BigDecimal"><![CDATA[$V{totalvolume}]]></textFieldExpression></textField>
+            <textField><reportElement x="500" y="420" width="40" height="14"/><textElement><font size="9"/></textElement><textFieldExpression><![CDATA[$P{company.volumeunit}]]></textFieldExpression></textField>
 
 
         </band>
