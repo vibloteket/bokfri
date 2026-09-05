@@ -52,6 +52,7 @@ import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceService;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationIssue;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationResult;
 import org.fribok.bookkeeping.service.spreadsheet.AccountPlanSpreadsheetService;
+import org.fribok.bookkeeping.service.spreadsheet.VoucherSpreadsheetService;
 import org.fribok.bookkeeping.service.spreadsheet.VoucherTemplateSpreadsheetService;
 import org.fribok.bookkeeping.service.suppliercreditinvoice.SupplierCreditInvoiceJournalPlan;
 import org.fribok.bookkeeping.service.suppliercreditinvoice.SupplierCreditInvoiceService;
@@ -2778,8 +2779,9 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "voucher", description = "Inspect, validate, and create manual vouchers",
-            subcommands = {VoucherList.class, VoucherShow.class,
-                    VoucherValidate.class, VoucherCreate.class, CliInputSchemas.Voucher.class})
+            subcommands = {VoucherList.class, VoucherShow.class, VoucherSpreadsheetExport.class,
+                    VoucherSpreadsheetImport.class, VoucherValidate.class, VoucherCreate.class,
+                    CliInputSchemas.Voucher.class})
     static class VoucherCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -2835,6 +2837,79 @@ public class BokfriCli implements Runnable {
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "export",
+            description = "Export vouchers as legacy Excel XLS")
+    static class VoucherSpreadsheetExport implements Callable<Integer> {
+        @CommandLine.ParentCommand VoucherCommand command;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                List<SSVoucher> vouchers = new VoucherService(runtime.database()).list();
+                java.nio.file.Path exported = new VoucherSpreadsheetService()
+                        .write(vouchers, output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("output", exported.toString());
+                result.put("bytes", Files.size(exported));
+                result.put("count", vouchers.size());
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created voucher XLS " + exported);
+                return 0;
+            } catch (Exception exception) {
+                throw spreadsheetFailure("VOUCHER_EXPORT_FAILED", exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "import",
+            description = "Preview or import vouchers from legacy Excel XLS")
+    static class VoucherSpreadsheetImport implements Callable<Integer> {
+        @CommandLine.ParentCommand VoucherCommand command;
+        @Option(names = "--file", required = true) java.nio.file.Path file;
+        @Option(names = "--apply", description = "Store valid, non-duplicate vouchers") boolean apply;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                VoucherService service = new VoucherService(runtime.database());
+                List<SSVoucher> vouchers = new VoucherSpreadsheetService().read(file);
+                java.util.Set<Integer> existingNumbers = service.list().stream()
+                        .map(SSVoucher::getNumber).collect(java.util.stream.Collectors.toSet());
+                List<SSVoucher> additions = vouchers.stream()
+                        .filter(voucher -> !existingNumbers.contains(voucher.getNumber())).toList();
+                List<SSVoucher> invalid = additions.stream()
+                        .filter(voucher -> !service.validate(voucher).valid()).toList();
+                if (apply && !invalid.isEmpty()) {
+                    throw new CliException("VOUCHER_IMPORT_INVALID",
+                            invalid.size() + " imported vouchers failed validation");
+                }
+                if (apply) {
+                    additions.forEach(service::create);
+                }
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("file", file.toAbsolutePath().normalize().toString());
+                result.put("count", vouchers.size());
+                result.put("newCount", additions.size());
+                result.put("duplicateCount", vouchers.size() - additions.size());
+                result.put("invalidCount", invalid.size());
+                result.put("applied", apply);
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, apply ? "Imported " + additions.size() + " vouchers"
+                        : "Voucher import preview; no changes written");
+                return 0;
+            } catch (Exception exception) {
+                throw spreadsheetFailure("VOUCHER_IMPORT_FAILED", exception);
             }
         }
     }
