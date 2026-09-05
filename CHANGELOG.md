@@ -12,6 +12,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Added
+- The CLI can preview/import and export legacy `.xls` account plans through a GUI-independent
+  Apache POI service, establishing the migration path away from JExcelAPI.
+
 ### Fixed
 - Sales documents with a missing 12% tax-rate value now use the standard default instead of
   failing during invoice printing.
