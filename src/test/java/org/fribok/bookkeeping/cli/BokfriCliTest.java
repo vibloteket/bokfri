@@ -176,7 +176,7 @@ class BokfriCliTest {
         List<List<String>> paths = new ArrayList<>();
         collectCommandPaths(new CommandLine(new BokfriCli()), List.of(), paths);
 
-        assertThat(paths).hasSize(133);
+        assertThat(paths).hasSize(135);
         for (List<String> path : paths) {
             for (String helpOption : List.of("--help", "-h")) {
                 List<String> arguments = new ArrayList<>(path);
@@ -473,6 +473,39 @@ class BokfriCliTest {
                 "--format", "json", "account-plan", "list");
         assertThat(new ObjectMapper().readTree(afterApply.stdout()).path("count").asInt())
                 .isEqualTo(initialCount + 1);
+    }
+
+    @Test
+    void voucherSpreadsheetCommandsExportAndPreviewWithoutWriting() throws Exception {
+        Path config = temporaryDirectory.resolve("voucher-xls-cli.yaml");
+        Path data = temporaryDirectory.resolve("voucher-xls-data");
+        Result demo = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "demo", "recreate", "--commit");
+        int companyId = new ObjectMapper().readTree(demo.stdout()).path("companyId").asInt();
+        Result years = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--format", "json", "year", "list");
+        int yearId = new ObjectMapper().readTree(years.stdout()).path("years").get(0).path("id").asInt();
+        String[] context = {"--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+        Result before = execute(concat(context, "voucher", "list"));
+        int countBefore = new ObjectMapper().readTree(before.stdout()).path("count").asInt();
+        Path exported = temporaryDirectory.resolve("vouchers.xls");
+
+        Result export = execute(concat(context, "voucher", "export", "--output",
+                exported.toString()));
+        assertThat(export.exitCode()).as(export.stderr()).isZero();
+        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0xd0, (byte) 0xcf,
+                (byte) 0x11, (byte) 0xe0);
+        Result preview = execute(concat(context, "voucher", "import", "--file",
+                exported.toString()));
+        JsonNode previewJson = new ObjectMapper().readTree(preview.stdout());
+        assertThat(preview.exitCode()).as(preview.stderr()).isZero();
+        assertThat(previewJson.path("applied").asBoolean()).isFalse();
+        assertThat(previewJson.path("duplicateCount").asInt()).isEqualTo(countBefore);
+        Result after = execute(concat(context, "voucher", "list"));
+        assertThat(new ObjectMapper().readTree(after.stdout()).path("count").asInt())
+                .isEqualTo(countBefore);
     }
 
     @Test
