@@ -5,13 +5,10 @@ import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
-import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.JasperExportManager;
 import se.swedsoft.bookkeeping.data.system.SSDB;
-import se.swedsoft.bookkeeping.print.report.sales.SSInvoicePrinter;
+import se.swedsoft.bookkeeping.print.ReportService;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -112,18 +109,9 @@ public final class InvoiceService {
     }
 
     public Path exportPdf(SSInvoice invoice, Path output, Locale locale, boolean overwrite)
-            throws IOException, JRException {
-        Path resolved = output.toAbsolutePath().normalize();
-        if (Files.exists(resolved) && !overwrite) {
-            throw new java.nio.file.FileAlreadyExistsException(resolved.toString());
-        }
-        if (resolved.getParent() != null) {
-            Files.createDirectories(resolved.getParent());
-        }
-        SSInvoicePrinter printer = new SSInvoicePrinter(invoice, locale);
-        printer.generateReport();
-        JasperExportManager.exportReportToPdfFile(printer.getPrinter(), resolved.toString());
-        return resolved;
+            throws IOException {
+        ReportService reports = new ReportService();
+        return reports.exportPdf(reports.renderInvoice(invoice, locale), output, overwrite);
     }
 
     public int nextNumber() {

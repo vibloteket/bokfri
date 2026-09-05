@@ -13,6 +13,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- Report rendering and PDF export now have a shared headless service boundary; invoice GUI preview,
+  invoice CLI export, and balance-report rendering use the same incremental adapter pattern.
 - Reports now use bundled, PDF-embedded DejaVu Sans fonts on every platform;
   OCR invoices use a separately licensed and embedded OCR-B font.
 - Report templates now have one canonical source tree under Maven resources; the

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import net.sf.jasperreports.engine.JasperExportManager;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
@@ -96,11 +95,11 @@ import se.swedsoft.bookkeeping.data.common.SSDefaultAccount;
 import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
 import se.swedsoft.bookkeeping.data.system.SSDBConfig;
 import se.swedsoft.bookkeeping.importexport.sie.util.SIEType;
+import se.swedsoft.bookkeeping.print.ReportService;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 import se.swedsoft.bookkeeping.print.report.SSAccountsPayablePrinter;
 import se.swedsoft.bookkeeping.print.report.SSAccountsRecievablePrinter;
 import se.swedsoft.bookkeeping.print.report.SSAccountPlanPrinter;
-import se.swedsoft.bookkeeping.print.report.SSBalancePrinter;
 import se.swedsoft.bookkeeping.print.report.SSCreditInvoiceListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSCustomerclaimPrinter;
 import se.swedsoft.bookkeeping.print.report.SSCustomerListPrinter;
@@ -956,8 +955,9 @@ public class BokfriCli implements Runnable {
                 result.put("difference", money(report.difference()));
                 result.put("selection", context);
                 if (output != null) {
-                    addPdf(result, exportPdf(new SSBalancePrinter(year, year.getLocalFrom(),
-                            selectedDate), output, overwrite));
+                    ReportService reports = new ReportService();
+                    addPdf(result, reports.exportPdf(reports.renderBalance(
+                            year, year.getLocalFrom(), selectedDate), output, overwrite));
                 }
                 return result;
             }, BokfriCli::balanceSheetText);
@@ -1143,16 +1143,8 @@ public class BokfriCli implements Runnable {
 
     private static java.nio.file.Path exportPdf(SSPrinter printer, java.nio.file.Path output,
             boolean overwrite) throws Exception {
-        java.nio.file.Path resolved = output.toAbsolutePath().normalize();
-        if (Files.exists(resolved) && !overwrite) {
-            throw new java.nio.file.FileAlreadyExistsException(resolved.toString());
-        }
-        if (resolved.getParent() != null) {
-            Files.createDirectories(resolved.getParent());
-        }
-        printer.generateReport();
-        JasperExportManager.exportReportToPdfFile(printer.getPrinter(), resolved.toString());
-        return resolved;
+        ReportService reports = new ReportService();
+        return reports.exportPdf(reports.render(() -> printer), output, overwrite);
     }
 
     private static void addPdf(Map<String, Object> result, java.nio.file.Path output)
