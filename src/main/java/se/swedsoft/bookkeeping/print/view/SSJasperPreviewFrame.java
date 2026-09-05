@@ -3,6 +3,7 @@ package se.swedsoft.bookkeeping.print.view;
 
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JasperExportManager;
+import se.swedsoft.bookkeeping.print.PdfReportExporter;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperPrintManager;
 import net.sf.jasperreports.view.save.JRMultipleSheetsXlsSaveContributor;
@@ -345,8 +346,8 @@ public class SSJasperPreviewFrame extends SSDefaultTableFrame implements Propert
                     iFileName = iFileName + ".pdf";
                 }
 
-                JasperExportManager.exportReportToPdfFile(iPrinter, iFileName);
-            } catch (JRException ex) {
+                PdfReportExporter.export(iPrinter, new File(iFileName).toPath(), true);
+            } catch (JRException | java.io.IOException ex) {
                 LOG.error("Unexpected error", ex);
             }
         }
