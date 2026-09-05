@@ -39,7 +39,7 @@ class SSMultiPrinterTest {
         assertThat(combinedPrint.getPages()).hasSize(2);
         assertThat(combinedPrint.getStylesMap()).containsKeys("firstStyle", "secondStyle");
         assertThat(combinedPrint.getOriginsList())
-                .extracting(origin -> origin.getReportName() + ":" + origin.getBandTypeValue())
+                .extracting(origin -> origin.getReportName() + ":" + origin.getBandType())
                 .contains("first:DETAIL", "second:DETAIL");
         assertThat(combinedPrint.getProperty("bokfri.test.firstStyle")).isEqualTo("present");
         assertThat(combinedPrint.getProperty("bokfri.test.secondStyle")).isEqualTo("present");

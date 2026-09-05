@@ -1,185 +1,62 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="InventoryBasis" resourceBundle="book">
-
-    <parameter name="image.check" class="java.awt.Image"/>
-
-    <!-- Declared fields in the report. -->
-    <field name="product.number"            class="java.lang.String"/>
-    <field name="product.description"       class="java.lang.String"/>
-    <field name="product.expired"           class="java.lang.Boolean"/>
-    <field name="product.stockquantity"     class="java.lang.Integer"/>
-    <field name="product.unit"              class="java.lang.String"/>
-    <field name="product.warehouselocation" class="java.lang.String"/>
-
-
-    <columnHeader>
-        <band height="15">
-            <line>
-                <reportElement x="20" y="12" width="510" height="1"/>
-            </line>
-
-            <!-- Column 1 -->
-            <textField>
-                <reportElement x="20" y="0" width="70" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inventorybasisreport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="90" y="0" width="100" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inventorybasisreport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="240" y="0" width="60" height="12" />
-                <textElement textAlignment="Center">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inventorybasisreport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="300" y="0" width="60" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inventorybasisreport.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="360" y="0" width="60" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inventorybasisreport.column.5}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="450" y="0" width="80" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inventorybasisreport.column.6}]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </columnHeader>
-
-    <detail>
-        <band height="14">
-            <textField isBlankWhenNull="true">
-                <reportElement x="20" y="0" width="70" height="12" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{product.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField isBlankWhenNull="true">
-                <reportElement x="90" y="0" width="100" height="12" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{product.description}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField isBlankWhenNull="false">
-                <reportElement x="240" y="0" width="60" height="12"/>
-                <textElement textAlignment="Center">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{product.expired}.booleanValue() ? $R{inventorybasisreport.expired} : ""]]>
-                </textFieldExpression>
-            </textField>
-
-            <image onErrorType="Icon" vAlign="Middle" hAlign="Center">
-                <reportElement x="240" y="0" width="60" height="12">
-                    <printWhenExpression>
-                        <![CDATA[$F{product.expired}]]>
-                    </printWhenExpression>
-                </reportElement>
-
-                <imageExpression class="java.awt.Image">
-                    <![CDATA[$P{image.check}]]>
-                </imageExpression>
-            </image>
-
-
-
-            <textField isBlankWhenNull="false">
-                <reportElement x="300" y="0" width="60" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{product.warehouselocation}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField isBlankWhenNull="false">
-                <reportElement x="360" y="0" width="60" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.Integer">
-                    <![CDATA[$F{product.stockquantity}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField isBlankWhenNull="true">
-                <reportElement x="421" y="0" width="29" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{product.unit}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField isBlankWhenNull="true">
-                <reportElement x="450" y="0" width="80" height="12" />
-                <box border="Dotted"/>
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[""]]>
-                </textFieldExpression>
-            </textField>
-        </band>
-    </detail>
-
-
-
-
+<jasperReport name="InventoryBasis" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="b1464979-ff77-380c-9311-c790f7f4caa8">
+	<parameter name="image.check" class="java.awt.Image"/>
+	<field name="product.number" class="java.lang.String"/>
+	<field name="product.description" class="java.lang.String"/>
+	<field name="product.expired" class="java.lang.Boolean"/>
+	<field name="product.stockquantity" class="java.lang.Integer"/>
+	<field name="product.unit" class="java.lang.String"/>
+	<field name="product.warehouselocation" class="java.lang.String"/>
+	<columnHeader height="15" splitType="Stretch">
+		<element kind="line" uuid="e91f4f18-63cb-3209-864e-0dd8ca245a29" stretchType="NoStretch" x="20" y="12" width="510" height="1"/>
+		<element kind="textField" uuid="3c89a7f8-059a-3bcb-be62-868b7c8722fb" stretchType="NoStretch" x="20" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{inventorybasisreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="8dce6bef-9ec4-33e6-807c-2d506952e918" stretchType="NoStretch" x="90" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{inventorybasisreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="31773a12-5a0b-35cd-af0b-5552d6df221e" stretchType="NoStretch" x="240" y="0" width="60" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Center">
+			<expression><![CDATA[$R{inventorybasisreport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="045b3e0b-51b5-3790-b8b8-9edf798d0585" stretchType="NoStretch" x="300" y="0" width="60" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{inventorybasisreport.column.4}]]></expression>
+		</element>
+		<element kind="textField" uuid="bb36398f-4115-3571-a79e-0bd5c831d612" stretchType="NoStretch" x="360" y="0" width="60" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{inventorybasisreport.column.5}]]></expression>
+		</element>
+		<element kind="textField" uuid="204b9599-279b-3061-bc6c-10bd9b2d69d0" stretchType="NoStretch" x="450" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{inventorybasisreport.column.6}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="14" splitType="Stretch">
+			<element kind="textField" uuid="eff68dbf-65e5-338e-90b3-700641266167" stretchType="NoStretch" x="20" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true">
+				<expression><![CDATA[$F{product.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="1ed4ed11-263f-3396-b385-1e44d925ae13" stretchType="NoStretch" x="90" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true">
+				<expression><![CDATA[$F{product.description}]]></expression>
+			</element>
+			<element kind="textField" uuid="1bdefc41-3051-3c65-8344-6e6562fdd660" stretchType="NoStretch" x="240" y="0" width="60" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Center">
+				<expression><![CDATA[$F{product.expired}.booleanValue() ? $R{inventorybasisreport.expired} : ""]]></expression>
+			</element>
+			<element kind="image" uuid="49c2cc44-2038-3334-a997-4b4e4411b183" stretchType="NoStretch" x="240" y="0" width="60" height="12" onErrorType="Icon" linkType="None" linkTarget="Self" hImageAlign="Center" vImageAlign="Middle">
+				<printWhenExpression><![CDATA[$F{product.expired}]]></printWhenExpression>
+				<expression><![CDATA[$P{image.check}]]></expression>
+			</element>
+			<element kind="textField" uuid="2281831e-0222-3709-88bf-86a3b78cd05d" stretchType="NoStretch" x="300" y="0" width="60" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$F{product.warehouselocation}]]></expression>
+			</element>
+			<element kind="textField" uuid="405c3265-2c95-3886-b2a6-ecdb2fa417de" stretchType="NoStretch" x="360" y="0" width="60" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Right">
+				<expression><![CDATA[$F{product.stockquantity}]]></expression>
+			</element>
+			<element kind="textField" uuid="c06ce291-518e-37b7-84bb-74b0441abe18" stretchType="NoStretch" x="421" y="0" width="29" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$F{product.unit}]]></expression>
+			</element>
+			<element kind="textField" uuid="d1d16077-f2f4-3001-ab47-315ec0e5cbee" stretchType="NoStretch" x="450" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[""]]></expression>
+				<box>
+					<pen lineWidth="1.0" lineStyle="Dashed"/>
+				</box>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

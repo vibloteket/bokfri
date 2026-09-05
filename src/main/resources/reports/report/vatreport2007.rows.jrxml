@@ -1,52 +1,20 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="VATReport2007Rows" resourceBundle="book" >
-
-    <parameter name="vatreport.group"      class="java.lang.String"/>
-
-
-    <field name="group.number"      class="java.lang.Integer"/>
-    <field name="group.description" class="java.lang.String"/>
-    <field name="group.vatcodes"    class="java.lang.String"/>
-    <field name="group.value"       class="java.math.BigDecimal"/>
-
-    <detail>
-        <band height="12" isSplitAllowed="false">
-            <textField>
-                <reportElement x="40" y="0" width="300" height="12"/>
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{group.description}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="340" y="0" width="120" height="12"/>
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{group.vatcodes}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField  pattern="#,##0" isBlankWhenNull="true">
-                <reportElement x="460" y="0" width="70" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{group.value}]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </detail>
-
-
-
+<jasperReport name="VATReport2007Rows" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="6218c6f9-8127-3e25-84c3-9ae008c17b56">
+	<parameter name="vatreport.group" class="java.lang.String"/>
+	<field name="group.number" class="java.lang.Integer"/>
+	<field name="group.description" class="java.lang.String"/>
+	<field name="group.vatcodes" class="java.lang.String"/>
+	<field name="group.value" class="java.math.BigDecimal"/>
+	<detail>
+		<band height="12" splitType="Prevent">
+			<element kind="textField" uuid="21d1b187-153e-3f7c-8c1b-d18387bef451" stretchType="NoStretch" x="40" y="0" width="300" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$F{group.description}]]></expression>
+			</element>
+			<element kind="textField" uuid="f463230d-d49d-3bdb-bc56-207dfa7ecf17" stretchType="NoStretch" x="340" y="0" width="120" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$F{group.vatcodes}]]></expression>
+			</element>
+			<element kind="textField" uuid="931026d4-a6b0-3feb-a15e-ef828a4696a8" stretchType="NoStretch" x="460" y="0" width="70" height="12" fontSize="8.0" pattern="#,##0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[$F{group.value}]]></expression>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

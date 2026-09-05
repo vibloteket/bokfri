@@ -1,511 +1,216 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="Pickingslip">
-    <!--- Declared parameters in the report. -->
-    <parameter name="subreport.report"          class="net.sf.jasperreports.engine.JasperReport"/>
-
-    <parameter name="title"      class="java.lang.String"/>
-
-    <parameter name="company.logo"       class="java.awt.Image"/>
-
-    <parameter name="company.name"      class="java.lang.String"/>
-    <parameter name="company.address1"  class="java.lang.String"/>
-    <parameter name="company.address2"  class="java.lang.String"/>
-    <parameter name="company.zipcode"   class="java.lang.String"/>
-    <parameter name="company.city"      class="java.lang.String"/>
-    <parameter name="company.country"   class="java.lang.String"/>
-    <parameter name="company.phone"     class="java.lang.String"/>
-    <parameter name="company.telefax"   class="java.lang.String"/>
-    <parameter name="company.residence" class="java.lang.String"/>
-    <parameter name="company.email"     class="java.lang.String"/>
-    <parameter name="company.homepage"  class="java.lang.String"/>
-
-    <parameter name="company.plusaccount"  class="java.lang.String"/>
-    <parameter name="company.bankaccount"  class="java.lang.String"/>
-
-    <parameter name="company.bic"   class="java.lang.String"/>
-    <parameter name="company.iban"  class="java.lang.String"/>
-    <parameter name="company.bank"  class="java.lang.String"/>
-
-
-    <parameter name="company.weightunit" class="java.lang.String"/>
-    <parameter name="company.volumeunit" class="java.lang.String"/>
-
-
-    <parameter name="number"    class="java.lang.Integer"/>
-    <parameter name="date"      class="java.lang.String"/>
-    <parameter name="text"      class="java.lang.String"/>
-
-    <parameter name="order.deliveryadress.name"     class="java.lang.String"/>
-    <parameter name="order.deliveryadress.address1" class="java.lang.String"/>
-    <parameter name="order.deliveryadress.address2" class="java.lang.String"/>
-    <parameter name="order.deliveryadress.zipcode"  class="java.lang.String"/>
-    <parameter name="order.deliveryadress.city"     class="java.lang.String"/>
-    <parameter name="order.deliveryadress.country"  class="java.lang.String"/>
-
-    <parameter name="order.invoiceadress.name"      class="java.lang.String"/>
-    <parameter name="order.invoiceadress.address1"  class="java.lang.String"/>
-    <parameter name="order.invoiceadress.address2"  class="java.lang.String"/>
-    <parameter name="order.invoiceadress.zipcode"   class="java.lang.String"/>
-    <parameter name="order.invoiceadress.city"      class="java.lang.String"/>
-    <parameter name="order.invoiceadress.country"  class="java.lang.String"/>
-
-
-
-    <parameter name="order.ourcontact"                class="java.lang.String"/>
-    <parameter name="order.deliveryterm"              class="java.lang.String"/>
-    <parameter name="order.deliveryway"               class="java.lang.String"/>
-    <parameter name="order.paymentterm"               class="java.lang.String"/>
-    <parameter name="order.delayinterest"             class="java.lang.String"/>
-    <parameter name="order.customernr"                class="java.lang.String"/>
-    <parameter name="order.yourcontact"               class="java.lang.String"/>
-    <parameter name="order.yourordernumber"           class="java.lang.String"/>
-    <parameter name="order.vatnumber"                 class="java.lang.String"/>
-    <parameter name="order.currency"                  class="java.lang.String"/>
-    <parameter name="order.taxrate1"                  class="java.lang.String"/>
-    <parameter name="order.taxrate2"                  class="java.lang.String"/>
-    <parameter name="order.taxrate3"                  class="java.lang.String"/>
-    <parameter name="order.estimateddelivery"         class="java.lang.String"/>
-
-    <field name="subreport.datasource"  class="net.sf.jasperreports.engine.JRDataSource"/>
-
-    <field name="row.number"          class="java.lang.String"/>
-    <field name="row.description"     class="java.lang.String"/>
-    <field name="row.count"           class="java.math.BigDecimal"/>
-    <field name="row.unit"            class="java.lang.String"/>
-    <field name="row.unitprice"       class="java.math.BigDecimal"/>
-    <field name="row.discount"        class="java.math.BigDecimal"/>
-    <field name="row.sum"             class="java.math.BigDecimal"/>
-
-    <variable name="totalweight" class="java.math.BigDecimal" resetType="Report" calculation="System">
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-    <variable name="totalvolume" class="java.math.BigDecimal" resetType="Report" calculation="System">
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-
-    <columnHeader>
-        <band isSplitAllowed="false" height="176">
-
-            <!-- Delivery adress frame -->
-            <frame>
-                <reportElement x="40" y="0" width="250" height="86"/>
-
-                <box border="Thin" borderColor="#000000"/>
-
-                <!-- Adress text -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="5" y="2" width="240" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.deliveryadress}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Name -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="14" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.deliveryadress.name}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Address 1 -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="28" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.deliveryadress.address1}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Address 2 -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="42" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.deliveryadress.address2}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Zip Code + City -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="56" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.deliveryadress.zipcode} + " " + $P{order.deliveryadress.city}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Country -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="70" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.deliveryadress.country}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-            </frame>
-
-            <!-- Invoice adress frame -->
-            <frame>
-                <reportElement x="300" y="0" width="250" height="86"/>
-
-                <box border="Thin" borderColor="#000000"/>
-
-                <!-- Adress text -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="5" y="2" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.invoiceadress}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Name -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="14" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.invoiceadress.name}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Address 1 -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="28" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.invoiceadress.address1}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Address 2 -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="42" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.invoiceadress.address2}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Zip Code + City -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="56" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.invoiceadress.zipcode} + " " + $P{order.invoiceadress.city}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Country -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="70" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.invoiceadress.country}]]>
-                    </textFieldExpression>
-                </textField>
-
-            </frame>
-
-            <!-- Order details, Column 1 -->
-            <frame>
-                <reportElement x="45" y="90" width="250" height="76"/>
-
-                <!-- Our contact -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="0" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.ourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="0" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.ourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Deliveryterm -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="15" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.deliveryterm}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="15" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.deliveryterm}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Delivery way -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="30" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.deliveryway}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="30" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.deliveryway}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Payment term -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="45" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.paymentterm}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="45" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.paymentterm}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Delay interest -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="60" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.delayinterest}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="60" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.delayinterest} != null ? $P{order.delayinterest} + "%" : null]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-            </frame>
-
-            <!-- Order details, Column 2 -->
-            <frame>
-                <reportElement x="305" y="90" width="250" height="76"/>
-
-                <!-- Customer nr -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="0" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.customernr}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="0" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.customernr}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Your contact -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="15" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.yourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="15" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.yourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Your order number -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="30" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.yourordernumber}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="30" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.yourordernumber}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Estimated delivery -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="45" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{pickingslipreport.estimateddelivery}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="45" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{order.estimateddelivery}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-            </frame>
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band isSplitAllowed="true" height="436">
-            <!-- Subreport for the rows 385-->
-            <frame>
-                <reportElement x="40" y="0" width="510" height="396" isPrintWhenDetailOverflows="true"/>
-
-                <box border="Thin" borderColor="#000000"  topBorder="None" />
-
-                <subreport isUsingCache="false">
-                    <reportElement x="0" y="0" width="510" height="396" isPrintWhenDetailOverflows="true"/>
-
-                    <parametersMapExpression>
-                        <![CDATA[$P{REPORT_PARAMETERS_MAP}]]>
-                    </parametersMapExpression>
-
-                    <subreportParameter name="REPORT_RESOURCE_BUNDLE">
-                        <subreportParameterExpression>
-                            <![CDATA[$P{REPORT_RESOURCE_BUNDLE}]]>
-                        </subreportParameterExpression>
-                    </subreportParameter>
-
-                    <dataSourceExpression>
-                        <![CDATA[$F{subreport.datasource}]]>
-                    </dataSourceExpression>
-
-                    <returnValue subreportVariable="totalweight"      toVariable="totalweight"/>
-                    <returnValue subreportVariable="totalvolume"      toVariable="totalvolume"/>
-
-                    <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                        <![CDATA[$P{subreport.report}]]>
-                    </subreportExpression>
-
-
-                </subreport>
-            </frame>
-
-            <!-- Compact summary in the reserved area below the product subreport. -->
-            <rectangle><reportElement x="280" y="396" width="270" height="40"/><graphicElement pen="Thin"/></rectangle>
-            <line><reportElement x="280" y="416" width="270" height="1"/><graphicElement pen="Thin"/></line>
-
-            <textField><reportElement x="290" y="400" width="90" height="12"/><textElement><font size="8"/></textElement><textFieldExpression><![CDATA[$R{pickingslipreport.totalweight}]]></textFieldExpression></textField>
-            <textField pattern="#,##0.000" isBlankWhenNull="true" evaluationTime="Report"><reportElement x="385" y="399" width="105" height="14"/><textElement textAlignment="Right"><font size="10" isBold="true"/></textElement><textFieldExpression class="java.math.BigDecimal"><![CDATA[$V{totalweight}]]></textFieldExpression></textField>
-            <textField><reportElement x="500" y="399" width="40" height="14"/><textElement><font size="9"/></textElement><textFieldExpression><![CDATA[$P{company.weightunit}]]></textFieldExpression></textField>
-
-            <textField><reportElement x="290" y="420" width="90" height="12"/><textElement><font size="8"/></textElement><textFieldExpression><![CDATA[$R{pickingslipreport.totalvolume}]]></textFieldExpression></textField>
-            <textField pattern="#,##0.000" isBlankWhenNull="true" evaluationTime="Report"><reportElement x="385" y="419" width="105" height="14"/><textElement textAlignment="Right"><font size="10" isBold="true"/></textElement><textFieldExpression class="java.math.BigDecimal"><![CDATA[$V{totalvolume}]]></textFieldExpression></textField>
-            <textField><reportElement x="500" y="419" width="40" height="14"/><textElement><font size="9"/></textElement><textFieldExpression><![CDATA[$P{company.volumeunit}]]></textFieldExpression></textField>
-
-
-        </band>
-    </detail>
-
-
-
+<jasperReport name="Pickingslip" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" uuid="cb8b7f6f-a09f-30e3-9379-b948d22967ca">
+	<parameter name="subreport.report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="title" class="java.lang.String"/>
+	<parameter name="company.logo" class="java.awt.Image"/>
+	<parameter name="company.name" class="java.lang.String"/>
+	<parameter name="company.address1" class="java.lang.String"/>
+	<parameter name="company.address2" class="java.lang.String"/>
+	<parameter name="company.zipcode" class="java.lang.String"/>
+	<parameter name="company.city" class="java.lang.String"/>
+	<parameter name="company.country" class="java.lang.String"/>
+	<parameter name="company.phone" class="java.lang.String"/>
+	<parameter name="company.telefax" class="java.lang.String"/>
+	<parameter name="company.residence" class="java.lang.String"/>
+	<parameter name="company.email" class="java.lang.String"/>
+	<parameter name="company.homepage" class="java.lang.String"/>
+	<parameter name="company.plusaccount" class="java.lang.String"/>
+	<parameter name="company.bankaccount" class="java.lang.String"/>
+	<parameter name="company.bic" class="java.lang.String"/>
+	<parameter name="company.iban" class="java.lang.String"/>
+	<parameter name="company.bank" class="java.lang.String"/>
+	<parameter name="company.weightunit" class="java.lang.String"/>
+	<parameter name="company.volumeunit" class="java.lang.String"/>
+	<parameter name="number" class="java.lang.Integer"/>
+	<parameter name="date" class="java.lang.String"/>
+	<parameter name="text" class="java.lang.String"/>
+	<parameter name="order.deliveryadress.name" class="java.lang.String"/>
+	<parameter name="order.deliveryadress.address1" class="java.lang.String"/>
+	<parameter name="order.deliveryadress.address2" class="java.lang.String"/>
+	<parameter name="order.deliveryadress.zipcode" class="java.lang.String"/>
+	<parameter name="order.deliveryadress.city" class="java.lang.String"/>
+	<parameter name="order.deliveryadress.country" class="java.lang.String"/>
+	<parameter name="order.invoiceadress.name" class="java.lang.String"/>
+	<parameter name="order.invoiceadress.address1" class="java.lang.String"/>
+	<parameter name="order.invoiceadress.address2" class="java.lang.String"/>
+	<parameter name="order.invoiceadress.zipcode" class="java.lang.String"/>
+	<parameter name="order.invoiceadress.city" class="java.lang.String"/>
+	<parameter name="order.invoiceadress.country" class="java.lang.String"/>
+	<parameter name="order.ourcontact" class="java.lang.String"/>
+	<parameter name="order.deliveryterm" class="java.lang.String"/>
+	<parameter name="order.deliveryway" class="java.lang.String"/>
+	<parameter name="order.paymentterm" class="java.lang.String"/>
+	<parameter name="order.delayinterest" class="java.lang.String"/>
+	<parameter name="order.customernr" class="java.lang.String"/>
+	<parameter name="order.yourcontact" class="java.lang.String"/>
+	<parameter name="order.yourordernumber" class="java.lang.String"/>
+	<parameter name="order.vatnumber" class="java.lang.String"/>
+	<parameter name="order.currency" class="java.lang.String"/>
+	<parameter name="order.taxrate1" class="java.lang.String"/>
+	<parameter name="order.taxrate2" class="java.lang.String"/>
+	<parameter name="order.taxrate3" class="java.lang.String"/>
+	<parameter name="order.estimateddelivery" class="java.lang.String"/>
+	<field name="subreport.datasource" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<field name="row.number" class="java.lang.String"/>
+	<field name="row.description" class="java.lang.String"/>
+	<field name="row.count" class="java.math.BigDecimal"/>
+	<field name="row.unit" class="java.lang.String"/>
+	<field name="row.unitprice" class="java.math.BigDecimal"/>
+	<field name="row.discount" class="java.math.BigDecimal"/>
+	<field name="row.sum" class="java.math.BigDecimal"/>
+	<variable name="totalweight" calculation="System" class="java.math.BigDecimal">
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="totalvolume" calculation="System" class="java.math.BigDecimal">
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<columnHeader height="176" splitType="Prevent">
+		<element kind="frame" uuid="64520a65-b7f2-3865-bcdf-4623d55deaa9" stretchType="NoStretch" x="40" y="0" width="250" height="86">
+			<element kind="textField" uuid="a1f7a27c-6ee9-35c1-810e-49f7d8a6fa7a" stretchType="NoStretch" x="5" y="2" width="240" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.deliveryadress}]]></expression>
+			</element>
+			<element kind="textField" uuid="949f52ca-d530-322c-a3b4-df3877640d60" stretchType="NoStretch" x="10" y="14" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.deliveryadress.name}]]></expression>
+			</element>
+			<element kind="textField" uuid="f5b6f182-d6a0-310d-8699-d94bbcd6ed94" stretchType="NoStretch" x="10" y="28" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.deliveryadress.address1}]]></expression>
+			</element>
+			<element kind="textField" uuid="a623b35b-0f39-3115-a141-963b3462a3dc" stretchType="NoStretch" x="10" y="42" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.deliveryadress.address2}]]></expression>
+			</element>
+			<element kind="textField" uuid="62efd524-a5ba-31bf-9f66-9dd068e58463" stretchType="NoStretch" x="10" y="56" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.deliveryadress.zipcode} + " " + $P{order.deliveryadress.city}]]></expression>
+			</element>
+			<element kind="textField" uuid="dd6a59c8-eefa-34f1-9500-b6aa48435fc0" stretchType="NoStretch" x="10" y="70" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.deliveryadress.country}]]></expression>
+			</element>
+			<box>
+				<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+			</box>
+		</element>
+		<element kind="frame" uuid="348923ec-9b84-3795-8c90-cbd1a36798b5" stretchType="NoStretch" x="300" y="0" width="250" height="86">
+			<element kind="textField" uuid="75bc5c1f-a3c5-3b71-9fc5-3e1348eb9b85" stretchType="NoStretch" x="5" y="2" width="240" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.invoiceadress}]]></expression>
+			</element>
+			<element kind="textField" uuid="b7e24da3-a024-319e-a0cd-b9ca64f9a976" stretchType="NoStretch" x="10" y="14" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.invoiceadress.name}]]></expression>
+			</element>
+			<element kind="textField" uuid="8590f8b2-c528-355c-b048-1cc92356ab45" stretchType="NoStretch" x="10" y="28" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.invoiceadress.address1}]]></expression>
+			</element>
+			<element kind="textField" uuid="d4686b8f-72ca-3b8f-8582-a2358bb0e46d" stretchType="NoStretch" x="10" y="42" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.invoiceadress.address2}]]></expression>
+			</element>
+			<element kind="textField" uuid="95af122c-e721-34fa-a07f-6d99f1127483" stretchType="NoStretch" x="10" y="56" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.invoiceadress.zipcode} + " " + $P{order.invoiceadress.city}]]></expression>
+			</element>
+			<element kind="textField" uuid="c1b09bdc-99c1-3492-bc44-2e675c0e0bd2" stretchType="NoStretch" x="10" y="70" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.invoiceadress.country}]]></expression>
+			</element>
+			<box>
+				<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+			</box>
+		</element>
+		<element kind="frame" uuid="b49730b7-2b5e-3416-854a-0bd4d9d36a3f" stretchType="NoStretch" x="45" y="90" width="250" height="76">
+			<element kind="textField" uuid="f3834481-ac0c-3b66-877b-7d7438ceb783" stretchType="NoStretch" x="0" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.ourcontact}]]></expression>
+			</element>
+			<element kind="textField" uuid="c3c7a379-8a43-3ca3-9836-13d9ebe3a421" stretchType="NoStretch" x="100" y="0" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.ourcontact}]]></expression>
+			</element>
+			<element kind="textField" uuid="41aa9e0a-d5df-3dd3-9f49-9dc737f12638" stretchType="NoStretch" x="0" y="15" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.deliveryterm}]]></expression>
+			</element>
+			<element kind="textField" uuid="86e14982-d1e3-343b-b581-17c1c6682273" stretchType="NoStretch" x="100" y="15" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.deliveryterm}]]></expression>
+			</element>
+			<element kind="textField" uuid="6c196c8f-d754-3db9-801c-ae2add383d93" stretchType="NoStretch" x="0" y="30" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.deliveryway}]]></expression>
+			</element>
+			<element kind="textField" uuid="b9757e60-1ca5-302c-be6e-efb8dac6e7de" stretchType="NoStretch" x="100" y="30" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.deliveryway}]]></expression>
+			</element>
+			<element kind="textField" uuid="6f00f413-0c1f-3121-af9a-ccdb6a1f00b6" stretchType="NoStretch" x="0" y="45" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.paymentterm}]]></expression>
+			</element>
+			<element kind="textField" uuid="317fbfe6-66a2-35f7-9a2d-fd6ba20680e0" stretchType="NoStretch" x="100" y="45" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.paymentterm}]]></expression>
+			</element>
+			<element kind="textField" uuid="4e0848eb-d0ac-3521-a241-5c1a831a34c8" stretchType="NoStretch" x="0" y="60" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.delayinterest}]]></expression>
+			</element>
+			<element kind="textField" uuid="6e7768b5-577e-3d00-bbb0-0dddb41055ba" stretchType="NoStretch" x="100" y="60" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.delayinterest} != null ? $P{order.delayinterest} + "%" : null]]></expression>
+			</element>
+		</element>
+		<element kind="frame" uuid="c29779db-39ac-31d0-bda8-a954505f8fdf" stretchType="NoStretch" x="305" y="90" width="250" height="76">
+			<element kind="textField" uuid="bea9397c-0e2f-3240-96ec-00f16f0ee548" stretchType="NoStretch" x="0" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.customernr}]]></expression>
+			</element>
+			<element kind="textField" uuid="d9e05343-fc5a-3f1a-bbd9-e9406ff7ecf0" stretchType="NoStretch" x="100" y="0" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.customernr}]]></expression>
+			</element>
+			<element kind="textField" uuid="de380971-fd94-36b5-a68c-2ec75d8a0d35" stretchType="NoStretch" x="0" y="15" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.yourcontact}]]></expression>
+			</element>
+			<element kind="textField" uuid="a84d7c8f-1ed4-31dc-b3d1-d066c5537446" stretchType="NoStretch" x="100" y="15" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.yourcontact}]]></expression>
+			</element>
+			<element kind="textField" uuid="e7ad20ec-b187-3392-b398-308c51885441" stretchType="NoStretch" x="0" y="30" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.yourordernumber}]]></expression>
+			</element>
+			<element kind="textField" uuid="9ab47778-7dea-3431-8525-ff172d23de34" stretchType="NoStretch" x="100" y="30" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.yourordernumber}]]></expression>
+			</element>
+			<element kind="textField" uuid="e91e4f3b-3111-30f2-a968-04fc3fa3e0e1" stretchType="NoStretch" x="0" y="45" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{pickingslipreport.estimateddelivery}]]></expression>
+			</element>
+			<element kind="textField" uuid="bcf393e0-da2e-3c67-a3b7-68e868f632f7" stretchType="NoStretch" x="100" y="45" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{order.estimateddelivery}]]></expression>
+			</element>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="436" splitType="Stretch">
+			<element kind="frame" uuid="0f68439a-7dad-3ef5-b4b1-7371e67650c7" stretchType="NoStretch" x="40" y="0" width="510" height="396" printWhenDetailOverflows="true">
+				<element kind="subreport" uuid="51c67ec2-d308-324a-91c9-78ad8007b52a" stretchType="NoStretch" x="0" y="0" width="510" height="396" usingCache="false" printWhenDetailOverflows="true">
+					<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+					<dataSourceExpression><![CDATA[$F{subreport.datasource}]]></dataSourceExpression>
+					<expression><![CDATA[$P{subreport.report}]]></expression>
+					<returnValue toVariable="totalweight" subreportVariable="totalweight"/>
+					<returnValue toVariable="totalvolume" subreportVariable="totalvolume"/>
+					<parameter name="REPORT_RESOURCE_BUNDLE">
+						<expression><![CDATA[$P{REPORT_RESOURCE_BUNDLE}]]></expression>
+					</parameter>
+				</element>
+				<box>
+					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<topPen lineWidth="0.0" lineStyle="Solid"/>
+				</box>
+			</element>
+			<element kind="rectangle" uuid="ec5645b9-561c-31f0-a8d4-b8c6972427b6" stretchType="NoStretch" x="280" y="396" width="270" height="40">
+				<pen lineWidth="0.5" lineStyle="Solid"/>
+			</element>
+			<element kind="line" uuid="8d5abea9-7a71-3777-819c-b5bd0e058e19" stretchType="NoStretch" x="280" y="416" width="270" height="1">
+				<pen lineWidth="0.5" lineStyle="Solid"/>
+			</element>
+			<element kind="textField" uuid="2e6b1008-c8c3-3daf-904b-5b2fbba8e661" stretchType="NoStretch" x="290" y="400" width="90" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$R{pickingslipreport.totalweight}]]></expression>
+			</element>
+			<element kind="textField" uuid="1fb39a75-a0cd-3b66-b28a-33d91d060b56" stretchType="NoStretch" x="385" y="399" width="105" height="14" fontSize="10.0" evaluationTime="Report" pattern="#,##0.000" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$V{totalweight}]]></expression>
+			</element>
+			<element kind="textField" uuid="4506d76a-9dc2-3ea7-96f3-4e0aefe23c81" stretchType="NoStretch" x="500" y="399" width="40" height="14" fontSize="9.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$P{company.weightunit}]]></expression>
+			</element>
+			<element kind="textField" uuid="3b0aedeb-129f-3c24-a671-53807981f22e" stretchType="NoStretch" x="290" y="420" width="90" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$R{pickingslipreport.totalvolume}]]></expression>
+			</element>
+			<element kind="textField" uuid="c90a00af-db51-33ab-97bf-021370caf3af" stretchType="NoStretch" x="385" y="419" width="105" height="14" fontSize="10.0" evaluationTime="Report" pattern="#,##0.000" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$V{totalvolume}]]></expression>
+			</element>
+			<element kind="textField" uuid="60f80898-4e35-34ce-b756-4014c94cd174" stretchType="NoStretch" x="500" y="419" width="40" height="14" fontSize="9.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$P{company.volumeunit}]]></expression>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

@@ -1,152 +1,44 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="Customers" resourceBundle="book">
-
-
-    <!-- Declared fields in the report. -->
-
-    <field name="supplier.number"             class="java.lang.String"/>
-    <field name="supplier.name"               class="java.lang.String"/>
-    <field name="supplier.phone"              class="java.lang.String"/>
-    <field name="supplier.ourcustomernumber"  class="java.lang.String"/>
-    <field name="supplier.contact"            class="java.lang.String"/>
-
-
-    <columnHeader>
-        <band height="15">
-            <line>
-                <reportElement x="20" y="12" width="510" height="1"/>
-            </line>
-
-            <!-- Column 1 -->
-            <textField>
-                <reportElement x="20" y="0" width="60" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierlistreport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="80" y="0" width="150" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierlistreport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="230" y="0" width="100" height="12" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierlistreport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="330" y="0" width="100" height="12" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierlistreport.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="430" y="0" width="100" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierlistreport.column.5}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="14"  isSplitAllowed="true">
-            <!-- Number-->
-            <textField isBlankWhenNull="true">
-                <reportElement x="20" y="0" width="60" height="14" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{supplier.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Name-->
-            <textField isBlankWhenNull="true">
-                <reportElement x="80" y="0" width="150" height="14" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{supplier.name}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Our contact person-->
-            <textField isBlankWhenNull="true">
-                <reportElement x="230" y="0" width="100" height="12"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{supplier.contact}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Registration number -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="330" y="0" width="100" height="12"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{supplier.ourcustomernumber}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Phone -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="430" y="0" width="100" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{supplier.phone}]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-
-
-
-
-        </band>
-    </detail>
-
-
-
-
+<jasperReport name="Customers" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="da9e5ec0-4cbb-3139-ba2d-d24d43f81c2e">
+	<field name="supplier.number" class="java.lang.String"/>
+	<field name="supplier.name" class="java.lang.String"/>
+	<field name="supplier.phone" class="java.lang.String"/>
+	<field name="supplier.ourcustomernumber" class="java.lang.String"/>
+	<field name="supplier.contact" class="java.lang.String"/>
+	<columnHeader height="15" splitType="Stretch">
+		<element kind="line" uuid="a2cce6ba-8a9c-3771-b521-651f17201ae0" stretchType="NoStretch" x="20" y="12" width="510" height="1"/>
+		<element kind="textField" uuid="2f7ac24a-e092-3301-860f-9f393d30fb0f" stretchType="NoStretch" x="20" y="0" width="60" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{supplierlistreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="e2ea25ad-329b-3a33-8c67-a2bde105bf20" stretchType="NoStretch" x="80" y="0" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{supplierlistreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="5f10895a-bae1-38ab-a327-497ccac5c8e6" stretchType="NoStretch" x="230" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{supplierlistreport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="20288ea5-174e-35a2-a533-6d9096f112a0" stretchType="NoStretch" x="330" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{supplierlistreport.column.4}]]></expression>
+		</element>
+		<element kind="textField" uuid="a6a82c93-5a24-33a4-aabe-435515603a9a" stretchType="NoStretch" x="430" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{supplierlistreport.column.5}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="14" splitType="Stretch">
+			<element kind="textField" uuid="8938bfdb-41fc-3969-aec5-900b081ba72c" stretchType="NoStretch" x="20" y="0" width="60" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true">
+				<expression><![CDATA[$F{supplier.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="6cc99560-15df-3cc0-88ff-7f974795b98a" stretchType="NoStretch" x="80" y="0" width="150" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true">
+				<expression><![CDATA[$F{supplier.name}]]></expression>
+			</element>
+			<element kind="textField" uuid="1346e0d7-f124-3d5d-b411-07bb6e86c076" stretchType="NoStretch" x="230" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false">
+				<expression><![CDATA[$F{supplier.contact}]]></expression>
+			</element>
+			<element kind="textField" uuid="32ddecd1-7461-3ae5-a415-1f61100ec6b0" stretchType="NoStretch" x="330" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false">
+				<expression><![CDATA[$F{supplier.ourcustomernumber}]]></expression>
+			</element>
+			<element kind="textField" uuid="db218958-4a7c-3992-90f4-22ff85cca6f9" stretchType="NoStretch" x="430" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+				<expression><![CDATA[$F{supplier.phone}]]></expression>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

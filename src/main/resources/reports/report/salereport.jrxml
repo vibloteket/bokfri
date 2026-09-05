@@ -1,261 +1,78 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="SaleReport" resourceBundle="book">
-
-    <!-- Declared fields in the report. -->
-
-    <field name="product.number"       class="java.lang.String"/>
-    <field name="product.description"  class="java.lang.String"/>
-
-
-    <field name="product.count"    class="java.math.BigDecimal"/>
-    <field name="product.monthly"  class="java.math.BigDecimal"/>
-    <field name="product.weekly"   class="java.math.BigDecimal"/>
-
-    <field name="product.unitprice" class="java.math.BigDecimal"/>
-    <field name="product.inprice"   class="java.math.BigDecimal"/>
-
-    <field name="product.contribution"         class="java.math.BigDecimal"/>
-    <field name="product.contributionrate"     class="java.math.BigDecimal"/>
-    <field name="product.grossprofit"          class="java.math.BigDecimal"/>
-    <field name="product.averagesellingprice"  class="java.math.BigDecimal"/>
-
-
-
-    <columnHeader>
-        <band height="30">
-            <line>
-                <reportElement x="20" y="23" width="510" height="1"/>
-            </line>
-
-            <!-- Faktura nr -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{salereport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="80" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{salereport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="140" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{salereport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="180" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{salereport.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="250" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{salereport.column.5}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="320" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{salereport.column.6}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="390" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{salereport.column.7}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="460" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{salereport.column.8}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="30" isSplitAllowed="true">
-
-
-            <!-- Product number -->
-            <textField>
-                <reportElement x="20" y="0" width="120" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{product.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Product descriptionr -->
-            <textField>
-                <reportElement x="140" y="0" width="200" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{product.description}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Row #2 -->
-
-            <!-- Period sales -->
-            <textField isBlankWhenNull="true" pattern="#,##0.##">
-                <reportElement x="20" y="14" width="80" height="14"/>
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.count}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Montly sales -->
-            <textField isBlankWhenNull="true" pattern="#,##0.00">
-                <reportElement x="80" y="14" width="70" height="14"/>
-                <textElement textAlignment="Left">
-                    <font size="8" />
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.monthly}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Weekly sales -->
-            <textField isBlankWhenNull="true" pattern="#,##0.00">
-                <reportElement x="140" y="14" width="60" height="14"/>
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.weekly}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Unit price -->
-            <textField isBlankWhenNull="true" pattern="#,##0.00">
-                <reportElement x="180" y="14" width="70" height="14"/>
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.unitprice}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Genomsnittligt pris -->
-            <textField isBlankWhenNull="true" pattern="#,##0.00">
-                <reportElement x="250" y="14" width="70" height="14"/>
-                <textElement textAlignment="Right">
-                    <font size="8" />
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.averagesellingprice}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Inprice -->
-            <textField isBlankWhenNull="true" pattern="#,##0.00">
-                <reportElement x="320" y="14" width="70" height="14"/>
-                <textElement textAlignment="Right">
-                    <font size="8" />
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.inprice}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- TG% -->
-            <textField isBlankWhenNull="true" pattern="#,##0.00">
-                <reportElement x="390" y="14" width="70" height="14"/>
-                <textElement textAlignment="Right">
-                    <font size="8" />
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.contributionrate}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Bruttovinst -->
-            <textField isBlankWhenNull="true" pattern="#,##0.00">
-                <reportElement x="460" y="14" width="70" height="14"/>
-                <textElement textAlignment="Right">
-                    <font size="8" />
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.grossprofit}]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-            <textField>
-                <reportElement x="320" y="14" width="210" height="12">
-                    <printWhenExpression>
-                        <![CDATA[new Boolean($F{product.inprice} == null)]]>
-                    </printWhenExpression>
-                </reportElement>
-                <textElement textAlignment="Right">
-                    <font size="8" isItalic="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{salereport.noinprice}]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-
-        </band>
-    </detail>
-
+<jasperReport name="SaleReport" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="cdd41445-be9a-378e-afd3-90d0715b295b">
+	<field name="product.number" class="java.lang.String"/>
+	<field name="product.description" class="java.lang.String"/>
+	<field name="product.count" class="java.math.BigDecimal"/>
+	<field name="product.monthly" class="java.math.BigDecimal"/>
+	<field name="product.weekly" class="java.math.BigDecimal"/>
+	<field name="product.unitprice" class="java.math.BigDecimal"/>
+	<field name="product.inprice" class="java.math.BigDecimal"/>
+	<field name="product.contribution" class="java.math.BigDecimal"/>
+	<field name="product.contributionrate" class="java.math.BigDecimal"/>
+	<field name="product.grossprofit" class="java.math.BigDecimal"/>
+	<field name="product.averagesellingprice" class="java.math.BigDecimal"/>
+	<columnHeader height="30" splitType="Stretch">
+		<element kind="line" uuid="63448257-4f99-3c62-a5e2-24e1892ee7f7" stretchType="NoStretch" x="20" y="23" width="510" height="1"/>
+		<element kind="textField" uuid="f967cb1d-c375-3535-9dad-a52cc4c6c547" stretchType="NoStretch" x="20" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{salereport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="9036ed25-c326-37c4-990b-787318098274" stretchType="NoStretch" x="80" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{salereport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="f297506a-9276-3b81-a90c-b05e17189fdc" stretchType="NoStretch" x="140" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{salereport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="9abc2352-139b-319e-801e-ecda79f5dc02" stretchType="NoStretch" x="180" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{salereport.column.4}]]></expression>
+		</element>
+		<element kind="textField" uuid="c590ecf2-9abf-3447-bc1f-65cab5288f86" stretchType="NoStretch" x="250" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{salereport.column.5}]]></expression>
+		</element>
+		<element kind="textField" uuid="462d2b9d-cfda-3b6e-ab29-40266d6c283b" stretchType="NoStretch" x="320" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{salereport.column.6}]]></expression>
+		</element>
+		<element kind="textField" uuid="07808d23-78a2-3f61-8610-f30f8027fa9b" stretchType="NoStretch" x="390" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{salereport.column.7}]]></expression>
+		</element>
+		<element kind="textField" uuid="cefefd56-b0c7-3890-911d-e96b676cbf5c" stretchType="NoStretch" x="460" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{salereport.column.8}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="30" splitType="Stretch">
+			<element kind="textField" uuid="a9e3a162-f442-32d2-9984-0d2f30a5934d" stretchType="NoStretch" x="20" y="0" width="120" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{product.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="d0bae00c-5973-33a8-a4e0-58db484d242d" stretchType="NoStretch" x="140" y="0" width="200" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{product.description}]]></expression>
+			</element>
+			<element kind="textField" uuid="1d495f1d-8681-3cf7-abf9-37707ffb79bd" stretchType="NoStretch" x="20" y="14" width="80" height="14" fontSize="8.0" pattern="#,##0.##" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$F{product.count}]]></expression>
+			</element>
+			<element kind="textField" uuid="63e02144-f081-3fa6-a49d-631fe059ac4a" stretchType="NoStretch" x="80" y="14" width="70" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$F{product.monthly}]]></expression>
+			</element>
+			<element kind="textField" uuid="ef05d186-04f1-3d8a-bb46-dae0176f273e" stretchType="NoStretch" x="140" y="14" width="60" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$F{product.weekly}]]></expression>
+			</element>
+			<element kind="textField" uuid="ee007af6-8059-38c0-a4c1-691532fef9a3" stretchType="NoStretch" x="180" y="14" width="70" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[$F{product.unitprice}]]></expression>
+			</element>
+			<element kind="textField" uuid="481acf9f-1521-3e17-aae8-892ea814aa61" stretchType="NoStretch" x="250" y="14" width="70" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[$F{product.averagesellingprice}]]></expression>
+			</element>
+			<element kind="textField" uuid="8e8821aa-111c-3200-a9f0-e79045254eed" stretchType="NoStretch" x="320" y="14" width="70" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[$F{product.inprice}]]></expression>
+			</element>
+			<element kind="textField" uuid="c63e4aae-3916-3a21-a736-5f828b54af9c" stretchType="NoStretch" x="390" y="14" width="70" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[$F{product.contributionrate}]]></expression>
+			</element>
+			<element kind="textField" uuid="5cebef02-c3df-3ebc-accc-47ff351f1d47" stretchType="NoStretch" x="460" y="14" width="70" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[$F{product.grossprofit}]]></expression>
+			</element>
+			<element kind="textField" uuid="8cb1ec15-ca17-3510-b3ad-471f3165e4ff" stretchType="NoStretch" x="320" y="14" width="210" height="12" fontSize="8.0" linkType="None" linkTarget="Self" italic="true" hTextAlign="Right">
+				<printWhenExpression><![CDATA[new Boolean($F{product.inprice} == null)]]></printWhenExpression>
+				<expression><![CDATA[$R{salereport.noinprice}]]></expression>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

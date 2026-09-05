@@ -1,196 +1,65 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="Voucer" resourceBundle="book">
-    <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="Parameters" class="java.util.HashMap"/>
-
-
-    <!-- Declared fields in the report. -->
-    <field name="voucher.number"         class="java.lang.Integer"/>
-    <field name="voucher.date"           class="java.lang.String"/>
-    <field name="voucher.description"    class="java.lang.String"/>
-    <field name="voucher.debet"          class="java.math.BigDecimal"/>
-    <field name="voucher.credet"         class="java.math.BigDecimal"/>
-
-    <field name="voucher.rows"     class="net.sf.jasperreports.engine.JRDataSource"/>
-
-
-
-    <columnHeader>
-        <band height="63">
-
-            <frame>
-                <reportElement x="0" y="5" width="555" height="45" />
-
-                <textField>
-                    <reportElement x="20" y="0" width="340" height="14" />
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{voucherreport.verificationtext}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField>
-                    <reportElement x="20" y="15" width="340" height="14" />
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{voucherreport.verificationdate}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField>
-                    <reportElement x="20" y="30" width="340" height="14" />
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{voucherreport.verificationnumber}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <textField>
-                    <reportElement x="120" y="0" width="340" height="12" />
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$F{voucher.description}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField>
-                    <reportElement x="120" y="15" width="340" height="14" />
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$F{voucher.date}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField>
-                    <reportElement x="120" y="30" width="340" height="14" />
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.Integer">
-                        <![CDATA[$F{voucher.number}]]>
-                    </textFieldExpression>
-                </textField>
-
-            </frame>
-
-            <frame>
-                <reportElement x="0" y="50" width="555" height="13" />
-
-                <line>
-                    <reportElement x="20" y="0" width="510" height="1"/>
-                </line>
-
-                <line>
-                    <reportElement x="20" y="12" width="510" height="1"/>
-                </line>
-
-
-                <!-- Column 1 -->
-                <textField>
-                    <reportElement x="20" y="0" width="80" height="12" />
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{voucherreport.column.1}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField>
-                    <reportElement x="80" y="0" width="220" height="12" />
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{voucherreport.column.2}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <textField>
-                    <reportElement x="270" y="0" width="50" height="12" />
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{voucherreport.column.3}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField>
-                    <reportElement x="320" y="0" width="70" height="12" />
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{voucherreport.column.4}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField>
-                    <reportElement x="380" y="0" width="70" height="12" />
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{voucherreport.column.5}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField>
-                    <reportElement x="460" y="0" width="70" height="12" />
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{voucherreport.column.6}]]>
-                    </textFieldExpression>
-                </textField>
-            </frame>
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="14">
-
-            <!-- Voucher rows -->
-            <subreport isUsingCache="false">
-                <reportElement x="0" y="0" width="555" height="0" isPrintWhenDetailOverflows="true"/>
-
-                <subreportParameter name="invoice.customernr">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{voucher.number}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-                <dataSourceExpression>
-                    <![CDATA[$F{voucher.rows}]]>
-                </dataSourceExpression>
-
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$P{Report}]]>
-                </subreportExpression>
-            </subreport>
-
-        </band>
-    </detail>
-
-
+<jasperReport name="Voucer" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="109755c1-028d-3713-a916-99ab8aeef071">
+	<parameter name="Report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="Parameters" class="java.util.HashMap"/>
+	<field name="voucher.number" class="java.lang.Integer"/>
+	<field name="voucher.date" class="java.lang.String"/>
+	<field name="voucher.description" class="java.lang.String"/>
+	<field name="voucher.debet" class="java.math.BigDecimal"/>
+	<field name="voucher.credet" class="java.math.BigDecimal"/>
+	<field name="voucher.rows" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<columnHeader height="63" splitType="Stretch">
+		<element kind="frame" uuid="94a9b990-8d4c-3f3e-9b84-c9f9b1a4638e" stretchType="NoStretch" x="0" y="5" width="555" height="45">
+			<element kind="textField" uuid="cb411fb5-9fc9-39f1-9397-6d7d83e5f443" stretchType="NoStretch" x="20" y="0" width="340" height="14" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+				<expression><![CDATA[$R{voucherreport.verificationtext}]]></expression>
+			</element>
+			<element kind="textField" uuid="8420dcd1-b197-3d0a-b685-884a9af7e62d" stretchType="NoStretch" x="20" y="15" width="340" height="14" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+				<expression><![CDATA[$R{voucherreport.verificationdate}]]></expression>
+			</element>
+			<element kind="textField" uuid="5758ae51-f9d0-30e6-ab81-aac112e5c91a" stretchType="NoStretch" x="20" y="30" width="340" height="14" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+				<expression><![CDATA[$R{voucherreport.verificationnumber}]]></expression>
+			</element>
+			<element kind="textField" uuid="a9310fdd-861f-3379-ac74-310500b0d5c2" stretchType="NoStretch" x="120" y="0" width="340" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+				<expression><![CDATA[$F{voucher.description}]]></expression>
+			</element>
+			<element kind="textField" uuid="b141cb44-6b11-3a1c-aae8-84e2c66f4594" stretchType="NoStretch" x="120" y="15" width="340" height="14" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+				<expression><![CDATA[$F{voucher.date}]]></expression>
+			</element>
+			<element kind="textField" uuid="96d87e80-1843-3daf-8e88-562f16ece7d0" stretchType="NoStretch" x="120" y="30" width="340" height="14" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+				<expression><![CDATA[$F{voucher.number}]]></expression>
+			</element>
+		</element>
+		<element kind="frame" uuid="153d6605-c578-3a02-9ad7-2e9a9fd9b620" stretchType="NoStretch" x="0" y="50" width="555" height="13">
+			<element kind="line" uuid="63fcaa16-b39f-391d-9b74-6b015bd4ff79" stretchType="NoStretch" x="20" y="0" width="510" height="1"/>
+			<element kind="line" uuid="a66a1782-5112-3837-bdff-6e7de1bf8163" stretchType="NoStretch" x="20" y="12" width="510" height="1"/>
+			<element kind="textField" uuid="20eba71c-f957-3481-afad-b3a9428dfc14" stretchType="NoStretch" x="20" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+				<expression><![CDATA[$R{voucherreport.column.1}]]></expression>
+			</element>
+			<element kind="textField" uuid="d866dcc7-6f82-398c-9d82-15ecfb1c232c" stretchType="NoStretch" x="80" y="0" width="220" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+				<expression><![CDATA[$R{voucherreport.column.2}]]></expression>
+			</element>
+			<element kind="textField" uuid="b3462905-e193-310b-be9a-6010e60381b8" stretchType="NoStretch" x="270" y="0" width="50" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+				<expression><![CDATA[$R{voucherreport.column.3}]]></expression>
+			</element>
+			<element kind="textField" uuid="119cf053-90da-3284-959c-9c3653fc48e2" stretchType="NoStretch" x="320" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+				<expression><![CDATA[$R{voucherreport.column.4}]]></expression>
+			</element>
+			<element kind="textField" uuid="9f861059-c00b-349b-a7bf-ee4f6aa9f3b4" stretchType="NoStretch" x="380" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$R{voucherreport.column.5}]]></expression>
+			</element>
+			<element kind="textField" uuid="de863a56-efc8-3e3c-938b-2be0c0fd2692" stretchType="NoStretch" x="460" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$R{voucherreport.column.6}]]></expression>
+			</element>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="14" splitType="Stretch">
+			<element kind="subreport" uuid="ef124160-9b97-3bd4-a5df-fc839d6d113b" stretchType="NoStretch" x="0" y="0" width="555" height="0" usingCache="false" printWhenDetailOverflows="true">
+				<dataSourceExpression><![CDATA[$F{voucher.rows}]]></dataSourceExpression>
+				<expression><![CDATA[$P{Report}]]></expression>
+				<parameter name="invoice.customernr">
+					<expression><![CDATA[$F{voucher.number}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

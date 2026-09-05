@@ -1,218 +1,71 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="InpaymentList" resourceBundle="book">
-
-    <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="Parameters" class="java.util.HashMap"/>
-
-
-    <!-- Declared fields in the report. -->
-
-    <field name="inpayment.number"       	class="java.lang.Integer"/>
-    <field name="inpayment.date"         	class="java.lang.String"/>
-    <field name="inpayment.text"         	class="java.lang.String"/>
-    <field name="inpayment.sum"          	class="java.math.BigDecimal"/>
-
-    <field name="inpayment.rows"  class="net.sf.jasperreports.engine.JRDataSource"/>
-
-    <!-- The sum. -->
-    <variable name="sum" class="java.math.BigDecimal"  resetType="Report" calculation="Sum">
-        <variableExpression>
-            <![CDATA[$F{inpayment.sum}]]>
-        </variableExpression>
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-    <columnHeader>
-        <band height="30">
-            <line>
-                <reportElement x="20" y="23" width="510" height="1"/>
-            </line>
-
-            <!-- Faktura nr -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inpaymentlistreport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="80" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inpaymentlistreport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="180" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inpaymentlistreport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="250" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inpaymentlistreport.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="320" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inpaymentlistreport.column.5}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="390" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inpaymentlistreport.column.6}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="460" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inpaymentlistreport.column.7}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="30" isSplitAllowed="true">
-
-
-            <!-- Title -->
-            <textField>
-                <reportElement x="20" y="0" width="30" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.Integer">
-                    <![CDATA[$F{inpayment.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Customer nr -->
-            <textField>
-                <reportElement x="80" y="0" width="200" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{inpayment.text}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Date -->
-            <textField>
-                <reportElement x="470" y="0" width="60" height="14"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{inpayment.date}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Order rows -->
-            <subreport isUsingCache="false">
-                <reportElement x="0" y="12" width="575" height="0" isPrintWhenDetailOverflows="true"/>
-
-                <subreportParameter name="inpayment.number">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{inpayment.number}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-                <subreportParameter name="inpayment.sum">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{inpayment.sum}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-
-
-                <dataSourceExpression>
-                    <![CDATA[$F{inpayment.rows}]]>
-                </dataSourceExpression>
-
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$P{Report}]]>
-                </subreportExpression>
-
-
-            </subreport>
-
-
-        </band>
-    </detail>
-
-    <summary>
-        <band height="20">
-
-            <rectangle>
-                <reportElement x="20" y="0" width="510" height="2" backcolor="#000000"/>
-                <graphicElement pen="None" fill="Solid"/>
-            </rectangle>
-
-            <textField>
-                <reportElement x="20" y="2" width="250" height="14"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inpaymentlistreport.sum}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Total sum-->
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement x="450" y="2" width="80" height="14"/>
-
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$V{sum}]]>
-                </textFieldExpression>
-            </textField>
-        </band>
-    </summary>
-
+<jasperReport name="InpaymentList" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="c6fbac6a-ab00-3b25-9b37-c4aa0128dddf">
+	<parameter name="Report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="Parameters" class="java.util.HashMap"/>
+	<field name="inpayment.number" class="java.lang.Integer"/>
+	<field name="inpayment.date" class="java.lang.String"/>
+	<field name="inpayment.text" class="java.lang.String"/>
+	<field name="inpayment.sum" class="java.math.BigDecimal"/>
+	<field name="inpayment.rows" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<variable name="sum" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{inpayment.sum}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<columnHeader height="30" splitType="Stretch">
+		<element kind="line" uuid="120eb548-609f-3b49-805a-828d698da94e" stretchType="NoStretch" x="20" y="23" width="510" height="1"/>
+		<element kind="textField" uuid="f1e36d6c-5e75-34ee-a2bb-679f1dd4e710" stretchType="NoStretch" x="20" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{inpaymentlistreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="42b15728-3f8b-31af-935e-484005d8224c" stretchType="NoStretch" x="80" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{inpaymentlistreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="0368297d-3a68-34d0-b69d-34377aa25392" stretchType="NoStretch" x="180" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{inpaymentlistreport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="ab30d7bf-a44f-3f13-82b7-8954fcffb62e" stretchType="NoStretch" x="250" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{inpaymentlistreport.column.4}]]></expression>
+		</element>
+		<element kind="textField" uuid="a3b28611-f868-3f43-8f62-dd1039857e4a" stretchType="NoStretch" x="320" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{inpaymentlistreport.column.5}]]></expression>
+		</element>
+		<element kind="textField" uuid="baf0af74-7f00-37e5-84c0-601eb18c981b" stretchType="NoStretch" x="390" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{inpaymentlistreport.column.6}]]></expression>
+		</element>
+		<element kind="textField" uuid="4acc7a07-e1e2-3487-a871-2479514fbb9d" stretchType="NoStretch" x="460" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{inpaymentlistreport.column.7}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="30" splitType="Stretch">
+			<element kind="textField" uuid="870d4ed4-60a7-3b71-968b-3bb8d5910a84" stretchType="NoStretch" x="20" y="0" width="30" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{inpayment.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="587efa1e-4d08-386e-8bd2-b1bcbc22cd9d" stretchType="NoStretch" x="80" y="0" width="200" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{inpayment.text}]]></expression>
+			</element>
+			<element kind="textField" uuid="f086fe26-4334-3077-8509-4830f38d5700" stretchType="NoStretch" x="470" y="0" width="60" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{inpayment.date}]]></expression>
+			</element>
+			<element kind="subreport" uuid="6e286485-57c8-320d-b05f-91c33a314c8c" stretchType="NoStretch" x="0" y="12" width="575" height="0" usingCache="false" printWhenDetailOverflows="true">
+				<dataSourceExpression><![CDATA[$F{inpayment.rows}]]></dataSourceExpression>
+				<expression><![CDATA[$P{Report}]]></expression>
+				<parameter name="inpayment.number">
+					<expression><![CDATA[$F{inpayment.number}]]></expression>
+				</parameter>
+				<parameter name="inpayment.sum">
+					<expression><![CDATA[$F{inpayment.sum}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
+	<summary height="20" splitType="Stretch">
+		<element kind="rectangle" uuid="04386858-816a-3643-87a9-e7b8777ba400" stretchType="NoStretch" x="20" y="0" width="510" height="2" backcolor="#000000" fill="Solid">
+			<pen lineWidth="0.0" lineStyle="Solid"/>
+		</element>
+		<element kind="textField" uuid="b2ccb25c-70e8-3fa7-b6d3-ab47bc8a4d98" stretchType="NoStretch" x="20" y="2" width="250" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="false">
+			<expression><![CDATA[$R{inpaymentlistreport.sum}]]></expression>
+		</element>
+		<element kind="textField" uuid="d2893ce8-4351-37da-8ff1-e32706b3dacc" stretchType="NoStretch" x="450" y="2" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+			<expression><![CDATA[$V{sum}]]></expression>
+		</element>
+	</summary>
 </jasperReport>

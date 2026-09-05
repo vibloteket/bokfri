@@ -1,234 +1,76 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="Tenderist" resourceBundle="book">
-
-    <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="Parameters" class="java.util.HashMap"/>
-
-
-    <!-- Declared fields in the report. -->
-
-    <field name="tender.number"       class="java.lang.Integer"/>
-    <field name="tender.customernr"   class="java.lang.String"/>
-    <field name="tender.customername" class="java.lang.String"/>
-    <field name="tender.currency"     class="java.lang.String"/>
-    <field name="tender.date"         class="java.lang.String"/>
-    <field name="tender.sum"          class="java.math.BigDecimal"/>
-
-    <field name="tender.rows"  class="net.sf.jasperreports.engine.JRDataSource"/>
-
-    <!-- The sum. -->
-    <variable name="sum" class="java.math.BigDecimal"  resetType="Report" calculation="Sum">
-        <variableExpression>
-            <![CDATA[$F{tender.sum}]]>
-        </variableExpression>
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-    <columnHeader>
-        <band height="30">
-            <line>
-                <reportElement x="20" y="23" width="510" height="1"/>
-            </line>
-
-            <!-- Column 1 -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{tenderlistreport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="80" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{tenderlistreport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="140" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{tenderlistreport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="270" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{tenderlistreport.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="320" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{tenderlistreport.column.5}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="380" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{tenderlistreport.column.6}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="480" y="0" width="50" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{tenderlistreport.column.7}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="30" isSplitAllowed="true">
-
-
-            <!-- Title -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="20" y="0" width="30" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.Integer">
-                    <![CDATA[$F{tender.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Customer nr -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="80" y="0" width="200" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{tender.customernr}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Customer name -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="140" y="0" width="200" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{tender.customername}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Currency -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="380" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"  isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{tender.currency}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Date -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="470" y="0" width="60" height="14"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{tender.date}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Order rows -->
-            <subreport isUsingCache="false">
-                <reportElement x="20" y="12" width="555" height="0" isPrintWhenDetailOverflows="true"/>
-
-                <subreportParameter name="order.number">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{tender.number}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-                <dataSourceExpression>
-                    <![CDATA[$F{tender.rows}]]>
-                </dataSourceExpression>
-
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$P{Report}]]>
-                </subreportExpression>
-
-
-            </subreport>
-
-
-        </band>
-    </detail>
-
-    <summary>
-        <band height="20">
-
-            <rectangle>
-                <reportElement x="20" y="0" width="510" height="2" backcolor="#000000"/>
-                <graphicElement pen="None" fill="Solid"/>
-            </rectangle>
-
-            <textField>
-                <reportElement x="20" y="2" width="250" height="14"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inpaymentlistreport.sum}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Total sum-->
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement x="450" y="2" width="80" height="14"/>
-
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$V{sum}]]>
-                </textFieldExpression>
-            </textField>
-        </band>
-    </summary>
-
+<jasperReport name="Tenderist" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="38a0a3d6-d6ba-3c0d-82e8-4effeb530e63">
+	<parameter name="Report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="Parameters" class="java.util.HashMap"/>
+	<field name="tender.number" class="java.lang.Integer"/>
+	<field name="tender.customernr" class="java.lang.String"/>
+	<field name="tender.customername" class="java.lang.String"/>
+	<field name="tender.currency" class="java.lang.String"/>
+	<field name="tender.date" class="java.lang.String"/>
+	<field name="tender.sum" class="java.math.BigDecimal"/>
+	<field name="tender.rows" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<variable name="sum" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{tender.sum}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<columnHeader height="30" splitType="Stretch">
+		<element kind="line" uuid="9dbb0336-36e8-3907-9ec6-bb2873333d5a" stretchType="NoStretch" x="20" y="23" width="510" height="1"/>
+		<element kind="textField" uuid="01c839bb-7a2b-3a3e-b292-961e7aab5d17" stretchType="NoStretch" x="20" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{tenderlistreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="2e7f70c4-3f32-3599-a9fd-4cc95eec671c" stretchType="NoStretch" x="80" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{tenderlistreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="44b75774-e6b2-312d-8bdf-386bcc16056e" stretchType="NoStretch" x="140" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{tenderlistreport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="b2142e9c-094e-332c-bcfe-c0234ae96309" stretchType="NoStretch" x="270" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{tenderlistreport.column.4}]]></expression>
+		</element>
+		<element kind="textField" uuid="e844b4d8-f3ef-3e67-b429-c58a59f4f144" stretchType="NoStretch" x="320" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{tenderlistreport.column.5}]]></expression>
+		</element>
+		<element kind="textField" uuid="97502ccd-2fab-3cb0-a34e-4b329ccac3b9" stretchType="NoStretch" x="380" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{tenderlistreport.column.6}]]></expression>
+		</element>
+		<element kind="textField" uuid="5804fddd-2b7f-304d-bd23-6cc0f19f83eb" stretchType="NoStretch" x="480" y="0" width="50" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{tenderlistreport.column.7}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="30" splitType="Stretch">
+			<element kind="textField" uuid="593d7256-6d02-3e4d-a5da-5252202afd57" stretchType="NoStretch" x="20" y="0" width="30" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true">
+				<expression><![CDATA[$F{tender.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="bedb4673-3ea9-37c6-8648-be05a770ae03" stretchType="NoStretch" x="80" y="0" width="200" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true">
+				<expression><![CDATA[$F{tender.customernr}]]></expression>
+			</element>
+			<element kind="textField" uuid="bb415109-7006-30ea-92f1-78956d451533" stretchType="NoStretch" x="140" y="0" width="200" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true">
+				<expression><![CDATA[$F{tender.customername}]]></expression>
+			</element>
+			<element kind="textField" uuid="f1b1f7bf-fedb-3b61-90fa-5d836169d314" stretchType="NoStretch" x="380" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{tender.currency}]]></expression>
+			</element>
+			<element kind="textField" uuid="d4648ba8-773b-3402-b784-92ac6c599694" stretchType="NoStretch" x="470" y="0" width="60" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{tender.date}]]></expression>
+			</element>
+			<element kind="subreport" uuid="83ed47fa-e612-3d8d-b8e6-354a3be9d2b2" stretchType="NoStretch" x="20" y="12" width="555" height="0" usingCache="false" printWhenDetailOverflows="true">
+				<dataSourceExpression><![CDATA[$F{tender.rows}]]></dataSourceExpression>
+				<expression><![CDATA[$P{Report}]]></expression>
+				<parameter name="order.number">
+					<expression><![CDATA[$F{tender.number}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
+	<summary height="20" splitType="Stretch">
+		<element kind="rectangle" uuid="33b31ded-7ea2-3490-a2cc-823a81921a58" stretchType="NoStretch" x="20" y="0" width="510" height="2" backcolor="#000000" fill="Solid">
+			<pen lineWidth="0.0" lineStyle="Solid"/>
+		</element>
+		<element kind="textField" uuid="9c7945d6-0d70-3b91-97ab-ba77b7c9f900" stretchType="NoStretch" x="20" y="2" width="250" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="false">
+			<expression><![CDATA[$R{inpaymentlistreport.sum}]]></expression>
+		</element>
+		<element kind="textField" uuid="7830858f-7b1e-3f64-abfd-eb07351d4fac" stretchType="NoStretch" x="450" y="2" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+			<expression><![CDATA[$V{sum}]]></expression>
+		</element>
+	</summary>
 </jasperReport>

@@ -1,45 +1,19 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="MultiReport" resourceBundle="book" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
-
-    <field name="report.name"       class="java.lang.String"/>
-
-    <field name="report.report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <field name="report.datasource" class="net.sf.jasperreports.engine.JRDataSource"/>
-    <field name="report.parameters" class="java.util.Map"/>
-    <field name="report.bundle"     class="java.util.ResourceBundle"/>
-
-    <!-- 595  842 -->
-    <detail >
-        <band height="842" isSplitAllowed="true">
-            <subreport>
-                <reportElement x="0" y="0" width="595" height="842" isPrintWhenDetailOverflows="true" backcolor="#FF0000" stretchType="RelativeToBandHeight"/>
-
-
-
-                <parametersMapExpression>
-                    <![CDATA[$F{report.parameters}]]>
-                </parametersMapExpression>
-
-                <subreportParameter name="REPORT_RESOURCE_BUNDLE">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{report.bundle}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-                <dataSourceExpression>
-                    <![CDATA[$F{report.datasource}]]>
-                </dataSourceExpression>
-                
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$F{report.report}]]>
-                </subreportExpression>
-            </subreport>
-
-        </band>
-    </detail>
-
-
+<jasperReport name="MultiReport" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" resourceBundle="book" uuid="973e1bc8-2543-3e95-aa56-55d0a6e859e2">
+	<field name="report.name" class="java.lang.String"/>
+	<field name="report.report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<field name="report.datasource" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<field name="report.parameters" class="java.util.Map"/>
+	<field name="report.bundle" class="java.util.ResourceBundle"/>
+	<detail>
+		<band height="842" splitType="Stretch">
+			<element kind="subreport" uuid="02dbc6d0-a69e-3fa2-8fff-956cdb3bb908" stretchType="ContainerHeight" x="0" y="0" width="595" height="842" backcolor="#FF0000" printWhenDetailOverflows="true">
+				<parametersMapExpression><![CDATA[$F{report.parameters}]]></parametersMapExpression>
+				<dataSourceExpression><![CDATA[$F{report.datasource}]]></dataSourceExpression>
+				<expression><![CDATA[$F{report.report}]]></expression>
+				<parameter name="REPORT_RESOURCE_BUNDLE">
+					<expression><![CDATA[$F{report.bundle}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

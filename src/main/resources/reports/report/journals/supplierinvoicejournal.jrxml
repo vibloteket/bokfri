@@ -1,245 +1,79 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="Supplierinvoicejournal" resourceBundle="book">
-
-    <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="Parameters" class="java.util.HashMap"/>
-
-
-    <!-- Declared fields in the report. -->
-
-    <field name="supplierinvoice.number"          class="java.lang.Integer"/>
-
-    <field name="supplierinvoice.suppliernr"      class="java.lang.String"/>
-    <field name="supplierinvoice.suppliername"    class="java.lang.String"/>
-
-    <field name="supplierinvoice.date"            class="java.lang.String"/>
-    <field name="supplierinvoice.sum"             class="java.math.BigDecimal"/>
-    <field name="supplierinvoice.tax"             class="java.math.BigDecimal"/>
-    <field name="supplierinvoice.currency"        class="java.lang.String"/>
-    <field name="supplierinvoice.currencyrate"    class="java.math.BigDecimal"/>
-    <field name="supplierinvoice.localsum"        class="java.math.BigDecimal"/>
-
-
-    <field name="journal.rows"     class="net.sf.jasperreports.engine.JRDataSource"/>
-
-
-    <!-- The sum. -->
-    <variable name="sum" class="java.math.BigDecimal"  resetType="Report" calculation="Sum">
-        <variableExpression>
-            <![CDATA[$F{supplierinvoice.localsum}]]>
-        </variableExpression>
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-
-    <columnHeader>
-        <band height="30">
-            <line>
-                <reportElement x="20" y="23" width="510" height="1"/>
-            </line>
-
-            <!-- Column 1 -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierinvoicejournal.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="80" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierinvoicejournal.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="140" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierinvoicejournal.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="270" y="0" width="50" height="24" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierinvoicejournal.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="320" y="0" width="50" height="24" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierinvoicejournal.column.5}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="370" y="0" width="80" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierinvoicejournal.column.6}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="450" y="0" width="80" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierinvoicejournal.column.7}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="90" isSplitAllowed="true">
-
-
-            <!-- Invoice number -->
-            <textField>
-                <reportElement x="20" y="0" width="30" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.Integer">
-                    <![CDATA[$F{supplierinvoice.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Customer number -->
-            <textField>
-                <reportElement x="80" y="0" width="80" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{supplierinvoice.suppliernr}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Customer name -->
-            <textField>
-                <reportElement x="140" y="0" width="150" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{supplierinvoice.suppliername}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Invoice date -->
-            <textField>
-                <reportElement x="370" y="0" width="80" height="14"/>
-                <textElement  textAlignment="Right">
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{supplierinvoice.date}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Invoice currency -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="450" y="0" width="80" height="14"/>
-                <textElement  textAlignment="Right">
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{supplierinvoice.currency}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Order rows -->
-            <subreport isUsingCache="false">
-                <reportElement x="0" y="12" width="555" height="70" isPrintWhenDetailOverflows="true"/>
-
-                <subreportParameter name="supplierinvoice.suppliernr">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{supplierinvoice.number}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-                <dataSourceExpression>
-                    <![CDATA[$F{journal.rows}]]>
-                </dataSourceExpression>
-
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$P{Report}]]>
-                </subreportExpression>
-
-            </subreport>
-
-
-
-
-
-        </band>
-    </detail>
-
-
-    <summary>
-        <band height="20">
-
-            <rectangle>
-                <reportElement x="20" y="0" width="510" height="2" backcolor="#000000"/>
-                <graphicElement pen="None" fill="Solid"/>
-            </rectangle>
-
-            <textField>
-                <reportElement x="20" y="2" width="250" height="14"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{supplierinvoicejournal.totalsum}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Total sum-->
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement x="450" y="2" width="80" height="14"/>
-
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$V{sum} != null ? $V{sum} : new BigDecimal(0.0)]]>
-                </textFieldExpression>
-            </textField>
-        </band>
-    </summary>
-
-
+<jasperReport name="Supplierinvoicejournal" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="e0cd9bc8-2cc0-3a13-abdc-a325d0c3af5e">
+	<parameter name="Report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="Parameters" class="java.util.HashMap"/>
+	<field name="supplierinvoice.number" class="java.lang.Integer"/>
+	<field name="supplierinvoice.suppliernr" class="java.lang.String"/>
+	<field name="supplierinvoice.suppliername" class="java.lang.String"/>
+	<field name="supplierinvoice.date" class="java.lang.String"/>
+	<field name="supplierinvoice.sum" class="java.math.BigDecimal"/>
+	<field name="supplierinvoice.tax" class="java.math.BigDecimal"/>
+	<field name="supplierinvoice.currency" class="java.lang.String"/>
+	<field name="supplierinvoice.currencyrate" class="java.math.BigDecimal"/>
+	<field name="supplierinvoice.localsum" class="java.math.BigDecimal"/>
+	<field name="journal.rows" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<variable name="sum" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{supplierinvoice.localsum}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<columnHeader height="30" splitType="Stretch">
+		<element kind="line" uuid="337c3465-bc3a-3ce2-ab3a-509ce31f2802" stretchType="NoStretch" x="20" y="23" width="510" height="1"/>
+		<element kind="textField" uuid="01f58fcd-2724-33d8-9c83-4ab84374f540" stretchType="NoStretch" x="20" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{supplierinvoicejournal.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="b0f92df6-b665-3fa5-9128-8ec8127a854e" stretchType="NoStretch" x="80" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{supplierinvoicejournal.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="bae238eb-cb70-3b9e-a533-05f76c992118" stretchType="NoStretch" x="140" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{supplierinvoicejournal.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="9fdb3de7-0ef6-32b3-a21b-d1c9502826b0" stretchType="NoStretch" x="270" y="0" width="50" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{supplierinvoicejournal.column.4}]]></expression>
+		</element>
+		<element kind="textField" uuid="8ea8e4a9-f1db-39c2-a215-48f8a69b60d1" stretchType="NoStretch" x="320" y="0" width="50" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{supplierinvoicejournal.column.5}]]></expression>
+		</element>
+		<element kind="textField" uuid="d2895285-bccb-38b1-b68f-3b146525034b" stretchType="NoStretch" x="370" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{supplierinvoicejournal.column.6}]]></expression>
+		</element>
+		<element kind="textField" uuid="33c5b0dd-407b-35e8-a5c3-e8c3b5744f68" stretchType="NoStretch" x="450" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{supplierinvoicejournal.column.7}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="90" splitType="Stretch">
+			<element kind="textField" uuid="455745f5-5af5-399b-99a3-a087a50bdd0c" stretchType="NoStretch" x="20" y="0" width="30" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{supplierinvoice.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="3658e183-addf-3a9c-aa77-5dc04caf1955" stretchType="NoStretch" x="80" y="0" width="80" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{supplierinvoice.suppliernr}]]></expression>
+			</element>
+			<element kind="textField" uuid="a4a443ac-b1f5-368a-a3ad-293721a9c7ce" stretchType="NoStretch" x="140" y="0" width="150" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{supplierinvoice.suppliername}]]></expression>
+			</element>
+			<element kind="textField" uuid="d93e1ad5-7edf-39f9-9459-9c44eee3eefa" stretchType="NoStretch" x="370" y="0" width="80" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{supplierinvoice.date}]]></expression>
+			</element>
+			<element kind="textField" uuid="23dce3e6-ada0-3c13-a8e4-76507c68a7b6" stretchType="NoStretch" x="450" y="0" width="80" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{supplierinvoice.currency}]]></expression>
+			</element>
+			<element kind="subreport" uuid="5cdb174b-5947-36ef-91be-ff50977411b2" stretchType="NoStretch" x="0" y="12" width="555" height="70" usingCache="false" printWhenDetailOverflows="true">
+				<dataSourceExpression><![CDATA[$F{journal.rows}]]></dataSourceExpression>
+				<expression><![CDATA[$P{Report}]]></expression>
+				<parameter name="supplierinvoice.suppliernr">
+					<expression><![CDATA[$F{supplierinvoice.number}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
+	<summary height="20" splitType="Stretch">
+		<element kind="rectangle" uuid="afeb41b9-1a59-39fa-a4e6-388498ffcf6c" stretchType="NoStretch" x="20" y="0" width="510" height="2" backcolor="#000000" fill="Solid">
+			<pen lineWidth="0.0" lineStyle="Solid"/>
+		</element>
+		<element kind="textField" uuid="1320d518-3403-3af2-bfce-3713b0c4687e" stretchType="NoStretch" x="20" y="2" width="250" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="false">
+			<expression><![CDATA[$R{supplierinvoicejournal.totalsum}]]></expression>
+		</element>
+		<element kind="textField" uuid="dcaa69b1-db6a-3d79-9c25-78bb876b9fdb" stretchType="NoStretch" x="450" y="2" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+			<expression><![CDATA[$V{sum} != null ? $V{sum} : new BigDecimal(0.0)]]></expression>
+		</element>
+	</summary>
 </jasperReport>

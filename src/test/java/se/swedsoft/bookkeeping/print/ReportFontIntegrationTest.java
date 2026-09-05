@@ -40,26 +40,20 @@ class ReportFontIntegrationTest {
         SSReportFonts.register();
         String source = """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
-                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                    xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
-                    http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-                    name="FontProbe" pageWidth="300" pageHeight="180" columnWidth="260"
-                    leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+                <jasperReport name="FontProbe" language="java" pageWidth="300" pageHeight="180"
+                    columnWidth="260" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
                   <detail><band height="112">
-                    <staticText><reportElement x="0" y="0" width="260" height="20"/>
-                      <textElement><font size="12"/></textElement><text><![CDATA[Regular åäö ÅÄÖ € SEK]]></text>
-                    </staticText>
-                    <staticText><reportElement x="0" y="22" width="260" height="20"/>
-                      <textElement><font size="12" isBold="true"/></textElement><text><![CDATA[Bold åäö]]></text>
-                    </staticText>
-                    <staticText><reportElement x="0" y="44" width="260" height="20"/>
-                      <textElement><font size="12" isItalic="true"/></textElement><text><![CDATA[Italic åäö]]></text>
-                    </staticText>
-                    <staticText><reportElement x="0" y="60" width="260" height="16"/>
-                      <textElement><font size="12" isBold="true" isItalic="true"/></textElement>
+                    <element kind="staticText" x="0" y="0" width="260" height="20" fontSize="12.0">
+                      <text><![CDATA[Regular åäö ÅÄÖ € SEK]]></text>
+                    </element>
+                    <element kind="staticText" x="0" y="22" width="260" height="20"
+                        fontSize="12.0" bold="true"><text><![CDATA[Bold åäö]]></text></element>
+                    <element kind="staticText" x="0" y="44" width="260" height="20"
+                        fontSize="12.0" italic="true"><text><![CDATA[Italic åäö]]></text></element>
+                    <element kind="staticText" x="0" y="60" width="260" height="16"
+                        fontSize="12.0" bold="true" italic="true">
                       <text><![CDATA[Bold italic åäö]]></text>
-                    </staticText>
+                    </element>
                   </band></detail>
                 </jasperReport>
                 """;

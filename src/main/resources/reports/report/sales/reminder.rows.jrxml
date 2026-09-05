@@ -1,183 +1,140 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="ReminderRows">
-    <template><![CDATA["reports/report/styles/bokfri.jrtx"]]></template>
-
-    <parameter name="reminder.reminderfee" class="java.math.BigDecimal"/>
-    <parameter name="reminder.saldo.sum" class="java.math.BigDecimal"/>
-    <parameter name="reminder.interest.sum" class="java.math.BigDecimal"/>
-    <parameter name="customer.currency" class="java.lang.String"/>
-
-    <field name="invoice.number"        class="java.lang.String"/>
-    <field name="invoice.date"          class="java.lang.String"/>
-    <field name="invoice.duedate"       class="java.lang.String"/>
-    <field name="invoice.duedays"       class="java.lang.Integer"/>
-    <field name="invoice.numreminders"  class="java.lang.Integer"/>
-    <field name="invoice.delayinterest" class="java.math.BigDecimal"/>
-    <field name="invoice.saldo"         class="java.math.BigDecimal"/>
-    <field name="invoice.delayfee"      class="java.math.BigDecimal"/>
-
-
-    <variable name="delayfee.sum" class="java.math.BigDecimal" calculation="Sum" resetType="Report">
-        <variableExpression>
-            <![CDATA[$F{invoice.delayfee}]]>
-        </variableExpression>
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-    <variable name="saldo.sum"  class="java.math.BigDecimal" calculation="Sum" resetType="Report">
-        <variableExpression>
-            <![CDATA[$F{invoice.saldo}]]>
-        </variableExpression>
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-
-    <columnHeader>
-        <band height="20" isSplitAllowed="false">
-            <staticText>
-                <reportElement style="BokfriSection" x="0" y="3" width="510" height="14"/>
-                <text><![CDATA[Fakturauppgifter]]></text>
-            </staticText>
-            <line>
-                <reportElement x="0" y="19" width="510" height="1"/>
-                <graphicElement pen="Thin"/>
-            </line>
-        </band>
-    </columnHeader>
-
-    <detail>
-        <band height="92" isSplitAllowed="false">
-            <printWhenExpression><![CDATA[$F{invoice.duedays}.intValue() > 0]]></printWhenExpression>
-
-            <!-- One vertically flowing information block per invoice. -->
-            <textField>
-                <reportElement style="BokfriLabel" x="0" y="5" width="110" height="13"/>
-                <textFieldExpression><![CDATA[$R{reminderreport.column.1}]]></textFieldExpression>
-            </textField>
-            <textField isBlankWhenNull="true">
-                <reportElement style="BokfriCompactValueRight" x="115" y="4" width="135" height="14"/>
-                <textFieldExpression class="java.lang.String"><![CDATA[$F{invoice.number}]]></textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement style="BokfriLabel" x="0" y="23" width="110" height="13"/>
-                <textFieldExpression><![CDATA[$R{reminderreport.column.2}]]></textFieldExpression>
-            </textField>
-            <textField isBlankWhenNull="true">
-                <reportElement style="BokfriValueRight" x="115" y="23" width="135" height="13"/>
-                <textFieldExpression class="java.lang.String"><![CDATA[$F{invoice.date}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement style="BokfriLabel" x="265" y="23" width="110" height="13"/>
-                <textFieldExpression><![CDATA[$R{reminderreport.column.3}]]></textFieldExpression>
-            </textField>
-            <textField isBlankWhenNull="true">
-                <reportElement style="BokfriValueRight" x="380" y="23" width="130" height="13"/>
-                <textFieldExpression class="java.lang.String"><![CDATA[$F{invoice.duedate}]]></textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement style="BokfriLabel" x="0" y="40" width="110" height="13"/>
-                <textFieldExpression><![CDATA[$R{reminderreport.column.4}]]></textFieldExpression>
-            </textField>
-            <textField isBlankWhenNull="true">
-                <reportElement style="BokfriNumber" x="115" y="40" width="135" height="13"/>
-                <textFieldExpression class="java.lang.Integer"><![CDATA[$F{invoice.duedays}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement style="BokfriLabel" x="265" y="40" width="110" height="13"/>
-                <textFieldExpression><![CDATA[$R{reminderreport.column.5}]]></textFieldExpression>
-            </textField>
-            <textField isBlankWhenNull="true">
-                <reportElement style="BokfriNumber" x="380" y="40" width="130" height="13"/>
-                <textFieldExpression class="java.lang.Integer"><![CDATA[$F{invoice.numreminders}]]></textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement style="BokfriLabel" x="0" y="57" width="110" height="13"/>
-                <textFieldExpression><![CDATA[$R{reminderreport.column.6}]]></textFieldExpression>
-            </textField>
-            <textField pattern="#,##0.00' %'" isBlankWhenNull="true">
-                <reportElement style="BokfriNumber" x="115" y="57" width="135" height="13"/>
-                <textFieldExpression class="java.math.BigDecimal"><![CDATA[$F{invoice.delayinterest}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement style="BokfriLabel" x="265" y="57" width="110" height="13"/>
-                <textFieldExpression><![CDATA[$R{reminderreport.column.7}]]></textFieldExpression>
-            </textField>
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement style="BokfriNumber" x="380" y="57" width="130" height="13"/>
-                <textFieldExpression class="java.math.BigDecimal"><![CDATA[$F{invoice.saldo}]]></textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement style="BokfriLabel" x="265" y="74" width="110" height="13"/>
-                <textFieldExpression><![CDATA[$R{reminderreport.column.8}]]></textFieldExpression>
-            </textField>
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement style="BokfriNumber" x="380" y="74" width="130" height="13"/>
-                <textFieldExpression class="java.math.BigDecimal"><![CDATA[$F{invoice.delayfee}]]></textFieldExpression>
-            </textField>
-
-            <line>
-                <reportElement x="0" y="91" width="510" height="1"/>
-                <graphicElement pen="Thin"/>
-            </line>
-        </band>
-    </detail>
-
-    <pageFooter>
-        <band height="12">
-            <!-- Number -->
-            <textField>
-                <reportElement x="0" y="0" width="510" height="12"/>
-
-                <box bottomBorder="Thin" borderColor="#000000" />
-
-                <textElement textAlignment="Right" verticalAlignment="Bottom">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$R{reminderreport.continuing}]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </pageFooter>
-
-    <lastPageFooter>
-        <band height="0">
-        </band>
-    </lastPageFooter>
-
-
-    <summary>
-        <band height="50" isSplitAllowed="false">
-            <!-- Twelve points are approximately four millimetres of spacing. -->
-            <frame>
-                <reportElement x="0" y="12" width="510" height="38"/>
-                <box border="Thin" borderColor="#000000"/>
-                <line><reportElement x="127" y="0" width="1" height="38"/><graphicElement pen="Thin"/></line>
-                <line><reportElement x="254" y="0" width="1" height="38"/><graphicElement pen="Thin"/></line>
-                <line><reportElement x="381" y="0" width="1" height="38"/><graphicElement pen="Thin"/></line>
-                <textField isBlankWhenNull="true"><reportElement style="BokfriTotalLabel" x="5" y="3" width="117" height="10"/><textFieldExpression><![CDATA[$R{reminderreport.totalreminderfee}]]></textFieldExpression></textField>
-                <textField isBlankWhenNull="true" pattern="#,##0.00"><reportElement style="BokfriTotalValue" x="12" y="20" width="103" height="14"/><textFieldExpression class="java.math.BigDecimal"><![CDATA[$P{reminder.reminderfee}]]></textFieldExpression></textField>
-                <textField isBlankWhenNull="true"><reportElement style="BokfriTotalLabel" x="132" y="3" width="117" height="10"/><textFieldExpression><![CDATA[$R{reminderreport.delayfee}]]></textFieldExpression></textField>
-                <textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement style="BokfriTotalValue" x="139" y="20" width="103" height="14"/><textFieldExpression class="java.math.BigDecimal"><![CDATA[$P{reminder.interest.sum}]]></textFieldExpression></textField>
-                <textField isBlankWhenNull="true"><reportElement style="BokfriTotalLabel" x="259" y="3" width="117" height="10"/><textFieldExpression><![CDATA[$R{reminderreport.saldosum}]]></textFieldExpression></textField>
-                <textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement style="BokfriTotalValue" x="266" y="20" width="103" height="14"/><textFieldExpression class="java.math.BigDecimal"><![CDATA[$P{reminder.saldo.sum}]]></textFieldExpression></textField>
-                <textField isBlankWhenNull="true"><reportElement style="BokfriTotalLabel" x="386" y="3" width="117" height="10"/><textElement><font isBold="true"/></textElement><textFieldExpression><![CDATA[$R{reminderreport.totalsum}]]></textFieldExpression></textField>
-                <textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement style="BokfriTotalValue" x="393" y="20" width="82" height="14"/><textFieldExpression class="java.math.BigDecimal"><![CDATA[$P{reminder.interest.sum}.add($P{reminder.saldo.sum}).add($P{reminder.reminderfee})]]></textFieldExpression></textField>
-                <textField isBlankWhenNull="true"><reportElement style="BokfriValue" x="478" y="20" width="27" height="14"/><textFieldExpression><![CDATA[$P{customer.currency}]]></textFieldExpression></textField>
-            </frame>
-        </band>
-    </summary>
-
+<jasperReport name="ReminderRows" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" uuid="fe900a40-2998-3dcf-9b99-b84ce993ad88">
+	<template><![CDATA["reports/report/styles/bokfri.jrtx"]]></template>
+	<parameter name="reminder.reminderfee" class="java.math.BigDecimal"/>
+	<parameter name="reminder.saldo.sum" class="java.math.BigDecimal"/>
+	<parameter name="reminder.interest.sum" class="java.math.BigDecimal"/>
+	<parameter name="customer.currency" class="java.lang.String"/>
+	<field name="invoice.number" class="java.lang.String"/>
+	<field name="invoice.date" class="java.lang.String"/>
+	<field name="invoice.duedate" class="java.lang.String"/>
+	<field name="invoice.duedays" class="java.lang.Integer"/>
+	<field name="invoice.numreminders" class="java.lang.Integer"/>
+	<field name="invoice.delayinterest" class="java.math.BigDecimal"/>
+	<field name="invoice.saldo" class="java.math.BigDecimal"/>
+	<field name="invoice.delayfee" class="java.math.BigDecimal"/>
+	<variable name="delayfee.sum" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{invoice.delayfee}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="saldo.sum" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{invoice.saldo}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<columnHeader height="20" splitType="Prevent">
+		<element kind="staticText" uuid="e1c26f9f-4918-3c98-b544-0915fdfa6f06" stretchType="NoStretch" x="0" y="3" width="510" height="14" style="BokfriSection">
+			<text><![CDATA[Fakturauppgifter]]></text>
+		</element>
+		<element kind="line" uuid="983db820-205f-30ed-ac41-b0aebd483642" stretchType="NoStretch" x="0" y="19" width="510" height="1">
+			<pen lineWidth="0.5" lineStyle="Solid"/>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="92" splitType="Prevent">
+			<printWhenExpression><![CDATA[$F{invoice.duedays}.intValue() > 0]]></printWhenExpression>
+			<element kind="textField" uuid="e0106e9c-dde7-3f6d-bc6c-ab33dbda81dc" stretchType="NoStretch" x="0" y="5" width="110" height="13" linkType="None" linkTarget="Self" style="BokfriLabel">
+				<expression><![CDATA[$R{reminderreport.column.1}]]></expression>
+			</element>
+			<element kind="textField" uuid="8086b883-966c-339c-9904-deb92789510d" stretchType="NoStretch" x="115" y="4" width="135" height="14" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriCompactValueRight">
+				<expression><![CDATA[$F{invoice.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="b8495d99-8dad-3801-900b-143ce5de5e5d" stretchType="NoStretch" x="0" y="23" width="110" height="13" linkType="None" linkTarget="Self" style="BokfriLabel">
+				<expression><![CDATA[$R{reminderreport.column.2}]]></expression>
+			</element>
+			<element kind="textField" uuid="a6090afd-9423-3ccd-9965-1e6fdca0e015" stretchType="NoStretch" x="115" y="23" width="135" height="13" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriValueRight">
+				<expression><![CDATA[$F{invoice.date}]]></expression>
+			</element>
+			<element kind="textField" uuid="9f24d552-1501-3173-83c5-e5c90c576c26" stretchType="NoStretch" x="265" y="23" width="110" height="13" linkType="None" linkTarget="Self" style="BokfriLabel">
+				<expression><![CDATA[$R{reminderreport.column.3}]]></expression>
+			</element>
+			<element kind="textField" uuid="e0726dc7-f18e-3152-82b8-3d9da62929fc" stretchType="NoStretch" x="380" y="23" width="130" height="13" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriValueRight">
+				<expression><![CDATA[$F{invoice.duedate}]]></expression>
+			</element>
+			<element kind="textField" uuid="da97a818-dc0f-3e45-8f7a-1196648a6127" stretchType="NoStretch" x="0" y="40" width="110" height="13" linkType="None" linkTarget="Self" style="BokfriLabel">
+				<expression><![CDATA[$R{reminderreport.column.4}]]></expression>
+			</element>
+			<element kind="textField" uuid="d0892bf7-6afd-32a4-a3f7-81beb206e08b" stretchType="NoStretch" x="115" y="40" width="135" height="13" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriNumber">
+				<expression><![CDATA[$F{invoice.duedays}]]></expression>
+			</element>
+			<element kind="textField" uuid="79950f66-8803-3835-87d6-34180418e1a8" stretchType="NoStretch" x="265" y="40" width="110" height="13" linkType="None" linkTarget="Self" style="BokfriLabel">
+				<expression><![CDATA[$R{reminderreport.column.5}]]></expression>
+			</element>
+			<element kind="textField" uuid="b0ecec5b-2f44-30c5-8120-f9a069d13d55" stretchType="NoStretch" x="380" y="40" width="130" height="13" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriNumber">
+				<expression><![CDATA[$F{invoice.numreminders}]]></expression>
+			</element>
+			<element kind="textField" uuid="cf7e34f4-14fe-3c94-b47c-64a3851bed9b" stretchType="NoStretch" x="0" y="57" width="110" height="13" linkType="None" linkTarget="Self" style="BokfriLabel">
+				<expression><![CDATA[$R{reminderreport.column.6}]]></expression>
+			</element>
+			<element kind="textField" uuid="8349fd67-4e8f-370d-883a-336228428fdd" stretchType="NoStretch" x="115" y="57" width="135" height="13" pattern="#,##0.00' %'" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriNumber">
+				<expression><![CDATA[$F{invoice.delayinterest}]]></expression>
+			</element>
+			<element kind="textField" uuid="de4aeed8-f79d-3997-8cf4-722ef6d833d0" stretchType="NoStretch" x="265" y="57" width="110" height="13" linkType="None" linkTarget="Self" style="BokfriLabel">
+				<expression><![CDATA[$R{reminderreport.column.7}]]></expression>
+			</element>
+			<element kind="textField" uuid="846df5c7-dbd7-3acd-974f-b12ab9ba3c07" stretchType="NoStretch" x="380" y="57" width="130" height="13" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriNumber">
+				<expression><![CDATA[$F{invoice.saldo}]]></expression>
+			</element>
+			<element kind="textField" uuid="adf27586-01f3-3dda-b356-c04dd6416135" stretchType="NoStretch" x="265" y="74" width="110" height="13" linkType="None" linkTarget="Self" style="BokfriLabel">
+				<expression><![CDATA[$R{reminderreport.column.8}]]></expression>
+			</element>
+			<element kind="textField" uuid="d8b49eee-f40d-36b2-b706-9a0fc8f16f15" stretchType="NoStretch" x="380" y="74" width="130" height="13" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriNumber">
+				<expression><![CDATA[$F{invoice.delayfee}]]></expression>
+			</element>
+			<element kind="line" uuid="7b2b1506-b834-356b-86b8-0fab659818c3" stretchType="NoStretch" x="0" y="91" width="510" height="1">
+				<pen lineWidth="0.5" lineStyle="Solid"/>
+			</element>
+		</band>
+	</detail>
+	<pageFooter height="12" splitType="Stretch">
+		<element kind="textField" uuid="e49394b4-0053-36e0-889e-ea8ee65410fc" stretchType="NoStretch" x="0" y="0" width="510" height="12" fontSize="8.0" linkType="None" linkTarget="Self" bold="false" hTextAlign="Right" vTextAlign="Bottom">
+			<expression><![CDATA[$R{reminderreport.continuing}]]></expression>
+			<box>
+				<pen lineColor="#000000"/>
+				<bottomPen lineWidth="0.5" lineStyle="Solid"/>
+			</box>
+		</element>
+	</pageFooter>
+	<lastPageFooter splitType="Stretch"/>
+	<summary height="50" splitType="Prevent">
+		<element kind="frame" uuid="17b81ad4-1562-3372-92ca-33be97ce6dff" stretchType="NoStretch" x="0" y="12" width="510" height="38">
+			<element kind="line" uuid="1056ef22-cd91-3cee-a0fc-248b40168a81" stretchType="NoStretch" x="127" y="0" width="1" height="38">
+				<pen lineWidth="0.5" lineStyle="Solid"/>
+			</element>
+			<element kind="line" uuid="2dcde7dc-a2f0-35c7-ae9c-8a2208e0af1d" stretchType="NoStretch" x="254" y="0" width="1" height="38">
+				<pen lineWidth="0.5" lineStyle="Solid"/>
+			</element>
+			<element kind="line" uuid="69c83f40-f7db-3c88-8fb9-759ae1365d6f" stretchType="NoStretch" x="381" y="0" width="1" height="38">
+				<pen lineWidth="0.5" lineStyle="Solid"/>
+			</element>
+			<element kind="textField" uuid="3cb2c2f4-ab04-300e-ab32-f217faf71bb6" stretchType="NoStretch" x="5" y="3" width="117" height="10" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriTotalLabel">
+				<expression><![CDATA[$R{reminderreport.totalreminderfee}]]></expression>
+			</element>
+			<element kind="textField" uuid="a8e19c70-1ed1-382e-add4-628ec6b39dc4" stretchType="NoStretch" x="12" y="20" width="103" height="14" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriTotalValue">
+				<expression><![CDATA[$P{reminder.reminderfee}]]></expression>
+			</element>
+			<element kind="textField" uuid="458831db-ce8d-3650-a471-35be6f43bf55" stretchType="NoStretch" x="132" y="3" width="117" height="10" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriTotalLabel">
+				<expression><![CDATA[$R{reminderreport.delayfee}]]></expression>
+			</element>
+			<element kind="textField" uuid="fe61b693-a81d-3f51-a488-06a760c72eb4" stretchType="NoStretch" x="139" y="20" width="103" height="14" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriTotalValue">
+				<expression><![CDATA[$P{reminder.interest.sum}]]></expression>
+			</element>
+			<element kind="textField" uuid="609c84f1-fd9e-3d50-97df-36dbe42dddfd" stretchType="NoStretch" x="259" y="3" width="117" height="10" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriTotalLabel">
+				<expression><![CDATA[$R{reminderreport.saldosum}]]></expression>
+			</element>
+			<element kind="textField" uuid="5c7e4bbc-6cc3-332f-8bcc-7b37804fdc0f" stretchType="NoStretch" x="266" y="20" width="103" height="14" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriTotalValue">
+				<expression><![CDATA[$P{reminder.saldo.sum}]]></expression>
+			</element>
+			<element kind="textField" uuid="841d3770-309f-37ae-819f-3083ca682104" stretchType="NoStretch" x="386" y="3" width="117" height="10" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true" style="BokfriTotalLabel">
+				<expression><![CDATA[$R{reminderreport.totalsum}]]></expression>
+			</element>
+			<element kind="textField" uuid="0425fdc8-c837-335f-8a8e-8a31402cbb5f" stretchType="NoStretch" x="393" y="20" width="82" height="14" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriTotalValue">
+				<expression><![CDATA[$P{reminder.interest.sum}.add($P{reminder.saldo.sum}).add($P{reminder.reminderfee})]]></expression>
+			</element>
+			<element kind="textField" uuid="8e2a87e1-d748-360c-b799-601dab1d5cd3" stretchType="NoStretch" x="478" y="20" width="27" height="14" linkType="None" linkTarget="Self" blankWhenNull="true" style="BokfriValue">
+				<expression><![CDATA[$P{customer.currency}]]></expression>
+			</element>
+			<box>
+				<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+			</box>
+		</element>
+	</summary>
 </jasperReport>

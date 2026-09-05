@@ -1,114 +1,38 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="MainBook" resourceBundle="book">
-
-
-    <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="Parameters" class="java.util.HashMap"/>
-
-
-
-    <!-- Declared fields in the report. -->
-
-    <field name="account.number"      class="java.lang.Integer"/>
-    <field name="account.description" class="java.lang.String"/>
-    <field name="account.visible"     class="java.lang.Boolean"/>
-
-    <field name="month.data"  class="net.sf.jasperreports.engine.JRDataSource"/>
-
-    <columnHeader>
-        <band height="30">
-            <line>
-                <reportElement x="20" y="23" width="510" height="1"/>
-            </line>
-
-            <!-- Column 1 -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{budgetreport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="80" y="0" width="220" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{budgetreport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="450" y="0" width="80" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{budgetreport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="30" isSplitAllowed="true">
-
-            <printWhenExpression>
-                <![CDATA[$F{account.visible}]]>
-            </printWhenExpression>
-
-            <!-- Title -->
-            <textField>
-                <reportElement x="20" y="0" width="30" height="14"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.Integer">
-                    <![CDATA[$F{account.number}]]>
-                </textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="80" y="0" width="250" height="14"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{account.description}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <subreport isUsingCache="false">
-                <reportElement x="20" y="14" width="555" height="0" isPrintWhenDetailOverflows="true"/>
-
-                 <subreportParameter name="account.number">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{account.number}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-                <dataSourceExpression>
-                    <![CDATA[$F{month.data}]]>
-                </dataSourceExpression>
-
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$P{Report}]]>
-                </subreportExpression>
-
-
-            </subreport>
-
-
-        </band>
-    </detail>
-
+<jasperReport name="MainBook" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="34d8067a-74e1-3185-b91e-40dc3e40e96d">
+	<parameter name="Report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="Parameters" class="java.util.HashMap"/>
+	<field name="account.number" class="java.lang.Integer"/>
+	<field name="account.description" class="java.lang.String"/>
+	<field name="account.visible" class="java.lang.Boolean"/>
+	<field name="month.data" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<columnHeader height="30" splitType="Stretch">
+		<element kind="line" uuid="695d5979-3898-3e6a-abec-34304720d704" stretchType="NoStretch" x="20" y="23" width="510" height="1"/>
+		<element kind="textField" uuid="d8762289-b4c7-33ce-842b-c566f1fa1415" stretchType="NoStretch" x="20" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{budgetreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="645202ab-c965-318b-a9e8-fee247d426bf" stretchType="NoStretch" x="80" y="0" width="220" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{budgetreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="2249067c-2841-3d7f-a78c-e6f7e8fea04a" stretchType="NoStretch" x="450" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{budgetreport.column.3}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="30" splitType="Stretch">
+			<printWhenExpression><![CDATA[$F{account.visible}]]></printWhenExpression>
+			<element kind="textField" uuid="c22f5df8-ea5c-38c0-b802-937746fb0276" stretchType="NoStretch" x="20" y="0" width="30" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="false">
+				<expression><![CDATA[$F{account.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="9e4cde1a-9093-3ad7-bd86-6c7fccd738c9" stretchType="NoStretch" x="80" y="0" width="250" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="false">
+				<expression><![CDATA[$F{account.description}]]></expression>
+			</element>
+			<element kind="subreport" uuid="9554c295-9226-3999-8d2f-77474ce56d3e" stretchType="NoStretch" x="20" y="14" width="555" height="0" usingCache="false" printWhenDetailOverflows="true">
+				<dataSourceExpression><![CDATA[$F{month.data}]]></dataSourceExpression>
+				<expression><![CDATA[$P{Report}]]></expression>
+				<parameter name="account.number">
+					<expression><![CDATA[$F{account.number}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

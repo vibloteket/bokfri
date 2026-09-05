@@ -1,92 +1,30 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="Resultunits" resourceBundle="book">
-
-    <!-- Declared fields in the report. -->
-    <field name="resultunit.number"      class="java.lang.String"/>
-    <field name="resultunit.name"        class="java.lang.String"/>
-    <field name="resultunit.description" class="java.lang.String"/>
-
-    <columnHeader>
-        <band height="15">
-            <line>
-                <reportElement x="20" y="12" width="510" height="1"/>
-            </line>
-
-            <!-- Column 1 -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{resultunitreport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="80" y="0" width="220" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{resultunitreport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="180" y="0" width="400" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{resultunitreport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </columnHeader>
-
-    <detail>
-        <band height="14">
-            <textField>
-                <reportElement x="20" y="0" width="70" height="14" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{resultunit.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField isBlankWhenNull="true">
-                <reportElement x="80" y="0" width="220" height="14" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{resultunit.name}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField isBlankWhenNull="true">
-                <reportElement x="180" y="0" width="400" height="14" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{resultunit.description}]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </detail>
-
-
-
-
+<jasperReport name="Resultunits" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="24ac3559-bb7f-3e82-96d5-bc4357a5a293">
+	<field name="resultunit.number" class="java.lang.String"/>
+	<field name="resultunit.name" class="java.lang.String"/>
+	<field name="resultunit.description" class="java.lang.String"/>
+	<columnHeader height="15" splitType="Stretch">
+		<element kind="line" uuid="a64716d4-959d-3ad0-bff2-459bf8f4d466" stretchType="NoStretch" x="20" y="12" width="510" height="1"/>
+		<element kind="textField" uuid="e06dbc83-cd32-3217-a3e6-933635d8fe8d" stretchType="NoStretch" x="20" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{resultunitreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="ea3e62fa-920f-30c4-8f21-9bb89b48a39d" stretchType="NoStretch" x="80" y="0" width="220" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{resultunitreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="a4f2d4eb-aad4-3549-86f1-36cc2d6fcb42" stretchType="NoStretch" x="180" y="0" width="400" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{resultunitreport.column.3}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="14" splitType="Stretch">
+			<element kind="textField" uuid="9d1202e4-c336-3908-bb2f-63ed11b0eb42" stretchType="NoStretch" x="20" y="0" width="70" height="14" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$F{resultunit.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="ff821106-5816-336e-9e3d-5012ace372d9" stretchType="NoStretch" x="80" y="0" width="220" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true">
+				<expression><![CDATA[$F{resultunit.name}]]></expression>
+			</element>
+			<element kind="textField" uuid="6f722bcc-45b6-30dc-af5e-949cf348da18" stretchType="NoStretch" x="180" y="0" width="400" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$F{resultunit.description}]]></expression>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

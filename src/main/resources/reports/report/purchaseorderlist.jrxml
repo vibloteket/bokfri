@@ -1,240 +1,76 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="PurchaseOrderList" resourceBundle="book">
-
-    <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="Parameters" class="java.util.HashMap"/>
-
-
-    <!-- Declared fields in the report. -->
-
-    <field name="order.number"       class="java.lang.Integer"/>
-    <field name="order.suppliernr"   class="java.lang.String"/>
-    <field name="order.suppliername" class="java.lang.String"/>
-    <field name="order.date"         class="java.lang.String"/>
-    <field name="order.currency"      class="java.lang.String"/>
-    <field name="order.sum"          	class="java.math.BigDecimal"/>
-
-    <field name="order.rows"  class="net.sf.jasperreports.engine.JRDataSource"/>
-
-    <!-- The sum. -->
-    <variable name="sum" class="java.math.BigDecimal"  resetType="Report" calculation="Sum">
-        <variableExpression>
-            <![CDATA[$F{order.sum}]]>
-        </variableExpression>
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-    <columnHeader>
-        <band height="30">
-            <line>
-                <reportElement x="20" y="23" width="510" height="1"/>
-            </line>
-
-            <!-- Column 1 -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{purchaseorderlistreport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="80" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{purchaseorderlistreport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="140" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{purchaseorderlistreport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="250" y="0" width="90" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{purchaseorderlistreport.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="320" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{purchaseorderlistreport.column.5}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="380" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{purchaseorderlistreport.column.6}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="480" y="0" width="50" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{purchaseorderlistreport.column.7}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="30" isSplitAllowed="true">
-
-
-            <!-- Title -->
-            <textField>
-                <reportElement x="20" y="0" width="30" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.Integer">
-                    <![CDATA[$F{order.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Customer nr -->
-            <textField>
-                <reportElement x="80" y="0" width="200" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{order.suppliernr}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Customer name -->
-            <textField>
-                <reportElement x="140" y="0" width="200" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{order.suppliername}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Currency -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="380" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"  isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{order.currency}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Date -->
-            <textField>
-                <reportElement x="470" y="0" width="60" height="14"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{order.date}]]>
-                </textFieldExpression>
-            </textField>
-            <!--
-     <line>
-        <reportElement x="80" y="12" width="450" height="1"/>
-         <graphicElement pen="Dotted"/>
-    </line>
-            -->
-
-
-            <!-- Order rows -->
-            <subreport isUsingCache="false">
-                <reportElement x="20" y="12" width="555" height="0" isPrintWhenDetailOverflows="true"/>
-
-                <subreportParameter name="order.number">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{order.number}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-                <dataSourceExpression>
-                    <![CDATA[$F{order.rows}]]>
-                </dataSourceExpression>
-
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$P{Report}]]>
-                </subreportExpression>
-
-
-            </subreport>
-
-
-        </band>
-    </detail>
-
-    <summary>
-        <band height="20">
-
-            <rectangle>
-                <reportElement x="20" y="0" width="510" height="2" backcolor="#000000"/>
-                <graphicElement pen="None" fill="Solid"/>
-            </rectangle>
-
-            <textField>
-                <reportElement x="20" y="2" width="250" height="14"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{inpaymentlistreport.sum}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Total sum-->
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement x="450" y="2" width="80" height="14"/>
-
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$V{sum}]]>
-                </textFieldExpression>
-            </textField>
-        </band>
-    </summary>
-    
+<jasperReport name="PurchaseOrderList" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="21fdcb46-86e4-35dd-ac62-65947c6afc5f">
+	<parameter name="Report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="Parameters" class="java.util.HashMap"/>
+	<field name="order.number" class="java.lang.Integer"/>
+	<field name="order.suppliernr" class="java.lang.String"/>
+	<field name="order.suppliername" class="java.lang.String"/>
+	<field name="order.date" class="java.lang.String"/>
+	<field name="order.currency" class="java.lang.String"/>
+	<field name="order.sum" class="java.math.BigDecimal"/>
+	<field name="order.rows" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<variable name="sum" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{order.sum}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<columnHeader height="30" splitType="Stretch">
+		<element kind="line" uuid="d683d917-94e3-34b3-837c-9e60affe00e1" stretchType="NoStretch" x="20" y="23" width="510" height="1"/>
+		<element kind="textField" uuid="a13c6e6b-c72e-3880-bddd-baed0a85c5a0" stretchType="NoStretch" x="20" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{purchaseorderlistreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="00efbe86-3a38-3547-bd2e-391c08473d91" stretchType="NoStretch" x="80" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{purchaseorderlistreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="b95263f1-84fe-38a0-b878-95188ee71820" stretchType="NoStretch" x="140" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{purchaseorderlistreport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="ae9f3015-3e7f-392b-8351-40a5925d5664" stretchType="NoStretch" x="250" y="0" width="90" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{purchaseorderlistreport.column.4}]]></expression>
+		</element>
+		<element kind="textField" uuid="9092480c-4c5e-3620-831f-a4d284f24c61" stretchType="NoStretch" x="320" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{purchaseorderlistreport.column.5}]]></expression>
+		</element>
+		<element kind="textField" uuid="d9aea3b8-55ae-3b24-b7a1-070e646ab083" stretchType="NoStretch" x="380" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{purchaseorderlistreport.column.6}]]></expression>
+		</element>
+		<element kind="textField" uuid="bf090661-5b59-3947-9ac1-7ecf269ac5d6" stretchType="NoStretch" x="480" y="0" width="50" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{purchaseorderlistreport.column.7}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="30" splitType="Stretch">
+			<element kind="textField" uuid="79edc1d5-83d3-33d0-aca8-8a8024aea9d6" stretchType="NoStretch" x="20" y="0" width="30" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{order.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="f6a01287-79de-3480-8063-0b247bbf1240" stretchType="NoStretch" x="80" y="0" width="200" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{order.suppliernr}]]></expression>
+			</element>
+			<element kind="textField" uuid="570950c5-edc4-38e4-ae99-924fdebe9451" stretchType="NoStretch" x="140" y="0" width="200" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{order.suppliername}]]></expression>
+			</element>
+			<element kind="textField" uuid="e24e6337-a645-3581-b5ff-21d83b7bd585" stretchType="NoStretch" x="380" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{order.currency}]]></expression>
+			</element>
+			<element kind="textField" uuid="dd933f2b-8518-391f-beda-b78af001c5ca" stretchType="NoStretch" x="470" y="0" width="60" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{order.date}]]></expression>
+			</element>
+			<element kind="subreport" uuid="b708fb55-4696-34aa-a237-1eb0c2956eee" stretchType="NoStretch" x="20" y="12" width="555" height="0" usingCache="false" printWhenDetailOverflows="true">
+				<dataSourceExpression><![CDATA[$F{order.rows}]]></dataSourceExpression>
+				<expression><![CDATA[$P{Report}]]></expression>
+				<parameter name="order.number">
+					<expression><![CDATA[$F{order.number}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
+	<summary height="20" splitType="Stretch">
+		<element kind="rectangle" uuid="3c783a75-62b5-3e41-8e34-0a2d4ec30f4d" stretchType="NoStretch" x="20" y="0" width="510" height="2" backcolor="#000000" fill="Solid">
+			<pen lineWidth="0.0" lineStyle="Solid"/>
+		</element>
+		<element kind="textField" uuid="dc371c71-0e2e-341c-a8b3-8f1fee8a0cc6" stretchType="NoStretch" x="20" y="2" width="250" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="false">
+			<expression><![CDATA[$R{inpaymentlistreport.sum}]]></expression>
+		</element>
+		<element kind="textField" uuid="b769f6ad-4530-3630-84b5-bd87ac912c88" stretchType="NoStretch" x="450" y="2" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+			<expression><![CDATA[$V{sum}]]></expression>
+		</element>
+	</summary>
 </jasperReport>

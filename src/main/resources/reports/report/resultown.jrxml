@@ -1,346 +1,130 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="Result" resourceBundle="book">
-
-    <!-- Declared fields in the report. -->
-
-    <parameter name="column.text.1"    class="java.lang.String"/>
-    <parameter name="column.text.2"    class="java.lang.String"/>
-    <parameter name="column.text.3"    class="java.lang.String"/>
-
-    <field name="group.1.title"            class="java.lang.String"/>
-    <field name="group.2.title"            class="java.lang.String"/>
-    <field name="group.1.sumtitle"         class="java.lang.String"/>
-    <field name="group.2.sumtitle"         class="java.lang.String"/>
-
-    <field name="account.group.1"          class="java.lang.Integer"/>
-    <field name="account.group.2"          class="java.lang.Integer"/>
-    <field name="account.number"           class="java.lang.Integer"/>
-    <field name="account.description"      class="java.lang.String"/>
-
-    <field name="account.value.1"          class="java.math.BigDecimal"/>
-    <field name="account.value.2"          class="java.math.BigDecimal"/>
-    <field name="account.value.3"          class="java.math.BigDecimal"/>
-
-    <field name="summary.index"            class="java.lang.Integer"/>
-    <field name="summary.title"            class="java.lang.String"/>
-
-
-
-    <!-- Summary variables -->
-    <variable name="summary.value.1" class="java.math.BigDecimal" resetType="Report"  calculation="Sum">
-        <variableExpression>$F{account.value.1} </variableExpression>
-        <initialValueExpression>new BigDecimal(0.0)</initialValueExpression>
-    </variable>
-
-    <variable name="summary.value.2" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
-        <variableExpression>$F{account.value.2} </variableExpression>
-        <initialValueExpression>new BigDecimal(0.0)</initialValueExpression>
-    </variable>
-
-    <variable name="summary.value.3" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
-        <variableExpression>$F{account.value.3}</variableExpression>
-        <initialValueExpression>new BigDecimal(0.0)</initialValueExpression>
-    </variable>
-
-
-    <!-- Group 2 variables -->
-    <variable name="group.2.value.1" class="java.math.BigDecimal" resetType="Group" resetGroup="group.2" calculation="Sum">
-        <variableExpression>$F{account.value.1} </variableExpression>
-        <initialValueExpression>new BigDecimal(0.0)</initialValueExpression>
-    </variable>
-
-    <variable name="group.2.value.2" class="java.math.BigDecimal" resetType="Group" resetGroup="group.2" calculation="Sum">
-        <variableExpression>$F{account.value.2} </variableExpression>
-        <initialValueExpression>new BigDecimal(0.0)</initialValueExpression>
-    </variable>
-
-    <variable name="group.2.value.3" class="java.math.BigDecimal" resetType="Group" resetGroup="group.2" calculation="Sum">
-        <variableExpression>$F{account.value.3} </variableExpression>
-        <initialValueExpression>new BigDecimal(0.0)</initialValueExpression>
-    </variable>
-
-
-    <!-- Group the data by account group number. -->
-    <group name="group.1" minHeightToStartNewPage="85" >
-        <groupExpression>
-            <![CDATA[$F{account.group.1}]]>
-        </groupExpression>
-
-        <groupHeader>
-            <band height="25">
-                <textField isBlankWhenNull="true">
-                    <reportElement x="20" y="4" width="400" height="16"/>
-                    <textElement>
-                        <font size="12" isBold="true"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$F{group.1.title}]]>
-                    </textFieldExpression>
-                </textField>
-            </band>
-        </groupHeader>
-    </group>
-
-
-
-    <!-- This is for the special summary sections.  -->
-    <group name="summary" >
-        <groupExpression>
-            <!--<![CDATA[$V{summary.group}]]>-->
-             <![CDATA[$F{account.group.2}]]>
-        </groupExpression>
-
-        <groupFooter>
-            <band height="20">
-                 <printWhenExpression>
-                   <![CDATA[new Boolean($F{summary.index}.intValue() != -1)]]>
-               </printWhenExpression>
-
-                <rectangle>
-                    <reportElement x="20" y="0" width="510" height="2" backcolor="#000000"/>
-                    <graphicElement pen="None" fill="Solid"/>
-                </rectangle>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="20" y="2" width="250" height="14"/>
-                    <textElement>
-                        <font size="8" isBold="false"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$F{summary.title}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="290" y="2" width="80" height="14">
-                        <printWhenExpression>
-                            <![CDATA[new Boolean($P{column.text.1} != null) ]]>
-                        </printWhenExpression>
-                    </reportElement>
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{summary.value.1} != null ? $V{summary.value.1} : new BigDecimal(0.0) ]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="370" y="2" width="80" height="14">
-                        <printWhenExpression>
-                            <![CDATA[new Boolean($P{column.text.2} != null) ]]>
-                        </printWhenExpression>
-                    </reportElement>
-                    <textElement textAlignment="Right">
-                        <font size="8" isBold="false"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{summary.value.2} != null ? $V{summary.value.2} : new BigDecimal(0.0)]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="450" y="2" width="80" height="14">
-                        <printWhenExpression>
-                            <![CDATA[new Boolean($P{column.text.3} != null) ]]>
-                        </printWhenExpression>
-                    </reportElement>
-
-                    <textElement textAlignment="Right">
-                        <font size="8" isBold="false"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{summary.value.3} != null ? $V{summary.value.3} : new BigDecimal(0.0)]]>
-                    </textFieldExpression>
-                </textField>
-
-
-            </band>
-        </groupFooter>
-    </group>
-
-
-    <!-- Group the data by account group number. -->
-    <group name="group.2" minHeightToStartNewPage="60" >
-        <groupExpression>
-            <![CDATA[$F{account.group.2}]]>
-        </groupExpression>
-
-        <groupHeader>
-
-            <band height="15">
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="30" y="0" width="400" height="14"/>
-                    <textElement>
-                        <font size="10" isBold="true"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$F{group.2.title}]]>
-                    </textFieldExpression>
-                </textField>
-            </band>
-        </groupHeader>
-
-        <groupFooter>
-            <!-- Summa for den aktuella gruppen -->
-            <band height="15">
-
-                <line>
-                    <reportElement x="40" y="0" width="490" height="1"/>
-                </line>
-
-                <!-- Title-->
-                <textField >
-                    <reportElement x="40" y="1" width="250" height="12"/>
-                    <textElement>
-                        <font size="8" isBold="false"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$F{group.2.sumtitle}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Column 1 -->
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="290" y="1" width="80" height="12">
-                        <printWhenExpression>
-                            <![CDATA[new Boolean($P{column.text.1} != null) ]]>
-                        </printWhenExpression>
-                    </reportElement>
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{group.2.value.1} != null ? $V{group.2.value.1} : new BigDecimal(0.0) ]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Column 2 -->
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="370" y="1" width="80" height="12">
-                        <printWhenExpression>
-                            <![CDATA[new Boolean($P{column.text.2} != null) ]]>
-                        </printWhenExpression>
-                    </reportElement>
-                    <textElement textAlignment="Right">
-                        <font size="8" isBold="false"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{group.2.value.2} != null ? $V{group.2.value.2} : new BigDecimal(0.0)]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Column 3 -->
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="450" y="1" width="80" height="12">
-                        <printWhenExpression>
-                            <![CDATA[new Boolean($P{column.text.3} != null) ]]>
-                        </printWhenExpression>
-                    </reportElement>
-
-                    <textElement textAlignment="Right">
-                        <font size="8" isBold="false"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{group.2.value.3} != null ? $V{group.2.value.3} : new BigDecimal(0.0)]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-
-            </band>
-        </groupFooter>
-    </group>
-
-
-
-
-    <detail>
-        <band height="11" isSplitAllowed="false">
-            <!-- Number -->
-            <textField>
-                <reportElement x="40" y="0" width="30" height="11"/>
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.Integer">
-                    <![CDATA[$F{account.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Description -->
-            <textField>
-                <reportElement x="100" y="0" width="250" height="11"/>
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{account.description}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Column 1 -->
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement x="290" y="0" width="80" height="11">
-                    <printWhenExpression>
-                        <![CDATA[new Boolean($P{column.text.1} != null) ]]>
-                    </printWhenExpression>
-                </reportElement>
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{account.value.1} != null ? $F{account.value.1} : new BigDecimal(0.0)]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Column 2 -->
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement x="370" y="0" width="80" height="11">
-                    <printWhenExpression>
-                        <![CDATA[new Boolean($P{column.text.2} != null) ]]>
-                    </printWhenExpression>
-                </reportElement>
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{account.value.2} != null ? $F{account.value.2} : new BigDecimal(0.0)]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Column 3 -->
-            <textField pattern="#,##0.00">
-                <reportElement x="450" y="0" width="80" height="11">
-                    <printWhenExpression>
-                        <![CDATA[new Boolean($P{column.text.3} != null) ]]>
-                    </printWhenExpression>
-                </reportElement>
-
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{account.value.3} != null ? $F{account.value.3} : new BigDecimal(0.0)]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </detail>
-
-
+<jasperReport name="Result" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="7ce6bdfa-2e67-3425-9ef0-a27231d925ed">
+	<parameter name="column.text.1" class="java.lang.String"/>
+	<parameter name="column.text.2" class="java.lang.String"/>
+	<parameter name="column.text.3" class="java.lang.String"/>
+	<field name="group.1.title" class="java.lang.String"/>
+	<field name="group.2.title" class="java.lang.String"/>
+	<field name="group.1.sumtitle" class="java.lang.String"/>
+	<field name="group.2.sumtitle" class="java.lang.String"/>
+	<field name="account.group.1" class="java.lang.Integer"/>
+	<field name="account.group.2" class="java.lang.Integer"/>
+	<field name="account.number" class="java.lang.Integer"/>
+	<field name="account.description" class="java.lang.String"/>
+	<field name="account.value.1" class="java.math.BigDecimal"/>
+	<field name="account.value.2" class="java.math.BigDecimal"/>
+	<field name="account.value.3" class="java.math.BigDecimal"/>
+	<field name="summary.index" class="java.lang.Integer"/>
+	<field name="summary.title" class="java.lang.String"/>
+	<variable name="summary.value.1" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{account.value.1}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="summary.value.2" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{account.value.2}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="summary.value.3" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{account.value.3}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="group.2.value.1" resetType="Group" calculation="Sum" resetGroup="group.2" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{account.value.1}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="group.2.value.2" resetType="Group" calculation="Sum" resetGroup="group.2" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{account.value.2}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="group.2.value.3" resetType="Group" calculation="Sum" resetGroup="group.2" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{account.value.3}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<group name="group.1" minHeightToStartNewPage="85">
+		<expression><![CDATA[$F{account.group.1}]]></expression>
+		<groupHeader>
+			<band height="25" splitType="Stretch">
+				<element kind="textField" uuid="575f5a9c-3c99-3545-8bc5-203fc2afeae2" stretchType="NoStretch" x="20" y="4" width="400" height="16" fontSize="12.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true">
+					<expression><![CDATA[$F{group.1.title}]]></expression>
+				</element>
+			</band>
+		</groupHeader>
+	</group>
+	<group name="summary">
+		<expression><![CDATA[$F{account.group.2}]]></expression>
+		<groupFooter>
+			<band height="20" splitType="Stretch">
+				<printWhenExpression><![CDATA[new Boolean($F{summary.index}.intValue() != -1)]]></printWhenExpression>
+				<element kind="rectangle" uuid="4cdaef4f-4ee6-32d2-b129-712e66ad4e7d" stretchType="NoStretch" x="20" y="0" width="510" height="2" backcolor="#000000" fill="Solid">
+					<pen lineWidth="0.0" lineStyle="Solid"/>
+				</element>
+				<element kind="textField" uuid="82d07e80-7f5c-3157-819a-010db36dba84" stretchType="NoStretch" x="20" y="2" width="250" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false">
+					<expression><![CDATA[$F{summary.title}]]></expression>
+				</element>
+				<element kind="textField" uuid="058a86ae-45a8-3445-a57f-41840f2da9a6" stretchType="NoStretch" x="290" y="2" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+					<printWhenExpression><![CDATA[new Boolean($P{column.text.1} != null)]]></printWhenExpression>
+					<expression><![CDATA[$V{summary.value.1} != null ? $V{summary.value.1} : new BigDecimal(0.0)]]></expression>
+				</element>
+				<element kind="textField" uuid="3b15fcc1-e37b-3c3c-8cfd-f6913c53c2ce" stretchType="NoStretch" x="370" y="2" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+					<printWhenExpression><![CDATA[new Boolean($P{column.text.2} != null)]]></printWhenExpression>
+					<expression><![CDATA[$V{summary.value.2} != null ? $V{summary.value.2} : new BigDecimal(0.0)]]></expression>
+				</element>
+				<element kind="textField" uuid="fd14392c-0e8a-3d1c-ae1e-fe7e6b387564" stretchType="NoStretch" x="450" y="2" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+					<printWhenExpression><![CDATA[new Boolean($P{column.text.3} != null)]]></printWhenExpression>
+					<expression><![CDATA[$V{summary.value.3} != null ? $V{summary.value.3} : new BigDecimal(0.0)]]></expression>
+				</element>
+			</band>
+		</groupFooter>
+	</group>
+	<group name="group.2" minHeightToStartNewPage="60">
+		<expression><![CDATA[$F{account.group.2}]]></expression>
+		<groupHeader>
+			<band height="15" splitType="Stretch">
+				<element kind="textField" uuid="7bfd1200-5dbd-308b-a252-cc09db807014" stretchType="NoStretch" x="30" y="0" width="400" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true">
+					<expression><![CDATA[$F{group.2.title}]]></expression>
+				</element>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="15" splitType="Stretch">
+				<element kind="line" uuid="14beb82c-1932-394c-8edf-3d382e72d2cc" stretchType="NoStretch" x="40" y="0" width="490" height="1"/>
+				<element kind="textField" uuid="54d08eb5-70f3-3e2b-a23c-8591febd920d" stretchType="NoStretch" x="40" y="1" width="250" height="12" fontSize="8.0" linkType="None" linkTarget="Self" bold="false">
+					<expression><![CDATA[$F{group.2.sumtitle}]]></expression>
+				</element>
+				<element kind="textField" uuid="12ccebee-4449-3949-b884-791f0708e465" stretchType="NoStretch" x="290" y="1" width="80" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+					<printWhenExpression><![CDATA[new Boolean($P{column.text.1} != null)]]></printWhenExpression>
+					<expression><![CDATA[$V{group.2.value.1} != null ? $V{group.2.value.1} : new BigDecimal(0.0)]]></expression>
+				</element>
+				<element kind="textField" uuid="8d2090b7-272f-378b-8fb8-d9786a026d52" stretchType="NoStretch" x="370" y="1" width="80" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+					<printWhenExpression><![CDATA[new Boolean($P{column.text.2} != null)]]></printWhenExpression>
+					<expression><![CDATA[$V{group.2.value.2} != null ? $V{group.2.value.2} : new BigDecimal(0.0)]]></expression>
+				</element>
+				<element kind="textField" uuid="fb050ac3-fbd5-3919-9e6e-a4deeca07336" stretchType="NoStretch" x="450" y="1" width="80" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+					<printWhenExpression><![CDATA[new Boolean($P{column.text.3} != null)]]></printWhenExpression>
+					<expression><![CDATA[$V{group.2.value.3} != null ? $V{group.2.value.3} : new BigDecimal(0.0)]]></expression>
+				</element>
+			</band>
+		</groupFooter>
+	</group>
+	<detail>
+		<band height="11" splitType="Prevent">
+			<element kind="textField" uuid="feda6cc1-aa66-36d4-b244-f91a2e16b345" stretchType="NoStretch" x="40" y="0" width="30" height="11" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$F{account.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="e48c8733-2cb6-3ea8-b2ff-5b443b282110" stretchType="NoStretch" x="100" y="0" width="250" height="11" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$F{account.description}]]></expression>
+			</element>
+			<element kind="textField" uuid="543333f6-c2ef-3a6f-88ad-52344bc1478d" stretchType="NoStretch" x="290" y="0" width="80" height="11" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<printWhenExpression><![CDATA[new Boolean($P{column.text.1} != null)]]></printWhenExpression>
+				<expression><![CDATA[$F{account.value.1} != null ? $F{account.value.1} : new BigDecimal(0.0)]]></expression>
+			</element>
+			<element kind="textField" uuid="4854edf9-9cc2-383b-8203-4d83f4604b6d" stretchType="NoStretch" x="370" y="0" width="80" height="11" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<printWhenExpression><![CDATA[new Boolean($P{column.text.2} != null)]]></printWhenExpression>
+				<expression><![CDATA[$F{account.value.2} != null ? $F{account.value.2} : new BigDecimal(0.0)]]></expression>
+			</element>
+			<element kind="textField" uuid="08c243e0-b90d-3e9b-bd5b-c6b50337ba93" stretchType="NoStretch" x="450" y="0" width="80" height="11" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<printWhenExpression><![CDATA[new Boolean($P{column.text.3} != null)]]></printWhenExpression>
+				<expression><![CDATA[$F{account.value.3} != null ? $F{account.value.3} : new BigDecimal(0.0)]]></expression>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

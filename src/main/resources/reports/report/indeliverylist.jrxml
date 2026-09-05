@@ -1,138 +1,43 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="IndeliveryList" resourceBundle="book">
-
-    <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="Parameters" class="java.util.HashMap"/>
-
-
-    <!-- Declared fields in the report. -->
-
-    <field name="indelivery.number"       class="java.lang.Integer"/>
-    <field name="indelivery.date"         class="java.lang.String"/>
-    <field name="indelivery.text"         class="java.lang.String"/>
-
-    <field name="indelivery.rows"  class="net.sf.jasperreports.engine.JRDataSource"/>
-
-    <columnHeader>
-        <band height="30">
-            <line>
-                <reportElement x="20" y="23" width="510" height="1"/>
-            </line>
-
-            <!-- Faktura nr -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{indeliverylistreport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="80" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{indeliverylistreport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="180" y="0" width="70" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{indeliverylistreport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-            <textField>
-                <reportElement x="460" y="0" width="70" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{indeliverylistreport.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="30" isSplitAllowed="true">
-
-
-            <!-- Title -->
-            <textField>
-                <reportElement x="20" y="0" width="30" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.Integer">
-                    <![CDATA[$F{indelivery.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Customer nr -->
-            <textField>
-                <reportElement x="80" y="0" width="200" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{indelivery.text}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Date -->
-            <textField>
-                <reportElement x="470" y="0" width="60" height="14"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{indelivery.date}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Order rows -->
-            <subreport isUsingCache="false">
-                <reportElement x="0" y="12" width="575" height="0" isPrintWhenDetailOverflows="true"/>
-
-                <subreportParameter name="indelivery.number">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{indelivery.number}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-
-
-                <dataSourceExpression>
-                    <![CDATA[$F{indelivery.rows}]]>
-                </dataSourceExpression>
-
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$P{Report}]]>
-                </subreportExpression>
-
-
-            </subreport>
-
-
-        </band>
-    </detail>
-
+<jasperReport name="IndeliveryList" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="9ce94d69-9490-30bf-a91c-9a8798bca150">
+	<parameter name="Report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="Parameters" class="java.util.HashMap"/>
+	<field name="indelivery.number" class="java.lang.Integer"/>
+	<field name="indelivery.date" class="java.lang.String"/>
+	<field name="indelivery.text" class="java.lang.String"/>
+	<field name="indelivery.rows" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<columnHeader height="30" splitType="Stretch">
+		<element kind="line" uuid="983731ef-9eeb-3673-89f1-d4e9503a9b94" stretchType="NoStretch" x="20" y="23" width="510" height="1"/>
+		<element kind="textField" uuid="9ae31ee0-87e9-355a-a681-4cfff4acc0b3" stretchType="NoStretch" x="20" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{indeliverylistreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="03d1513d-a5e9-36cb-96a4-90e4fab4583a" stretchType="NoStretch" x="80" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{indeliverylistreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="d4e6d0fe-e34b-332d-8668-72a926787e7a" stretchType="NoStretch" x="180" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{indeliverylistreport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="67f516c6-b1ad-368e-9740-3bcfc3e18f79" stretchType="NoStretch" x="460" y="0" width="70" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{indeliverylistreport.column.4}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="30" splitType="Stretch">
+			<element kind="textField" uuid="b9c0b314-ecc5-3efc-a632-9846ac933039" stretchType="NoStretch" x="20" y="0" width="30" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{indelivery.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="dc0a2c14-3be4-3388-90a3-808be9c89f99" stretchType="NoStretch" x="80" y="0" width="200" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{indelivery.text}]]></expression>
+			</element>
+			<element kind="textField" uuid="936bfc1e-0d71-3dad-9288-12071c19f94e" stretchType="NoStretch" x="470" y="0" width="60" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{indelivery.date}]]></expression>
+			</element>
+			<element kind="subreport" uuid="7de4acc3-0f85-35a9-80e2-e143d437521a" stretchType="NoStretch" x="0" y="12" width="575" height="0" usingCache="false" printWhenDetailOverflows="true">
+				<dataSourceExpression><![CDATA[$F{indelivery.rows}]]></dataSourceExpression>
+				<expression><![CDATA[$P{Report}]]></expression>
+				<parameter name="indelivery.number">
+					<expression><![CDATA[$F{indelivery.number}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

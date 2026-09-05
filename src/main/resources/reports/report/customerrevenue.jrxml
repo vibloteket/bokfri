@@ -1,109 +1,36 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="MainBook" resourceBundle="book">
-
-
-    <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="Parameters" class="java.util.HashMap"/>
-
-
-
-    <!-- Declared fields in the report. -->
-
-    <field name="customer.number"      class="java.lang.String"/>
-    <field name="customer.description" class="java.lang.String"/>
-
-    <field name="month.data"  class="net.sf.jasperreports.engine.JRDataSource"/>
-
-    <columnHeader>
-        <band height="30">
-            <line>
-                <reportElement x="20" y="23" width="510" height="1"/>
-            </line>
-
-            <!-- Column 1 -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{customerrevenue.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="100" y="0" width="220" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{customerrevenue.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="450" y="0" width="80" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{customerrevenue.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="30" isSplitAllowed="true">
-
-            <!-- Title -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{customer.number}]]>
-                </textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="100" y="0" width="250" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{customer.description}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <subreport isUsingCache="false">
-                <reportElement x="20" y="14" width="555" height="0" isPrintWhenDetailOverflows="true"/>
-
-                 <subreportParameter name="customer.number">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{customer.number}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-                <dataSourceExpression>
-                    <![CDATA[$F{month.data}]]>
-                </dataSourceExpression>
-
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$P{Report}]]>
-                </subreportExpression>
-
-
-            </subreport>
-
-
-        </band>
-    </detail>
-
+<jasperReport name="MainBook" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="4de71dc0-25af-3c96-b0a3-ed7440469136">
+	<parameter name="Report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="Parameters" class="java.util.HashMap"/>
+	<field name="customer.number" class="java.lang.String"/>
+	<field name="customer.description" class="java.lang.String"/>
+	<field name="month.data" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<columnHeader height="30" splitType="Stretch">
+		<element kind="line" uuid="1a54a17c-db3d-31dc-81e3-d7539cd98753" stretchType="NoStretch" x="20" y="23" width="510" height="1"/>
+		<element kind="textField" uuid="c8bcd0fe-96f7-3a01-8284-0f8589e36b81" stretchType="NoStretch" x="20" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{customerrevenue.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="11a20d9c-f7c3-3f0b-ba3d-ece8042325b8" stretchType="NoStretch" x="100" y="0" width="220" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{customerrevenue.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="a39fe5d7-b509-3502-9340-3c0c16fd9462" stretchType="NoStretch" x="450" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{customerrevenue.column.3}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="30" splitType="Stretch">
+			<element kind="textField" uuid="e0eb49be-c3d3-3e7f-ac2b-d64119460980" stretchType="NoStretch" x="20" y="0" width="80" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{customer.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="12995326-597a-33de-b225-d44531bb4521" stretchType="NoStretch" x="100" y="0" width="250" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{customer.description}]]></expression>
+			</element>
+			<element kind="subreport" uuid="8b8698ad-eee3-3664-bc7c-c9c47b6d4438" stretchType="NoStretch" x="20" y="14" width="555" height="0" usingCache="false" printWhenDetailOverflows="true">
+				<dataSourceExpression><![CDATA[$F{month.data}]]></dataSourceExpression>
+				<expression><![CDATA[$P{Report}]]></expression>
+				<parameter name="customer.number">
+					<expression><![CDATA[$F{customer.number}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

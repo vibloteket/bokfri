@@ -41,7 +41,11 @@ class ReportTemplateInventoryTest {
             String resource = "/reports/report/" + template;
             try (InputStream input = getClass().getResourceAsStream(resource)) {
                 assertThat(input).as("Packaged report resource %s", resource).isNotNull();
-                JasperCompileManager.compileReport(input);
+                try {
+                    JasperCompileManager.compileReport(input);
+                } catch (Exception exception) {
+                    throw new AssertionError("Could not compile " + resource, exception);
+                }
             }
         }
     }

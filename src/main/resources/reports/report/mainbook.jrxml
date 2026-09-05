@@ -1,362 +1,127 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="MainBook" resourceBundle="book">
-
-    <!-- Declared fields in the report. -->
-
-    <field name="isrow"                  class="java.lang.Boolean"/>
-    <field name="account.number"         class="java.lang.Integer"/>
-    <field name="account.description"    class="java.lang.String"/>
-    <field name="account.insaldo"        class="java.math.BigDecimal"/>
-    <field name="account.inbalance"      class="java.math.BigDecimal"/>
-
-
-    <field name="voucher.number"         class="java.lang.Integer"/>
-    <field name="voucher.description"    class="java.lang.String"/>
-    <field name="voucher.date"           class="java.lang.String"/>
-
-    <field name="voucherrow.added"       class="java.lang.Boolean"/>
-    <field name="voucherrow.crossed"     class="java.lang.Boolean"/>
-
-    <field name="voucherrow.debet"       class="java.math.BigDecimal"/>
-    <field name="voucherrow.credit"      class="java.math.BigDecimal"/>
-    <field name="voucherrow.sum"         class="java.math.BigDecimal"/>
-
-    <variable name="account.debet" class="java.math.BigDecimal" resetType="Group" resetGroup="account" calculation="Sum">
-        <variableExpression>$F{voucherrow.crossed}.booleanValue() ? new BigDecimal(0.0) : $F{voucherrow.debet}</variableExpression>
-        <initialValueExpression>new BigDecimal(0.0)</initialValueExpression>
-    </variable>
-
-    <variable name="account.credit" class="java.math.BigDecimal" resetType="Group" resetGroup="account" calculation="Sum">
-        <variableExpression>$F{voucherrow.crossed}.booleanValue() ? new BigDecimal(0.0) : $F{voucherrow.credit}</variableExpression>
-        <initialValueExpression>new BigDecimal(0.0)</initialValueExpression>
-    </variable>
-
-    <variable name="account.sum" class="java.math.BigDecimal" resetType="Group" resetGroup="account" calculation="Sum">
-        <variableExpression>$F{voucherrow.crossed}.booleanValue() ? new BigDecimal(0.0) : $F{voucherrow.sum}</variableExpression>
-        <initialValueExpression>new BigDecimal(0.0)</initialValueExpression>
-    </variable>
-
-
-
-    <!-- Group the data by account group number. -->
-    <group name="account" minHeightToStartNewPage="60">
-        <groupExpression>
-            <![CDATA[$F{account.number}]]>
-        </groupExpression>
-
-        <groupHeader>
-            <band height="50">
-                <textField isBlankWhenNull="true">
-                    <reportElement x="20" y="0" width="400" height="14"/>
-                    <textElement>
-                        <font size="8" isBold="true"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.Integer">
-                        <![CDATA[$F{account.number}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="60" y="0" width="400" height="14"/>
-                    <textElement>
-                        <font size="8" isBold="true"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$F{account.description}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-                <textField isBlankWhenNull="true" pattern="#,##0.00">
-                    <reportElement x="60" y="14" width="80" height="14"/>
-                    <textElement>
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{mainbookreport.account.inbalance}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true" pattern="#,##0.00">
-                    <reportElement x="60" y="28" width="80" height="14"/>
-                    <textElement>
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{mainbookreport.account.insaldo}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <textField isBlankWhenNull="true" pattern="#,##0.00">
-                    <reportElement x="450" y="14" width="80" height="14"/>
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{account.inbalance} != null ? $F{account.inbalance} : new BigDecimal(0.0) ]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true" pattern="#,##0.00">
-                    <reportElement x="450" y="28" width="80" height="14"/>
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{account.insaldo} != null ? $F{account.insaldo} : new BigDecimal(0.0)]]>
-                    </textFieldExpression>
-                </textField>
-
-
-            </band>
-        </groupHeader>
-
-        <groupFooter>
-            <band height="35">
-                <line>
-                    <reportElement x="60" y="0" width="470" height="1"/>
-                </line>
-
-
-                <textField pattern="#,##0.00">
-                    <reportElement x="60" y="5" width="80" height="14"/>
-                    <textElement>
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{mainbookreport.account.change}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00">
-                    <reportElement x="60" y="16" width="80" height="14"/>
-                    <textElement>
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{mainbookreport.account.outsaldo}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="300" y="2" width="80" height="14" />
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{account.debet}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="380" y="2" width="80" height="14" />
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{account.credit}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="450" y="16" width="80" height="14" />
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$F{account.insaldo} != null ? $F{account.insaldo}.add($V{account.sum}): $V{account.sum} ]]>
-                    </textFieldExpression>
-                </textField>
-            </band>
-        </groupFooter>
-
-    </group>
-
-
-    <columnHeader>
-        <band height="30">
-            <line>
-                <reportElement x="20" y="23" width="510" height="1"/>
-            </line>
-
-            <!-- Column 1 -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{mainbookreport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="60" y="0" width="220" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{mainbookreport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="100" y="0" width="220" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{mainbookreport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="160" y="0" width="80" height="24" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{mainbookreport.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="300" y="0" width="80" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{mainbookreport.column.5}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="380" y="0" width="80" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{mainbookreport.column.6}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="450" y="0" width="80" height="24" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{mainbookreport.column.7}]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="12">
-            <printWhenExpression>
-                 <![CDATA[$F{isrow}]]>
-            </printWhenExpression>
-
-            <line>
-                <reportElement x="60" y="5" width="470" height="1">
-                    <printWhenExpression>
-                        <![CDATA[$F{voucherrow.crossed}]]>
-                    </printWhenExpression>
-
-                </reportElement>
-                <graphicElement pen="Dotted"/>
-            </line>
-
-            <line>
-                <reportElement x="60" y="10" width="470" height="1">
-                    <printWhenExpression>
-                        <![CDATA[$F{voucherrow.added}]]>
-                    </printWhenExpression>
-                </reportElement>
-                <graphicElement pen="Dotted"/>
-            </line>
-
-
-            <textField>
-                <reportElement x="60" y="0" width="80" height="12" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.Integer">
-                    <![CDATA[$F{voucher.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="100" y="0" width="60" height="12" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{voucher.date}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField isStretchWithOverflow="true">
-                <reportElement x="160" y="0" width="135" height="12" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{voucher.description}]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement x="300" y="0" width="80" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{voucherrow.debet}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement x="380" y="0" width="80" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{voucherrow.credit}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField pattern="#,##0.00" isBlankWhenNull="true">
-                <reportElement x="450" y="0" width="80" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[($F{account.insaldo} != null) ? $F{account.insaldo}.add($V{account.sum}) : $V{account.sum}]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </detail>
-
-
+<jasperReport name="MainBook" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="25dd79f1-d96a-33b1-9686-13b3102a04bd">
+	<field name="isrow" class="java.lang.Boolean"/>
+	<field name="account.number" class="java.lang.Integer"/>
+	<field name="account.description" class="java.lang.String"/>
+	<field name="account.insaldo" class="java.math.BigDecimal"/>
+	<field name="account.inbalance" class="java.math.BigDecimal"/>
+	<field name="voucher.number" class="java.lang.Integer"/>
+	<field name="voucher.description" class="java.lang.String"/>
+	<field name="voucher.date" class="java.lang.String"/>
+	<field name="voucherrow.added" class="java.lang.Boolean"/>
+	<field name="voucherrow.crossed" class="java.lang.Boolean"/>
+	<field name="voucherrow.debet" class="java.math.BigDecimal"/>
+	<field name="voucherrow.credit" class="java.math.BigDecimal"/>
+	<field name="voucherrow.sum" class="java.math.BigDecimal"/>
+	<variable name="account.debet" resetType="Group" calculation="Sum" resetGroup="account" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{voucherrow.crossed}.booleanValue() ? new BigDecimal(0.0) : $F{voucherrow.debet}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="account.credit" resetType="Group" calculation="Sum" resetGroup="account" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{voucherrow.crossed}.booleanValue() ? new BigDecimal(0.0) : $F{voucherrow.credit}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="account.sum" resetType="Group" calculation="Sum" resetGroup="account" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{voucherrow.crossed}.booleanValue() ? new BigDecimal(0.0) : $F{voucherrow.sum}]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<group name="account" minHeightToStartNewPage="60">
+		<expression><![CDATA[$F{account.number}]]></expression>
+		<groupHeader>
+			<band height="50" splitType="Stretch">
+				<element kind="textField" uuid="9a9625eb-686b-3d9e-ab9c-9042e22ff4f2" stretchType="NoStretch" x="20" y="0" width="400" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true">
+					<expression><![CDATA[$F{account.number}]]></expression>
+				</element>
+				<element kind="textField" uuid="4a0d3341-6893-3849-9419-afb65fec9a2e" stretchType="NoStretch" x="60" y="0" width="400" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true">
+					<expression><![CDATA[$F{account.description}]]></expression>
+				</element>
+				<element kind="textField" uuid="20b648e1-7648-3549-83f8-e95a85355969" stretchType="NoStretch" x="60" y="14" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true">
+					<expression><![CDATA[$R{mainbookreport.account.inbalance}]]></expression>
+				</element>
+				<element kind="textField" uuid="3cf05d5a-42c5-3206-854c-6e302aaf0de4" stretchType="NoStretch" x="60" y="28" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true">
+					<expression><![CDATA[$R{mainbookreport.account.insaldo}]]></expression>
+				</element>
+				<element kind="textField" uuid="0880abc5-dd2b-3069-852f-26c9636c5c60" stretchType="NoStretch" x="450" y="14" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+					<expression><![CDATA[$F{account.inbalance} != null ? $F{account.inbalance} : new BigDecimal(0.0)]]></expression>
+				</element>
+				<element kind="textField" uuid="31a4e3de-f227-3e21-9f3c-dc479bb78a08" stretchType="NoStretch" x="450" y="28" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+					<expression><![CDATA[$F{account.insaldo} != null ? $F{account.insaldo} : new BigDecimal(0.0)]]></expression>
+				</element>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="35" splitType="Stretch">
+				<element kind="line" uuid="17f1a3ca-9bbb-3e88-8619-f4c97274ab53" stretchType="NoStretch" x="60" y="0" width="470" height="1"/>
+				<element kind="textField" uuid="586989ce-9d4d-35f2-a15b-17013a7c9c1c" stretchType="NoStretch" x="60" y="5" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self">
+					<expression><![CDATA[$R{mainbookreport.account.change}]]></expression>
+				</element>
+				<element kind="textField" uuid="8e938703-c9f8-34b5-a459-a7751455b5c2" stretchType="NoStretch" x="60" y="16" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self">
+					<expression><![CDATA[$R{mainbookreport.account.outsaldo}]]></expression>
+				</element>
+				<element kind="textField" uuid="deb1566a-d0db-37d7-8106-69c4f41470db" stretchType="NoStretch" x="300" y="2" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+					<expression><![CDATA[$V{account.debet}]]></expression>
+				</element>
+				<element kind="textField" uuid="ed9a9f5c-5984-3848-8ac9-a2888b816f79" stretchType="NoStretch" x="380" y="2" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+					<expression><![CDATA[$V{account.credit}]]></expression>
+				</element>
+				<element kind="textField" uuid="a3cab9e2-7dac-3cb8-895a-b65149cd01a7" stretchType="NoStretch" x="450" y="16" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+					<expression><![CDATA[$F{account.insaldo} != null ? $F{account.insaldo}.add($V{account.sum}): $V{account.sum}]]></expression>
+				</element>
+			</band>
+		</groupFooter>
+	</group>
+	<columnHeader height="30" splitType="Stretch">
+		<element kind="line" uuid="c2a8df00-93bc-3a54-a0f3-0e4b663765df" stretchType="NoStretch" x="20" y="23" width="510" height="1"/>
+		<element kind="textField" uuid="79d5fda0-d4ee-31d3-a911-3b3cbf70ea29" stretchType="NoStretch" x="20" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{mainbookreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="c4ff0615-0146-3cec-abb7-b61f616553a7" stretchType="NoStretch" x="60" y="0" width="220" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{mainbookreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="09cddb5e-e48e-3797-908d-d7cb06a9e48f" stretchType="NoStretch" x="100" y="0" width="220" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{mainbookreport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="df6529cd-34dc-3bdc-a1cf-faafc917241e" stretchType="NoStretch" x="160" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{mainbookreport.column.4}]]></expression>
+		</element>
+		<element kind="textField" uuid="0308d66e-43cf-3a36-aec2-53d382ead8d2" stretchType="NoStretch" x="300" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{mainbookreport.column.5}]]></expression>
+		</element>
+		<element kind="textField" uuid="919f62b0-58dd-344a-b1e9-2e90e6258025" stretchType="NoStretch" x="380" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{mainbookreport.column.6}]]></expression>
+		</element>
+		<element kind="textField" uuid="613f95c7-e75b-3969-839e-f428a89d1fc5" stretchType="NoStretch" x="450" y="0" width="80" height="24" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{mainbookreport.column.7}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="12" splitType="Stretch">
+			<printWhenExpression><![CDATA[$F{isrow}]]></printWhenExpression>
+			<element kind="line" uuid="0c32a5a5-2bb3-3810-acdd-37a2ea7af475" stretchType="NoStretch" x="60" y="5" width="470" height="1">
+				<printWhenExpression><![CDATA[$F{voucherrow.crossed}]]></printWhenExpression>
+				<pen lineWidth="1.0" lineStyle="Dashed"/>
+			</element>
+			<element kind="line" uuid="e764f766-2470-3964-95cb-85d7693f6a42" stretchType="NoStretch" x="60" y="10" width="470" height="1">
+				<printWhenExpression><![CDATA[$F{voucherrow.added}]]></printWhenExpression>
+				<pen lineWidth="1.0" lineStyle="Dashed"/>
+			</element>
+			<element kind="textField" uuid="c9f93d20-e030-3ccf-9e55-b4709fe5fea8" stretchType="NoStretch" x="60" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$F{voucher.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="6a3719e1-b6b7-3dd6-8478-8e804c9ee6c9" stretchType="NoStretch" x="100" y="0" width="60" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$F{voucher.date}]]></expression>
+			</element>
+			<element kind="textField" uuid="58c9bc3e-5d4f-3d86-8836-4adae5475ccb" stretchType="NoStretch" x="160" y="0" width="135" height="12" fontSize="8.0" textAdjust="StretchHeight" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$F{voucher.description}]]></expression>
+			</element>
+			<element kind="textField" uuid="251c19c6-6b1a-36b1-85dd-e440a223f728" stretchType="NoStretch" x="300" y="0" width="80" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[$F{voucherrow.debet}]]></expression>
+			</element>
+			<element kind="textField" uuid="ad04240d-b98a-3575-b78e-ba6458504d1f" stretchType="NoStretch" x="380" y="0" width="80" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[$F{voucherrow.credit}]]></expression>
+			</element>
+			<element kind="textField" uuid="750557d2-6c94-37b2-9be2-1b5ae1233f22" stretchType="NoStretch" x="450" y="0" width="80" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[($F{account.insaldo} != null) ? $F{account.insaldo}.add($V{account.sum}) : $V{account.sum}]]></expression>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

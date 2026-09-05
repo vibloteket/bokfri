@@ -1,138 +1,47 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="SaleHeader">
-
-    <!--- Declared parameters in the report. -->
-    <parameter name="title"             class="java.lang.String"/>
-    <parameter name="title.date"        class="java.lang.String"/>
-    <parameter name="title.number"      class="java.lang.String"/>
-
-    <parameter name="company.logo"       class="java.awt.Image"/>
-
-    <parameter name="number"    class="java.lang.Integer"/>
-    <parameter name="date"      class="java.lang.String"/>
-    <parameter name="text"      class="java.lang.String"/>
-
-
-    <pageHeader>
-        <band isSplitAllowed="false" height="90">
-
-            <!-- Logo -->
-            <image onErrorType="Icon">
-                <reportElement x="40" y="20" width="300" height="60"/>
-
-                <imageExpression class="java.awt.Image">
-                    <![CDATA[$P{company.logo}]]>
-                </imageExpression>
-            </image>
-
-            <!-- Title -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="280" y="20" width="270" height="20"/>
-                <textElement textAlignment="Right">
-                    <font fontName="Bokfri Sans" size="16" isBold="true"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$P{title}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Number and date frame -->
-            <frame>
-                <reportElement x="350" y="40" width="200" height="25"/>
-
-                <box border="Thin" borderColor="#000000"/>
-
-                <!-- Number text -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="5" y="1" width="90" height="12">
-                        <printWhenExpression>
-                            <![CDATA[new Boolean($P{title.number} != null)]]>
-                        </printWhenExpression>
-                    </reportElement>
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{title.number}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Number -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="5" y="11" width="90" height="14"/>
-                    <textElement textAlignment="Right">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.Integer">
-                        <![CDATA[$P{number}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Separator -->
-                <line>
-                    <reportElement x="100" y="0" width="1" height="25">
-                        <printWhenExpression>
-                            <![CDATA[new Boolean($P{number} != null)]]>
-                        </printWhenExpression>
-                    </reportElement>
-                     <graphicElement pen="Thin"/>
-                </line>
-
-                <!-- Date text -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="105" y="1" width="90" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{title.date}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Date -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="105" y="11" width="90" height="14"/>
-                    <textElement textAlignment="Right">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{date}]]>
-                    </textFieldExpression>
-                </textField>
-
-            </frame>
-
-            <frame>
-                <reportElement x="450" y="70" width="100" height="15"/>
-
-                <textField evaluationTime="Now">
-                    <reportElement x="0" y="0" width="80" height="15"/>
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.Integer">
-                        <![CDATA[$V{PAGE_NUMBER}]]>
-                    </textFieldExpression>
-                </textField>
-                <textField evaluationTime="Report">
-                    <reportElement x="20" y="0" width="80" height="15"/>
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA["(" + $V{PAGE_NUMBER}.toString() + ")"]]>
-                    </textFieldExpression>
-                </textField>
-            </frame>
-
-        </band>
-    </pageHeader>
-
-
-
-
+<jasperReport name="SaleHeader" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" uuid="065472f5-2ddf-3202-9552-b78527fa4439">
+	<parameter name="title" class="java.lang.String"/>
+	<parameter name="title.date" class="java.lang.String"/>
+	<parameter name="title.number" class="java.lang.String"/>
+	<parameter name="company.logo" class="java.awt.Image"/>
+	<parameter name="number" class="java.lang.Integer"/>
+	<parameter name="date" class="java.lang.String"/>
+	<parameter name="text" class="java.lang.String"/>
+	<pageHeader height="90" splitType="Prevent">
+		<element kind="image" uuid="67fa2f0e-6bc3-39da-8e08-8409aee73741" stretchType="NoStretch" x="40" y="20" width="300" height="60" onErrorType="Icon" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$P{company.logo}]]></expression>
+		</element>
+		<element kind="textField" uuid="1489e488-fd42-3f0f-9bfc-cbee57c61639" stretchType="NoStretch" x="280" y="20" width="270" height="20" fontName="Bokfri Sans" fontSize="16.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true" hTextAlign="Right">
+			<expression><![CDATA[$P{title}]]></expression>
+		</element>
+		<element kind="frame" uuid="1a0789f6-450d-3808-b947-c7462dc0df99" stretchType="NoStretch" x="350" y="40" width="200" height="25">
+			<element kind="textField" uuid="92100e63-c55c-3e23-9aeb-3676362e409d" stretchType="NoStretch" x="5" y="1" width="90" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<printWhenExpression><![CDATA[new Boolean($P{title.number} != null)]]></printWhenExpression>
+				<expression><![CDATA[$P{title.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="10c0c060-7683-3cc0-947e-38ce6bd52820" stretchType="NoStretch" x="5" y="11" width="90" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[$P{number}]]></expression>
+			</element>
+			<element kind="line" uuid="69242560-eae2-3e3b-845b-6fe684517289" stretchType="NoStretch" x="100" y="0" width="1" height="25">
+				<printWhenExpression><![CDATA[new Boolean($P{number} != null)]]></printWhenExpression>
+				<pen lineWidth="0.5" lineStyle="Solid"/>
+			</element>
+			<element kind="textField" uuid="07688295-cfcc-3fea-a2c7-067d9a59ebff" stretchType="NoStretch" x="105" y="1" width="90" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{title.date}]]></expression>
+			</element>
+			<element kind="textField" uuid="1234d27e-8527-37c1-8863-27e53889c4f0" stretchType="NoStretch" x="105" y="11" width="90" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+				<expression><![CDATA[$P{date}]]></expression>
+			</element>
+			<box>
+				<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+			</box>
+		</element>
+		<element kind="frame" uuid="db96ae79-75ca-384d-8a34-237883aa9b61" stretchType="NoStretch" x="450" y="70" width="100" height="15">
+			<element kind="textField" uuid="2b0ae2fa-3d96-321f-bffa-9e4cea1aff4b" stretchType="NoStretch" x="0" y="0" width="80" height="15" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$V{PAGE_NUMBER}]]></expression>
+			</element>
+			<element kind="textField" uuid="11816cef-7ebd-3ee2-836b-7e5b31a64f9b" stretchType="NoStretch" x="20" y="0" width="80" height="15" fontSize="8.0" evaluationTime="Report" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA["(" + $V{PAGE_NUMBER}.toString() + ")"]]></expression>
+			</element>
+		</element>
+	</pageHeader>
 </jasperReport>

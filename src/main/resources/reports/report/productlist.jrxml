@@ -1,198 +1,63 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="Projects" resourceBundle="book">
-    <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="Parameters" class="java.util.HashMap"/>
-
-
-    <!-- Declared fields in the report. -->
-    <field name="product.isparcel"      class="java.lang.Boolean"/>
-
-    <field name="product.number"                class="java.lang.String"/>
-    <field name="product.description"           class="java.lang.String"/>
-    <field name="product.unit"                  class="java.lang.String"/>
-    <field name="product.unitprice"             class="java.math.BigDecimal"/>
-    <field name="product.warehouselocation"     class="java.lang.String"/>
-    <field name="product.warehousequantity"     class="java.lang.Integer"/>
-
-    <field name="product.rows"  class="net.sf.jasperreports.engine.JRDataSource"/>
-
-
-    <columnHeader>
-        <band height="15">
-            <line>
-                <reportElement x="20" y="12" width="510" height="1"/>
-            </line>
-
-            <!-- Column 1 -->
-            <textField>
-                <reportElement x="20" y="0" width="80" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{productlistreport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="100" y="0" width="230" height="12" />
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{productlistreport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField>
-                <reportElement x="230" y="0" width="70" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{productlistreport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="295" y="0" width="70" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{productlistreport.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="375" y="0" width="70" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{productlistreport.column.5}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="450" y="0" width="80" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{productlistreport.column.6}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </columnHeader>
-
-    <detail>
-        <band height="14"  isSplitAllowed="true">
-            <textField>
-                <reportElement x="20" y="0" width="80" height="14" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{product.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField isBlankWhenNull="true">
-                <reportElement x="100" y="0" width="230" height="14" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{product.description}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- warehouse location -->
-            <textField>
-                <reportElement x="230" y="0" width="70" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{product.warehouselocation}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Warehouse quantoty -->
-            <textField>
-                <reportElement x="290" y="0" width="70" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.lang.Integer">
-                    <![CDATA[$F{product.warehousequantity}]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-            <!-- Unit -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="362" y="0" width="18" height="12"/>
-                <textElement textAlignment="Left">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$F{product.unit}]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-            <!-- product unitprice -->
-            <textField pattern="#,##0.00">
-                <reportElement x="450" y="0" width="80" height="14"/>
-                <textElement  textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.unitprice}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Subreport for the rows -->
-            <subreport isUsingCache="false">
-                <reportElement x="0" y="14" width="530" height="0" isPrintWhenDetailOverflows="true"/>
-
-                <parametersMapExpression>
-                    <![CDATA[$P{REPORT_PARAMETERS_MAP}]]>
-                </parametersMapExpression>
-
-                <subreportParameter name="REPORT_RESOURCE_BUNDLE">
-                    <subreportParameterExpression>
-                        <![CDATA[$P{REPORT_RESOURCE_BUNDLE}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-                <dataSourceExpression>
-                    <![CDATA[$F{product.rows}]]>
-                </dataSourceExpression>
-
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$P{Report}]]>
-                </subreportExpression>
-
-
-            </subreport>
-
-        </band>
-    </detail>
-
-
-
-
+<jasperReport name="Projects" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="d98e7e38-ce04-3270-b03f-798634b6c1dd">
+	<parameter name="Report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="Parameters" class="java.util.HashMap"/>
+	<field name="product.isparcel" class="java.lang.Boolean"/>
+	<field name="product.number" class="java.lang.String"/>
+	<field name="product.description" class="java.lang.String"/>
+	<field name="product.unit" class="java.lang.String"/>
+	<field name="product.unitprice" class="java.math.BigDecimal"/>
+	<field name="product.warehouselocation" class="java.lang.String"/>
+	<field name="product.warehousequantity" class="java.lang.Integer"/>
+	<field name="product.rows" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<columnHeader height="15" splitType="Stretch">
+		<element kind="line" uuid="c1d62f79-fee5-3301-91de-a03d43ca6722" stretchType="NoStretch" x="20" y="12" width="510" height="1"/>
+		<element kind="textField" uuid="ecdbfffc-e384-3d8f-8f38-2236da7c4161" stretchType="NoStretch" x="20" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{productlistreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="50180e8f-a2cd-3d1d-a812-1fd9d0f0aef3" stretchType="NoStretch" x="100" y="0" width="230" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{productlistreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="26d56950-75aa-3373-a3a8-9d01431c394f" stretchType="NoStretch" x="230" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{productlistreport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="ecea0907-18fa-34a3-ac0a-856df3c99a65" stretchType="NoStretch" x="295" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{productlistreport.column.4}]]></expression>
+		</element>
+		<element kind="textField" uuid="cfac1e3f-c774-3c69-a805-7562a34e5b11" stretchType="NoStretch" x="375" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{productlistreport.column.5}]]></expression>
+		</element>
+		<element kind="textField" uuid="eed2d87b-b75d-3d5d-aac5-92989b177e2b" stretchType="NoStretch" x="450" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{productlistreport.column.6}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="14" splitType="Stretch">
+			<element kind="textField" uuid="8e5fb0cf-0248-35e0-9165-a43c371a81a5" stretchType="NoStretch" x="20" y="0" width="80" height="14" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$F{product.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="1ef5195b-2d61-34e1-ab52-d272deecc69e" stretchType="NoStretch" x="100" y="0" width="230" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true">
+				<expression><![CDATA[$F{product.description}]]></expression>
+			</element>
+			<element kind="textField" uuid="1315cb80-2654-3298-93f1-de4ed0e6c37a" stretchType="NoStretch" x="230" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" bold="false" hTextAlign="Right">
+				<expression><![CDATA[$F{product.warehouselocation}]]></expression>
+			</element>
+			<element kind="textField" uuid="7791b84a-8fe5-3b20-b3ed-a35aa69ec5ac" stretchType="NoStretch" x="290" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" bold="false" hTextAlign="Right">
+				<expression><![CDATA[$F{product.warehousequantity}]]></expression>
+			</element>
+			<element kind="textField" uuid="b7b199c8-e833-32d4-a9b9-823f1ad570a9" stretchType="NoStretch" x="362" y="0" width="18" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Left">
+				<expression><![CDATA[$F{product.unit}]]></expression>
+			</element>
+			<element kind="textField" uuid="1f418b2e-d72b-3547-a1a6-02731f97ec08" stretchType="NoStretch" x="450" y="0" width="80" height="14" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$F{product.unitprice}]]></expression>
+			</element>
+			<element kind="subreport" uuid="ca85ebad-cae9-38e8-8f03-c8c8a79746b1" stretchType="NoStretch" x="0" y="14" width="530" height="0" usingCache="false" printWhenDetailOverflows="true">
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<dataSourceExpression><![CDATA[$F{product.rows}]]></dataSourceExpression>
+				<expression><![CDATA[$P{Report}]]></expression>
+				<parameter name="REPORT_RESOURCE_BUNDLE">
+					<expression><![CDATA[$P{REPORT_RESOURCE_BUNDLE}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
 </jasperReport>
