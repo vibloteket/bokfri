@@ -176,7 +176,7 @@ class BokfriCliTest {
         List<List<String>> paths = new ArrayList<>();
         collectCommandPaths(new CommandLine(new BokfriCli()), List.of(), paths);
 
-        assertThat(paths).hasSize(128);
+        assertThat(paths).hasSize(130);
         for (List<String> path : paths) {
             for (String helpOption : List.of("--help", "-h")) {
                 List<String> arguments = new ArrayList<>(path);
@@ -417,6 +417,62 @@ class BokfriCliTest {
         assertThat(textList.stdout()).startsWith("Id  From        To")
                 .contains("* " + selectedYearId + "   2025-07-01  2026-06-30",
                         "2026-07-01");
+    }
+
+    @Test
+    void accountPlanSpreadsheetCommandsPreviewImportBeforeApplying() throws Exception {
+        Path config = temporaryDirectory.resolve("account-plan-cli.yaml");
+        Path data = temporaryDirectory.resolve("account-plan-data");
+        Result initial = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "account-plan", "list");
+        JsonNode initialPlans = new ObjectMapper().readTree(initial.stdout()).path("accountPlans");
+        int sourceId = initialPlans.get(0).path("id").asInt();
+        int initialCount = initialPlans.size();
+        Path exported = temporaryDirectory.resolve("account-plan.xls");
+
+        Result export = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "account-plan", "export", "--id",
+                Integer.toString(sourceId), "--output", exported.toString());
+        assertThat(export.exitCode()).as(export.stderr()).isZero();
+        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0xd0, (byte) 0xcf,
+                (byte) 0x11, (byte) 0xe0);
+
+        Result duplicatePreview = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "account-plan", "import", "--file", exported.toString());
+        assertThat(duplicatePreview.exitCode()).as(duplicatePreview.stderr()).isZero();
+        JsonNode duplicateJson = new ObjectMapper().readTree(duplicatePreview.stdout());
+        assertThat(duplicateJson.path("duplicate").asBoolean()).isTrue();
+        assertThat(duplicateJson.path("applied").asBoolean()).isFalse();
+
+        Path unique = temporaryDirectory.resolve("unique.xls");
+        Files.copy(Path.of("src/main/resources/account/default/BAS-2026---Aktiebolag.xls"), unique);
+        try (org.apache.poi.hssf.usermodel.HSSFWorkbook workbook =
+                     new org.apache.poi.hssf.usermodel.HSSFWorkbook(Files.newInputStream(unique))) {
+            workbook.getSheetAt(0).getRow(0).getCell(1).setCellValue("CLI Testplan");
+            try (var output = Files.newOutputStream(unique)) {
+                workbook.write(output);
+            }
+        }
+        Result preview = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "account-plan", "import", "--file", unique.toString());
+        JsonNode previewJson = new ObjectMapper().readTree(preview.stdout());
+        assertThat(preview.exitCode()).as(preview.stderr()).isZero();
+        assertThat(previewJson.path("applied").asBoolean()).isFalse();
+        assertThat(previewJson.path("name").asText()).isEqualTo("CLI Testplan");
+
+        Result afterPreview = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "account-plan", "list");
+        assertThat(new ObjectMapper().readTree(afterPreview.stdout()).path("count").asInt())
+                .isEqualTo(initialCount);
+
+        Result applied = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "account-plan", "import", "--file", unique.toString(), "--apply");
+        assertThat(applied.exitCode()).as(applied.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(applied.stdout()).path("applied").asBoolean()).isTrue();
+        Result afterApply = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "account-plan", "list");
+        assertThat(new ObjectMapper().readTree(afterApply.stdout()).path("count").asInt())
+                .isEqualTo(initialCount + 1);
     }
 
     @Test
