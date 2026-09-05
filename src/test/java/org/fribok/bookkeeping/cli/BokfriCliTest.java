@@ -176,7 +176,7 @@ class BokfriCliTest {
         List<List<String>> paths = new ArrayList<>();
         collectCommandPaths(new CommandLine(new BokfriCli()), List.of(), paths);
 
-        assertThat(paths).hasSize(130);
+        assertThat(paths).hasSize(133);
         for (List<String> path : paths) {
             for (String helpOption : List.of("--help", "-h")) {
                 List<String> arguments = new ArrayList<>(path);
@@ -473,6 +473,49 @@ class BokfriCliTest {
                 "--format", "json", "account-plan", "list");
         assertThat(new ObjectMapper().readTree(afterApply.stdout()).path("count").asInt())
                 .isEqualTo(initialCount + 1);
+    }
+
+    @Test
+    void voucherTemplateSpreadsheetCommandsAreSafeByDefault() throws Exception {
+        Path config = temporaryDirectory.resolve("template-cli.yaml");
+        Path data = temporaryDirectory.resolve("template-data");
+        Result companies = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Path fixture = temporaryDirectory.resolve("templates.xls");
+        se.swedsoft.bookkeeping.data.SSVoucherTemplate template =
+                new se.swedsoft.bookkeeping.data.SSVoucherTemplate();
+        template.setDescription("CLI mall åäö");
+        var row = new se.swedsoft.bookkeeping.data.SSVoucherTemplate.SSVoucherTemplateRow();
+        row.setAccountNr(1930);
+        row.setDebet(BigDecimal.ZERO);
+        template.getRows().add(row);
+        new org.fribok.bookkeeping.service.spreadsheet.VoucherTemplateSpreadsheetService()
+                .write(List.of(template), fixture, false);
+        String[] context = {"--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--format", "json"};
+
+        Result preview = execute(concat(context, "voucher-template", "import", "--file",
+                fixture.toString()));
+        JsonNode previewJson = new ObjectMapper().readTree(preview.stdout());
+        assertThat(preview.exitCode()).as(preview.stderr()).isZero();
+        assertThat(previewJson.path("applied").asBoolean()).isFalse();
+        assertThat(previewJson.path("newCount").asInt()).isEqualTo(1);
+
+        Result applied = execute(concat(context, "voucher-template", "import", "--file",
+                fixture.toString(), "--apply"));
+        assertThat(applied.exitCode()).as(applied.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(applied.stdout()).path("applied").asBoolean()).isTrue();
+
+        Path exported = temporaryDirectory.resolve("templates-export.xls");
+        Result export = execute(concat(context, "voucher-template", "export", "--output",
+                exported.toString()));
+        assertThat(export.exitCode()).as(export.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(export.stdout()).path("count").asInt())
+                .isGreaterThanOrEqualTo(1);
+        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0xd0, (byte) 0xcf,
+                (byte) 0x11, (byte) 0xe0);
     }
 
     @Test
