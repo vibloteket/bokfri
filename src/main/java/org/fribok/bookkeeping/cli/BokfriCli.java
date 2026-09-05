@@ -52,6 +52,7 @@ import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceService;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationIssue;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationResult;
 import org.fribok.bookkeeping.service.spreadsheet.AccountPlanSpreadsheetService;
+import org.fribok.bookkeeping.service.spreadsheet.VoucherTemplateSpreadsheetService;
 import org.fribok.bookkeeping.service.suppliercreditinvoice.SupplierCreditInvoiceJournalPlan;
 import org.fribok.bookkeeping.service.suppliercreditinvoice.SupplierCreditInvoiceService;
 import org.fribok.bookkeeping.service.product.ProductValidationIssue;
@@ -90,6 +91,7 @@ import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoiceRow;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
+import se.swedsoft.bookkeeping.data.SSVoucherTemplate;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.common.SSCurrency;
 import se.swedsoft.bookkeeping.data.common.SSDefaultAccount;
@@ -188,7 +190,8 @@ import java.util.concurrent.Callable;
             BokfriCli.InpaymentCommand.class,
             BokfriCli.OutpaymentCommand.class,
             BokfriCli.VatCommand.class,
-            BokfriCli.VoucherCommand.class
+            BokfriCli.VoucherCommand.class,
+            BokfriCli.VoucherTemplateCommand.class
         })
 public class BokfriCli implements Runnable {
     enum OutputFormat { text, json }
@@ -2916,6 +2919,79 @@ public class BokfriCli implements Runnable {
         @Option(names = "--dry-run", description = "Validate and preview without writing")
         boolean dryRun;
         @Override boolean persist() { return !dryRun; }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "voucher-template",
+            description = "Exchange voucher templates",
+            subcommands = {VoucherTemplateExport.class, VoucherTemplateImport.class})
+    static class VoucherTemplateCommand extends CliCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @Override public void run() {
+            throw new CommandLine.ParameterException(spec.commandLine(),
+                    "A voucher-template command is required");
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "export",
+            description = "Export voucher templates as legacy Excel XLS")
+    static class VoucherTemplateExport implements Callable<Integer> {
+        @CommandLine.ParentCommand VoucherTemplateCommand command;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                List<SSVoucherTemplate> templates = runtime.database().getVoucherTemplates();
+                java.nio.file.Path exported = new VoucherTemplateSpreadsheetService()
+                        .write(templates, output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("output", exported.toString());
+                result.put("bytes", Files.size(exported));
+                result.put("count", templates.size());
+                result.put("companyId", company.getId());
+                root.output(result, "Created voucher-template XLS " + exported);
+                return 0;
+            } catch (Exception exception) {
+                throw spreadsheetFailure("VOUCHER_TEMPLATE_EXPORT_FAILED", exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "import",
+            description = "Preview or import voucher templates from legacy Excel XLS")
+    static class VoucherTemplateImport implements Callable<Integer> {
+        @CommandLine.ParentCommand VoucherTemplateCommand command;
+        @Option(names = "--file", required = true) java.nio.file.Path file;
+        @Option(names = "--apply", description = "Store non-duplicate voucher templates") boolean apply;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                List<SSVoucherTemplate> templates = new VoucherTemplateSpreadsheetService().read(file);
+                java.util.Set<String> existingNames = runtime.database().getVoucherTemplates().stream()
+                        .map(SSVoucherTemplate::getDescription).collect(java.util.stream.Collectors.toSet());
+                List<SSVoucherTemplate> additions = templates.stream()
+                        .filter(template -> !existingNames.contains(template.getDescription())).toList();
+                if (apply) {
+                    additions.forEach(runtime.database()::addVoucherTemplate);
+                }
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("file", file.toAbsolutePath().normalize().toString());
+                result.put("count", templates.size());
+                result.put("newCount", additions.size());
+                result.put("duplicateCount", templates.size() - additions.size());
+                result.put("applied", apply);
+                result.put("companyId", company.getId());
+                root.output(result, apply ? "Imported " + additions.size() + " voucher templates"
+                        : "Voucher-template import preview; no changes written");
+                return 0;
+            } catch (Exception exception) {
+                throw spreadsheetFailure("VOUCHER_TEMPLATE_IMPORT_FAILED", exception);
+            }
+        }
     }
 
     private static OutpaymentInput readOutpaymentInput(String file) {
