@@ -1,272 +1,112 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="Invoice">
-    <template><![CDATA["reports/report/styles/bokfri.jrtx"]]></template>
-
-    <!--- Declared parameters in the report. -->
-
-    <parameter name="title"      class="java.lang.String"/>
-
-    <parameter name="company.logo"          class="java.awt.Image"/>
-    <parameter name="company.name"          class="java.lang.String"/>
-    <parameter name="company.address1"      class="java.lang.String"/>
-    <parameter name="company.address2"      class="java.lang.String"/>
-    <parameter name="company.zipcode"       class="java.lang.String"/>
-    <parameter name="company.city"          class="java.lang.String"/>
-    <parameter name="company.country"       class="java.lang.String"/>
-    <parameter name="company.phone"         class="java.lang.String"/>
-    <parameter name="company.telefax"       class="java.lang.String"/>
-    <parameter name="company.residence"     class="java.lang.String"/>
-    <parameter name="company.email"         class="java.lang.String"/>
-    <parameter name="company.homepage"      class="java.lang.String"/>
-    <parameter name="company.reminderfee"   class="java.math.BigDecimal"/>
-    <parameter name="company.delayinterest" class="java.math.BigDecimal"/>
-    <parameter name="company.plusaccount"   class="java.lang.String"/>
-    <parameter name="company.bankaccount"   class="java.lang.String"/>
-    <parameter name="company.bic"           class="java.lang.String"/>
-    <parameter name="company.iban"          class="java.lang.String"/>
-    <parameter name="company.bank"          class="java.lang.String"/>
-
-
-    <parameter name="number"    class="java.lang.Integer"/>
-    <parameter name="date"      class="java.lang.String"/>
-    <parameter name="text"      class="java.lang.String"/>
-
-    <parameter name="customer.invoiceadress.name"      class="java.lang.String"/>
-    <parameter name="customer.invoiceadress.address1"  class="java.lang.String"/>
-    <parameter name="customer.invoiceadress.address2"  class="java.lang.String"/>
-    <parameter name="customer.invoiceadress.zipcode"   class="java.lang.String"/>
-    <parameter name="customer.invoiceadress.city"      class="java.lang.String"/>
-    <parameter name="customer.invoiceadress.country"  class="java.lang.String"/>
-
-    <parameter name="customer.customernr"       class="java.lang.String"/>
-    <parameter name="customer.currency"         class="java.lang.String"/>
-    <parameter name="customer.yourcontact"      class="java.lang.String"/>
-    <parameter name="customer.ourcontact"       class="java.lang.String"/>
-
-
-    <parameter name="reminder.reminderfee"       class="java.math.BigDecimal"/>
-    <parameter name="reminder.saldo.sum"        class="java.math.BigDecimal"/>
-    <parameter name="reminder.interest.sum"     class="java.math.BigDecimal"/>
-
-
-
-    <parameter name="subreport.report"         class="net.sf.jasperreports.engine.JasperReport"/>
-    <field     name="subreport.datasource"     class="net.sf.jasperreports.engine.JRDataSource"/>
-
-
-    <variable name="delayfee.sum" class="java.math.BigDecimal" calculation="System" resetType="Report">
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-    <variable name="saldo.sum" class="java.math.BigDecimal" calculation="System" resetType="Report">
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-    <columnHeader>
-        <band isSplitAllowed="false" height="128">
-
-
-            <!-- invoice adress frame -->
-            <frame>
-                <reportElement x="300" y="0" width="250" height="86"/>
-
-                <box border="Thin" borderColor="#000000"/>
-
-                <!-- Adress text -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="5" y="2" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{reminderreport.invoiceadress}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Name -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="14" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{customer.invoiceadress.name}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Address 1 -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="28" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{customer.invoiceadress.address1}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Address 2 -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="42" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{customer.invoiceadress.address2}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Zip Code + City -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="56" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{customer.invoiceadress.zipcode} + " " + $P{customer.invoiceadress.city}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Country -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="70" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{customer.invoiceadress.country}]]>
-                    </textFieldExpression>
-                </textField>
-
-            </frame>
-
-            <!-- Invoice details, Column 1 -->
-            <frame>
-                <reportElement x="45" y="90" width="250" height="30"/>
-
-                <!-- Our contact -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="0" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{customer.ourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="0" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{customer.ourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Remainderfee -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="15" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{company.reminderfee}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true"  pattern="#,##0.00">
-                    <reportElement x="100" y="15" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$P{company.reminderfee}]]>
-                    </textFieldExpression>
-                </textField>
-            </frame>
-
-
-            <!-- Invoice details, Column 2 -->
-            <frame>
-                <reportElement x="305" y="90" width="250" height="30"/>
-
-                <!-- Customer nr -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="0" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{customer.customernr}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="0" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{customer.customernr}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Your contact -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="15" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{customer.yourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="15" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{customer.yourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-            </frame>
-
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band isSplitAllowed="true" height="162">
-            <!-- Rows and totals are owned by one report and therefore flow vertically. -->
-            <subreport isUsingCache="false">
-                <reportElement x="40" y="0" width="510" height="162"/>
-                <parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
-                <subreportParameter name="REPORT_RESOURCE_BUNDLE">
-                    <subreportParameterExpression><![CDATA[$P{REPORT_RESOURCE_BUNDLE}]]></subreportParameterExpression>
-                </subreportParameter>
-                <dataSourceExpression><![CDATA[$F{subreport.datasource}]]></dataSourceExpression>
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport"><![CDATA[$P{subreport.report}]]></subreportExpression>
-            </subreport>
-        </band>
-    </detail>
-
-
-
+<jasperReport name="Invoice" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" uuid="10414df0-4b0c-3107-9ec6-a77808409c27">
+	<template><![CDATA["reports/report/styles/bokfri.jrtx"]]></template>
+	<parameter name="title" class="java.lang.String"/>
+	<parameter name="company.logo" class="java.awt.Image"/>
+	<parameter name="company.name" class="java.lang.String"/>
+	<parameter name="company.address1" class="java.lang.String"/>
+	<parameter name="company.address2" class="java.lang.String"/>
+	<parameter name="company.zipcode" class="java.lang.String"/>
+	<parameter name="company.city" class="java.lang.String"/>
+	<parameter name="company.country" class="java.lang.String"/>
+	<parameter name="company.phone" class="java.lang.String"/>
+	<parameter name="company.telefax" class="java.lang.String"/>
+	<parameter name="company.residence" class="java.lang.String"/>
+	<parameter name="company.email" class="java.lang.String"/>
+	<parameter name="company.homepage" class="java.lang.String"/>
+	<parameter name="company.reminderfee" class="java.math.BigDecimal"/>
+	<parameter name="company.delayinterest" class="java.math.BigDecimal"/>
+	<parameter name="company.plusaccount" class="java.lang.String"/>
+	<parameter name="company.bankaccount" class="java.lang.String"/>
+	<parameter name="company.bic" class="java.lang.String"/>
+	<parameter name="company.iban" class="java.lang.String"/>
+	<parameter name="company.bank" class="java.lang.String"/>
+	<parameter name="number" class="java.lang.Integer"/>
+	<parameter name="date" class="java.lang.String"/>
+	<parameter name="text" class="java.lang.String"/>
+	<parameter name="customer.invoiceadress.name" class="java.lang.String"/>
+	<parameter name="customer.invoiceadress.address1" class="java.lang.String"/>
+	<parameter name="customer.invoiceadress.address2" class="java.lang.String"/>
+	<parameter name="customer.invoiceadress.zipcode" class="java.lang.String"/>
+	<parameter name="customer.invoiceadress.city" class="java.lang.String"/>
+	<parameter name="customer.invoiceadress.country" class="java.lang.String"/>
+	<parameter name="customer.customernr" class="java.lang.String"/>
+	<parameter name="customer.currency" class="java.lang.String"/>
+	<parameter name="customer.yourcontact" class="java.lang.String"/>
+	<parameter name="customer.ourcontact" class="java.lang.String"/>
+	<parameter name="reminder.reminderfee" class="java.math.BigDecimal"/>
+	<parameter name="reminder.saldo.sum" class="java.math.BigDecimal"/>
+	<parameter name="reminder.interest.sum" class="java.math.BigDecimal"/>
+	<parameter name="subreport.report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<field name="subreport.datasource" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<variable name="delayfee.sum" calculation="System" class="java.math.BigDecimal">
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="saldo.sum" calculation="System" class="java.math.BigDecimal">
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<columnHeader height="128" splitType="Prevent">
+		<element kind="frame" uuid="9073b904-2e13-344a-abad-796357b0b939" stretchType="NoStretch" x="300" y="0" width="250" height="86">
+			<element kind="textField" uuid="1fd8e816-6abc-3c57-820e-05979a290dbb" stretchType="NoStretch" x="5" y="2" width="240" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$R{reminderreport.invoiceadress}]]></expression>
+			</element>
+			<element kind="textField" uuid="25076bf2-9f9f-3ada-be9e-15d1cd32bee3" stretchType="NoStretch" x="10" y="14" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{customer.invoiceadress.name}]]></expression>
+			</element>
+			<element kind="textField" uuid="da9f1202-ee39-315e-85f6-5a56e8b34bb3" stretchType="NoStretch" x="10" y="28" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{customer.invoiceadress.address1}]]></expression>
+			</element>
+			<element kind="textField" uuid="99c339e0-41d0-34cd-aef1-3ac03b28dfb8" stretchType="NoStretch" x="10" y="42" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{customer.invoiceadress.address2}]]></expression>
+			</element>
+			<element kind="textField" uuid="af83dc46-e784-3099-92ac-cb6984fb3bad" stretchType="NoStretch" x="10" y="56" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{customer.invoiceadress.zipcode} + " " + $P{customer.invoiceadress.city}]]></expression>
+			</element>
+			<element kind="textField" uuid="87dad843-afd7-3cac-ab7c-da0ca4b8725e" stretchType="NoStretch" x="10" y="70" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{customer.invoiceadress.country}]]></expression>
+			</element>
+			<box>
+				<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+			</box>
+		</element>
+		<element kind="frame" uuid="9af60007-1c8f-392f-b8d4-f3da5b28861a" stretchType="NoStretch" x="45" y="90" width="250" height="30">
+			<element kind="textField" uuid="d1cc3e26-2a25-35d6-b681-c6e863770418" stretchType="NoStretch" x="0" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{customer.ourcontact}]]></expression>
+			</element>
+			<element kind="textField" uuid="54436f81-be03-3620-8def-3999d3291f6f" stretchType="NoStretch" x="100" y="0" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{customer.ourcontact}]]></expression>
+			</element>
+			<element kind="textField" uuid="356f1a40-2be4-3e6a-9342-5db566a44a10" stretchType="NoStretch" x="0" y="15" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{company.reminderfee}]]></expression>
+			</element>
+			<element kind="textField" uuid="3cfc4044-3e63-3ffb-906e-c8a963615794" stretchType="NoStretch" x="100" y="15" width="150" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{company.reminderfee}]]></expression>
+			</element>
+		</element>
+		<element kind="frame" uuid="ac2eb2de-d624-3eaf-8121-98bbab558a64" stretchType="NoStretch" x="305" y="90" width="250" height="30">
+			<element kind="textField" uuid="6e0069e8-847c-38b9-8d8c-ad7d66cb7951" stretchType="NoStretch" x="0" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{customer.customernr}]]></expression>
+			</element>
+			<element kind="textField" uuid="61fee183-c62a-309d-aefa-7aa12bc76654" stretchType="NoStretch" x="100" y="0" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{customer.customernr}]]></expression>
+			</element>
+			<element kind="textField" uuid="5ed816c5-eeb7-30c8-83c1-3a755ae1b787" stretchType="NoStretch" x="0" y="15" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{customer.yourcontact}]]></expression>
+			</element>
+			<element kind="textField" uuid="a94dedf2-b3bf-3626-bf41-04db411b3fb3" stretchType="NoStretch" x="100" y="15" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{customer.yourcontact}]]></expression>
+			</element>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="162" splitType="Stretch">
+			<element kind="subreport" uuid="35b8574c-990d-32fe-af0d-a9e90e0bf099" stretchType="NoStretch" x="40" y="0" width="510" height="162" usingCache="false">
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<dataSourceExpression><![CDATA[$F{subreport.datasource}]]></dataSourceExpression>
+				<expression><![CDATA[$P{subreport.report}]]></expression>
+				<parameter name="REPORT_RESOURCE_BUNDLE">
+					<expression><![CDATA[$P{REPORT_RESOURCE_BUNDLE}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

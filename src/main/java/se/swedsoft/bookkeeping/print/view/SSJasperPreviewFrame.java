@@ -1,12 +1,13 @@
 package se.swedsoft.bookkeeping.print.view;
 
 
+import net.sf.jasperreports.engine.DefaultJasperReportsContext;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JasperExportManager;
 import se.swedsoft.bookkeeping.print.PdfReportExporter;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperPrintManager;
-import net.sf.jasperreports.view.save.JRMultipleSheetsXlsSaveContributor;
+import net.sf.jasperreports.poi.view.save.JRMultipleSheetsXlsSaveContributor;
 import net.sf.jasperreports.view.save.JRRtfSaveContributor;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.status.SSStatusBar;
@@ -369,7 +370,8 @@ public class SSJasperPreviewFrame extends SSDefaultTableFrame implements Propert
         if (iFileExt.equals(".rtf")
                 || (iFileExt.length() == 0 && pFileFilter instanceof SSFilterRTF)) {
             try {
-                JRRtfSaveContributor iSaver = new JRRtfSaveContributor(Locale.of("sv", "SE"), bundle);
+                JRRtfSaveContributor iSaver = new JRRtfSaveContributor(
+                        DefaultJasperReportsContext.getInstance(), Locale.of("sv", "SE"), bundle);
 
                 iSaver.save(iPrinter, pSelectedFile);
             } catch (JRException ex) {
@@ -382,7 +384,8 @@ public class SSJasperPreviewFrame extends SSDefaultTableFrame implements Propert
                 || (iFileExt.length() == 0 && pFileFilter instanceof SSFilterXLS)) {
 
             try {
-                JRMultipleSheetsXlsSaveContributor iSaver = new JRMultipleSheetsXlsSaveContributor(Locale.of("sv", "SE"), bundle);
+                JRMultipleSheetsXlsSaveContributor iSaver = new JRMultipleSheetsXlsSaveContributor(
+                        DefaultJasperReportsContext.getInstance(), Locale.of("sv", "SE"), bundle);
 
                 iSaver.save(iPrinter, pSelectedFile);
             } catch (JRException ex) {

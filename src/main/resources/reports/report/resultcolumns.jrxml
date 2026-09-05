@@ -1,81 +1,23 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="ResultColumnHeader" resourceBundle="book">
-
-    <!-- Declared fields in the report. -->
-
-
-    <parameter name="column.text.1"    class="java.lang.String"/>
-    <parameter name="column.text.2"    class="java.lang.String"/>
-    <parameter name="column.text.3"    class="java.lang.String"/>
-
-
-    <columnHeader>
-        <band height="15">
-            <line>
-                <reportElement x="20" y="12" width="510" height="1"/>
-            </line>
-
-            <!-- Number -->
-            <textField>
-                <reportElement x="40" y="0" width="30" height="12"/>
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{resultreport.column.8}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Description -->
-            <textField>
-                <reportElement x="100" y="0" width="250" height="12"/>
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{resultreport.column.9}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Column 1 -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="290" y="0" width="80" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$P{column.text.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Column 2 -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="370" y="0" width="80" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$P{column.text.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Column 3 -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="450" y="0" width="80" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$P{column.text.3}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </columnHeader>
-
+<jasperReport name="ResultColumnHeader" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="a1265eae-751f-33b7-879f-a26ffb311945">
+	<parameter name="column.text.1" class="java.lang.String"/>
+	<parameter name="column.text.2" class="java.lang.String"/>
+	<parameter name="column.text.3" class="java.lang.String"/>
+	<columnHeader height="15" splitType="Stretch">
+		<element kind="line" uuid="19947d5e-c7ec-377c-a92c-f42b66e517cf" stretchType="NoStretch" x="20" y="12" width="510" height="1"/>
+		<element kind="textField" uuid="66163ed7-b287-3752-a55e-b0e097a33374" stretchType="NoStretch" x="40" y="0" width="30" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{resultreport.column.8}]]></expression>
+		</element>
+		<element kind="textField" uuid="4648dff5-d384-32b9-a623-76009f91d3de" stretchType="NoStretch" x="100" y="0" width="250" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{resultreport.column.9}]]></expression>
+		</element>
+		<element kind="textField" uuid="7a517937-edc3-30a1-9d48-27d7597823da" stretchType="NoStretch" x="290" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+			<expression><![CDATA[$P{column.text.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="d968dbf5-7a21-3a2d-901d-f838c4efe1c7" stretchType="NoStretch" x="370" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+			<expression><![CDATA[$P{column.text.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="80f3a77e-2da8-36d8-a399-613574bd5635" stretchType="NoStretch" x="450" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+			<expression><![CDATA[$P{column.text.3}]]></expression>
+		</element>
+	</columnHeader>
 </jasperReport>

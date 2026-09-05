@@ -1,190 +1,66 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="PickingslipRows">
-
-    <field name="product.number"          class="java.lang.String"/>
-    <field name="product.description"     class="java.lang.String"/>
-    <field name="product.count"           class="java.math.BigDecimal"/>
-
-    <field name="product.unitprice"          class="java.math.BigDecimal"/>
-    <field name="product.unit"               class="java.lang.String"/>
-    <field name="product.weight"             class="java.math.BigDecimal"/>
-    <field name="product.volume"             class="java.math.BigDecimal"/>
-
-    <variable name="totalweight" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
-        <variableExpression>
-            <![CDATA[$F{product.weight}.multiply( $F{product.count} )]]>
-        </variableExpression>
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-    <variable name="totalvolume" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
-        <variableExpression>
-            <![CDATA[$F{product.volume}.multiply( $F{product.count} )]]>
-        </variableExpression>
-        <initialValueExpression>
-            <![CDATA[new BigDecimal(0.0)]]>
-        </initialValueExpression>
-    </variable>
-
-    <columnHeader>
-        <band height="16" isSplitAllowed="true">
-            <line>
-                <reportElement x="0" y="0" width="510" height="1"/>
-                <graphicElement pen="Thin"/>
-            </line>
-
-            <line>
-                <reportElement x="0" y="13" width="510" height="1"/>
-                <graphicElement pen="Thin"/>
-            </line>
-
-            <!-- Product number -->
-            <textField>
-                <reportElement x="10" y="2" width="70" height="12"/>
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$R{deliverynotereport.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Description -->
-            <textField isBlankWhenNull="true" pattern="#,##0.##">
-                <reportElement x="80" y="2" width="90" height="12"/>
-                <textElement textAlignment="Left">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$R{deliverynotereport.column.2}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Unit price -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="250" y="2" width="70" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$R{deliverynotereport.column.3}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Num picked -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="400" y="2" width="80" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$R{deliverynotereport.column.4}]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-
-
-        </band>
-    </columnHeader>
-
-    <detail>
-        <band height="12" isSplitAllowed="true">
-
-            <!-- Number -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="10" y="0" width="70" height="12"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$F{product.number}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Description -->
-            <textField  isBlankWhenNull="true">
-                <reportElement x="80" y="0" width="250" height="12"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$F{product.description}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <!-- Unitprice -->
-            <textField  isBlankWhenNull="true" pattern="#,##0.00">
-                <reportElement x="250" y="0" width="70" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.unitprice}]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-            <!-- Count -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="400" y="0" width="70" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{product.count}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- Unit -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="472" y="0" width="18" height="12"/>
-                <textElement textAlignment="Left">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$F{product.unit}]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-
-        </band>
-    </detail>
-
-    <pageFooter>
-        <band height="13">
-            <!-- Number -->
-            <textField>
-                <reportElement x="0" y="0" width="510" height="13"/>
-
-                <box bottomBorder="Thin" borderColor="#000000" />
-
-                <textElement textAlignment="Right" verticalAlignment="Bottom">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$R{deliverynotereport.continuing}]]>
-                </textFieldExpression>
-            </textField>
-
-        </band>
-    </pageFooter>
-
-    <lastPageFooter>
-        <band height="0">
-        </band>
-    </lastPageFooter>
-
+<jasperReport name="PickingslipRows" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" uuid="94e98e64-243d-31e2-95bd-983e29e11765">
+	<field name="product.number" class="java.lang.String"/>
+	<field name="product.description" class="java.lang.String"/>
+	<field name="product.count" class="java.math.BigDecimal"/>
+	<field name="product.unitprice" class="java.math.BigDecimal"/>
+	<field name="product.unit" class="java.lang.String"/>
+	<field name="product.weight" class="java.math.BigDecimal"/>
+	<field name="product.volume" class="java.math.BigDecimal"/>
+	<variable name="totalweight" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{product.weight}.multiply( $F{product.count} )]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<variable name="totalvolume" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{product.volume}.multiply( $F{product.count} )]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<columnHeader height="16" splitType="Stretch">
+		<element kind="line" uuid="e4dffd6d-5e95-3086-9b7f-95f59649c0f6" stretchType="NoStretch" x="0" y="0" width="510" height="1">
+			<pen lineWidth="0.5" lineStyle="Solid"/>
+		</element>
+		<element kind="line" uuid="be8fbfa7-4027-3877-aeb0-9320ee3aa16c" stretchType="NoStretch" x="0" y="13" width="510" height="1">
+			<pen lineWidth="0.5" lineStyle="Solid"/>
+		</element>
+		<element kind="textField" uuid="d239a9ab-69b8-3287-a266-46112b9f8d5a" stretchType="NoStretch" x="10" y="2" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$R{deliverynotereport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="85e927c7-5b1f-3606-a4ce-3148a36f5bcf" stretchType="NoStretch" x="80" y="2" width="90" height="12" fontSize="8.0" pattern="#,##0.##" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+			<expression><![CDATA[$R{deliverynotereport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="bde308c3-ddeb-3535-aab2-8a39c7db610e" stretchType="NoStretch" x="250" y="2" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+			<expression><![CDATA[$R{deliverynotereport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="79b29032-89ee-31cb-9059-e0a9b89290fe" stretchType="NoStretch" x="400" y="2" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+			<expression><![CDATA[$R{deliverynotereport.column.4}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="12" splitType="Stretch">
+			<element kind="textField" uuid="63ca8389-0a73-3da3-b807-bb1d46b32095" stretchType="NoStretch" x="10" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false">
+				<expression><![CDATA[$F{product.number}]]></expression>
+			</element>
+			<element kind="textField" uuid="6f16cf51-4f73-3a22-8619-982739a80a8b" stretchType="NoStretch" x="80" y="0" width="250" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false">
+				<expression><![CDATA[$F{product.description}]]></expression>
+			</element>
+			<element kind="textField" uuid="cc06b875-8610-3d5b-bf76-a9a1f83a9335" stretchType="NoStretch" x="250" y="0" width="70" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+				<expression><![CDATA[$F{product.unitprice}]]></expression>
+			</element>
+			<element kind="textField" uuid="e6aacf5e-bee8-3ff4-a13a-3eb68b36e44f" stretchType="NoStretch" x="400" y="0" width="70" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Right">
+				<expression><![CDATA[$F{product.count}]]></expression>
+			</element>
+			<element kind="textField" uuid="db6a762d-8026-3015-99a2-9597e874f5e0" stretchType="NoStretch" x="472" y="0" width="18" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="false" hTextAlign="Left">
+				<expression><![CDATA[$F{product.unit}]]></expression>
+			</element>
+		</band>
+	</detail>
+	<pageFooter height="13" splitType="Stretch">
+		<element kind="textField" uuid="2af6a5d9-c7ce-391e-b10a-46b3d43cdf5a" stretchType="NoStretch" x="0" y="0" width="510" height="13" fontSize="8.0" linkType="None" linkTarget="Self" bold="false" hTextAlign="Right" vTextAlign="Bottom">
+			<expression><![CDATA[$R{deliverynotereport.continuing}]]></expression>
+			<box>
+				<pen lineColor="#000000"/>
+				<bottomPen lineWidth="0.5" lineStyle="Solid"/>
+			</box>
+		</element>
+	</pageFooter>
+	<lastPageFooter splitType="Stretch"/>
 </jasperReport>

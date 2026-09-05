@@ -286,7 +286,7 @@ public class SSReport {    private static final Logger LOG = LoggerFactory.getLo
         if (iDetail != null) {
             for (JRBand band: iDetail.getBands()) {
                 JRDesignBand b = new JRDesignBand();
-                b.setSplitType(band.getSplitTypeValue());
+                b.setSplitType(band.getSplitType());
                 b.setHeight(band.getHeight());
                 b.setPrintWhenExpression(band.getPrintWhenExpression());
                 if (band.getReturnValues() != null) {

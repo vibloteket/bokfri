@@ -1,166 +1,60 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="VATControl2015" resourceBundle="book">
-
-    <field name="group.number"      class="java.lang.Integer"/>
-    <field name="group.description" class="java.lang.String"/>
-    <field name="group.turnover"    class="java.math.BigDecimal"/>
-    <field name="group.calculated"  class="java.math.BigDecimal"/>
-    <field name="group.reported"    class="java.math.BigDecimal"/>
-
-
-    <!-- Sums the deviation. -->
-    <variable name="deviation" class="java.math.BigDecimal" resetType="Report" calculation="Nothing">
-        <variableExpression>
-            <![CDATA[ $F{group.calculated}.subtract( $F{group.reported} ) ]]>
-        </variableExpression>
-    </variable>
-
-
-    <!-- Sums the deviation. -->
-    <variable name="deviation.sum" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
-        <variableExpression>
-            <![CDATA[ $V{deviation} ]]>
-        </variableExpression>
-    </variable>
-
-
-    <columnHeader>
-         <band height="15">
-             <line>
-                 <reportElement x="20" y="12" width="510" height="1"/>
-             </line>
-             <textField>
-                 <reportElement x="210" y="0" width="80" height="12" />
-                 <textElement textAlignment="Right">
-                     <font size="8"/>
-                 </textElement>
-                 <textFieldExpression class="java.lang.String">
-                     <![CDATA[$R{vatcontrolreport.column.1}]]>
-                 </textFieldExpression>
-             </textField>
-             <textField>
-                 <reportElement x="290" y="0" width="80" height="12" />
-                 <textElement textAlignment="Right">
-                     <font size="8"/>
-                 </textElement>
-                 <textFieldExpression class="java.lang.String">
-                     <![CDATA[$R{vatcontrolreport.column.2}]]>
-                 </textFieldExpression>
-             </textField>
-             <textField>
-                 <reportElement x="370" y="0" width="80" height="12" />
-                 <textElement textAlignment="Right">
-                     <font size="8"/>
-                 </textElement>
-                 <textFieldExpression class="java.lang.String">
-                     <![CDATA[$R{vatcontrolreport.column.3}]]>
-                 </textFieldExpression>
-             </textField>
-             <textField>
-                 <reportElement x="450" y="0" width="80" height="12" />
-                 <textElement textAlignment="Right">
-                     <font size="8"/>
-                 </textElement>
-                 <textFieldExpression class="java.lang.String">
-                     <![CDATA[$R{vatcontrolreport.column.4}]]>
-                 </textFieldExpression>
-             </textField>
-         </band>
-     </columnHeader>
-
-
-    <detail>
-        <band height="12" isSplitAllowed="false">
-            <textField>
-                <reportElement x="20" y="0" width="190" height="12"/>
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{group.description}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField pattern="#,##0.00">
-                 <reportElement x="210" y="0" width="80" height="12" />
-                 <textElement textAlignment="Right">
-                     <font size="8"/>
-                 </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{group.turnover}]]>
-                </textFieldExpression>
-             </textField>
-
-            <textField pattern="#,##0.00">
-                 <reportElement x="290" y="0" width="80" height="12" />
-                 <textElement textAlignment="Right">
-                     <font size="8"/>
-                 </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{group.calculated}]]>
-                </textFieldExpression>
-             </textField>
-
-            <textField pattern="#,##0.00">
-                 <reportElement x="370" y="0" width="80" height="12" />
-                 <textElement textAlignment="Right">
-                     <font size="8"/>
-                 </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{group.reported}]]>
-                </textFieldExpression>
-             </textField>
-
-            <textField pattern="#,##0.00">
-                 <reportElement x="450" y="0" width="80" height="12" />
-                 <textElement textAlignment="Right">
-                     <font size="8"/>
-                 </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$V{deviation} ]]>
-                </textFieldExpression>
-             </textField>
-
-        </band>
-    </detail>
-
-
-    <summary>
-        <band height="25">
-
-            <elementGroup>
-                <rectangle>
-                    <reportElement x="20" y="0" width="510" height="2" backcolor="#000000"/>
-                    <graphicElement pen="None" fill="Solid"/>
-                </rectangle>
-
-                <textField>
-                    <reportElement x="20" y="3" width="250" height="14"/>
-                    <textElement>
-                        <font size="10" isBold="false"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{vatcontrolreport.sum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00" isBlankWhenNull="false">
-                    <reportElement x="450" y="3" width="80" height="14"/>
-                    <textElement textAlignment="Right">
-                        <font size="10" isBold="false"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$V{deviation.sum}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-            </elementGroup>
-        </band>
-    </summary>
-
+<jasperReport name="VATControl2015" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="4644a97f-0b15-3ade-b221-c63bb680f9be">
+	<field name="group.number" class="java.lang.Integer"/>
+	<field name="group.description" class="java.lang.String"/>
+	<field name="group.turnover" class="java.math.BigDecimal"/>
+	<field name="group.calculated" class="java.math.BigDecimal"/>
+	<field name="group.reported" class="java.math.BigDecimal"/>
+	<variable name="deviation" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{group.calculated}.subtract( $F{group.reported} )]]></expression>
+	</variable>
+	<variable name="deviation.sum" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$V{deviation}]]></expression>
+	</variable>
+	<columnHeader height="15" splitType="Stretch">
+		<element kind="line" uuid="de7622e2-cfa2-3dab-9e06-5b6c1b126916" stretchType="NoStretch" x="20" y="12" width="510" height="1"/>
+		<element kind="textField" uuid="719e765d-74f3-37a0-b6ce-1de722dca38a" stretchType="NoStretch" x="210" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{vatcontrolreport.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="6ca7860f-b234-3a99-af31-f510b410fd0c" stretchType="NoStretch" x="290" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{vatcontrolreport.column.2}]]></expression>
+		</element>
+		<element kind="textField" uuid="a07d7e6c-09e3-3cce-ae3d-3038f63e6dab" stretchType="NoStretch" x="370" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{vatcontrolreport.column.3}]]></expression>
+		</element>
+		<element kind="textField" uuid="c6725e71-44ee-3e46-96fd-5697e3bdbfa6" stretchType="NoStretch" x="450" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{vatcontrolreport.column.4}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="12" splitType="Prevent">
+			<element kind="textField" uuid="f0c9b259-7b31-368c-aafc-978bd2586f05" stretchType="NoStretch" x="20" y="0" width="190" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+				<expression><![CDATA[$F{group.description}]]></expression>
+			</element>
+			<element kind="textField" uuid="d52f7fed-5560-333f-94c5-54169af73fca" stretchType="NoStretch" x="210" y="0" width="80" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$F{group.turnover}]]></expression>
+			</element>
+			<element kind="textField" uuid="fb380466-61d7-30c1-a7b5-d4fc375ab9ba" stretchType="NoStretch" x="290" y="0" width="80" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$F{group.calculated}]]></expression>
+			</element>
+			<element kind="textField" uuid="c24c7dd7-7cff-3017-9390-80f96a288a0d" stretchType="NoStretch" x="370" y="0" width="80" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$F{group.reported}]]></expression>
+			</element>
+			<element kind="textField" uuid="e0505728-c3b0-3181-9034-f454bc2e6dbf" stretchType="NoStretch" x="450" y="0" width="80" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$V{deviation}]]></expression>
+			</element>
+		</band>
+	</detail>
+	<summary height="25" splitType="Stretch">
+		<element kind="elementGroup">
+			<element kind="rectangle" uuid="88191659-4f4a-349d-904d-259d48716117" stretchType="NoStretch" x="20" y="0" width="510" height="2" backcolor="#000000" fill="Solid">
+				<pen lineWidth="0.0" lineStyle="Solid"/>
+			</element>
+			<element kind="textField" uuid="6ee17c4b-ea66-32cd-8bde-979d29f2eb83" stretchType="NoStretch" x="20" y="3" width="250" height="14" fontSize="10.0" linkType="None" linkTarget="Self" bold="false">
+				<expression><![CDATA[$R{vatcontrolreport.sum}]]></expression>
+			</element>
+			<element kind="textField" uuid="db37b788-f0d7-3a85-9ecc-50c8caeb4966" stretchType="NoStretch" x="450" y="3" width="80" height="14" fontSize="10.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="false" bold="false" hTextAlign="Right">
+				<expression><![CDATA[$V{deviation.sum}]]></expression>
+			</element>
+		</element>
+	</summary>
 </jasperReport>

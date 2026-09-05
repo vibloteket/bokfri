@@ -1,438 +1,169 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="PurchaseOrder" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
-    <!--- Declared parameters in the report. -->
-    <parameter name="subreport.report"          class="net.sf.jasperreports.engine.JasperReport"/>
-
-    <parameter name="title"      class="java.lang.String"/>
-
-    <parameter name="company.logo"       class="java.awt.Image"/>
-
-    <parameter name="company.name"      class="java.lang.String"/>
-    <parameter name="company.address1"  class="java.lang.String"/>
-    <parameter name="company.address2"  class="java.lang.String"/>
-    <parameter name="company.zipcode"   class="java.lang.String"/>
-    <parameter name="company.city"      class="java.lang.String"/>
-    <parameter name="company.country"   class="java.lang.String"/>
-    <parameter name="company.phone"     class="java.lang.String"/>
-    <parameter name="company.telefax"   class="java.lang.String"/>
-    <parameter name="company.residence" class="java.lang.String"/>
-    <parameter name="company.email"     class="java.lang.String"/>
-    <parameter name="company.homepage"  class="java.lang.String"/>
-
-    <parameter name="company.plusaccount"  class="java.lang.String"/>
-    <parameter name="company.bankaccount"  class="java.lang.String"/>
-
-    <parameter name="company.bic"   class="java.lang.String"/>
-    <parameter name="company.iban"  class="java.lang.String"/>
-    <parameter name="company.bank"  class="java.lang.String"/>
-
-
-    <parameter name="number"    class="java.lang.Integer"/>
-    <parameter name="date"      class="java.lang.String"/>
-    <parameter name="text"      class="java.lang.String"/>
-
-    <parameter name="purchaseorder.deliveryadress.name"     class="java.lang.String"/>
-    <parameter name="purchaseorder.deliveryadress.address1" class="java.lang.String"/>
-    <parameter name="purchaseorder.deliveryadress.address2" class="java.lang.String"/>
-    <parameter name="purchaseorder.deliveryadress.zipcode"  class="java.lang.String"/>
-    <parameter name="purchaseorder.deliveryadress.city"     class="java.lang.String"/>
-    <parameter name="purchaseorder.deliveryadress.country"  class="java.lang.String"/>
-
-    <parameter name="purchaseorder.supplieraddress.name"      class="java.lang.String"/>
-    <parameter name="purchaseorder.supplieraddress.address1"  class="java.lang.String"/>
-    <parameter name="purchaseorder.supplieraddress.address2"  class="java.lang.String"/>
-    <parameter name="purchaseorder.supplieraddress.zipcode"   class="java.lang.String"/>
-    <parameter name="purchaseorder.supplieraddress.city"      class="java.lang.String"/>
-    <parameter name="purchaseorder.supplieraddress.country"  class="java.lang.String"/>
-
-
-
-    <parameter name="purchaseorder.ourcontact"                class="java.lang.String"/>
-    <parameter name="purchaseorder.yourcontact"               class="java.lang.String"/>
-    <parameter name="purchaseorder.deliveryterm"              class="java.lang.String"/>
-    <parameter name="purchaseorder.deliveryway"               class="java.lang.String"/>
-    <parameter name="purchaseorder.paymentterm"               class="java.lang.String"/>
-    <parameter name="purchaseorder.currency"                  class="java.lang.String"/>
-
-    <parameter name="purchaseorder.totalsum"           class="java.math.BigDecimal"/>
-
-
-    <field name="subreport.datasource"  class="net.sf.jasperreports.engine.JRDataSource"/>
-
-    <field name="row.number"          class="java.lang.String"/>
-    <field name="row.description"     class="java.lang.String"/>
-    <field name="row.count"           class="java.lang.Integer"/>
-    <field name="row.unit"            class="java.lang.String"/>
-    <field name="row.unitprice"       class="java.math.BigDecimal"/>
-    <field name="row.discount"        class="java.math.BigDecimal"/>
-    <field name="row.sum"             class="java.math.BigDecimal"/>
-
-
-    <columnHeader>
-        <band isSplitAllowed="false" height="150">
-
-            <!-- delivery adress frame -->
-            <frame>
-                <reportElement x="40" y="0" width="250" height="86"/>
-
-                <box border="Thin" borderColor="#000000"/>
-
-                <!-- Adress text -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="5" y="2" width="240" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{purchaseorderreport.deliveryadress}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Name -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="14" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.deliveryadress.name}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Address 1 -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="28" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.deliveryadress.address1}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Address 2 -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="42" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.deliveryadress.address2}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Zip Code + City -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="56" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.deliveryadress.zipcode} + " " + $P{purchaseorder.deliveryadress.city}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Country -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="70" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.deliveryadress.country}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-            </frame>
-
-            <!-- invoice adress frame -->
-            <frame>
-                <reportElement x="300" y="0" width="250" height="86"/>
-
-                <box border="Thin" borderColor="#000000"/>
-
-                <!-- Adress text -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="5" y="2" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{purchaseorderreport.supplieraddress}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Name -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="14" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.supplieraddress.name}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Address 1 -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="28" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.supplieraddress.address1}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Address 2 -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="42" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.supplieraddress.address2}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Zip Code + City -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="56" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.supplieraddress.zipcode} + " " + $P{purchaseorder.supplieraddress.city}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Country -->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="10" y="70" width="240" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.supplieraddress.country}]]>
-                    </textFieldExpression>
-                </textField>
-
-            </frame>
-
-            <!-- Invoice details, Column 1 -->
-            <frame>
-                <reportElement x="45" y="90" width="250" height="60"/>
-
-                <!-- Our contact -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="0" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{purchaseorderreport.ourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="0" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.ourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-                <!-- Deliveryterm -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="15" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{purchaseorderreport.deliveryterm}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="15" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.deliveryterm}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Delivery way -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="30" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{purchaseorderreport.deliveryway}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="30" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.deliveryway}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <!-- Payment term -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="45" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{purchaseorderreport.paymentterm}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="45" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.paymentterm}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-            </frame>
-
-            <!-- Invoice details, Column 2 -->
-            <frame>
-                <reportElement x="305" y="90" width="250" height="60"/>
-
-
-                <!-- Your contact -->
-                <textField isBlankWhenNull="false">
-                    <reportElement x="0" y="0" width="100" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{purchaseorderreport.yourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField isBlankWhenNull="true">
-                    <reportElement x="100" y="0" width="150" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="8" />
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.yourcontact}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-            </frame>
-
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band isSplitAllowed="true" height="458">
-            <!-- Subreport for the rows 385-->
-            <frame>
-                <reportElement x="40" y="0" width="510" height="433" isPrintWhenDetailOverflows="true"/>
-
-                <box border="Thin" borderColor="#000000"  topBorder="None" />
-
-                <!-- Subreport for the rows 425 -->
-                <subreport isUsingCache="false">
-                    <reportElement x="0" y="0" width="510" height="433" isPrintWhenDetailOverflows="true"/>
-
-                    <parametersMapExpression>
-                        <![CDATA[$P{REPORT_PARAMETERS_MAP}]]>
-                    </parametersMapExpression>
-
-                    <subreportParameter name="REPORT_RESOURCE_BUNDLE">
-                        <subreportParameterExpression>
-                            <![CDATA[$P{REPORT_RESOURCE_BUNDLE}]]>
-                        </subreportParameterExpression>
-                    </subreportParameter>
-
-                    <dataSourceExpression>
-                        <![CDATA[$F{subreport.datasource}]]>
-                    </dataSourceExpression>
-
-                    <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                        <![CDATA[$P{subreport.report}]]>
-                    </subreportExpression>
-                </subreport>
-            </frame>
-
-            <!-- Summary fields -->
-            <frame>
-                <reportElement x="40" y="433" width="510" height="25" positionType="Float"/>
-
-                <box border="Thin" borderColor="#000000" topBorder="None" />
-
-
-                <line>
-                    <reportElement x="400" y="0" width="1" height="25"/>
-                    <graphicElement pen="Thin"/>
-                </line>
-
-                <!-- Total sum-->
-                <textField isBlankWhenNull="true">
-                    <reportElement x="403" y="1" width="97" height="12"/>
-                    <textElement textAlignment="Left">
-                        <font size="7" isBold="true"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$R{purchaseorderreport.totalsum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00" isBlankWhenNull="true">
-                    <reportElement x="400" y="10" width="77" height="14"/>
-                    <textElement textAlignment="Right">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression class="java.math.BigDecimal">
-                        <![CDATA[$P{purchaseorder.totalsum}]]>
-                    </textFieldExpression>
-                </textField>
-
-                <textField pattern="#,##0.00">
-                    <reportElement x="483" y="10" width="27" height="14"/>
-                    <textElement textAlignment="Left">
-                        <font size="10"/>
-                    </textElement>
-                    <textFieldExpression>
-                        <![CDATA[$P{purchaseorder.currency}]]>
-                    </textFieldExpression>
-                </textField>
-
-
-
-            </frame>
-
-
-        </band>
-    </detail>
-
-
-
+<jasperReport name="PurchaseOrder" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="f3ef4c3c-d709-36e0-b65f-c5595742da2e">
+	<parameter name="subreport.report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="title" class="java.lang.String"/>
+	<parameter name="company.logo" class="java.awt.Image"/>
+	<parameter name="company.name" class="java.lang.String"/>
+	<parameter name="company.address1" class="java.lang.String"/>
+	<parameter name="company.address2" class="java.lang.String"/>
+	<parameter name="company.zipcode" class="java.lang.String"/>
+	<parameter name="company.city" class="java.lang.String"/>
+	<parameter name="company.country" class="java.lang.String"/>
+	<parameter name="company.phone" class="java.lang.String"/>
+	<parameter name="company.telefax" class="java.lang.String"/>
+	<parameter name="company.residence" class="java.lang.String"/>
+	<parameter name="company.email" class="java.lang.String"/>
+	<parameter name="company.homepage" class="java.lang.String"/>
+	<parameter name="company.plusaccount" class="java.lang.String"/>
+	<parameter name="company.bankaccount" class="java.lang.String"/>
+	<parameter name="company.bic" class="java.lang.String"/>
+	<parameter name="company.iban" class="java.lang.String"/>
+	<parameter name="company.bank" class="java.lang.String"/>
+	<parameter name="number" class="java.lang.Integer"/>
+	<parameter name="date" class="java.lang.String"/>
+	<parameter name="text" class="java.lang.String"/>
+	<parameter name="purchaseorder.deliveryadress.name" class="java.lang.String"/>
+	<parameter name="purchaseorder.deliveryadress.address1" class="java.lang.String"/>
+	<parameter name="purchaseorder.deliveryadress.address2" class="java.lang.String"/>
+	<parameter name="purchaseorder.deliveryadress.zipcode" class="java.lang.String"/>
+	<parameter name="purchaseorder.deliveryadress.city" class="java.lang.String"/>
+	<parameter name="purchaseorder.deliveryadress.country" class="java.lang.String"/>
+	<parameter name="purchaseorder.supplieraddress.name" class="java.lang.String"/>
+	<parameter name="purchaseorder.supplieraddress.address1" class="java.lang.String"/>
+	<parameter name="purchaseorder.supplieraddress.address2" class="java.lang.String"/>
+	<parameter name="purchaseorder.supplieraddress.zipcode" class="java.lang.String"/>
+	<parameter name="purchaseorder.supplieraddress.city" class="java.lang.String"/>
+	<parameter name="purchaseorder.supplieraddress.country" class="java.lang.String"/>
+	<parameter name="purchaseorder.ourcontact" class="java.lang.String"/>
+	<parameter name="purchaseorder.yourcontact" class="java.lang.String"/>
+	<parameter name="purchaseorder.deliveryterm" class="java.lang.String"/>
+	<parameter name="purchaseorder.deliveryway" class="java.lang.String"/>
+	<parameter name="purchaseorder.paymentterm" class="java.lang.String"/>
+	<parameter name="purchaseorder.currency" class="java.lang.String"/>
+	<parameter name="purchaseorder.totalsum" class="java.math.BigDecimal"/>
+	<field name="subreport.datasource" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<field name="row.number" class="java.lang.String"/>
+	<field name="row.description" class="java.lang.String"/>
+	<field name="row.count" class="java.lang.Integer"/>
+	<field name="row.unit" class="java.lang.String"/>
+	<field name="row.unitprice" class="java.math.BigDecimal"/>
+	<field name="row.discount" class="java.math.BigDecimal"/>
+	<field name="row.sum" class="java.math.BigDecimal"/>
+	<columnHeader height="150" splitType="Prevent">
+		<element kind="frame" uuid="85d05e88-6168-33e6-9474-cff266c4ff89" stretchType="NoStretch" x="40" y="0" width="250" height="86">
+			<element kind="textField" uuid="7a7c06f4-48dc-33ac-9d24-7547dfda7ce9" stretchType="NoStretch" x="5" y="2" width="240" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$R{purchaseorderreport.deliveryadress}]]></expression>
+			</element>
+			<element kind="textField" uuid="336c3cce-4c32-3348-bc30-e3ec00501122" stretchType="NoStretch" x="10" y="14" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.deliveryadress.name}]]></expression>
+			</element>
+			<element kind="textField" uuid="f8bb6a27-3bde-3723-893d-4d6c1162b728" stretchType="NoStretch" x="10" y="28" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.deliveryadress.address1}]]></expression>
+			</element>
+			<element kind="textField" uuid="f5d41337-57eb-3e5f-9a51-a183e6ce17d2" stretchType="NoStretch" x="10" y="42" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.deliveryadress.address2}]]></expression>
+			</element>
+			<element kind="textField" uuid="f229724b-cd68-3968-a957-033a4d56cbf6" stretchType="NoStretch" x="10" y="56" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.deliveryadress.zipcode} + " " + $P{purchaseorder.deliveryadress.city}]]></expression>
+			</element>
+			<element kind="textField" uuid="a299affa-ab03-3a1e-a5bf-05bedcae5e15" stretchType="NoStretch" x="10" y="70" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.deliveryadress.country}]]></expression>
+			</element>
+			<box>
+				<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+			</box>
+		</element>
+		<element kind="frame" uuid="0892fb8e-2cda-3e36-8c85-14b967752ebe" stretchType="NoStretch" x="300" y="0" width="250" height="86">
+			<element kind="textField" uuid="43a2d95c-9352-3e90-8b95-a022de7e8801" stretchType="NoStretch" x="5" y="2" width="240" height="14" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$R{purchaseorderreport.supplieraddress}]]></expression>
+			</element>
+			<element kind="textField" uuid="44634106-9b01-3c13-94fa-3f278d56d673" stretchType="NoStretch" x="10" y="14" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.supplieraddress.name}]]></expression>
+			</element>
+			<element kind="textField" uuid="e8a151d1-484d-3fcb-92e6-3ac74b45b545" stretchType="NoStretch" x="10" y="28" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.supplieraddress.address1}]]></expression>
+			</element>
+			<element kind="textField" uuid="fff60bc1-fd7e-3b5e-9cb0-1a8897cb282d" stretchType="NoStretch" x="10" y="42" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.supplieraddress.address2}]]></expression>
+			</element>
+			<element kind="textField" uuid="0cf053a9-046e-30b0-8769-0c7436acb50c" stretchType="NoStretch" x="10" y="56" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.supplieraddress.zipcode} + " " + $P{purchaseorder.supplieraddress.city}]]></expression>
+			</element>
+			<element kind="textField" uuid="6d462056-b2f5-3ad9-91b5-75f62e3a6337" stretchType="NoStretch" x="10" y="70" width="240" height="14" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.supplieraddress.country}]]></expression>
+			</element>
+			<box>
+				<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+			</box>
+		</element>
+		<element kind="frame" uuid="3d5324fe-f1f1-331e-8018-f862956186d0" stretchType="NoStretch" x="45" y="90" width="250" height="60">
+			<element kind="textField" uuid="449b4c28-ce63-3f27-94ef-e0bfc534ca40" stretchType="NoStretch" x="0" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{purchaseorderreport.ourcontact}]]></expression>
+			</element>
+			<element kind="textField" uuid="f4315595-1752-397c-9bf6-97ea0ffe480a" stretchType="NoStretch" x="100" y="0" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.ourcontact}]]></expression>
+			</element>
+			<element kind="textField" uuid="8ecc0295-62a8-31fa-a7c7-9e6eca6d4973" stretchType="NoStretch" x="0" y="15" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{purchaseorderreport.deliveryterm}]]></expression>
+			</element>
+			<element kind="textField" uuid="146a81f4-676f-39af-9e75-13f2c172a65c" stretchType="NoStretch" x="100" y="15" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.deliveryterm}]]></expression>
+			</element>
+			<element kind="textField" uuid="603871cf-33e9-32c7-89a6-6095065bc584" stretchType="NoStretch" x="0" y="30" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{purchaseorderreport.deliveryway}]]></expression>
+			</element>
+			<element kind="textField" uuid="cc5a5307-7f1e-3e4a-9457-9cf6662c30f5" stretchType="NoStretch" x="100" y="30" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.deliveryway}]]></expression>
+			</element>
+			<element kind="textField" uuid="c961a8ea-ee4a-3f48-bf05-ecc86e8aa2af" stretchType="NoStretch" x="0" y="45" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{purchaseorderreport.paymentterm}]]></expression>
+			</element>
+			<element kind="textField" uuid="1c5446ac-c45f-348e-9442-46464a00fa18" stretchType="NoStretch" x="100" y="45" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.paymentterm}]]></expression>
+			</element>
+		</element>
+		<element kind="frame" uuid="57ca64d2-9748-3563-bedf-22b52a734511" stretchType="NoStretch" x="305" y="90" width="250" height="60">
+			<element kind="textField" uuid="8df9414c-d390-3eb8-8013-79084748a59f" stretchType="NoStretch" x="0" y="0" width="100" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="false" hTextAlign="Left">
+				<expression><![CDATA[$R{purchaseorderreport.yourcontact}]]></expression>
+			</element>
+			<element kind="textField" uuid="d7f54ecf-9448-3435-ab71-f13823e69f33" stretchType="NoStretch" x="100" y="0" width="150" height="12" fontSize="8.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Left">
+				<expression><![CDATA[$P{purchaseorder.yourcontact}]]></expression>
+			</element>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="458" splitType="Stretch">
+			<element kind="frame" uuid="a4d00bf4-df42-3147-854d-372aa0f46be9" stretchType="NoStretch" x="40" y="0" width="510" height="433" printWhenDetailOverflows="true">
+				<element kind="subreport" uuid="b9d751c7-50da-32cf-ab40-576a39f8b955" stretchType="NoStretch" x="0" y="0" width="510" height="433" usingCache="false" printWhenDetailOverflows="true">
+					<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+					<dataSourceExpression><![CDATA[$F{subreport.datasource}]]></dataSourceExpression>
+					<expression><![CDATA[$P{subreport.report}]]></expression>
+					<parameter name="REPORT_RESOURCE_BUNDLE">
+						<expression><![CDATA[$P{REPORT_RESOURCE_BUNDLE}]]></expression>
+					</parameter>
+				</element>
+				<box>
+					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<topPen lineWidth="0.0" lineStyle="Solid"/>
+				</box>
+			</element>
+			<element kind="frame" uuid="fd290daa-6dd5-36bd-b2f3-2c0780ee9667" positionType="Float" stretchType="NoStretch" x="40" y="433" width="510" height="25">
+				<element kind="line" uuid="f2516de8-f110-3b0b-b95a-b39a91383858" stretchType="NoStretch" x="400" y="0" width="1" height="25">
+					<pen lineWidth="0.5" lineStyle="Solid"/>
+				</element>
+				<element kind="textField" uuid="8d1d37d0-b5bb-3b2f-90c1-1dcb8676bd2a" stretchType="NoStretch" x="403" y="1" width="97" height="12" fontSize="7.0" linkType="None" linkTarget="Self" blankWhenNull="true" bold="true" hTextAlign="Left">
+					<expression><![CDATA[$R{purchaseorderreport.totalsum}]]></expression>
+				</element>
+				<element kind="textField" uuid="4f7e783f-d816-355d-88cf-e8ff368ebaeb" stretchType="NoStretch" x="400" y="10" width="77" height="14" fontSize="10.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+					<expression><![CDATA[$P{purchaseorder.totalsum}]]></expression>
+				</element>
+				<element kind="textField" uuid="2fac01c3-6cf5-3087-a47e-5cbc168995df" stretchType="NoStretch" x="483" y="10" width="27" height="14" fontSize="10.0" pattern="#,##0.00" linkType="None" linkTarget="Self" hTextAlign="Left">
+					<expression><![CDATA[$P{purchaseorder.currency}]]></expression>
+				</element>
+				<box>
+					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<topPen lineWidth="0.0" lineStyle="Solid"/>
+				</box>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

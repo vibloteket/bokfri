@@ -13,6 +13,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Changed
+- The report engine now uses JasperReports 7.0.8 with reproducibly converted JRXML/JRTX sources;
+  the complete PDF gallery remains pixel-identical to the JasperReports 6.21.5 baseline.
 - Report rendering and PDF export now have a shared headless service boundary; invoice GUI preview,
   invoice CLI export, and balance-report rendering use the same incremental adapter pattern.
 - Reports now use bundled, PDF-embedded DejaVu Sans fonts on every platform;

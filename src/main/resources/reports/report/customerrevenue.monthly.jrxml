@@ -1,85 +1,31 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="MonthlyDistribution" resourceBundle="book">
-
-    <parameter name="customer.number" class="java.lang.String"/>
-
-    <field name="month.date"          class="java.lang.String"/>
-    <field name="month.description"   class="java.lang.String"/>
-    <field name="month.value"         class="java.math.BigDecimal"/>
-    <field name="month.visible"       class="java.lang.Boolean"/>
-
-    <!-- The sum. -->
-    <variable name="month.sum" class="java.math.BigDecimal"  resetType="Report" calculation="Sum">
-        <variableExpression>$F{month.visible}.booleanValue() ? $F{month.value} : new BigDecimal(0.0)</variableExpression>
-        <initialValueExpression>new BigDecimal(0.0) </initialValueExpression>
-    </variable>
-
-
-
-
-    <detail>
-        <band height="12" isSplitAllowed="true">
-            <printWhenExpression>
-                <![CDATA[$F{month.visible}]]>
-            </printWhenExpression>
-
-            <textField>
-                <reportElement x="80" y="0" width="80" height="12"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$F{month.date}]]>
-                </textFieldExpression>
-            </textField>
-
-
-            <textField pattern="#,##0.00" isBlankWhenNull="false">
-                <reportElement x="260" y="0" width="250" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$F{month.value} != null ? $F{month.value} : new BigDecimal(0.0) ]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </detail>
-
-    <summary>
-        <band height="12" isSplitAllowed="false">
-            <line>
-                <reportElement x="80" y="0" width="430" height="1"/>
-            </line>
-
-            <textField>
-                <reportElement x="80" y="0" width="250" height="12"/>
-                <textElement>
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$R{customerrevenue.sum}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField pattern="#,##0.00" isBlankWhenNull="false">
-                <reportElement x="260" y="0" width="250" height="12"/>
-                <textElement textAlignment="Right">
-                    <font size="8" isBold="false"/>
-                </textElement>
-                <textFieldExpression class="java.math.BigDecimal">
-                    <![CDATA[$V{month.sum}]]>
-                </textFieldExpression>
-            </textField>
-
-
-        </band>
-    </summary>
-
-
+<jasperReport name="MonthlyDistribution" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="7c1608ba-d7ce-3716-8b22-225e88555f5e">
+	<parameter name="customer.number" class="java.lang.String"/>
+	<field name="month.date" class="java.lang.String"/>
+	<field name="month.description" class="java.lang.String"/>
+	<field name="month.value" class="java.math.BigDecimal"/>
+	<field name="month.visible" class="java.lang.Boolean"/>
+	<variable name="month.sum" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{month.visible}.booleanValue() ? $F{month.value} : new BigDecimal(0.0)]]></expression>
+		<initialValueExpression><![CDATA[new BigDecimal(0.0)]]></initialValueExpression>
+	</variable>
+	<detail>
+		<band height="12" splitType="Stretch">
+			<printWhenExpression><![CDATA[$F{month.visible}]]></printWhenExpression>
+			<element kind="textField" uuid="065207ed-5e4a-3777-aca5-7d44ccc3fe3c" stretchType="NoStretch" x="80" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" bold="false">
+				<expression><![CDATA[$F{month.date}]]></expression>
+			</element>
+			<element kind="textField" uuid="ffcde5f2-65cd-389d-a23a-6a24ad60d3f7" stretchType="NoStretch" x="260" y="0" width="250" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="false" bold="false" hTextAlign="Right">
+				<expression><![CDATA[$F{month.value} != null ? $F{month.value} : new BigDecimal(0.0)]]></expression>
+			</element>
+		</band>
+	</detail>
+	<summary height="12" splitType="Prevent">
+		<element kind="line" uuid="258d708b-74a0-3829-9f9c-bafd22872d28" stretchType="NoStretch" x="80" y="0" width="430" height="1"/>
+		<element kind="textField" uuid="f4808fa6-6bca-354a-9880-6b469d80f182" stretchType="NoStretch" x="80" y="0" width="250" height="12" fontSize="8.0" linkType="None" linkTarget="Self" bold="false">
+			<expression><![CDATA[$R{customerrevenue.sum}]]></expression>
+		</element>
+		<element kind="textField" uuid="fb4ed89a-0b5b-3430-a988-8cedcdc443f5" stretchType="NoStretch" x="260" y="0" width="250" height="12" fontSize="8.0" pattern="#,##0.00" linkType="None" linkTarget="Self" blankWhenNull="false" bold="false" hTextAlign="Right">
+			<expression><![CDATA[$V{month.sum}]]></expression>
+		</element>
+	</summary>
 </jasperReport>

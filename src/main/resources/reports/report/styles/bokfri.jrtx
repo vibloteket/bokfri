@@ -1,16 +1,12 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<jasperTemplate xmlns="http://jasperreports.sourceforge.net/jasperreports/template"
-                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/template
-                http://jasperreports.sourceforge.net/xsd/jaspertemplate.xsd">
-    <style name="BokfriBase" fontName="Bokfri Sans" fontSize="9"/>
-    <style name="BokfriSection" style="BokfriBase" fontSize="10" isBold="true"/>
-    <style name="BokfriLabel" style="BokfriBase" fontSize="8" forecolor="#555555"/>
-    <style name="BokfriValue" style="BokfriBase" fontSize="9"/>
-    <style name="BokfriValueRight" style="BokfriValue" hTextAlign="Right"/>
-    <style name="BokfriCompactValueRight" style="BokfriValueRight" fontSize="8"/>
-    <style name="BokfriSectionValue" style="BokfriSection" hTextAlign="Right"/>
-    <style name="BokfriNumber" style="BokfriValueRight"/>
-    <style name="BokfriTotalLabel" style="BokfriLabel" fontSize="7"/>
-    <style name="BokfriTotalValue" style="BokfriNumber" fontSize="10"/>
+<jasperTemplate>
+	<style name="BokfriBase" fontName="Bokfri Sans" fontSize="9.0"/>
+	<style name="BokfriSection" style="BokfriBase" fontSize="10.0" bold="true"/>
+	<style name="BokfriLabel" style="BokfriBase" forecolor="#555555" fontSize="8.0"/>
+	<style name="BokfriValue" style="BokfriBase" fontSize="9.0"/>
+	<style name="BokfriValueRight" style="BokfriValue" hTextAlign="Right"/>
+	<style name="BokfriCompactValueRight" style="BokfriValueRight" fontSize="8.0"/>
+	<style name="BokfriSectionValue" style="BokfriSection" hTextAlign="Right"/>
+	<style name="BokfriNumber" style="BokfriValueRight"/>
+	<style name="BokfriTotalLabel" style="BokfriLabel" fontSize="7.0"/>
+	<style name="BokfriTotalValue" style="BokfriNumber" fontSize="10.0"/>
 </jasperTemplate>

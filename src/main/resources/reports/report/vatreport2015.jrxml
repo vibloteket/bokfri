@@ -1,82 +1,30 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="VATReport2015" resourceBundle="book" >
-
-    <parameter name="Report"     class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="Parameters" class="java.util.HashMap"/>
-
-
-    <!-- Declared fields in the report. -->
-    <field name="group.number"         class="java.lang.String"/>
-    <field name="group.description"    class="java.lang.String"/>
-
-    <field name="group.rows"        class="net.sf.jasperreports.engine.JRDataSource"/>
-
-
-    <columnHeader>
-        <band height="15">
-            <line>
-                <reportElement x="20" y="12" width="510" height="1"/>
-            </line>
-            <textField>
-                <reportElement x="340" y="0" width="80" height="12" />
-                <textElement>
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{vatreport2015.column.1}]]>
-                </textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="450" y="0" width="80" height="12" />
-                <textElement textAlignment="Right">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$R{vatreport2015.column.2}]]>
-                </textFieldExpression>
-            </textField>
-        </band>
-    </columnHeader>
-
-
-    <detail>
-        <band height="35" isSplitAllowed="false">
-
-            <textField>
-                <reportElement x="20" y="0" width="510" height="14"/>
-                <textElement>
-                    <font size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$F{group.description}]]>
-                </textFieldExpression>
-            </textField>
-
-
-             <!-- Mainbook rows -->
-            <subreport isUsingCache="false">
-                <reportElement x="0" y="16" width="555" height="12" isPrintWhenDetailOverflows="true"/>
-
-                <subreportParameter name="vatreport.group">
-                    <subreportParameterExpression>
-                        <![CDATA[$F{group.number}]]>
-                    </subreportParameterExpression>
-                </subreportParameter>
-
-                <dataSourceExpression>
-                    <![CDATA[$F{group.rows}]]>
-                </dataSourceExpression>
-
-                <subreportExpression class="net.sf.jasperreports.engine.JasperReport">
-                    <![CDATA[$P{Report}]]>
-                </subreportExpression>
-            </subreport>
-
-        </band>
-    </detail>
-
+<jasperReport name="VATReport2015" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="8f22c6d5-d4f3-3787-83bd-233be8af6bd1">
+	<parameter name="Report" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="Parameters" class="java.util.HashMap"/>
+	<field name="group.number" class="java.lang.String"/>
+	<field name="group.description" class="java.lang.String"/>
+	<field name="group.rows" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<columnHeader height="15" splitType="Stretch">
+		<element kind="line" uuid="9de98fed-8333-38bd-b964-051dc33e0533" stretchType="NoStretch" x="20" y="12" width="510" height="1"/>
+		<element kind="textField" uuid="d911afb0-012f-3635-8bf6-e7b78170f2f0" stretchType="NoStretch" x="340" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self">
+			<expression><![CDATA[$R{vatreport2015.column.1}]]></expression>
+		</element>
+		<element kind="textField" uuid="ff9fce39-ce2c-347d-b628-4165790ba334" stretchType="NoStretch" x="450" y="0" width="80" height="12" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$R{vatreport2015.column.2}]]></expression>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="35" splitType="Prevent">
+			<element kind="textField" uuid="38a84cc1-186e-3991-910f-cbb46f918e18" stretchType="NoStretch" x="20" y="0" width="510" height="14" fontSize="8.0" linkType="None" linkTarget="Self" bold="true">
+				<expression><![CDATA[$F{group.description}]]></expression>
+			</element>
+			<element kind="subreport" uuid="133dcfb8-fe8d-3d3a-947d-505b9724d5fd" stretchType="NoStretch" x="0" y="16" width="555" height="12" usingCache="false" printWhenDetailOverflows="true">
+				<dataSourceExpression><![CDATA[$F{group.rows}]]></dataSourceExpression>
+				<expression><![CDATA[$P{Report}]]></expression>
+				<parameter name="vatreport.group">
+					<expression><![CDATA[$F{group.number}]]></expression>
+				</parameter>
+			</element>
+		</band>
+	</detail>
 </jasperReport>

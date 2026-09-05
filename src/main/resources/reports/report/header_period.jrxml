@@ -1,160 +1,51 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
-
-<jasperReport name="PeriodHeader" resourceBundle="book">
-
-    <!--- Declared parameters in the report. -->
-    <parameter name="title"       class="java.lang.String"/>
-    <parameter name="subtitle"    class="java.lang.String"/>
-    <parameter name="company"     class="java.lang.String"/>
-    <parameter name="lastvoucher" class="java.lang.Integer"/>
-    <parameter name="reportdate"  class="java.lang.String"/>
-
-    <parameter name="dateFrom"    class="java.lang.String"/>
-    <parameter name="dateTo"      class="java.lang.String"/>
-
-    <parameter name="periodTitle"   class="java.lang.String"/>
-    <parameter name="periodText"    class="java.lang.String"/>
-
-
-    <pageHeader>
-        <band isSplitAllowed="false" height="85">
-
-            <!-- title -->
-            <textField>
-                <reportElement x="80" y="12" width="395" height="30"/>
-                <textElement textAlignment="Center">
-                    <font size="20"></font>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$P{title}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- secondary title -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="80" y="42" width="395" height="30"/>
-                <textElement textAlignment="Center">
-                    <font size="12"></font>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$P{subtitle}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- last voucher -->
-            <textField isBlankWhenNull="true">
-                <reportElement x="290" y="25" width="240" height="25"/>
-                <textElement textAlignment="Right">
-                    <font size="10"></font>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA["Senaste verifikat: " + $P{lastvoucher}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- company name -->
-            <textField>
-                <reportElement x="20" y="0" width="455" height="14"/>
-                <textElement textAlignment="Left">
-                    <font size="10"></font>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$P{company}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- date period label -->
-            <textField>
-                <reportElement x="20" y="45" width="250" height="13">
-                    <printWhenExpression>
-                        <![CDATA[new Boolean($P{dateFrom} != null && $P{dateTo} != null)]]>
-                    </printWhenExpression>
-                </reportElement>
-
-                <textElement textAlignment="Left">
-                    <font size="10"></font>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$R{report.period.label} + " " + $P{dateFrom} + " " + $R{report.period.separator} + " " + $P{dateTo}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- second periond label -->
-            <textField >
-                <reportElement x="20" y="60" width="250" height="13">
-                    <printWhenExpression>
-                        <![CDATA[new Boolean($P{periodTitle} != null && $P{periodText} != null)]]>
-                    </printWhenExpression>
-                </reportElement>
-
-                <textElement textAlignment="Left">
-                    <font size="10"></font>
-                </textElement>
-                <textFieldExpression>
-                    <![CDATA[$P{periodTitle} + " " + $P{periodText} ]]>
-                </textFieldExpression>
-            </textField>
-
-
-
-            <!-- date of report -->
-            <textField>
-                <reportElement x="80" y="50" width="450" height="15"/>
-                <textElement textAlignment="Right">
-                    <font size="8"></font>
-                </textElement>
-                <textFieldExpression class="java.lang.String">
-                    <![CDATA[$P{reportdate}]]>
-                </textFieldExpression>
-            </textField>
-
-            <!-- page number-->
-            <elementGroup>
-                <textField evaluationTime="Report">
-                    <reportElement x="365" y="65" width="100" height="15"/>
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{report.page}]]>
-                    </textFieldExpression>
-                </textField>
-                <textField evaluationTime="Now">
-                    <reportElement x="465" y="65" width="25" height="15"/>
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.Integer">
-                        <![CDATA[$V{PAGE_NUMBER}]]>
-                    </textFieldExpression>
-                </textField>
-                <textField evaluationTime="Report">
-                    <reportElement x="490" y="65" width="15" height="15"/>
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.String">
-                        <![CDATA[$R{report.page.of}]]>
-                    </textFieldExpression>
-                </textField>
-                <textField evaluationTime="Report">
-                    <reportElement x="505" y="65" width="25" height="15"/>
-                    <textElement textAlignment="Right">
-                        <font size="8"/>
-                    </textElement>
-                    <textFieldExpression class="java.lang.Integer">
-                        <![CDATA[$V{PAGE_NUMBER}]]>
-                    </textFieldExpression>
-                </textField>
-            </elementGroup>
-
-            <line>
-                <reportElement x="20" y="84" width="510" height="1"/>
-            </line>
-
-        </band>
-    </pageHeader>
-
+<jasperReport name="PeriodHeader" language="java" columnCount="1" pageWidth="595" pageHeight="842" whenNoDataType="NoPages" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="book" uuid="c212484a-b71b-32a0-9ade-bb4cd98e6164">
+	<parameter name="title" class="java.lang.String"/>
+	<parameter name="subtitle" class="java.lang.String"/>
+	<parameter name="company" class="java.lang.String"/>
+	<parameter name="lastvoucher" class="java.lang.Integer"/>
+	<parameter name="reportdate" class="java.lang.String"/>
+	<parameter name="dateFrom" class="java.lang.String"/>
+	<parameter name="dateTo" class="java.lang.String"/>
+	<parameter name="periodTitle" class="java.lang.String"/>
+	<parameter name="periodText" class="java.lang.String"/>
+	<pageHeader height="85" splitType="Prevent">
+		<element kind="textField" uuid="1c5b437e-3b06-366f-95ca-b20743f0295d" stretchType="NoStretch" x="80" y="12" width="395" height="30" fontSize="20.0" linkType="None" linkTarget="Self" hTextAlign="Center">
+			<expression><![CDATA[$P{title}]]></expression>
+		</element>
+		<element kind="textField" uuid="13d4ce04-62e1-3a74-a9a2-d7d810f133b5" stretchType="NoStretch" x="80" y="42" width="395" height="30" fontSize="12.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Center">
+			<expression><![CDATA[$P{subtitle}]]></expression>
+		</element>
+		<element kind="textField" uuid="2c5d7a11-9cd3-3088-8748-f6efe92c235d" stretchType="NoStretch" x="290" y="25" width="240" height="25" fontSize="10.0" linkType="None" linkTarget="Self" blankWhenNull="true" hTextAlign="Right">
+			<expression><![CDATA["Senaste verifikat: " + $P{lastvoucher}]]></expression>
+		</element>
+		<element kind="textField" uuid="70f35739-6c3e-3753-85b5-12c401f4736c" stretchType="NoStretch" x="20" y="0" width="455" height="14" fontSize="10.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<expression><![CDATA[$P{company}]]></expression>
+		</element>
+		<element kind="textField" uuid="f74465ab-7e51-3953-9fb3-7e4e7b60a727" stretchType="NoStretch" x="20" y="45" width="250" height="13" fontSize="10.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<printWhenExpression><![CDATA[new Boolean($P{dateFrom} != null && $P{dateTo} != null)]]></printWhenExpression>
+			<expression><![CDATA[$R{report.period.label} + " " + $P{dateFrom} + " " + $R{report.period.separator} + " " + $P{dateTo}]]></expression>
+		</element>
+		<element kind="textField" uuid="8046913a-d34f-3a24-ab6c-41d8abcf58d2" stretchType="NoStretch" x="20" y="60" width="250" height="13" fontSize="10.0" linkType="None" linkTarget="Self" hTextAlign="Left">
+			<printWhenExpression><![CDATA[new Boolean($P{periodTitle} != null && $P{periodText} != null)]]></printWhenExpression>
+			<expression><![CDATA[$P{periodTitle} + " " + $P{periodText}]]></expression>
+		</element>
+		<element kind="textField" uuid="0604744b-e1b1-3ea2-b031-8c7dd1cee3df" stretchType="NoStretch" x="80" y="50" width="450" height="15" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+			<expression><![CDATA[$P{reportdate}]]></expression>
+		</element>
+		<element kind="elementGroup">
+			<element kind="textField" uuid="df143dd5-1ef3-3a7b-bd7b-45b21cf4ac6d" stretchType="NoStretch" x="365" y="65" width="100" height="15" fontSize="8.0" evaluationTime="Report" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$R{report.page}]]></expression>
+			</element>
+			<element kind="textField" uuid="5b59a027-2677-349f-900f-662ee6fcf713" stretchType="NoStretch" x="465" y="65" width="25" height="15" fontSize="8.0" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$V{PAGE_NUMBER}]]></expression>
+			</element>
+			<element kind="textField" uuid="d4d481d4-4255-36e6-9606-89e0003c0ef8" stretchType="NoStretch" x="490" y="65" width="15" height="15" fontSize="8.0" evaluationTime="Report" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$R{report.page.of}]]></expression>
+			</element>
+			<element kind="textField" uuid="2695a9f8-30b8-34ea-a137-ca2035feecfd" stretchType="NoStretch" x="505" y="65" width="25" height="15" fontSize="8.0" evaluationTime="Report" linkType="None" linkTarget="Self" hTextAlign="Right">
+				<expression><![CDATA[$V{PAGE_NUMBER}]]></expression>
+			</element>
+		</element>
+		<element kind="line" uuid="e8cb53b2-bd7d-35c0-bb82-f4a292a6f4b2" stretchType="NoStretch" x="20" y="84" width="510" height="1"/>
+	</pageHeader>
 </jasperReport>
