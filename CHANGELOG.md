@@ -19,6 +19,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   always written to the GUI log with their full stack trace.
 
 ### Changed
+- Report preview exports now use PDF as the single presentation and archive format. The legacy
+  HTML, RTF, and layout-oriented XLS options have been removed; dedicated Excel workflows remain.
 - The report engine now uses JasperReports 7.0.8 with reproducibly converted JRXML/JRTX sources;
   the complete PDF gallery remains pixel-identical to the JasperReports 6.21.5 baseline.
 - Report rendering and PDF export now have a shared headless service boundary; invoice GUI preview,

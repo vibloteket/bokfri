@@ -1,10 +1,7 @@
 package se.swedsoft.bookkeeping.gui.util.filechooser;
 
 
-import se.swedsoft.bookkeeping.gui.util.filechooser.util.SSFilterHTM;
 import se.swedsoft.bookkeeping.gui.util.filechooser.util.SSFilterPDF;
-import se.swedsoft.bookkeeping.gui.util.filechooser.util.SSFilterRTF;
-import se.swedsoft.bookkeeping.gui.util.filechooser.util.SSFilterXLS;
 
 
 /**
@@ -33,10 +30,6 @@ public class SSJasperFileChooser extends SSFileChooser {
         SSFilterPDF iFilterPDF = new SSFilterPDF();
 
         addChoosableFileFilter(iFilterPDF);
-        addChoosableFileFilter(new SSFilterHTM());
-        addChoosableFileFilter(new SSFilterRTF());
-        addChoosableFileFilter(new SSFilterXLS());
-
         setFileFilter(iFilterPDF);
 
     }
