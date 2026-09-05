@@ -12,6 +12,12 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Fixed
+- Sales documents with a missing 12% tax-rate value now use the standard default instead of
+  failing during invoice printing.
+- Unexpected failures from progress operations now use the copyable diagnostic dialog and are
+  always written to the GUI log with their full stack trace.
+
 ### Changed
 - The report engine now uses JasperReports 7.0.8 with reproducibly converted JRXML/JRTX sources;
   the complete PDF gallery remains pixel-identical to the JasperReports 6.21.5 baseline.

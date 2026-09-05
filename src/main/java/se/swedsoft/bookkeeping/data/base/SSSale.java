@@ -421,6 +421,9 @@ public abstract class SSSale implements SSTableSearchable, Serializable {
      * @return
      */
     public BigDecimal getTaxRate2() {
+        if (iTaxRate2 == null) {
+            iTaxRate2 = new BigDecimal(12);
+        }
         return iTaxRate2;
     }
 

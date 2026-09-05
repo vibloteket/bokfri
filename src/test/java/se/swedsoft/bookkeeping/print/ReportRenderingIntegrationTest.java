@@ -86,6 +86,18 @@ class ReportRenderingIntegrationTest {
     }
 
     @Test
+    void invoiceWithMissingTaxRatesCanBeRendered() throws Exception {
+        SSInvoice invoice = invoice();
+        invoice.setTaxRate1(null);
+        invoice.setTaxRate2(null);
+        invoice.setTaxRate3(null);
+
+        SSInvoicePrinter printer = new SSInvoicePrinter(invoice, Locale.forLanguageTag("sv-SE"));
+
+        assertPreviewImageContainsRenderedContent(printer);
+    }
+
+    @Test
     void multipageInvoicePrintsTotalsOnlyOnLastPage() throws Exception {
         SSInvoice invoice = invoice();
         invoice.getRows().clear();

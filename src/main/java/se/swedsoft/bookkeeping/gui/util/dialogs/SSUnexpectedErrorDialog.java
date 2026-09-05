@@ -2,6 +2,8 @@ package se.swedsoft.bookkeeping.gui.util.dialogs;
 
 import org.fribok.bookkeeping.app.LogFile;
 import org.fribok.bookkeeping.app.Version;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -12,9 +14,12 @@ import java.time.OffsetDateTime;
 
 /** A copyable diagnostic dialog for unexpected technical failures. */
 public final class SSUnexpectedErrorDialog {
+    private static final Logger LOG = LoggerFactory.getLogger(SSUnexpectedErrorDialog.class);
+
     private SSUnexpectedErrorDialog() {}
 
     public static void showDialog(JFrame parent, String title, String summary, Throwable error) {
+        LOG.error(summary == null || summary.isBlank() ? "Unexpected error" : summary, error);
         String diagnostic = diagnosticText(summary, error);
         JTextArea details = new JTextArea(diagnostic, 18, 90);
         details.setEditable(false);

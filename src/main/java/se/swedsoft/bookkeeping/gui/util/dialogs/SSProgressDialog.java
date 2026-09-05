@@ -73,8 +73,8 @@ public class SSProgressDialog extends SSDialog {
                 try {
                     iAction.run();
                 } catch (RuntimeException e) {
-                    SwingUtilities.invokeLater(() -> SSErrorDialog.showDialog(iFrame,
-                            "Fel", e.getLocalizedMessage()));
+                    SwingUtilities.invokeLater(() -> SSUnexpectedErrorDialog.showDialog(iFrame,
+                            "Ett oväntat fel har inträffat", e.getLocalizedMessage(), e));
                 } finally {
                     dialog.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
                     dialog.setVisible(false);
@@ -108,8 +108,9 @@ public class SSProgressDialog extends SSDialog {
                 try {
                     iAction.run();
                 } catch (RuntimeException e) {
-                    SwingUtilities.invokeLater(() -> SSErrorDialog.showDialog(SSMainFrame.getInstance(),
-                            "Fel", e.getLocalizedMessage()));
+                    SwingUtilities.invokeLater(() -> SSUnexpectedErrorDialog.showDialog(
+                            SSMainFrame.getInstance(), "Ett oväntat fel har inträffat",
+                            e.getLocalizedMessage(), e));
                 } finally {
                     dialog.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
                     dialog.setVisible(false);
