@@ -1,35 +1,25 @@
 package se.swedsoft.bookkeeping.print.view;
 
 
-import net.sf.jasperreports.engine.DefaultJasperReportsContext;
 import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.JasperExportManager;
 import se.swedsoft.bookkeeping.print.PdfReportExporter;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperPrintManager;
-import net.sf.jasperreports.poi.view.save.JRMultipleSheetsXlsSaveContributor;
-import net.sf.jasperreports.view.save.JRRtfSaveContributor;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.status.SSStatusBar;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.filechooser.SSJasperFileChooser;
-import se.swedsoft.bookkeeping.gui.util.filechooser.util.SSFilterHTM;
-import se.swedsoft.bookkeeping.gui.util.filechooser.util.SSFilterPDF;
-import se.swedsoft.bookkeeping.gui.util.filechooser.util.SSFilterRTF;
-import se.swedsoft.bookkeeping.gui.util.filechooser.util.SSFilterXLS;
 import se.swedsoft.bookkeeping.gui.util.frame.SSDefaultTableFrame;
 import se.swedsoft.bookkeeping.print.SSReport;
 
 import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
-import java.util.Locale;
 import java.util.ResourceBundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,8 +98,7 @@ public class SSJasperPreviewFrame extends SSDefaultTableFrame implements Propert
 
                         if (iFileChooser.showSaveDialog(SSJasperPreviewFrame.this)
                                 == JFileChooser.APPROVE_OPTION) {
-                            saveDocument(iFileChooser.getFileFilter(),
-                                    iFileChooser.getSelectedFile());
+                            saveDocument(iFileChooser.getSelectedFile());
                         }
 
 
@@ -331,84 +320,21 @@ public class SSJasperPreviewFrame extends SSDefaultTableFrame implements Propert
     }
 
     /**
+     * Saves the report as PDF.
      *
-     * @param pFileFilter
-     * @param pSelectedFile
+     * @param pSelectedFile selected destination
      */
-    private void saveDocument(FileFilter pFileFilter, File pSelectedFile) {
+    private void saveDocument(File pSelectedFile) {
         String iFileName = pSelectedFile.getAbsolutePath();
-        String iFileExt = getExtension(pSelectedFile);
-
-        // Pdf
-        if (iFileExt.equals("pdf")
-                || (iFileExt.length() == 0 && pFileFilter instanceof SSFilterPDF)) {
-            try {
-                if (iFileExt.length() == 0) {
-                    iFileName = iFileName + ".pdf";
-                }
-
-                PdfReportExporter.export(iPrinter, new File(iFileName).toPath(), true);
-            } catch (JRException | java.io.IOException ex) {
-                LOG.error("Unexpected error", ex);
-            }
-        }
-        // html
-        if (iFileExt.equals("htm") || iFileExt.equals("html")
-                || (iFileExt.length() == 0 && pFileFilter instanceof SSFilterHTM)) {
-            try {
-                if (iFileExt.length() == 0) {
-                    iFileName = iFileName + ".htm";
-                }
-
-                JasperExportManager.exportReportToHtmlFile(iPrinter, iFileName);
-            } catch (JRException ex) {
-                LOG.error("Unexpected error", ex);
-            }
+        if (!iFileName.toLowerCase().endsWith(".pdf")) {
+            iFileName = iFileName + ".pdf";
         }
 
-        // RTF
-        if (iFileExt.equals(".rtf")
-                || (iFileExt.length() == 0 && pFileFilter instanceof SSFilterRTF)) {
-            try {
-                JRRtfSaveContributor iSaver = new JRRtfSaveContributor(
-                        DefaultJasperReportsContext.getInstance(), Locale.of("sv", "SE"), bundle);
-
-                iSaver.save(iPrinter, pSelectedFile);
-            } catch (JRException ex) {
-                LOG.error("Unexpected error", ex);
-            }
+        try {
+            PdfReportExporter.export(iPrinter, new File(iFileName).toPath(), true);
+        } catch (JRException | java.io.IOException ex) {
+            LOG.error("Unexpected error", ex);
         }
-
-        // Excel
-        if (iFileExt.equals(".xls")
-                || (iFileExt.length() == 0 && pFileFilter instanceof SSFilterXLS)) {
-
-            try {
-                JRMultipleSheetsXlsSaveContributor iSaver = new JRMultipleSheetsXlsSaveContributor(
-                        DefaultJasperReportsContext.getInstance(), Locale.of("sv", "SE"), bundle);
-
-                iSaver.save(iPrinter, pSelectedFile);
-            } catch (JRException ex) {
-                LOG.error("Unexpected error", ex);
-            }
-        }
-
-    }
-
-    /*
-     * Get the lowercase extension of a file.
-     */
-    private String getExtension(File pFile) {
-        String ext = null;
-        String s = pFile.getName();
-
-        int i = s.lastIndexOf('.');
-
-        if (i > 0 && i < s.length() - 1) {
-            ext = s.substring(i + 1).toLowerCase();
-        }
-
-        return ext == null ? "" : ext.toLowerCase();
     }
 
     public void actionPerformed(ActionEvent e) {
