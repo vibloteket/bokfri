@@ -52,6 +52,7 @@ import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceService;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationIssue;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationResult;
 import org.fribok.bookkeeping.service.spreadsheet.AccountPlanSpreadsheetService;
+import org.fribok.bookkeeping.service.spreadsheet.SupplierSpreadsheetService;
 import org.fribok.bookkeeping.service.spreadsheet.VoucherSpreadsheetService;
 import org.fribok.bookkeeping.service.spreadsheet.VoucherTemplateSpreadsheetService;
 import org.fribok.bookkeeping.service.suppliercreditinvoice.SupplierCreditInvoiceJournalPlan;
@@ -1777,8 +1778,9 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "supplier", description = "Inspect and create suppliers",
-            subcommands = {SupplierList.class, SupplierShow.class, SupplierValidate.class,
-                    SupplierCreate.class, CliInputSchemas.Supplier.class})
+            subcommands = {SupplierList.class, SupplierShow.class, SupplierSpreadsheetExport.class,
+                    SupplierSpreadsheetImport.class, SupplierValidate.class, SupplierCreate.class,
+                    CliInputSchemas.Supplier.class})
     static class SupplierCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -1813,6 +1815,80 @@ public class BokfriCli implements Runnable {
                                 left("Name", "name"), left("Email", "email")));
                 return 0;
             } catch (Exception exception) { throw databaseFailure(exception); }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "export",
+            description = "Export suppliers as legacy Excel XLS")
+    static class SupplierSpreadsheetExport implements Callable<Integer> {
+        @CommandLine.ParentCommand SupplierCommand command;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                List<SSSupplier> suppliers = new SupplierService(runtime.database()).list();
+                java.nio.file.Path exported = new SupplierSpreadsheetService()
+                        .write(suppliers, output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("output", exported.toString());
+                result.put("bytes", Files.size(exported));
+                result.put("count", suppliers.size());
+                result.put("selection", selectedCompanyContext(context, company));
+                root.output(result, "Created supplier XLS " + exported);
+                return 0;
+            } catch (Exception exception) {
+                throw spreadsheetFailure("SUPPLIER_EXPORT_FAILED", exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "import",
+            description = "Preview or import suppliers from legacy Excel XLS")
+    static class SupplierSpreadsheetImport implements Callable<Integer> {
+        @CommandLine.ParentCommand SupplierCommand command;
+        @Option(names = "--file", required = true) java.nio.file.Path file;
+        @Option(names = "--apply", description = "Store valid, non-duplicate suppliers") boolean apply;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SupplierService service = new SupplierService(runtime.database());
+                List<SSSupplier> suppliers = new SupplierSpreadsheetService().read(file);
+                java.util.Set<String> existingNumbers = service.list().stream()
+                        .map(SSSupplier::getNumber).collect(java.util.stream.Collectors.toSet());
+                List<SSSupplier> additions = suppliers.stream()
+                        .filter(supplier -> !existingNumbers.contains(supplier.getNumber())).toList();
+                int nextOutpaymentNumber = service.nextOutpaymentNumber();
+                for (SSSupplier supplier : additions) {
+                    supplier.setOutpaymentNumber(nextOutpaymentNumber++);
+                }
+                List<SSSupplier> invalid = additions.stream()
+                        .filter(supplier -> !service.validate(supplier).valid()).toList();
+                if (apply && !invalid.isEmpty()) {
+                    throw new CliException("SUPPLIER_IMPORT_INVALID",
+                            invalid.size() + " imported suppliers failed validation");
+                }
+                if (apply) {
+                    additions.forEach(service::create);
+                }
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("file", file.toAbsolutePath().normalize().toString());
+                result.put("count", suppliers.size());
+                result.put("newCount", additions.size());
+                result.put("duplicateCount", suppliers.size() - additions.size());
+                result.put("invalidCount", invalid.size());
+                result.put("applied", apply);
+                result.put("selection", selectedCompanyContext(context, company));
+                root.output(result, apply ? "Imported " + additions.size() + " suppliers"
+                        : "Supplier import preview; no changes written");
+                return 0;
+            } catch (Exception exception) {
+                throw spreadsheetFailure("SUPPLIER_IMPORT_FAILED", exception);
+            }
         }
     }
 
