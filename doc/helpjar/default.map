@@ -76,9 +76,7 @@
   <mapID target="popup_gif" url="images/popup.gif"/>
   <mapID target="CreateOwnIncomeReport_html" url="html/CreateOwnIncomeReport.html"/>
   <mapID target="ExportOrdersXML_html" url="html/ExportOrdersXML.html"/>
-  <mapID target="ImportCustomersXML_html" url="html/ImportCustomersXML.html"/>
   <mapID target="OpenYear_html" url="html/OpenYear.html"/>
-  <mapID target="ExportCustomersXML_html" url="html/ExportCustomersXML.html"/>
   <mapID target="ChangeVerifications_html" url="html/ChangeVerifications.html"/>
   <mapID target="CopyInvoice_html" url="html/CopyInvoice.html"/>
   <mapID target="ChangeInpayment_html" url="html/ChangeInpayment.html"/>
@@ -129,7 +127,6 @@
   <mapID target="DeletePurchaseorders_html" url="html/DeletePurchaseorders.html"/>
   <mapID target="Deliverynote_html" url="html/Deliverynote.html"/>
   <mapID target="CopyCreditinvoice_html" url="html/CopyCreditinvoice.html"/>
-  <mapID target="ImportCustomersEbutik_html" url="html/ImportCustomersEbutik.html"/>
   <mapID target="Verifications_html" url="html/Verifications.html"/>
   <mapID target="Reminder_html" url="html/Reminder.html"/>
   <mapID target="ChangeQuotation_html" url="html/ChangeQuotation.html"/>
@@ -140,7 +137,6 @@
   <mapID target="Stockvaluereport_html" url="html/Stockvaluereport.html"/>
   <mapID target="CreateSuppliercreditinvoice_html" url="html/CreateSuppliercreditinvoice.html"/>
   <mapID target="InquiryReport_html" url="html/InquiryReport.html"/>
-  <mapID target="ExportProductsXML_html" url="html/ExportProductsXML.html"/>
   <mapID target="ChangeYear_html" url="html/ChangeYear.html"/>
   <mapID target="BeginningBalance_html" url="html/BeginningBalance.html"/>
   <mapID target="ProfitLossBudgetReport_html" url="html/ProfitLossBudgetReport.html"/>
@@ -207,7 +203,6 @@
   <mapID target="Saleorder_html" url="html/Saleorder.html"/>
   <mapID target="CreateSupplierinvoice_html" url="html/CreateSupplierinvoice.html"/>
   <mapID target="SIEexport_html" url="html/SIEexport.html"/>
-  <mapID target="ImportProductsXML_html" url="html/ImportProductsXML.html"/>
   <mapID target="CreatePeriodicInvoice_html" url="html/CreatePeriodicInvoice.html"/>
   <mapID target="DeleteInventorycount_html" url="html/DeleteInventorycount.html"/>
   <mapID target="license_html" url="license.html"/>

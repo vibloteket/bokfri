@@ -44,7 +44,7 @@ import java.sql.*;
 import java.util.*;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import se.swedsoft.bookkeeping.importexport.excel.SSAccountPlanImporter;
+import org.fribok.bookkeeping.service.spreadsheet.AccountPlanSpreadsheetService;
 import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 import se.swedsoft.bookkeeping.util.SSUtil;
 import org.slf4j.Logger;
@@ -369,7 +369,7 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                     if (input == null) {
                         throw new RuntimeException("Resource not found: " + path);
                     }
-                    SSAccountPlanImporter.doImport(input);
+                    addAccountPlan(new AccountPlanSpreadsheetService().read(input));
                     existingNames.add(name);
                 } catch (IOException | SSImportException ex) {
                     LOG.error("Could not import default account plan " + name, ex);
