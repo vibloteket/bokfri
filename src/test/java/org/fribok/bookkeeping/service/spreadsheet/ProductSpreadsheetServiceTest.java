@@ -27,7 +27,7 @@ class ProductSpreadsheetServiceTest {
     }
 
     @Test
-    void xlsRoundTripPreservesProductFieldsAndDecimals() throws Exception {
+    void xlsxRoundTripPreservesProductFieldsAndDecimals() throws Exception {
         SSProduct product = new SSProduct();
         product.setNumber("P-001");
         product.setDescription("Räksmörgås åäö");
@@ -43,7 +43,7 @@ class ProductSpreadsheetServiceTest {
         product.setOrderpoint(7);
         product.setWarehouseLocation("A-01");
         product.setStockPrice(new BigDecimal("700.25"));
-        Path file = temporaryDirectory.resolve("produkter.xls");
+        Path file = temporaryDirectory.resolve("produkter.xlsx");
         ProductSpreadsheetService service = new ProductSpreadsheetService();
 
         service.write(List.of(product), new SSStock(), SSDB.getInstance().getCurrentCompany(),
@@ -51,8 +51,7 @@ class ProductSpreadsheetServiceTest {
         List<SSProduct> imported = service.read(file, SSDB.getInstance().getCurrentCompany(),
                 List.of(new SSUnit("st", "Styck")));
 
-        assertThat(Files.readAllBytes(file)).startsWith((byte) 0xd0, (byte) 0xcf, (byte) 0x11,
-                (byte) 0xe0);
+        assertThat(Files.readAllBytes(file)).startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
         assertThat(imported).singleElement().satisfies(actual -> {
             assertThat(actual.getNumber()).isEqualTo("P-001");
             assertThat(actual.getDescription()).isEqualTo("Räksmörgås åäö");

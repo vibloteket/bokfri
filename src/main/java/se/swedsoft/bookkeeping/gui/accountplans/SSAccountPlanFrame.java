@@ -193,7 +193,7 @@ public class SSAccountPlanFrame extends SSDefaultTableFrame {
                         updateFrame();
                         SSExcelFileChooser iFilechooser = SSExcelFileChooser.getInstance();
 
-                        iFilechooser.setSelectedFile(new File(iSelected.getName() + ".xls"));
+                        iFilechooser.setSelectedFile(new File(iSelected.getName() + ".xlsx"));
 
                         if (iFilechooser.showSaveDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {

@@ -2,7 +2,7 @@
 
 `generate_account_plans.py` is a standalone Python script with PEP 723 inline
 dependency metadata. It downloads checksum-pinned BAS workbooks and generates six
-reviewable Bokfri `.xls` drafts plus Markdown/JSON reports.
+reviewable Bokfri `.xlsx` drafts plus Markdown/JSON reports.
 
 ## Run
 
@@ -25,7 +25,7 @@ the downloaded cache nor generated review drafts are committed.
 uv run tools/account-plans/generate_account_plans.py --offline --install
 ```
 
-`--install` replaces the packaged `.xls` defaults only when no generator errors
+`--install` replaces the packaged `.xlsx` defaults only when no generator errors
 remain. Warnings still require human review, especially ambiguous SRU mappings.
 The generator splits Aktiebolag and Ekonomisk förening because BAS assigns
 account 2087 different official names for those legal forms. After installation, update `SSDB.checkImportDefaultAccountPlans()` and
@@ -35,7 +35,7 @@ run the Java import/integration tests before committing.
 
 1. Update `YEAR`, `SOURCES`, checksums, and plan names in the script.
 2. Run the generator without `--install`.
-3. Review `review.md`, `review.json`, and the generated `.xls` files.
+3. Review `review.md`, `review.json`, and the generated `.xlsx` files.
 4. Resolve mappings that cannot be represented automatically.
 5. Install, test in Bokfri, and commit the resulting packaged defaults.
 

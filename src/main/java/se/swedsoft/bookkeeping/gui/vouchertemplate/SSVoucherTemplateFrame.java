@@ -131,7 +131,7 @@ public class SSVoucherTemplateFrame extends SSDefaultTableFrame {
                             iItems = SSDB.getInstance().getVoucherTemplates();
                         }
 
-                        iFilechooser.setSelectedFile(new File("Konteringsmallar.xls"));
+                        iFilechooser.setSelectedFile(new File("Konteringsmallar.xlsx"));
 
                         if (iFilechooser.showSaveDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {

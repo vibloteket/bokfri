@@ -229,7 +229,7 @@ public class SSVoucherFrame extends SSDefaultTableFrame {
                         } else {
                             iItems = SSDB.getInstance().getVouchers();
                         }
-                        iFilechooser.setSelectedFile(new File("Verifikationer.xls"));
+                        iFilechooser.setSelectedFile(new File("Verifikationer.xlsx"));
 
                         if (iFilechooser.showSaveDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {

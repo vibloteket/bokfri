@@ -1,6 +1,6 @@
 package org.fribok.bookkeeping.service.spreadsheet;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
@@ -43,21 +43,21 @@ public final class VoucherSpreadsheetService {
     private static final List<String> HEADINGS = List.of(NUMBER, DESCRIPTION, DATE, ACCOUNT,
             DEBIT, CREDIT, PROJECT, RESULT_UNIT);
 
-    /** Reads vouchers from the first sheet of a legacy Excel {@code .xls} file. */
+    /** Reads vouchers from the first sheet of an Excel {@code .xlsx} file. */
     public List<SSVoucher> read(Path input) throws IOException {
         Objects.requireNonNull(input, "input");
         try (InputStream stream = Files.newInputStream(input);
-             Workbook workbook = new HSSFWorkbook(stream)) {
+             Workbook workbook = new XSSFWorkbook(stream)) {
             if (workbook.getNumberOfSheets() == 0) {
                 throw new SSImportException("Excelfilen innehåller inga blad.");
             }
             return read(workbook.getSheetAt(0));
         } catch (IllegalArgumentException exception) {
-            throw new SSImportException("Ogiltig XLS-fil: " + exception.getMessage());
+            throw new SSImportException("Ogiltig XLSX-fil: " + exception.getMessage());
         }
     }
 
-    /** Writes vouchers to a legacy Excel {@code .xls} file. */
+    /** Writes vouchers to an Excel {@code .xlsx} file. */
     public Path write(List<SSVoucher> vouchers, Path output, boolean overwrite) throws IOException {
         Objects.requireNonNull(vouchers, "vouchers");
         Objects.requireNonNull(output, "output");
@@ -68,7 +68,7 @@ public final class VoucherSpreadsheetService {
         if (resolved.getParent() != null) {
             Files.createDirectories(resolved.getParent());
         }
-        try (Workbook workbook = new HSSFWorkbook()) {
+        try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Verifikationer");
             CellStyle header = workbook.createCellStyle();
             header.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());

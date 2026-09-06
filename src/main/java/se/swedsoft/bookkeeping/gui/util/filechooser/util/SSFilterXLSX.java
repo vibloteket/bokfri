@@ -10,12 +10,12 @@ import java.util.ResourceBundle;
  * Date: 2006-feb-13
  * Time: 14:48:14
  */
-public class SSFilterXLS extends SSFileFilter {
+public class SSFilterXLSX extends SSFileFilter {
 
     public static ResourceBundle bundle = SSBundle.getBundle();
 
-    public SSFilterXLS() {
-        addExtension("xls");
+    public SSFilterXLSX() {
+        addExtension("xlsx");
     }
 
     /**
@@ -23,7 +23,7 @@ public class SSFilterXLS extends SSFileFilter {
      */
     @Override
     public String getDescription() {
-        return bundle.getString("filechooser.xls.filter");
+        return bundle.getString("filechooser.xlsx.filter");
     }
 
 }

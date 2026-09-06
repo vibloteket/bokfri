@@ -1,6 +1,6 @@
 package org.fribok.bookkeeping.service.spreadsheet;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -36,21 +36,21 @@ public final class VoucherTemplateSpreadsheetService {
     static final String DEBIT = "Debet";
     static final String CREDIT = "Kredit";
 
-    /** Reads voucher templates from the first sheet of a legacy Excel {@code .xls} file. */
+    /** Reads voucher templates from the first sheet of an Excel {@code .xlsx} file. */
     public List<SSVoucherTemplate> read(Path input) throws IOException {
         Objects.requireNonNull(input, "input");
         try (InputStream stream = Files.newInputStream(input);
-             Workbook workbook = new HSSFWorkbook(stream)) {
+             Workbook workbook = new XSSFWorkbook(stream)) {
             if (workbook.getNumberOfSheets() == 0) {
                 throw new SSImportException("Excelfilen innehåller inga blad.");
             }
             return read(workbook.getSheetAt(0));
         } catch (IllegalArgumentException exception) {
-            throw new SSImportException("Ogiltig XLS-fil: " + exception.getMessage());
+            throw new SSImportException("Ogiltig XLSX-fil: " + exception.getMessage());
         }
     }
 
-    /** Writes voucher templates to a legacy Excel {@code .xls} file. */
+    /** Writes voucher templates to an Excel {@code .xlsx} file. */
     public Path write(List<SSVoucherTemplate> templates, Path output, boolean overwrite)
             throws IOException {
         Objects.requireNonNull(templates, "templates");
@@ -62,7 +62,7 @@ public final class VoucherTemplateSpreadsheetService {
         if (resolved.getParent() != null) {
             Files.createDirectories(resolved.getParent());
         }
-        try (Workbook workbook = new HSSFWorkbook()) {
+        try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Konteringmallar");
             CellStyle header = workbook.createCellStyle();
             header.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());

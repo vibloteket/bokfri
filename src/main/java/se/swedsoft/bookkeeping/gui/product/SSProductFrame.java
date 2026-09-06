@@ -215,7 +215,7 @@ public class SSProductFrame extends SSDefaultTableFrame {
                         } else {
                             iItems = SSDB.getInstance().getProducts();
                         }
-                        iFilechooser.setSelectedFile(new File("Produktlista.xls"));
+                        iFilechooser.setSelectedFile(new File("Produktlista.xlsx"));
 
                         if (iFilechooser.showSaveDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {

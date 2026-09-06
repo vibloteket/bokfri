@@ -1,7 +1,7 @@
 package se.swedsoft.bookkeeping.gui.util.filechooser;
 
 
-import se.swedsoft.bookkeeping.gui.util.filechooser.util.SSFilterXLS;
+import se.swedsoft.bookkeeping.gui.util.filechooser.util.SSFilterXLSX;
 
 
 /**
@@ -28,7 +28,7 @@ public class SSExcelFileChooser extends SSFileChooser {
      */
     private SSExcelFileChooser() {
         // Add a custom file filter
-        addChoosableFileFilter(new SSFilterXLS());
+        addChoosableFileFilter(new SSFilterXLSX());
         // Disable the default (Accept All) file filter.
         setAcceptAllFileFilterUsed(false);
     }

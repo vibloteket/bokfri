@@ -15,7 +15,7 @@ class SupplierSpreadsheetServiceTest {
     Path temporaryDirectory;
 
     @Test
-    void xlsRoundTripPreservesSupplierStringsAndAddress() throws Exception {
+    void xlsxRoundTripPreservesSupplierStringsAndAddress() throws Exception {
         SSSupplier supplier = new SSSupplier();
         supplier.setNumber("L-001");
         supplier.setName("Ångström & Söner AB");
@@ -35,14 +35,13 @@ class SupplierSpreadsheetServiceTest {
         supplier.getAddress().setZipCode("01234");
         supplier.getAddress().setCity("Örebro");
         supplier.getAddress().setCountry("Sverige");
-        Path file = temporaryDirectory.resolve("leverantorer.xls");
+        Path file = temporaryDirectory.resolve("leverantorer.xlsx");
         SupplierSpreadsheetService service = new SupplierSpreadsheetService();
 
         service.write(List.of(supplier), file, false);
         List<SSSupplier> imported = service.read(file);
 
-        assertThat(Files.readAllBytes(file)).startsWith((byte) 0xd0, (byte) 0xcf, (byte) 0x11,
-                (byte) 0xe0);
+        assertThat(Files.readAllBytes(file)).startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
         assertThat(imported).singleElement().satisfies(actual -> {
             assertThat(actual.getNumber()).isEqualTo("L-001");
             assertThat(actual.getName()).isEqualTo("Ångström & Söner AB");

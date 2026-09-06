@@ -13,8 +13,8 @@ Run from anywhere in the repository:
 
     uv run tools/account-plans/generate_account_plans.py
 
-The script downloads checksum-pinned source files, reads the old Bokfri plans
-for conservative VAT-code inheritance, writes old-style .xls files understood
+The script downloads checksum-pinned source files, reads the existing Bokfri plans
+for conservative VAT-code inheritance, writes modern .xlsx files understood
 by Bokfri, and creates Markdown/JSON review reports. It never modifies Bokfri's
 packaged defaults unless --install is explicitly supplied.
 """
@@ -33,9 +33,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
 
-import xlrd
-import xlwt
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 
 YEAR = 2026
 ACCOUNT_PLAN_TYPE = "EUBAS97"
@@ -365,12 +363,12 @@ def apply_sru(accounts: dict[int, Account], candidates: dict[int, set[str]], iss
 
 def read_old_vat_codes(defaults: Path, issues: list[Issue]) -> tuple[dict[int, str], dict[int, list[str]]]:
     candidates: dict[int, set[str]] = defaultdict(set)
-    for path in sorted(defaults.glob("*.xls")):
-        book = xlrd.open_workbook(path)
-        sheet = book.sheet_by_index(0)
-        for row in range(5, sheet.nrows):
-            number_text = str(sheet.cell_value(row, 0)).strip().removesuffix(".0")
-            vat_code = str(sheet.cell_value(row, 2)).strip()
+    for path in sorted(defaults.glob("*.xlsx")):
+        book = load_workbook(path, read_only=True, data_only=True)
+        sheet = book.worksheets[0]
+        for row in range(6, sheet.max_row + 1):
+            number_text = str(sheet.cell(row, 1).value or "").strip().removesuffix(".0")
+            vat_code = str(sheet.cell(row, 3).value or "").strip()
             if re.fullmatch(r"\d{4}", number_text) and vat_code:
                 candidates[int(number_text)].add(vat_code)
     consensus = {number: next(iter(codes)) for number, codes in candidates.items() if len(codes) == 1}
@@ -391,30 +389,31 @@ def apply_vat_codes(accounts: dict[int, Account], vat_codes: dict[int, str], pla
     return applied
 
 
-def write_xls(path: Path, name: str, accounts: Iterable[Account]) -> None:
-    workbook = xlwt.Workbook(encoding="windows-1252")
-    sheet = workbook.add_sheet(name[:31])
+def write_xlsx(path: Path, name: str, accounts: Iterable[Account]) -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = name[:31]
     metadata = (("#Namn", name), ("#Typ", ACCOUNT_PLAN_TYPE), ("#Taxeringsår", str(YEAR)), ("#Start", 6))
     for row, values in enumerate(metadata):
         for column, value in enumerate(values):
-            sheet.write(row, column, value)
+            sheet.cell(row + 1, column + 1, value)
     for column, heading in enumerate(("Konto nr", "Beskrivning", "Momskod", "SRU-kod", "Rapportkod")):
-        sheet.write(4, column, heading)
+        sheet.cell(5, column + 1, heading)
     for row, account in enumerate(sorted(accounts, key=lambda item: item.number), start=5):
         for column, value in enumerate(
             (account.number, account.name, account.vat_code, account.sru_code, account.report_code)
         ):
-            sheet.write(row, column, value)
+            sheet.cell(row + 1, column + 1, value)
     path.parent.mkdir(parents=True, exist_ok=True)
-    workbook.save(str(path))
+    workbook.save(path)
 
 
-def verify_xls(path: Path, expected: dict[int, Account]) -> None:
-    sheet = xlrd.open_workbook(path).sheet_by_index(0)
+def verify_xlsx(path: Path, expected: dict[int, Account]) -> None:
+    sheet = load_workbook(path, read_only=True, data_only=True).worksheets[0]
     actual: dict[int, tuple[str, str, str, str]] = {}
-    for row in range(5, sheet.nrows):
-        number = int(sheet.cell_value(row, 0))
-        actual[number] = tuple(str(sheet.cell_value(row, col)).strip() for col in range(1, 5))
+    for row in range(6, sheet.max_row + 1):
+        number = int(sheet.cell(row, 1).value)
+        actual[number] = tuple(str(sheet.cell(row, col).value or "").strip() for col in range(2, 6))
     if set(actual) != set(expected):
         raise RuntimeError(f"Round-trip account mismatch in {path}")
     for number, account in expected.items():
@@ -425,7 +424,7 @@ def verify_xls(path: Path, expected: dict[int, Account]) -> None:
 
 def safe_filename(name: str) -> str:
     replacements = str.maketrans({"å": "a", "ä": "a", "ö": "o", "Å": "A", "Ä": "A", "Ö": "O"})
-    return re.sub(r"[^A-Za-z0-9_-]+", "-", name.translate(replacements)).strip("-") + ".xls"
+    return re.sub(r"[^A-Za-z0-9_-]+", "-", name.translate(replacements)).strip("-") + ".xlsx"
 
 
 def write_reports(
@@ -550,8 +549,8 @@ def main() -> int:
     generated_files: dict[str, Path] = {}
     for key, accounts in plans.items():
         path = output / safe_filename(PLAN_SPECS[key])
-        write_xls(path, PLAN_SPECS[key], accounts.values())
-        verify_xls(path, accounts)
+        write_xlsx(path, PLAN_SPECS[key], accounts.values())
+        verify_xlsx(path, accounts)
         generated_files[key] = path
 
     write_reports(output, plans, issues, vat_applied)
@@ -562,7 +561,7 @@ def main() -> int:
             print(f"Refusing --install: {len(errors)} error(s) remain; see {output / 'review.md'}", file=sys.stderr)
             return 2
         defaults = root / "src/main/resources/account/default"
-        for old_file in defaults.glob("*.xls"):
+        for old_file in defaults.glob("*.xlsx"):
             old_file.unlink()
         for path in generated_files.values():
             shutil.copy2(path, defaults / path.name)

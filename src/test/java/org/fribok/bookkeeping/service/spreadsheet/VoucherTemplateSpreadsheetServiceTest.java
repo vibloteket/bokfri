@@ -17,19 +17,18 @@ class VoucherTemplateSpreadsheetServiceTest {
     Path temporaryDirectory;
 
     @Test
-    void xlsRoundTripPreservesSwedishTextAccountsAndSides() throws Exception {
+    void xlsxRoundTripPreservesSwedishTextAccountsAndSides() throws Exception {
         SSVoucherTemplate source = new SSVoucherTemplate();
         source.setDescription("Löner åäö");
         source.getRows().add(row(7010, true));
         source.getRows().add(row(1930, false));
-        Path file = temporaryDirectory.resolve("konteringsmallar.xls");
+        Path file = temporaryDirectory.resolve("konteringsmallar.xlsx");
         VoucherTemplateSpreadsheetService service = new VoucherTemplateSpreadsheetService();
 
         service.write(List.of(source), file, false);
         List<SSVoucherTemplate> imported = service.read(file);
 
-        assertThat(Files.readAllBytes(file)).startsWith((byte) 0xd0, (byte) 0xcf, (byte) 0x11,
-                (byte) 0xe0);
+        assertThat(Files.readAllBytes(file)).startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
         assertThat(imported).singleElement().satisfies(template -> {
             assertThat(template.getDescription()).isEqualTo("Löner åäö");
             assertThat(template.getRows()).hasSize(2);

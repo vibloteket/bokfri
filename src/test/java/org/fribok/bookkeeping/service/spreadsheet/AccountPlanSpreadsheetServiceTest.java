@@ -18,8 +18,8 @@ class AccountPlanSpreadsheetServiceTest {
     private final AccountPlanSpreadsheetService service = new AccountPlanSpreadsheetService();
 
     @Test
-    void readsExistingBokfriXlsFixture() throws Exception {
-        Path fixture = Path.of("src/main/resources/account/default/BAS-2026---Aktiebolag.xls");
+    void readsExistingBokfriXlsxFixture() throws Exception {
+        Path fixture = Path.of("src/main/resources/account/default/BAS-2026---Aktiebolag.xlsx");
 
         SSAccountPlan plan = service.read(fixture);
 
@@ -34,7 +34,7 @@ class AccountPlanSpreadsheetServiceTest {
     }
 
     @Test
-    void xlsRoundTripPreservesAccountPlanData() throws Exception {
+    void xlsxRoundTripPreservesAccountPlanData() throws Exception {
         SSAccountPlan source = new SSAccountPlan("ÅÄÖ Konsultplan");
         source.setType("EUBAS97");
         source.setAssessementYear("2026");
@@ -44,13 +44,12 @@ class AccountPlanSpreadsheetServiceTest {
         account.setSRUCode("7410");
         account.setReportCode("R1");
         source.addAccount(account);
-        Path file = temporaryDirectory.resolve("kontoplan.xls");
+        Path file = temporaryDirectory.resolve("kontoplan.xlsx");
 
         service.write(source, file, false);
         SSAccountPlan imported = service.read(file);
 
-        assertThat(Files.readAllBytes(file)).startsWith((byte) 0xd0, (byte) 0xcf, (byte) 0x11,
-                (byte) 0xe0);
+        assertThat(Files.readAllBytes(file)).startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
         assertThat(imported.getName()).isEqualTo(source.getName());
         assertThat(imported.getType().toString()).isEqualTo(source.getType().toString());
         assertThat(imported.getAssessementYear()).isEqualTo(source.getAssessementYear());
@@ -65,7 +64,7 @@ class AccountPlanSpreadsheetServiceTest {
 
     @Test
     void exportDoesNotOverwriteByDefault() throws Exception {
-        Path file = temporaryDirectory.resolve("existing.xls");
+        Path file = temporaryDirectory.resolve("existing.xlsx");
         Files.writeString(file, "keep");
 
         assertThatThrownBy(() -> service.write(new SSAccountPlan("Test"), file, false))

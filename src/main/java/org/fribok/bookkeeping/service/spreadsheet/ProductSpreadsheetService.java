@@ -1,6 +1,6 @@
 package org.fribok.bookkeeping.service.spreadsheet;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSProduct;
@@ -24,7 +24,7 @@ public final class ProductSpreadsheetService {
     public List<SSProduct> read(Path input, SSNewCompany company, List<SSUnit> units)
             throws IOException {
         Objects.requireNonNull(company, "company");
-        try (InputStream stream = Files.newInputStream(input); Workbook workbook = new HSSFWorkbook(stream)) {
+        try (InputStream stream = Files.newInputStream(input); Workbook workbook = new XSSFWorkbook(stream)) {
             if (workbook.getNumberOfSheets() == 0) throw new SSImportException("Excelfilen innehåller inga blad.");
             Sheet sheet = workbook.getSheetAt(0);
             DataFormatter formatter = new DataFormatter(Locale.forLanguageTag("sv-SE"));
@@ -60,7 +60,7 @@ public final class ProductSpreadsheetService {
             if (products.isEmpty()) throw new SSImportException("Excelbladet innehåller inga produkter.");
             return products;
         } catch (IllegalArgumentException exception) {
-            throw new SSImportException("Ogiltig XLS-fil: " + exception.getMessage());
+            throw new SSImportException("Ogiltig XLSX-fil: " + exception.getMessage());
         }
     }
 
@@ -69,7 +69,7 @@ public final class ProductSpreadsheetService {
         Path resolved = output.toAbsolutePath().normalize();
         if (Files.exists(resolved) && !overwrite) throw new FileAlreadyExistsException(resolved.toString());
         if (resolved.getParent() != null) Files.createDirectories(resolved.getParent());
-        try (Workbook workbook = new HSSFWorkbook()) {
+        try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Produkter");
             CellStyle header = workbook.createCellStyle();
             header.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());

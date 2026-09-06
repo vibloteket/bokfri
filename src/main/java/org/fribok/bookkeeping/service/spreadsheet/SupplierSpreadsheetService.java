@@ -1,6 +1,6 @@
 package org.fribok.bookkeeping.service.spreadsheet;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.DataFormatter;
@@ -49,21 +49,21 @@ public final class SupplierSpreadsheetService {
             EMAIL, HOMEPAGE, CONTACT, REGISTRATION_NUMBER, OUR_CUSTOMER_NUMBER, BANKGIRO,
             PLUSGIRO, ADDRESS_NAME, ADDRESS_1, ADDRESS_2, ZIP_CODE, CITY, COUNTRY);
 
-    /** Reads suppliers from the first sheet of a legacy Excel {@code .xls} file. */
+    /** Reads suppliers from the first sheet of an Excel {@code .xlsx} file. */
     public List<SSSupplier> read(Path input) throws IOException {
         Objects.requireNonNull(input, "input");
         try (InputStream stream = Files.newInputStream(input);
-             Workbook workbook = new HSSFWorkbook(stream)) {
+             Workbook workbook = new XSSFWorkbook(stream)) {
             if (workbook.getNumberOfSheets() == 0) {
                 throw new SSImportException("Excelfilen innehåller inga blad.");
             }
             return read(workbook.getSheetAt(0));
         } catch (IllegalArgumentException exception) {
-            throw new SSImportException("Ogiltig XLS-fil: " + exception.getMessage());
+            throw new SSImportException("Ogiltig XLSX-fil: " + exception.getMessage());
         }
     }
 
-    /** Writes suppliers to a legacy Excel {@code .xls} file. */
+    /** Writes suppliers to an Excel {@code .xlsx} file. */
     public Path write(List<SSSupplier> suppliers, Path output, boolean overwrite) throws IOException {
         Objects.requireNonNull(suppliers, "suppliers");
         Objects.requireNonNull(output, "output");
@@ -74,7 +74,7 @@ public final class SupplierSpreadsheetService {
         if (resolved.getParent() != null) {
             Files.createDirectories(resolved.getParent());
         }
-        try (Workbook workbook = new HSSFWorkbook()) {
+        try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Leverantörer");
             CellStyle header = workbook.createCellStyle();
             header.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
