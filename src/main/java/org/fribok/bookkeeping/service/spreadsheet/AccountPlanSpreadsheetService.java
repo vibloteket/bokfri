@@ -1,6 +1,6 @@
 package org.fribok.bookkeeping.service.spreadsheet;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
@@ -31,7 +31,7 @@ public final class AccountPlanSpreadsheetService {
     private static final String START = BUNDLE.getString("importaccountplan.field_start");
     private static final int ACCOUNT_START_ROW = 5;
 
-    /** Reads the first sheet of a legacy Excel {@code .xls} account-plan file. */
+    /** Reads the first sheet of an Excel {@code .xlsx} account-plan file. */
     public SSAccountPlan read(Path input) throws IOException {
         Objects.requireNonNull(input, "input");
         try (InputStream stream = Files.newInputStream(input)) {
@@ -39,20 +39,20 @@ public final class AccountPlanSpreadsheetService {
         }
     }
 
-    /** Reads the first sheet from a legacy Excel {@code .xls} stream. */
+    /** Reads the first sheet from an Excel {@code .xlsx} stream. */
     public SSAccountPlan read(InputStream input) throws IOException {
         Objects.requireNonNull(input, "input");
-        try (Workbook workbook = new HSSFWorkbook(input)) {
+        try (Workbook workbook = new XSSFWorkbook(input)) {
             if (workbook.getNumberOfSheets() == 0) {
                 throw new SSImportException(BUNDLE, "importaccountplan.nosheets");
             }
             return read(workbook.getSheetAt(0));
         } catch (IllegalArgumentException exception) {
-            throw new SSImportException("Ogiltig XLS-fil: " + exception.getMessage());
+            throw new SSImportException("Ogiltig XLSX-fil: " + exception.getMessage());
         }
     }
 
-    /** Writes a legacy Excel {@code .xls} account-plan file. */
+    /** Writes an Excel {@code .xlsx} account-plan file. */
     public Path write(SSAccountPlan accountPlan, Path output, boolean overwrite) throws IOException {
         Objects.requireNonNull(accountPlan, "accountPlan");
         Objects.requireNonNull(output, "output");
@@ -63,7 +63,7 @@ public final class AccountPlanSpreadsheetService {
         if (resolved.getParent() != null) {
             Files.createDirectories(resolved.getParent());
         }
-        try (Workbook workbook = new HSSFWorkbook()) {
+        try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet(safeSheetName(accountPlan.getName()));
             setString(sheet, 0, 0, NAME);
             setString(sheet, 0, 1, accountPlan.getName());

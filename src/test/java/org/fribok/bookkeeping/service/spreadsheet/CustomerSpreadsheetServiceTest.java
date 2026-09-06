@@ -15,7 +15,7 @@ class CustomerSpreadsheetServiceTest {
     Path temporaryDirectory;
 
     @Test
-    void xlsRoundTripPreservesCustomerStringsAndBothAddresses() throws Exception {
+    void xlsxRoundTripPreservesCustomerStringsAndBothAddresses() throws Exception {
         SSCustomer customer = new SSCustomer();
         customer.setNumber("K-001"); customer.setName("Ångström & Söner AB");
         customer.setPhone1("08-123 45 67"); customer.setPhone2("070-000 00 00");
@@ -34,14 +34,13 @@ class CustomerSpreadsheetServiceTest {
         customer.getDeliveryAddress().setZipCode("00123");
         customer.getDeliveryAddress().setCity("Västerås");
         customer.getDeliveryAddress().setCountry("Sverige");
-        Path file = temporaryDirectory.resolve("kunder.xls");
+        Path file = temporaryDirectory.resolve("kunder.xlsx");
         CustomerSpreadsheetService service = new CustomerSpreadsheetService();
 
         service.write(List.of(customer), file, false);
         List<SSCustomer> imported = service.read(file);
 
-        assertThat(Files.readAllBytes(file)).startsWith((byte) 0xd0, (byte) 0xcf, (byte) 0x11,
-                (byte) 0xe0);
+        assertThat(Files.readAllBytes(file)).startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
         assertThat(imported).singleElement().satisfies(actual -> {
             assertThat(actual.getNumber()).isEqualTo("K-001");
             assertThat(actual.getName()).isEqualTo("Ångström & Söner AB");

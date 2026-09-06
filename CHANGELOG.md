@@ -13,7 +13,7 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Added
-- The CLI and graphical interface now import and export all six legacy `.xls` data types—account
+- The CLI and graphical interface now import and export all six structured `.xlsx` data types—account
   plans, customers, products, suppliers, vouchers, and voucher templates—through shared,
   GUI-independent Apache POI services. JExcelAPI and its Log4j 1.2 dependency have been removed.
 - The untested custom XML customer/product exchange and E-butik.se customer import have been

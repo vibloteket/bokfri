@@ -221,7 +221,7 @@ public class SSCustomerFrame extends SSDefaultTableFrame {
                             iItems = SSDB.getInstance().getCustomers();
                         }
 
-                        iFilechooser.setSelectedFile(new File("Kundlista.xls"));
+                        iFilechooser.setSelectedFile(new File("Kundlista.xlsx"));
 
                         if (iFilechooser.showSaveDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {

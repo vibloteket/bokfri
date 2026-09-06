@@ -617,7 +617,7 @@ public class BokfriCli implements Runnable {
     static class AccountPlanCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An account-plan command is required");}}
     @Command(mixinStandardHelpOptions = true, name="list") static class AccountPlanList implements Callable<Integer>{@CommandLine.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),table(plans,"No account plans found",right("Id","id"),left("Name","name"),right("Assessment year","assessmentYear"),right("Accounts","accountCount")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
-    @Command(mixinStandardHelpOptions = true, name="export", description="Export an account plan as legacy Excel XLS")
+    @Command(mixinStandardHelpOptions = true, name="export", description="Export an account plan as Excel XLSX")
     static class AccountPlanExport implements Callable<Integer> {
         @CommandLine.ParentCommand AccountPlanCommand command;
         @Option(names="--id", required=true, description="Account-plan id") int id;
@@ -636,7 +636,7 @@ public class BokfriCli implements Runnable {
                 Map<String, Object> result = accountPlanSpreadsheetDetails(accountPlan);
                 result.put("output", file.toString());
                 result.put("bytes", Files.size(file));
-                root.output(result, "Created account-plan XLS " + file);
+                root.output(result, "Created account-plan XLSX " + file);
                 return 0;
             } catch (Exception exception) {
                 throw spreadsheetFailure("ACCOUNT_PLAN_EXPORT_FAILED", exception);
@@ -644,7 +644,7 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(mixinStandardHelpOptions = true, name="import", description="Preview or import a legacy Excel XLS account plan")
+    @Command(mixinStandardHelpOptions = true, name="import", description="Preview or import an Excel XLSX account plan")
     static class AccountPlanImport implements Callable<Integer> {
         @CommandLine.ParentCommand AccountPlanCommand command;
         @Option(names="--file", required=true) java.nio.file.Path file;
@@ -1590,7 +1590,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "export",
-            description = "Export customers as legacy Excel XLS")
+            description = "Export customers as Excel XLSX")
     static class CustomerSpreadsheetExport implements Callable<Integer> {
         @CommandLine.ParentCommand CustomerCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
@@ -1607,7 +1607,7 @@ public class BokfriCli implements Runnable {
                 result.put("output", exported.toString()); result.put("bytes", Files.size(exported));
                 result.put("count", customers.size());
                 result.put("selection", selectedCompanyContext(context, company));
-                root.output(result, "Created customer XLS " + exported);
+                root.output(result, "Created customer XLSX " + exported);
                 return 0;
             } catch (Exception exception) {
                 throw spreadsheetFailure("CUSTOMER_EXPORT_FAILED", exception);
@@ -1616,7 +1616,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "import",
-            description = "Preview or import customers from legacy Excel XLS")
+            description = "Preview or import customers from Excel XLSX")
     static class CustomerSpreadsheetImport implements Callable<Integer> {
         @CommandLine.ParentCommand CustomerCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
@@ -1772,7 +1772,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "export",
-            description = "Export products as legacy Excel XLS")
+            description = "Export products as Excel XLSX")
     static class ProductSpreadsheetExport implements Callable<Integer> {
         @CommandLine.ParentCommand ProductCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
@@ -1791,7 +1791,7 @@ public class BokfriCli implements Runnable {
                 result.put("output", exported.toString()); result.put("bytes", Files.size(exported));
                 result.put("count", products.size());
                 result.put("selection", selectedContext(context, company, year));
-                root.output(result, "Created product XLS " + exported);
+                root.output(result, "Created product XLSX " + exported);
                 return 0;
             } catch (Exception exception) {
                 throw spreadsheetFailure("PRODUCT_EXPORT_FAILED", exception);
@@ -1800,7 +1800,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "import",
-            description = "Preview or import products from legacy Excel XLS")
+            description = "Preview or import products from Excel XLSX")
     static class ProductSpreadsheetImport implements Callable<Integer> {
         @CommandLine.ParentCommand ProductCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
@@ -1958,7 +1958,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "export",
-            description = "Export suppliers as legacy Excel XLS")
+            description = "Export suppliers as Excel XLSX")
     static class SupplierSpreadsheetExport implements Callable<Integer> {
         @CommandLine.ParentCommand SupplierCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
@@ -1976,7 +1976,7 @@ public class BokfriCli implements Runnable {
                 result.put("bytes", Files.size(exported));
                 result.put("count", suppliers.size());
                 result.put("selection", selectedCompanyContext(context, company));
-                root.output(result, "Created supplier XLS " + exported);
+                root.output(result, "Created supplier XLSX " + exported);
                 return 0;
             } catch (Exception exception) {
                 throw spreadsheetFailure("SUPPLIER_EXPORT_FAILED", exception);
@@ -1985,7 +1985,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "import",
-            description = "Preview or import suppliers from legacy Excel XLS")
+            description = "Preview or import suppliers from Excel XLSX")
     static class SupplierSpreadsheetImport implements Callable<Integer> {
         @CommandLine.ParentCommand SupplierCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
@@ -3057,7 +3057,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "export",
-            description = "Export vouchers as legacy Excel XLS")
+            description = "Export vouchers as Excel XLSX")
     static class VoucherSpreadsheetExport implements Callable<Integer> {
         @CommandLine.ParentCommand VoucherCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
@@ -3076,7 +3076,7 @@ public class BokfriCli implements Runnable {
                 result.put("bytes", Files.size(exported));
                 result.put("count", vouchers.size());
                 result.put("selection", selectedContext(context, company, year));
-                root.output(result, "Created voucher XLS " + exported);
+                root.output(result, "Created voucher XLSX " + exported);
                 return 0;
             } catch (Exception exception) {
                 throw spreadsheetFailure("VOUCHER_EXPORT_FAILED", exception);
@@ -3085,7 +3085,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "import",
-            description = "Preview or import vouchers from legacy Excel XLS")
+            description = "Preview or import vouchers from Excel XLSX")
     static class VoucherSpreadsheetImport implements Callable<Integer> {
         @CommandLine.ParentCommand VoucherCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
@@ -3223,7 +3223,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "export",
-            description = "Export voucher templates as legacy Excel XLS")
+            description = "Export voucher templates as Excel XLSX")
     static class VoucherTemplateExport implements Callable<Integer> {
         @CommandLine.ParentCommand VoucherTemplateCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
@@ -3241,7 +3241,7 @@ public class BokfriCli implements Runnable {
                 result.put("bytes", Files.size(exported));
                 result.put("count", templates.size());
                 result.put("companyId", company.getId());
-                root.output(result, "Created voucher-template XLS " + exported);
+                root.output(result, "Created voucher-template XLSX " + exported);
                 return 0;
             } catch (Exception exception) {
                 throw spreadsheetFailure("VOUCHER_TEMPLATE_EXPORT_FAILED", exception);
@@ -3250,7 +3250,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "import",
-            description = "Preview or import voucher templates from legacy Excel XLS")
+            description = "Preview or import voucher templates from Excel XLSX")
     static class VoucherTemplateImport implements Callable<Integer> {
         @CommandLine.ParentCommand VoucherTemplateCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;

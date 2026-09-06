@@ -1,6 +1,6 @@
 package org.fribok.bookkeeping.service.spreadsheet;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.swedsoft.bookkeeping.data.SSVoucher;
@@ -21,20 +21,19 @@ class VoucherSpreadsheetServiceTest {
     Path temporaryDirectory;
 
     @Test
-    void xlsRoundTripPreservesDatesDecimalsAndDimensions() throws Exception {
+    void xlsxRoundTripPreservesDatesDecimalsAndDimensions() throws Exception {
         SSVoucher voucher = new SSVoucher(17);
         voucher.setDescription("Inköp åäö");
         voucher.setLocalDate(LocalDate.of(2026, 9, 5));
         voucher.addVoucherRow(row(4010, "1234.56", null, "P-1", "R-1"));
         voucher.addVoucherRow(row(1930, null, "1234.56", null, null));
-        Path file = temporaryDirectory.resolve("verifikationer.xls");
+        Path file = temporaryDirectory.resolve("verifikationer.xlsx");
         VoucherSpreadsheetService service = new VoucherSpreadsheetService();
 
         service.write(List.of(voucher), file, false);
         List<SSVoucher> imported = service.read(file);
 
-        assertThat(Files.readAllBytes(file)).startsWith((byte) 0xd0, (byte) 0xcf, (byte) 0x11,
-                (byte) 0xe0);
+        assertThat(Files.readAllBytes(file)).startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
         assertThat(imported).singleElement().satisfies(actual -> {
             assertThat(actual.getNumber()).isEqualTo(17);
             assertThat(actual.getDescription()).isEqualTo("Inköp åäö");
@@ -49,8 +48,8 @@ class VoucherSpreadsheetServiceTest {
 
     @Test
     void invalidDateIsRejectedInsteadOfBecomingToday() throws Exception {
-        Path file = temporaryDirectory.resolve("invalid-date.xls");
-        try (var workbook = new HSSFWorkbook()) {
+        Path file = temporaryDirectory.resolve("invalid-date.xlsx");
+        try (var workbook = new XSSFWorkbook()) {
             var sheet = workbook.createSheet("Verifikationer");
             var headings = sheet.createRow(0);
             String[] names = {"Nummer", "Beskrivning", "Datum", "Konto", "Debet", "Kredit",

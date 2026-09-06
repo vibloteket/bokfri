@@ -2,9 +2,11 @@ package org.fribok.bookkeeping.cli;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.fribok.bookkeeping.service.spreadsheet.AccountPlanSpreadsheetService;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 import org.junit.jupiter.api.io.TempDir;
+import se.swedsoft.bookkeeping.data.SSAccountPlan;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
@@ -428,14 +430,13 @@ class BokfriCliTest {
         JsonNode initialPlans = new ObjectMapper().readTree(initial.stdout()).path("accountPlans");
         int sourceId = initialPlans.get(0).path("id").asInt();
         int initialCount = initialPlans.size();
-        Path exported = temporaryDirectory.resolve("account-plan.xls");
+        Path exported = temporaryDirectory.resolve("account-plan.xlsx");
 
         Result export = execute("--config", config.toString(), "--data-dir", data.toString(),
                 "--format", "json", "account-plan", "export", "--id",
                 Integer.toString(sourceId), "--output", exported.toString());
         assertThat(export.exitCode()).as(export.stderr()).isZero();
-        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0xd0, (byte) 0xcf,
-                (byte) 0x11, (byte) 0xe0);
+        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
 
         Result duplicatePreview = execute("--config", config.toString(), "--data-dir", data.toString(),
                 "--format", "json", "account-plan", "import", "--file", exported.toString());
@@ -444,15 +445,12 @@ class BokfriCliTest {
         assertThat(duplicateJson.path("duplicate").asBoolean()).isTrue();
         assertThat(duplicateJson.path("applied").asBoolean()).isFalse();
 
-        Path unique = temporaryDirectory.resolve("unique.xls");
-        Files.copy(Path.of("src/main/resources/account/default/BAS-2026---Aktiebolag.xls"), unique);
-        try (org.apache.poi.hssf.usermodel.HSSFWorkbook workbook =
-                     new org.apache.poi.hssf.usermodel.HSSFWorkbook(Files.newInputStream(unique))) {
-            workbook.getSheetAt(0).getRow(0).getCell(1).setCellValue("CLI Testplan");
-            try (var output = Files.newOutputStream(unique)) {
-                workbook.write(output);
-            }
-        }
+        Path unique = temporaryDirectory.resolve("unique.xlsx");
+        AccountPlanSpreadsheetService spreadsheetService = new AccountPlanSpreadsheetService();
+        SSAccountPlan uniquePlan = spreadsheetService.read(Path.of(
+                "src/main/resources/account/default/BAS-2026---Aktiebolag.xlsx"));
+        uniquePlan.setName("CLI Testplan");
+        spreadsheetService.write(uniquePlan, unique, false);
         Result preview = execute("--config", config.toString(), "--data-dir", data.toString(),
                 "--format", "json", "account-plan", "import", "--file", unique.toString());
         JsonNode previewJson = new ObjectMapper().readTree(preview.stdout());
@@ -477,8 +475,8 @@ class BokfriCliTest {
 
     @Test
     void customerSpreadsheetCommandsExportAndPreviewWithoutWriting() throws Exception {
-        Path config = temporaryDirectory.resolve("customer-xls-cli.yaml");
-        Path data = temporaryDirectory.resolve("customer-xls-data");
+        Path config = temporaryDirectory.resolve("customer-xlsx-cli.yaml");
+        Path data = temporaryDirectory.resolve("customer-xlsx-data");
         Result companies = execute("--config", config.toString(), "--data-dir", data.toString(),
                 "--format", "json", "company", "list");
         int companyId = new ObjectMapper().readTree(companies.stdout())
@@ -487,7 +485,7 @@ class BokfriCliTest {
                 "--company-id", Integer.toString(companyId), "--format", "json"};
         Result before = execute(concat(context, "customer", "list"));
         int countBefore = new ObjectMapper().readTree(before.stdout()).path("count").asInt();
-        Path exported = temporaryDirectory.resolve("customers.xls");
+        Path exported = temporaryDirectory.resolve("customers.xlsx");
 
         Result export = execute(concat(context, "customer", "export", "--output", exported.toString()));
         assertThat(export.exitCode()).as(export.stderr()).isZero();
@@ -503,8 +501,8 @@ class BokfriCliTest {
 
     @Test
     void productSpreadsheetCommandsExportAndPreviewWithoutWriting() throws Exception {
-        Path config = temporaryDirectory.resolve("product-xls-cli.yaml");
-        Path data = temporaryDirectory.resolve("product-xls-data");
+        Path config = temporaryDirectory.resolve("product-xlsx-cli.yaml");
+        Path data = temporaryDirectory.resolve("product-xlsx-data");
         Result demo = execute("--config", config.toString(), "--data-dir", data.toString(),
                 "--format", "json", "demo", "recreate", "--commit");
         int companyId = new ObjectMapper().readTree(demo.stdout()).path("companyId").asInt();
@@ -516,7 +514,7 @@ class BokfriCliTest {
                 "--format", "json"};
         Result before = execute(concat(context, "product", "list"));
         int countBefore = new ObjectMapper().readTree(before.stdout()).path("count").asInt();
-        Path exported = temporaryDirectory.resolve("products.xls");
+        Path exported = temporaryDirectory.resolve("products.xlsx");
 
         Result export = execute(concat(context, "product", "export", "--output", exported.toString()));
         assertThat(export.exitCode()).as(export.stderr()).isZero();
@@ -532,8 +530,8 @@ class BokfriCliTest {
 
     @Test
     void supplierSpreadsheetCommandsExportAndPreviewWithoutWriting() throws Exception {
-        Path config = temporaryDirectory.resolve("supplier-xls-cli.yaml");
-        Path data = temporaryDirectory.resolve("supplier-xls-data");
+        Path config = temporaryDirectory.resolve("supplier-xlsx-cli.yaml");
+        Path data = temporaryDirectory.resolve("supplier-xlsx-data");
         Result companies = execute("--config", config.toString(), "--data-dir", data.toString(),
                 "--format", "json", "company", "list");
         int companyId = new ObjectMapper().readTree(companies.stdout())
@@ -542,13 +540,12 @@ class BokfriCliTest {
                 "--company-id", Integer.toString(companyId), "--format", "json"};
         Result before = execute(concat(context, "supplier", "list"));
         int countBefore = new ObjectMapper().readTree(before.stdout()).path("count").asInt();
-        Path exported = temporaryDirectory.resolve("suppliers.xls");
+        Path exported = temporaryDirectory.resolve("suppliers.xlsx");
 
         Result export = execute(concat(context, "supplier", "export", "--output",
                 exported.toString()));
         assertThat(export.exitCode()).as(export.stderr()).isZero();
-        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0xd0, (byte) 0xcf,
-                (byte) 0x11, (byte) 0xe0);
+        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
         Result preview = execute(concat(context, "supplier", "import", "--file",
                 exported.toString()));
         JsonNode previewJson = new ObjectMapper().readTree(preview.stdout());
@@ -562,8 +559,8 @@ class BokfriCliTest {
 
     @Test
     void voucherSpreadsheetCommandsExportAndPreviewWithoutWriting() throws Exception {
-        Path config = temporaryDirectory.resolve("voucher-xls-cli.yaml");
-        Path data = temporaryDirectory.resolve("voucher-xls-data");
+        Path config = temporaryDirectory.resolve("voucher-xlsx-cli.yaml");
+        Path data = temporaryDirectory.resolve("voucher-xlsx-data");
         Result demo = execute("--config", config.toString(), "--data-dir", data.toString(),
                 "--format", "json", "demo", "recreate", "--commit");
         int companyId = new ObjectMapper().readTree(demo.stdout()).path("companyId").asInt();
@@ -575,13 +572,12 @@ class BokfriCliTest {
                 "--format", "json"};
         Result before = execute(concat(context, "voucher", "list"));
         int countBefore = new ObjectMapper().readTree(before.stdout()).path("count").asInt();
-        Path exported = temporaryDirectory.resolve("vouchers.xls");
+        Path exported = temporaryDirectory.resolve("vouchers.xlsx");
 
         Result export = execute(concat(context, "voucher", "export", "--output",
                 exported.toString()));
         assertThat(export.exitCode()).as(export.stderr()).isZero();
-        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0xd0, (byte) 0xcf,
-                (byte) 0x11, (byte) 0xe0);
+        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
         Result preview = execute(concat(context, "voucher", "import", "--file",
                 exported.toString()));
         JsonNode previewJson = new ObjectMapper().readTree(preview.stdout());
@@ -601,7 +597,7 @@ class BokfriCliTest {
                 "--format", "json", "company", "list");
         int companyId = new ObjectMapper().readTree(companies.stdout())
                 .path("companies").get(0).path("id").asInt();
-        Path fixture = temporaryDirectory.resolve("templates.xls");
+        Path fixture = temporaryDirectory.resolve("templates.xlsx");
         se.swedsoft.bookkeeping.data.SSVoucherTemplate template =
                 new se.swedsoft.bookkeeping.data.SSVoucherTemplate();
         template.setDescription("CLI mall åäö");
@@ -626,14 +622,13 @@ class BokfriCliTest {
         assertThat(applied.exitCode()).as(applied.stderr()).isZero();
         assertThat(new ObjectMapper().readTree(applied.stdout()).path("applied").asBoolean()).isTrue();
 
-        Path exported = temporaryDirectory.resolve("templates-export.xls");
+        Path exported = temporaryDirectory.resolve("templates-export.xlsx");
         Result export = execute(concat(context, "voucher-template", "export", "--output",
                 exported.toString()));
         assertThat(export.exitCode()).as(export.stderr()).isZero();
         assertThat(new ObjectMapper().readTree(export.stdout()).path("count").asInt())
                 .isGreaterThanOrEqualTo(1);
-        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0xd0, (byte) 0xcf,
-                (byte) 0x11, (byte) 0xe0);
+        assertThat(Files.readAllBytes(exported)).startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
     }
 
     @Test

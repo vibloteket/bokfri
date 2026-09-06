@@ -345,12 +345,12 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             }
 
             String[][] defaults = new String[][]{
-                {"BAS 2026 - Aktiebolag", "BAS-2026---Aktiebolag.xls"},
-                {"BAS 2026 - Ekonomisk förening", "BAS-2026---Ekonomisk-forening.xls"},
-                {"BAS 2026 - Enskild firma K1", "BAS-2026---Enskild-firma-K1.xls"},
-                {"BAS 2026 - Enskild firma, ej K1", "BAS-2026---Enskild-firma-ej-K1.xls"},
-                {"BAS 2026 - Handelsbolag och kommanditbolag", "BAS-2026---Handelsbolag-och-kommanditbolag.xls"},
-                {"BAS 2026 - Ideell förening, stiftelse och trossamfund", "BAS-2026---Ideell-forening-stiftelse-och-trossamfund.xls"},};
+                {"BAS 2026 - Aktiebolag", "BAS-2026---Aktiebolag.xlsx"},
+                {"BAS 2026 - Ekonomisk förening", "BAS-2026---Ekonomisk-forening.xlsx"},
+                {"BAS 2026 - Enskild firma K1", "BAS-2026---Enskild-firma-K1.xlsx"},
+                {"BAS 2026 - Enskild firma, ej K1", "BAS-2026---Enskild-firma-ej-K1.xlsx"},
+                {"BAS 2026 - Handelsbolag och kommanditbolag", "BAS-2026---Handelsbolag-och-kommanditbolag.xlsx"},
+                {"BAS 2026 - Ideell förening, stiftelse och trossamfund", "BAS-2026---Ideell-forening-stiftelse-och-trossamfund.xlsx"},};
 
             Set<String> existingNames = getAccountPlans().stream()
                     .map(SSAccountPlan::getName)
