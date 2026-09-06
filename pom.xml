@@ -391,16 +391,14 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.poi</groupId>
-      <artifactId>poi</artifactId>
-      <version>5.5.1</version>
-      <scope>compile</scope>
+      <groupId>org.dhatim</groupId>
+      <artifactId>fastexcel</artifactId>
+      <version>0.20.2</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.poi</groupId>
-      <artifactId>poi-ooxml</artifactId>
-      <version>5.5.1</version>
-      <scope>compile</scope>
+      <groupId>org.dhatim</groupId>
+      <artifactId>fastexcel-reader</artifactId>
+      <version>0.20.2</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
@@ -429,12 +427,6 @@
       <version>1.5.0-b01</version>
       <scope>compile</scope>
     </dependency>
-    <!--dependency>
-        <groupId>org.apache.poi</groupId>
-        <artifactId>poi</artifactId>
-        <version>3.2-FINAL</version>
-        <scope>compile</scope>
-        </dependency-->
     <!-- command-line interface -->
     <dependency>
       <groupId>info.picocli</groupId>
