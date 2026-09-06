@@ -52,6 +52,7 @@ import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceService;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationIssue;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationResult;
 import org.fribok.bookkeeping.service.spreadsheet.AccountPlanSpreadsheetService;
+import org.fribok.bookkeeping.service.spreadsheet.ProductSpreadsheetService;
 import org.fribok.bookkeeping.service.spreadsheet.SupplierSpreadsheetService;
 import org.fribok.bookkeeping.service.spreadsheet.VoucherSpreadsheetService;
 import org.fribok.bookkeeping.service.spreadsheet.VoucherTemplateSpreadsheetService;
@@ -1661,8 +1662,9 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "product", description = "Inspect and create products",
-            subcommands = {ProductList.class, ProductShow.class, ProductValidate.class,
-                    ProductCreate.class, CliInputSchemas.Product.class})
+            subcommands = {ProductList.class, ProductShow.class, ProductSpreadsheetExport.class,
+                    ProductSpreadsheetImport.class, ProductValidate.class, ProductCreate.class,
+                    CliInputSchemas.Product.class})
     static class ProductCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -1698,6 +1700,76 @@ public class BokfriCli implements Runnable {
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "export",
+            description = "Export products as legacy Excel XLS")
+    static class ProductSpreadsheetExport implements Callable<Integer> {
+        @CommandLine.ParentCommand ProductCommand command;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                List<SSProduct> products = new ProductService(runtime.database()).list();
+                java.nio.file.Path exported = new ProductSpreadsheetService().write(products,
+                        new se.swedsoft.bookkeeping.data.SSStock(true), company, output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("output", exported.toString()); result.put("bytes", Files.size(exported));
+                result.put("count", products.size());
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created product XLS " + exported);
+                return 0;
+            } catch (Exception exception) {
+                throw spreadsheetFailure("PRODUCT_EXPORT_FAILED", exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "import",
+            description = "Preview or import products from legacy Excel XLS")
+    static class ProductSpreadsheetImport implements Callable<Integer> {
+        @CommandLine.ParentCommand ProductCommand command;
+        @Option(names = "--file", required = true) java.nio.file.Path file;
+        @Option(names = "--apply", description = "Store valid, non-duplicate products") boolean apply;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                runtime.database().init(false);
+                ProductService service = new ProductService(runtime.database());
+                List<SSProduct> products = new ProductSpreadsheetService().read(file, company,
+                        runtime.database().getUnits());
+                java.util.Set<String> existingNumbers = service.list().stream()
+                        .map(SSProduct::getNumber).collect(java.util.stream.Collectors.toSet());
+                List<SSProduct> additions = products.stream()
+                        .filter(product -> !existingNumbers.contains(product.getNumber())).toList();
+                List<SSProduct> invalid = additions.stream()
+                        .filter(product -> !service.validate(product).valid()).toList();
+                if (apply && !invalid.isEmpty()) {
+                    throw new CliException("PRODUCT_IMPORT_INVALID",
+                            invalid.size() + " imported products failed validation");
+                }
+                if (apply) additions.forEach(service::create);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("file", file.toAbsolutePath().normalize().toString());
+                result.put("count", products.size()); result.put("newCount", additions.size());
+                result.put("duplicateCount", products.size() - additions.size());
+                result.put("invalidCount", invalid.size()); result.put("applied", apply);
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, apply ? "Imported " + additions.size() + " products"
+                        : "Product import preview; no changes written");
+                return 0;
+            } catch (Exception exception) {
+                throw spreadsheetFailure("PRODUCT_IMPORT_FAILED", exception);
             }
         }
     }

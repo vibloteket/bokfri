@@ -108,7 +108,8 @@ class SSInvoiceTest {
         // Use a day-boundary Date since fields are now LocalDate internally
         LocalDate invoiceDate = LocalDate.of(2024, 7, 20);
         invoice.setLocalDate(invoiceDate);
-        // iPaymentTerm is null by default when SSDB has no company
+        // Tests may share a JVM with database fixtures that install a current company.
+        invoice.setPaymentTerm(null);
         invoice.setDueDate();
 
         assertThat(invoice.getLocalDueDate()).isEqualTo(invoiceDate);
