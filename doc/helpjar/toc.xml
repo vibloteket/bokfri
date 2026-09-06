@@ -58,11 +58,9 @@
       <tocitem target="DeleteProducts_html" text="Radera produkter"/>
       <tocitem image="Book Blue 16 n p_png" text="Importera produkter">
         <tocitem target="ImportProducts_html" text="Importera produkter (Excel)"/>
-        <tocitem target="ImportProductsXML_html" text="Importera produkter (XML)"/>
       </tocitem>
       <tocitem image="Book Blue 16 n p_png" text="Exportera produkter">
         <tocitem target="ExportProducts_html" text="Exportera produkter (Excel)"/>
-        <tocitem target="ExportProductsXML_html" text="Exportera produkter (XML)"/>
       </tocitem>
       <tocitem target="ProductRevenue_html" text="Produktomsättning"/>
     </tocitem>
@@ -73,12 +71,9 @@
       <tocitem target="DeleteCustomers_html" text="Radera kunder"/>
       <tocitem image="Book Blue 16 n p_png" text="Importera kunder">
         <tocitem target="ImportCustomers_html" text="Importera kunder (Excel)"/>
-        <tocitem target="ImportCustomersXML_html" text="Importera kunder (XML)"/>
-        <tocitem target="ImportCustomersEbutik_html" text="Importera kunder E-butik"/>
       </tocitem>
       <tocitem image="Book Blue 16 n p_png" text="Exportera kunder">
         <tocitem target="ExportCustomers_html" text="Exportera kunder (Excel)"/>
-        <tocitem target="ExportCustomersXML_html" text="Exportera kunder (XML)"/>
       </tocitem>
       <tocitem target="CustomerRevenue_html" text="Kundomsättning"/>
     </tocitem>

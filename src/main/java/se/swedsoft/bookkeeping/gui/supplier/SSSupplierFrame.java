@@ -6,7 +6,9 @@ import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.supplier.panel.SSSupplierSearchPanel;
 import se.swedsoft.bookkeeping.gui.supplier.util.SSSupplierTableModel;
+import org.fribok.bookkeeping.service.spreadsheet.SupplierSpreadsheetService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSSpreadsheetExchange;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.components.SSMenuButton;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
@@ -15,9 +17,6 @@ import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
 import se.swedsoft.bookkeeping.gui.util.filechooser.SSExcelFileChooser;
 import se.swedsoft.bookkeeping.gui.util.frame.SSDefaultTableFrame;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
-import se.swedsoft.bookkeeping.importexport.excel.SSSupplierExporter;
-import se.swedsoft.bookkeeping.importexport.excel.SSSupplierImporter;
-import se.swedsoft.bookkeeping.importexport.util.SSExportException;
 import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 import se.swedsoft.bookkeeping.print.dialog.SSPeriodSelectionDialog;
 import se.swedsoft.bookkeeping.print.report.SSSupplierListPrinter;
@@ -170,11 +169,9 @@ public class SSSupplierFrame extends SSDefaultTableFrame {
 
                         if (iFilechooser.showOpenDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
-                            SSSupplierImporter iImporter = new SSSupplierImporter(
-                                    iFilechooser.getSelectedFile());
-
                             try {
-                                iImporter.Import();
+                                SSSpreadsheetExchange.importSuppliers(getMainFrame(),
+                                        iFilechooser.getSelectedFile().toPath());
 
                             } catch (IOException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
@@ -226,14 +223,9 @@ public class SSSupplierFrame extends SSDefaultTableFrame {
                                 == JFileChooser.APPROVE_OPTION) {
 
                             try {
-                                SSSupplierExporter iExporter = new SSSupplierExporter(
-                                        iFilechooser.getSelectedFile(), iItems);
-
-                                iExporter.export();
+                                new SupplierSpreadsheetService().write(iItems,
+                                        iFilechooser.getSelectedFile().toPath(), true);
                             } catch (IOException ex) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        ex.getLocalizedMessage());
-                            } catch (SSExportException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
                             }

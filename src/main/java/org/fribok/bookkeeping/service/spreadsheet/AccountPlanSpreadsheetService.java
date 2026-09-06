@@ -34,8 +34,15 @@ public final class AccountPlanSpreadsheetService {
     /** Reads the first sheet of a legacy Excel {@code .xls} account-plan file. */
     public SSAccountPlan read(Path input) throws IOException {
         Objects.requireNonNull(input, "input");
-        try (InputStream stream = Files.newInputStream(input);
-             Workbook workbook = new HSSFWorkbook(stream)) {
+        try (InputStream stream = Files.newInputStream(input)) {
+            return read(stream);
+        }
+    }
+
+    /** Reads the first sheet from a legacy Excel {@code .xls} stream. */
+    public SSAccountPlan read(InputStream input) throws IOException {
+        Objects.requireNonNull(input, "input");
+        try (Workbook workbook = new HSSFWorkbook(input)) {
             if (workbook.getNumberOfSheets() == 0) {
                 throw new SSImportException(BUNDLE, "importaccountplan.nosheets");
             }

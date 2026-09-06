@@ -7,19 +7,17 @@ import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.product.panel.SSProductSearchPanel;
 import se.swedsoft.bookkeeping.gui.product.util.SSProductTableModel;
+import org.fribok.bookkeeping.service.spreadsheet.ProductSpreadsheetService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSSpreadsheetExchange;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.components.SSMenuButton;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSProgressDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
 import se.swedsoft.bookkeeping.gui.util.filechooser.SSExcelFileChooser;
-import se.swedsoft.bookkeeping.gui.util.filechooser.SSXMLFileChooser;
 import se.swedsoft.bookkeeping.gui.util.frame.SSDefaultTableFrame;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
-import se.swedsoft.bookkeeping.importexport.excel.SSProductExporter;
-import se.swedsoft.bookkeeping.importexport.excel.SSProductImporter;
-import se.swedsoft.bookkeeping.importexport.util.SSExportException;
 import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 import se.swedsoft.bookkeeping.print.dialog.SSPeriodSelectionDialog;
 import se.swedsoft.bookkeeping.print.report.SSProductListPrinter;
@@ -172,40 +170,13 @@ public class SSProductFrame extends SSDefaultTableFrame {
                         if (iFilechooser.showOpenDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
                             try {
-                                SSProductImporter iImporter = new SSProductImporter(
-                                        iFilechooser.getSelectedFile());
-
-                                iImporter.doImport();
-                            } catch (IOException ex) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        ex.getLocalizedMessage());
-                            } catch (SSImportException ex) {
+                                SSSpreadsheetExchange.importProducts(getMainFrame(),
+                                        iFilechooser.getSelectedFile().toPath());
+                            } catch (IOException | SSImportException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
                             }
                             iModel.fireTableDataChanged();
-                        }
-
-                    });
-        iButton2.add("productframe.import.xml",
-                e -> {
-
-                        SSXMLFileChooser iFilechooser = SSXMLFileChooser.getInstance();
-
-                        iFilechooser.setSelectedFile(new File("Produktlista.xml"));
-
-                        if (iFilechooser.showOpenDialog(getMainFrame())
-                                == JFileChooser.APPROVE_OPTION) {
-                            SSProductImporter iImporter = new SSProductImporter(
-                                    iFilechooser.getSelectedFile());
-
-                            try {
-                                iImporter.doXMLImport();
-                            } catch (SSImportException e1) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        e1.getLocalizedMessage());
-                            }
-
                         }
 
                     });
@@ -250,61 +221,12 @@ public class SSProductFrame extends SSDefaultTableFrame {
                                 == JFileChooser.APPROVE_OPTION) {
                             iItems = getProducts(iItems);
                             try {
-                                SSProductExporter iExporter = new SSProductExporter(
-                                        iFilechooser.getSelectedFile(), iItems);
-
-                                iExporter.doExport();
+                                new ProductSpreadsheetService().write(iItems, new SSStock(true),
+                                        SSDB.getInstance().getCurrentCompany(),
+                                        iFilechooser.getSelectedFile().toPath(), true);
                             } catch (IOException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
-                            } catch (SSExportException ex) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        ex.getLocalizedMessage());
-                            }
-                        }
-
-                    });
-        iButton2.add("customerframe.export.xml",
-                e -> {
-
-                        List<SSProduct> iSelected = iModel.getSelectedRows(iTable);
-
-                        iSelected = getProducts(iSelected);
-                        List<SSProduct> iItems;
-
-                        if (iSelected != null) {
-                            int select = SSQueryDialog.showDialog(getMainFrame(),
-                                    JOptionPane.YES_NO_CANCEL_OPTION, getTitle(),
-                                    SSBundle.getBundle().getString(
-                                    "productframe.import.allorselected"));
-
-                            switch (select) {
-                            case JOptionPane.YES_OPTION:
-                                iItems = iSelected;
-                                break;
-
-                            case JOptionPane.NO_OPTION:
-                                iItems = SSDB.getInstance().getProducts();
-                                break;
-
-                            default:
-                                return;
-                            }
-                        } else {
-                            iItems = SSDB.getInstance().getProducts();
-                        }
-                        if (!iItems.isEmpty()) {
-
-                            SSXMLFileChooser iFilechooser = SSXMLFileChooser.getInstance();
-
-                            iFilechooser.setSelectedFile(new File("Produktlista.xml"));
-
-                            if (iFilechooser.showSaveDialog(getMainFrame())
-                                    == JFileChooser.APPROVE_OPTION) {
-                                SSProductExporter iExporter = new SSProductExporter(
-                                        iFilechooser.getSelectedFile(), iItems);
-
-                                iExporter.doXMLExport();
                             }
                         }
 

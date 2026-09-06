@@ -7,21 +7,17 @@ import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.customer.panel.SSCustomerSearchPanel;
 import se.swedsoft.bookkeeping.gui.customer.util.SSCustomerTableModel;
 import se.swedsoft.bookkeeping.gui.exportbgcadmission.SSExportBGCAdmissionDialog;
+import org.fribok.bookkeeping.service.spreadsheet.CustomerSpreadsheetService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSSpreadsheetExchange;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.components.SSMenuButton;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
-import se.swedsoft.bookkeeping.gui.util.dialogs.SSInitDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSProgressDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
-import se.swedsoft.bookkeeping.gui.util.filechooser.SSDefaultFileChooser;
 import se.swedsoft.bookkeeping.gui.util.filechooser.SSExcelFileChooser;
-import se.swedsoft.bookkeeping.gui.util.filechooser.SSXMLFileChooser;
 import se.swedsoft.bookkeeping.gui.util.frame.SSDefaultTableFrame;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
-import se.swedsoft.bookkeeping.importexport.excel.SSCustomerExporter;
-import se.swedsoft.bookkeeping.importexport.excel.SSCustomerImporter;
-import se.swedsoft.bookkeeping.importexport.util.SSExportException;
 import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 import se.swedsoft.bookkeeping.print.dialog.SSPeriodSelectionDialog;
 import se.swedsoft.bookkeeping.print.report.SSCustomerListPrinter;
@@ -178,62 +174,16 @@ public class SSCustomerFrame extends SSDefaultTableFrame {
 
                         if (iFilechooser.showOpenDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
-                            final SSCustomerImporter iImporter = new SSCustomerImporter(
-                                    iFilechooser.getSelectedFile());
-
                             try {
-                                SSInitDialog.runProgress(getMainFrame(), "Importerar kunder",
-                                        () -> iImporter.Import());
-                            } catch (SSImportException ex) {
+                                SSSpreadsheetExchange.importCustomers(getMainFrame(),
+                                        iFilechooser.getSelectedFile().toPath());
+                            } catch (IOException | SSImportException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
                             }
                             iModel.fireTableDataChanged();
                         }
 
-
-                    });
-        iButton2.add("customerframe.import.xml",
-                e -> {
-
-                        SSXMLFileChooser iFilechooser = SSXMLFileChooser.getInstance();
-
-                        iFilechooser.setSelectedFile(new File("Kundlista.xml"));
-
-                        if (iFilechooser.showOpenDialog(getMainFrame())
-                                == JFileChooser.APPROVE_OPTION) {
-                            final SSCustomerImporter iImporter = new SSCustomerImporter(
-                                    iFilechooser.getSelectedFile());
-
-                            try {
-                                SSInitDialog.runProgress(getMainFrame(), "Importerar kunder",
-                                        () -> iImporter.doImport());
-                            } catch (SSImportException e1) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        e1.getLocalizedMessage());
-                            }
-
-                        }
-
-                    });
-        iButton2.add("customerframe.import.ebutik",
-                e -> {
-
-                        SSDefaultFileChooser iFileChooser = new SSDefaultFileChooser();
-
-                        if (iFileChooser.showOpenDialog(getMainFrame())
-                                == JFileChooser.APPROVE_OPTION) {
-                            final SSCustomerImporter iImporter = new SSCustomerImporter(
-                                    iFileChooser.getSelectedFile());
-
-                            try {
-                                SSInitDialog.runProgress(getMainFrame(), "Importerar kunder",
-                                        () -> iImporter.doEbutikImport());
-                            } catch (SSImportException e1) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        e1.getLocalizedMessage());
-                            }
-                        }
 
                     });
         iToolBar.add(iButton2);
@@ -275,62 +225,12 @@ public class SSCustomerFrame extends SSDefaultTableFrame {
 
                         if (iFilechooser.showSaveDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
-                            SSCustomerExporter iExporter = new SSCustomerExporter(
-                                    iFilechooser.getSelectedFile(), iItems);
-
                             try {
-                                iExporter.export();
+                                new CustomerSpreadsheetService().write(iItems,
+                                        iFilechooser.getSelectedFile().toPath(), true);
                             } catch (IOException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
-                            } catch (SSExportException ex) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        ex.getLocalizedMessage());
-                            }
-                        }
-
-                    });
-        iButton2.add("customerframe.export.xml",
-                e -> {
-
-                        List<SSCustomer> iSelected = iModel.getSelectedRows(iTable);
-
-                        iSelected = getCustomers(iSelected);
-                        List<SSCustomer> iItems;
-
-                        if (iSelected != null) {
-                            int select = SSQueryDialog.showDialog(getMainFrame(),
-                                    JOptionPane.YES_NO_CANCEL_OPTION, getTitle(),
-                                    SSBundle.getBundle().getString(
-                                    "customerframe.import.allorselected"));
-
-                            switch (select) {
-                            case JOptionPane.YES_OPTION:
-                                iItems = iSelected;
-                                break;
-
-                            case JOptionPane.NO_OPTION:
-                                iItems = SSDB.getInstance().getCustomers();
-                                break;
-
-                            default:
-                                return;
-                            }
-                        } else {
-                            iItems = SSDB.getInstance().getCustomers();
-                        }
-                        if (!iItems.isEmpty()) {
-
-                            SSXMLFileChooser iFilechooser = SSXMLFileChooser.getInstance();
-
-                            iFilechooser.setSelectedFile(new File("Kundlista.xml"));
-
-                            if (iFilechooser.showSaveDialog(getMainFrame())
-                                    == JFileChooser.APPROVE_OPTION) {
-                                SSCustomerExporter iExporter = new SSCustomerExporter(
-                                        iFilechooser.getSelectedFile(), iItems);
-
-                                iExporter.doXMLExport();
                             }
                         }
 
