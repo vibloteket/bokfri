@@ -4,11 +4,13 @@ package se.swedsoft.bookkeeping.gui.voucher;
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.service.sie.SieImportService;
+import org.fribok.bookkeeping.service.spreadsheet.VoucherSpreadsheetService;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSSpreadsheetExchange;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSProgressDialog;
@@ -18,9 +20,6 @@ import se.swedsoft.bookkeeping.gui.util.filechooser.SSSIEFileChooser;
 import se.swedsoft.bookkeeping.gui.util.frame.SSDefaultTableFrame;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
 import se.swedsoft.bookkeeping.gui.voucher.util.SSVoucherTableModel;
-import se.swedsoft.bookkeeping.importexport.excel.SSVoucherExporter;
-import se.swedsoft.bookkeeping.importexport.excel.SSVoucherImporter;
-import se.swedsoft.bookkeeping.importexport.util.SSExportException;
 import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 import se.swedsoft.bookkeeping.print.report.SSVoucherListPrinter;
 
@@ -182,11 +181,9 @@ public class SSVoucherFrame extends SSDefaultTableFrame {
                         int iResponce = iFilechooser.showOpenDialog(getMainFrame());
 
                         if (iResponce == JFileChooser.APPROVE_OPTION) {
-                            SSVoucherImporter iImporter = new SSVoucherImporter(
-                                    iFilechooser.getSelectedFile());
-
                             try {
-                                iImporter.Import();
+                                SSSpreadsheetExchange.importVouchers(getMainFrame(),
+                                        iFilechooser.getSelectedFile().toPath());
 
                             } catch (IOException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
@@ -237,18 +234,13 @@ public class SSVoucherFrame extends SSDefaultTableFrame {
                         if (iFilechooser.showSaveDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
 
-                            SSVoucherExporter iExporter = new SSVoucherExporter(
-                                    iFilechooser.getSelectedFile(), iItems);
-
                             try {
-                                iExporter.export();
+                                new VoucherSpreadsheetService().write(iItems,
+                                        iFilechooser.getSelectedFile().toPath(), true);
                             } catch (IOException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
 
-                            } catch (SSExportException ex) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        ex.getLocalizedMessage());
                             }
                         }
 

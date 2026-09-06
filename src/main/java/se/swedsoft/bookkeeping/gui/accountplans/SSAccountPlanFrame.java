@@ -5,7 +5,9 @@ import se.swedsoft.bookkeeping.data.SSAccountPlan;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.accountplans.util.SSAccountPlanTableModel;
+import org.fribok.bookkeeping.service.spreadsheet.AccountPlanSpreadsheetService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSSpreadsheetExchange;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSProgressDialog;
@@ -13,9 +15,6 @@ import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
 import se.swedsoft.bookkeeping.gui.util.filechooser.SSExcelFileChooser;
 import se.swedsoft.bookkeeping.gui.util.frame.SSDefaultTableFrame;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
-import se.swedsoft.bookkeeping.importexport.excel.SSAccountPlanExporter;
-import se.swedsoft.bookkeeping.importexport.excel.SSAccountPlanImporter;
-import se.swedsoft.bookkeeping.importexport.util.SSExportException;
 import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 import se.swedsoft.bookkeeping.print.report.SSAccountPlanPrinter;
 
@@ -159,11 +158,9 @@ public class SSAccountPlanFrame extends SSDefaultTableFrame {
                         if (iFilechooser.showOpenDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
 
-                            SSAccountPlanImporter iImporter = new SSAccountPlanImporter(
-                                    iFilechooser.getSelectedFile());
-
                             try {
-                                iImporter.doImport();
+                                SSSpreadsheetExchange.importAccountPlan(getMainFrame(),
+                                        iFilechooser.getSelectedFile().toPath());
 
                             } catch (IOException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
@@ -201,15 +198,10 @@ public class SSAccountPlanFrame extends SSDefaultTableFrame {
                         if (iFilechooser.showSaveDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
 
-                            SSAccountPlanExporter iExporter = new SSAccountPlanExporter(
-                                    iFilechooser.getSelectedFile());
-
                             try {
-                                iExporter.doExport(iSelected);
+                                new AccountPlanSpreadsheetService().write(iSelected,
+                                        iFilechooser.getSelectedFile().toPath(), true);
                             } catch (IOException ex) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        ex.getLocalizedMessage());
-                            } catch (SSExportException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
                             }

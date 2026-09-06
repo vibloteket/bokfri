@@ -7,7 +7,9 @@ import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.product.panel.SSProductSearchPanel;
 import se.swedsoft.bookkeeping.gui.product.util.SSProductTableModel;
+import org.fribok.bookkeeping.service.spreadsheet.ProductSpreadsheetService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSSpreadsheetExchange;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.components.SSMenuButton;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
@@ -172,10 +174,8 @@ public class SSProductFrame extends SSDefaultTableFrame {
                         if (iFilechooser.showOpenDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
                             try {
-                                SSProductImporter iImporter = new SSProductImporter(
-                                        iFilechooser.getSelectedFile());
-
-                                iImporter.doImport();
+                                SSSpreadsheetExchange.importProducts(getMainFrame(),
+                                        iFilechooser.getSelectedFile().toPath());
                             } catch (IOException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
@@ -250,14 +250,10 @@ public class SSProductFrame extends SSDefaultTableFrame {
                                 == JFileChooser.APPROVE_OPTION) {
                             iItems = getProducts(iItems);
                             try {
-                                SSProductExporter iExporter = new SSProductExporter(
-                                        iFilechooser.getSelectedFile(), iItems);
-
-                                iExporter.doExport();
+                                new ProductSpreadsheetService().write(iItems, new SSStock(true),
+                                        SSDB.getInstance().getCurrentCompany(),
+                                        iFilechooser.getSelectedFile().toPath(), true);
                             } catch (IOException ex) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        ex.getLocalizedMessage());
-                            } catch (SSExportException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
                             }

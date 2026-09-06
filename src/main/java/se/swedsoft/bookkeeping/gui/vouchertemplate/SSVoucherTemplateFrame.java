@@ -4,7 +4,9 @@ package se.swedsoft.bookkeeping.gui.vouchertemplate;
 import se.swedsoft.bookkeeping.data.SSVoucherTemplate;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
+import org.fribok.bookkeeping.service.spreadsheet.VoucherTemplateSpreadsheetService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSSpreadsheetExchange;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
@@ -12,9 +14,6 @@ import se.swedsoft.bookkeeping.gui.util.filechooser.SSExcelFileChooser;
 import se.swedsoft.bookkeeping.gui.util.frame.SSDefaultTableFrame;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
 import se.swedsoft.bookkeeping.gui.vouchertemplate.util.SSVoucherTemplateTableModel;
-import se.swedsoft.bookkeeping.importexport.excel.SSVoucherTemplateExporter;
-import se.swedsoft.bookkeeping.importexport.excel.SSVoucherTemplateImporter;
-import se.swedsoft.bookkeeping.importexport.util.SSExportException;
 import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 
 import javax.swing.*;
@@ -81,11 +80,9 @@ public class SSVoucherTemplateFrame extends SSDefaultTableFrame {
 
                         if (iFilechooser.showOpenDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
-                            SSVoucherTemplateImporter iImporter = new SSVoucherTemplateImporter(
-                                    iFilechooser.getSelectedFile());
-
                             try {
-                                iImporter.Import();
+                                SSSpreadsheetExchange.importVoucherTemplates(getMainFrame(),
+                                        iFilechooser.getSelectedFile().toPath());
 
                             } catch (IOException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
@@ -139,15 +136,10 @@ public class SSVoucherTemplateFrame extends SSDefaultTableFrame {
                         if (iFilechooser.showSaveDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
 
-                            SSVoucherTemplateExporter iExporter = new SSVoucherTemplateExporter(
-                                    iFilechooser.getSelectedFile(), iItems);
-
                             try {
-                                iExporter.export();
+                                new VoucherTemplateSpreadsheetService().write(iItems,
+                                        iFilechooser.getSelectedFile().toPath(), true);
                             } catch (IOException ex) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        ex.getLocalizedMessage());
-                            } catch (SSExportException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
                             }

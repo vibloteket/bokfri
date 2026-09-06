@@ -13,9 +13,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Added
-- The CLI can preview/import and export all six legacy `.xls` data types—account plans, customers,
-  products, suppliers, vouchers, and voucher templates—through GUI-independent Apache POI services,
-  establishing the migration path away from JExcelAPI.
+- The CLI and graphical interface now import and export all six legacy `.xls` data types—account
+  plans, customers, products, suppliers, vouchers, and voucher templates—through shared,
+  GUI-independent Apache POI services, establishing the migration path away from JExcelAPI.
 
 ### Fixed
 - Sales documents with a missing 12% tax-rate value now use the standard default instead of

@@ -7,7 +7,9 @@ import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.customer.panel.SSCustomerSearchPanel;
 import se.swedsoft.bookkeeping.gui.customer.util.SSCustomerTableModel;
 import se.swedsoft.bookkeeping.gui.exportbgcadmission.SSExportBGCAdmissionDialog;
+import org.fribok.bookkeeping.service.spreadsheet.CustomerSpreadsheetService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSSpreadsheetExchange;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.components.SSMenuButton;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
@@ -178,13 +180,10 @@ public class SSCustomerFrame extends SSDefaultTableFrame {
 
                         if (iFilechooser.showOpenDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
-                            final SSCustomerImporter iImporter = new SSCustomerImporter(
-                                    iFilechooser.getSelectedFile());
-
                             try {
-                                SSInitDialog.runProgress(getMainFrame(), "Importerar kunder",
-                                        () -> iImporter.Import());
-                            } catch (SSImportException ex) {
+                                SSSpreadsheetExchange.importCustomers(getMainFrame(),
+                                        iFilechooser.getSelectedFile().toPath());
+                            } catch (IOException | SSImportException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
                             }
@@ -275,15 +274,10 @@ public class SSCustomerFrame extends SSDefaultTableFrame {
 
                         if (iFilechooser.showSaveDialog(getMainFrame())
                                 == JFileChooser.APPROVE_OPTION) {
-                            SSCustomerExporter iExporter = new SSCustomerExporter(
-                                    iFilechooser.getSelectedFile(), iItems);
-
                             try {
-                                iExporter.export();
+                                new CustomerSpreadsheetService().write(iItems,
+                                        iFilechooser.getSelectedFile().toPath(), true);
                             } catch (IOException ex) {
-                                SSErrorDialog.showDialog(getMainFrame(), "",
-                                        ex.getLocalizedMessage());
-                            } catch (SSExportException ex) {
                                 SSErrorDialog.showDialog(getMainFrame(), "",
                                         ex.getLocalizedMessage());
                             }
