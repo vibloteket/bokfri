@@ -26,6 +26,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   always written to the GUI log with their full stack trace.
 
 ### Changed
+- HSQLDB has been upgraded from 1.8.0.10 to the 2.5.0 compatibility bridge. Legacy catalogs are
+  upgraded on a staged copy after a verified rollback archive is created, while the original
+  catalog is retained. Backup and cleanup flows now include HSQLDB's `.lobs` file.
 - Report preview exports now use PDF as the single presentation and archive format. The legacy
   HTML, RTF, and layout-oriented XLS options have been removed; dedicated Excel workflows remain.
 - The report engine now uses JasperReports 7.0.8 with reproducibly converted JRXML/JRTX sources;

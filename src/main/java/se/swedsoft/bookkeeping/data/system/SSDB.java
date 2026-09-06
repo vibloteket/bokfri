@@ -403,6 +403,7 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
         File iDataFile = new File(iDbDir, "JFSDB.data");
         File iBackupFile = new File(iDbDir, "JFSDB.backup");
         File iLogFile = new File(iDbDir, "JFSDB.log");
+        File iLobsFile = new File(iDbDir, "JFSDB.lobs");
 
         if (iPropFile.exists()) {
             iPropFile.delete();
@@ -418,6 +419,9 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
         }
         if (iLogFile.exists()) {
             iLogFile.delete();
+        }
+        if (iLobsFile.exists()) {
+            iLobsFile.delete();
         }
     }
 
@@ -7713,16 +7717,20 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                 return;
             }
             
-            String q = SSUtil.readResourceToString("sql/create_tables.sql");
+            String schema = SSUtil.readResourceToString("sql/create_tables.sql");
 
-            PreparedStatement iStatement = iConnection.prepareStatement(q);
-
-            iStatement.executeUpdate();
+            try (Statement statement = iConnection.createStatement()) {
+                for (String sql : schema.split(";")) {
+                    if (!sql.isBlank()) {
+                        statement.executeUpdate(sql.trim());
+                    }
+                }
+            }
             iConnection.commit();
-            iStatement.close();
 
             dropTriggers();
-        } catch (SQLException e) {// LOG.error("Unexpected error", e);
+        } catch (SQLException e) {
+            LOG.error("Could not create database tables", e);
         }
     }
 

@@ -42,8 +42,11 @@ class LegacyV101CompatibilityIntegrationTest {
                     .containsExactly("Exempelföretag");
         }
         assertCurrentFormat(dataDirectory);
-        assertThat(Files.list(dataDirectory.resolve("backups")))
-                .singleElement().satisfies(path -> assertThat(path).exists());
+        try (var backups = Files.list(dataDirectory.resolve("backups"))) {
+            assertThat(backups.filter(path -> path.getFileName().toString()
+                    .startsWith("bokfri-before-format-2-")))
+                    .singleElement().satisfies(path -> assertThat(path).exists());
+        }
     }
 
     @Test

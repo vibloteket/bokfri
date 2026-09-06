@@ -52,6 +52,7 @@ class BackupServiceTest {
         Files.createDirectories(sourceDatabase);
         Files.writeString(sourceDatabase.resolve("JFSDB.properties"), "new-properties");
         Files.writeString(sourceDatabase.resolve("JFSDB.script"), "new-script");
+        Files.writeString(sourceDatabase.resolve("JFSDB.lobs"), "new-lobs");
         Path backup = tempDir.resolve("backup.zip");
         BackupService service = new BackupService(source);
         service.create(backup, false);
@@ -69,6 +70,7 @@ class BackupServiceTest {
         assertThat(plan.replacesExistingDatabase()).isTrue();
         assertThat(targetDatabase.resolve("JFSDB.properties")).hasContent("new-properties");
         assertThat(targetDatabase.resolve("JFSDB.script")).hasContent("new-script");
+        assertThat(targetDatabase.resolve("JFSDB.lobs")).hasContent("new-lobs");
         assertThat(targetDatabase.resolve("JFSDB.data")).doesNotExist();
         assertThat(targetDatabase.resolve("unrelated.txt")).doesNotExist();
     }

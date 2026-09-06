@@ -69,7 +69,8 @@ public final class DataFormatManager {
      * @throws ClassNotFoundException if the HSQLDB driver is unavailable
      */
     public static DataFormatStatus inspect(java.nio.file.Path dataDirectory)
-            throws SQLException, ClassNotFoundException {
+            throws SQLException, ClassNotFoundException, java.io.IOException {
+        HsqlEngineMigrationService.migrateIfRequired(dataDirectory);
         java.nio.file.Path database = dataDirectory.toAbsolutePath().normalize().resolve("db/JFSDB");
         boolean exists = java.nio.file.Files.exists(java.nio.file.Path.of(database + ".properties"));
         if (!exists) {

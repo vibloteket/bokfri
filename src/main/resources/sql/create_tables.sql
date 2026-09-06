@@ -1,220 +1,220 @@
-CREATE CACHED TABLE tbl_company(
+CREATE CACHED TABLE IF NOT EXISTS tbl_company(
   id INTEGER IDENTITY,
-  company OBJECT
+  company OTHER
   ) ;
 
-CREATE CACHED TABLE tbl_inpayment(
+CREATE CACHED TABLE IF NOT EXISTS tbl_inpayment(
   id Integer IDENTITY,
   number INTEGER,
-  inpayment OBJECT,
+  inpayment OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_invoice(
+CREATE CACHED TABLE IF NOT EXISTS tbl_invoice(
   id INTEGER IDENTITY,
   number INTEGER,
-  invoice OBJECT,
+  invoice OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_creditinvoice(
+CREATE CACHED TABLE IF NOT EXISTS tbl_creditinvoice(
   id INTEGER IDENTITY,
   number INTEGER,
-  creditinvoice OBJECT,
+  creditinvoice OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_periodicinvoice(
+CREATE CACHED TABLE IF NOT EXISTS tbl_periodicinvoice(
   id INTEGER IDENTITY,
   number INTEGER,
-  periodicinvoice OBJECT,
+  periodicinvoice OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_outpayment(
+CREATE CACHED TABLE IF NOT EXISTS tbl_outpayment(
   id INTEGER IDENTITY,
   number INTEGER,
-  outpayment OBJECT,
+  outpayment OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_supplierinvoice(
+CREATE CACHED TABLE IF NOT EXISTS tbl_supplierinvoice(
   id INTEGER IDENTITY,
   number INTEGER,
-  supplierinvoice OBJECT,
+  supplierinvoice OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_purchaseorder(
+CREATE CACHED TABLE IF NOT EXISTS tbl_purchaseorder(
   id INTEGER IDENTITY,
   number INTEGER,
-  purchaseorder OBJECT,
+  purchaseorder OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_order(
+CREATE CACHED TABLE IF NOT EXISTS tbl_order(
   id INTEGER IDENTITY,
   number INTEGER,
-  iorder OBJECT,
+  iorder OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_tender(
+CREATE CACHED TABLE IF NOT EXISTS tbl_tender(
   id INTEGER IDENTITY,
   number INTEGER,
-  tender OBJECT,
+  tender OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_suppliercreditinvoice(
+CREATE CACHED TABLE IF NOT EXISTS tbl_suppliercreditinvoice(
   id INTEGER IDENTITY,
   number INTEGER,
-  suppliercreditinvoice OBJECT,
+  suppliercreditinvoice OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_vouchertemplate(
-  name VARCHAR,
-  vouchertemplate OBJECT,
+CREATE CACHED TABLE IF NOT EXISTS tbl_vouchertemplate(
+  name VARCHAR(255),
+  vouchertemplate OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id),
   PRIMARY KEY(name,companyid)
   ) ;
 
-CREATE CACHED TABLE tbl_project(
-  number VARCHAR,
-  project OBJECT,
+CREATE CACHED TABLE IF NOT EXISTS tbl_project(
+  number VARCHAR(255),
+  project OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id),
   PRIMARY KEY(number,companyid)
   ) ;
 
-CREATE CACHED TABLE tbl_resultunit(
-  number VARCHAR,
-  resultunit OBJECT,
+CREATE CACHED TABLE IF NOT EXISTS tbl_resultunit(
+  number VARCHAR(255),
+  resultunit OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id),
   PRIMARY KEY(number,companyid)
-  ) 
+  );
 
-CREATE CACHED TABLE tbl_product(
+CREATE CACHED TABLE IF NOT EXISTS tbl_product(
   id INTEGER IDENTITY,
-  number VARCHAR,
-  product OBJECT,
+  number VARCHAR(255),
+  product OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_customer(
+CREATE CACHED TABLE IF NOT EXISTS tbl_customer(
   id INTEGER IDENTITY,
-  number VARCHAR,
-  customer OBJECT,
+  number VARCHAR(255),
+  customer OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_supplier(
+CREATE CACHED TABLE IF NOT EXISTS tbl_supplier(
   id INTEGER IDENTITY,
-  number VARCHAR,
-  supplier OBJECT,
+  number VARCHAR(255),
+  supplier OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_autodist(
+CREATE CACHED TABLE IF NOT EXISTS tbl_autodist(
   id INTEGER IDENTITY,
   number INTEGER,
-  autodist OBJECT,
+  autodist OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_indelivery(
+CREATE CACHED TABLE IF NOT EXISTS tbl_indelivery(
   id INTEGER IDENTITY,
   number INTEGER,
-  indelivery OBJECT,
+  indelivery OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_outdelivery(
+CREATE CACHED TABLE IF NOT EXISTS tbl_outdelivery(
   id INTEGER IDENTITY,
   number INTEGER,
-  outdelivery OBJECT,
+  outdelivery OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_inventory(
+CREATE CACHED TABLE IF NOT EXISTS tbl_inventory(
   id INTEGER IDENTITY,
   number INTEGER,
-  inventory OBJECT,
+  inventory OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_currency(
-  code VARCHAR PRIMARY KEY,
-  currency OBJECT
+CREATE CACHED TABLE IF NOT EXISTS tbl_currency(
+  code VARCHAR(255) PRIMARY KEY,
+  currency OTHER
   ) ;
 
-CREATE CACHED TABLE tbl_unit(
-  name VARCHAR PRIMARY KEY,
-  unit OBJECT
+CREATE CACHED TABLE IF NOT EXISTS tbl_unit(
+  name VARCHAR(255) PRIMARY KEY,
+  unit OTHER
   ) ;
 
-CREATE CACHED TABLE tbl_deliveryway(
-  name VARCHAR PRIMARY KEY,
-  deliveryway OBJECT
+CREATE CACHED TABLE IF NOT EXISTS tbl_deliveryway(
+  name VARCHAR(255) PRIMARY KEY,
+  deliveryway OTHER
   ) ;
 
-CREATE CACHED TABLE tbl_deliveryterm(
-  name VARCHAR PRIMARY KEY,
-  deliveryterm OBJECT
+CREATE CACHED TABLE IF NOT EXISTS tbl_deliveryterm(
+  name VARCHAR(255) PRIMARY KEY,
+  deliveryterm OTHER
   ) ;
 
-CREATE CACHED TABLE tbl_paymentterm(
-  name VARCHAR PRIMARY KEY,
-  paymentterm OBJECT
+CREATE CACHED TABLE IF NOT EXISTS tbl_paymentterm(
+  name VARCHAR(255) PRIMARY KEY,
+  paymentterm OTHER
   ) ;
 
-CREATE CACHED TABLE tbl_accountplan(
+CREATE CACHED TABLE IF NOT EXISTS tbl_accountplan(
   id INTEGER IDENTITY,
-  accountplan OBJECT
+  accountplan OTHER
   ) ;
 
-CREATE CACHED TABLE tbl_accountingyear(
+CREATE CACHED TABLE IF NOT EXISTS tbl_accountingyear(
   id INTEGER IDENTITY,
-  accountingyear OBJECT,
+  accountingyear OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
 
-CREATE CACHED TABLE tbl_voucher(
+CREATE CACHED TABLE IF NOT EXISTS tbl_voucher(
   id INTEGER IDENTITY,
   number INTEGER,
-  voucher OBJECT,
+  voucher OTHER,
   yearid INTEGER,
   FOREIGN KEY(yearid) REFERENCES tbl_accountingyear(id)
   ) ;
 
-CREATE CACHED TABLE tbl_license(
-  licensekey VARCHAR PRIMARY KEY
+CREATE CACHED TABLE IF NOT EXISTS tbl_license(
+  licensekey VARCHAR(255) PRIMARY KEY
   );
 
-CREATE CACHED TABLE tbl_ownreport(
+CREATE CACHED TABLE IF NOT EXISTS tbl_ownreport(
   id INTEGER IDENTITY,
-  ownreport OBJECT,
+  ownreport OTHER,
   companyid INTEGER,
   FOREIGN KEY(companyid) REFERENCES tbl_company(id)
   ) ;
