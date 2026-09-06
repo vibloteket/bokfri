@@ -52,6 +52,7 @@ import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceService;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationIssue;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationResult;
 import org.fribok.bookkeeping.service.spreadsheet.AccountPlanSpreadsheetService;
+import org.fribok.bookkeeping.service.spreadsheet.CustomerSpreadsheetService;
 import org.fribok.bookkeeping.service.spreadsheet.ProductSpreadsheetService;
 import org.fribok.bookkeeping.service.spreadsheet.SupplierSpreadsheetService;
 import org.fribok.bookkeeping.service.spreadsheet.VoucherSpreadsheetService;
@@ -1545,8 +1546,9 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "customer", description = "Inspect and create customers",
-            subcommands = {CustomerList.class, CustomerShow.class, CustomerValidate.class,
-                    CustomerCreate.class, CliInputSchemas.Customer.class})
+            subcommands = {CustomerList.class, CustomerShow.class, CustomerSpreadsheetExport.class,
+                    CustomerSpreadsheetImport.class, CustomerValidate.class, CustomerCreate.class,
+                    CliInputSchemas.Customer.class})
     static class CustomerCommand extends CliCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() {
@@ -1583,6 +1585,71 @@ public class BokfriCli implements Runnable {
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "export",
+            description = "Export customers as legacy Excel XLS")
+    static class CustomerSpreadsheetExport implements Callable<Integer> {
+        @CommandLine.ParentCommand CustomerCommand command;
+        @Option(names = "--output", required = true) java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                List<SSCustomer> customers = new CustomerService(runtime.database()).list();
+                java.nio.file.Path exported = new CustomerSpreadsheetService()
+                        .write(customers, output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("output", exported.toString()); result.put("bytes", Files.size(exported));
+                result.put("count", customers.size());
+                result.put("selection", selectedCompanyContext(context, company));
+                root.output(result, "Created customer XLS " + exported);
+                return 0;
+            } catch (Exception exception) {
+                throw spreadsheetFailure("CUSTOMER_EXPORT_FAILED", exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "import",
+            description = "Preview or import customers from legacy Excel XLS")
+    static class CustomerSpreadsheetImport implements Callable<Integer> {
+        @CommandLine.ParentCommand CustomerCommand command;
+        @Option(names = "--file", required = true) java.nio.file.Path file;
+        @Option(names = "--apply", description = "Store valid, non-duplicate customers") boolean apply;
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                CustomerService service = new CustomerService(runtime.database());
+                List<SSCustomer> customers = new CustomerSpreadsheetService().read(file);
+                java.util.Set<String> existingNumbers = service.list().stream()
+                        .map(SSCustomer::getNumber).collect(java.util.stream.Collectors.toSet());
+                List<SSCustomer> additions = customers.stream()
+                        .filter(customer -> !existingNumbers.contains(customer.getNumber())).toList();
+                List<SSCustomer> invalid = additions.stream()
+                        .filter(customer -> !service.validate(customer).valid()).toList();
+                if (apply && !invalid.isEmpty()) {
+                    throw new CliException("CUSTOMER_IMPORT_INVALID",
+                            invalid.size() + " imported customers failed validation");
+                }
+                if (apply) additions.forEach(service::create);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("file", file.toAbsolutePath().normalize().toString());
+                result.put("count", customers.size()); result.put("newCount", additions.size());
+                result.put("duplicateCount", customers.size() - additions.size());
+                result.put("invalidCount", invalid.size()); result.put("applied", apply);
+                result.put("selection", selectedCompanyContext(context, company));
+                root.output(result, apply ? "Imported " + additions.size() + " customers"
+                        : "Customer import preview; no changes written");
+                return 0;
+            } catch (Exception exception) {
+                throw spreadsheetFailure("CUSTOMER_IMPORT_FAILED", exception);
             }
         }
     }

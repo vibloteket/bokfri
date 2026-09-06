@@ -176,7 +176,7 @@ class BokfriCliTest {
         List<List<String>> paths = new ArrayList<>();
         collectCommandPaths(new CommandLine(new BokfriCli()), List.of(), paths);
 
-        assertThat(paths).hasSize(139);
+        assertThat(paths).hasSize(141);
         for (List<String> path : paths) {
             for (String helpOption : List.of("--help", "-h")) {
                 List<String> arguments = new ArrayList<>(path);
@@ -473,6 +473,32 @@ class BokfriCliTest {
                 "--format", "json", "account-plan", "list");
         assertThat(new ObjectMapper().readTree(afterApply.stdout()).path("count").asInt())
                 .isEqualTo(initialCount + 1);
+    }
+
+    @Test
+    void customerSpreadsheetCommandsExportAndPreviewWithoutWriting() throws Exception {
+        Path config = temporaryDirectory.resolve("customer-xls-cli.yaml");
+        Path data = temporaryDirectory.resolve("customer-xls-data");
+        Result companies = execute("--config", config.toString(), "--data-dir", data.toString(),
+                "--format", "json", "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        String[] context = {"--config", config.toString(), "--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--format", "json"};
+        Result before = execute(concat(context, "customer", "list"));
+        int countBefore = new ObjectMapper().readTree(before.stdout()).path("count").asInt();
+        Path exported = temporaryDirectory.resolve("customers.xls");
+
+        Result export = execute(concat(context, "customer", "export", "--output", exported.toString()));
+        assertThat(export.exitCode()).as(export.stderr()).isZero();
+        Result preview = execute(concat(context, "customer", "import", "--file", exported.toString()));
+        JsonNode previewJson = new ObjectMapper().readTree(preview.stdout());
+        assertThat(preview.exitCode()).as(preview.stderr()).isZero();
+        assertThat(previewJson.path("applied").asBoolean()).isFalse();
+        assertThat(previewJson.path("duplicateCount").asInt()).isEqualTo(countBefore);
+        Result after = execute(concat(context, "customer", "list"));
+        assertThat(new ObjectMapper().readTree(after.stdout()).path("count").asInt())
+                .isEqualTo(countBefore);
     }
 
     @Test
