@@ -12,6 +12,7 @@ import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.DataMigrationRequiredException;
 import org.fribok.bookkeeping.dataformat.DataMigrationService;
+import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.data.util.SSConfig;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
@@ -59,6 +60,7 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
 
         Connection connection = null;
         try {
+            HsqlEngineMigrationService.migrateIfRequired(Path.get(Path.USER_DATA).toPath());
             File dbDir = new File(Path.get(Path.USER_DATA), "db");
             boolean databaseExisted = new File(dbDir, "JFSDB.properties").exists();
             connection = DriverManager.getConnection(
@@ -83,7 +85,7 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
             }
             SSDB.getInstance().startupLocal(connection);
             return true;
-        } catch (SQLException | java.io.IOException e) {
+        } catch (SQLException | java.io.IOException | ClassNotFoundException e) {
             if (connection != null) {
                 try {
                     connection.close();

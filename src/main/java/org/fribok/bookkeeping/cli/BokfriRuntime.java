@@ -1,6 +1,7 @@
 package org.fribok.bookkeeping.cli;
 
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
+import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -23,6 +24,7 @@ public final class BokfriRuntime implements AutoCloseable {
 
     public static BokfriRuntime open(Path dataDir)
             throws IOException, SQLException, ClassNotFoundException {
+        HsqlEngineMigrationService.migrateIfRequired(dataDir);
         Path databaseDirectory = dataDir.toAbsolutePath().normalize().resolve("db");
         Files.createDirectories(databaseDirectory);
         boolean databaseExisted = Files.exists(databaseDirectory.resolve("JFSDB.properties"));

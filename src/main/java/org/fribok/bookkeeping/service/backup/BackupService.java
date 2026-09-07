@@ -35,7 +35,7 @@ public final class BackupService {
     private static final String HISTORY_FILE = "backup.history.cli";
     private static final ObjectMapper JSON = new ObjectMapper().registerModule(new JavaTimeModule());
     private static final List<String> DATABASE_SUFFIXES = List.of(
-            ".properties", ".script", ".data", ".backup", ".log");
+            ".properties", ".script", ".data", ".backup", ".log", ".lobs");
 
     private final Path dataDirectory;
 

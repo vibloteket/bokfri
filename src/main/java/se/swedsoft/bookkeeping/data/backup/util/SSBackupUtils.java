@@ -37,6 +37,7 @@ public class SSBackupUtils {
         iFiles.add(new ArchiveFile(new File(dbDir, "JFSDB.data")));
         iFiles.add(new ArchiveFile(new File(dbDir, "JFSDB.backup")));
         iFiles.add(new ArchiveFile(new File(dbDir, "JFSDB.log")));
+        iFiles.add(new ArchiveFile(new File(dbDir, "JFSDB.lobs")));
 
         return iFiles;
     }
