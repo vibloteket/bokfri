@@ -97,7 +97,10 @@ public class SSSaleMath {
 
         for (SSSaleRow iRow: iSale.getRows()) {
             BigDecimal iRowSum = iRow.getSum().orElse(null);
-            SSTaxCode  iRowTax = iRow.getTaxCode();
+            // Historical invoices can have no stored tax code. Treat those rows as tax-free;
+            // current invoice validation still requires an explicit code for new data.
+            SSTaxCode iRowTax = Objects.requireNonNullElse(
+                    iRow.getTaxCode(), SSTaxCode.TAXRATE_0);
 
             if (iRowSum != null) {
                 BigDecimal iSum = iTaxSum.get(iRowTax);

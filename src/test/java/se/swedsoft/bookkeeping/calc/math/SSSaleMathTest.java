@@ -30,6 +30,19 @@ class SSSaleMathTest {
         assertThat(SSSaleMath.getTotalTaxSum(invoice)).isEqualByComparingTo("93.67");
     }
 
+    @Test
+    void missingHistoricalTaxCodeIsTreatedAsTaxFree() {
+        SSInvoice invoice = new SSInvoice();
+        invoice.getRows().add(row("125.00", null));
+
+        var tax = SSSaleMath.getTaxSum(invoice);
+
+        assertThat(tax.get(SSTaxCode.TAXRATE_0)).isEqualByComparingTo("0.00");
+        assertThat(tax.get(SSTaxCode.TAXRATE_1)).isEqualByComparingTo("0.00");
+        assertThat(tax.get(SSTaxCode.TAXRATE_2)).isEqualByComparingTo("0.00");
+        assertThat(tax.get(SSTaxCode.TAXRATE_3)).isEqualByComparingTo("0.00");
+    }
+
     private static SSSaleRow row(String amount, SSTaxCode taxCode) {
         SSSaleRow row = new SSSaleRow();
         row.setQuantity(BigDecimal.ONE);
