@@ -20,6 +20,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   removed; modern order exchange is tracked separately.
 
 ### Fixed
+- Historical invoice and credit-invoice rows without a stored VAT code are now treated as tax-free
+  during balance calculation instead of preventing the application from starting.
 - Sales documents with a missing 12% tax-rate value now use the standard default instead of
   failing during invoice printing.
 - Unexpected failures from progress operations now use the copyable diagnostic dialog and are
