@@ -23,10 +23,6 @@ import org.slf4j.LoggerFactory;
 public class SSViewer extends JPanel {    private static final Logger LOG = LoggerFactory.getLogger(SSViewer.class);
 
 
-    public static final int REPORT_RESOLUTION = 72;
-
-    public static final int SCREEN_RESOLUTION = Toolkit.getDefaultToolkit().getScreenResolution();
-
     private Map<String, List<PropertyChangeListener>> iListenerMap;
 
     private JPanel iPagePanel = new JPanel();
@@ -39,7 +35,7 @@ public class SSViewer extends JPanel {    private static final Logger LOG = Logg
 
     private int  iPageIndex;
 
-    private float iScale = 1.0f;
+    private double iDeviceScale = -1.0;
 
     /**
      *
@@ -66,8 +62,7 @@ public class SSViewer extends JPanel {    private static final Logger LOG = Logg
         notifyPropertyChangeListeners("page_change");
         notifyPropertyChangeListeners("page_zoom");
 
-        setZoom(100);
-
+        iZoom = 100;
         refreshPage();
     }
 
@@ -132,9 +127,8 @@ public class SSViewer extends JPanel {    private static final Logger LOG = Logg
      */
     public void setZoom(int pZoom) {
         if (iZoom != pZoom) {
+            ReportPreviewScale.logicalScale(pZoom);
             iZoom = pZoom;
-
-            iScale = (iZoom / 100.0f) * REPORT_RESOLUTION / SCREEN_RESOLUTION;
 
             notifyPropertyChangeListeners("page_zoom");
 
@@ -209,14 +203,14 @@ public class SSViewer extends JPanel {    private static final Logger LOG = Logg
         }
 
         try {
+            iDeviceScale = ReportPreviewScale.deviceScale(getGraphicsConfiguration());
+            float renderScale = ReportPreviewScale.renderScale(iZoom, iDeviceScale);
             Image image = JasperPrintManager.printPageToImage(iJasperPrint, iPageIndex,
-                    iScale);
+                    renderScale);
 
-            int width = image.getWidth(this);
-            int height = image.getHeight(this);
-
-            Dimension iSize = new Dimension(width, height);
-            Dimension iPageSize = new Dimension(width + 28, height + 28);
+            Dimension iSize = ReportPreviewScale.logicalPageSize(
+                    iJasperPrint.getPageWidth(), iJasperPrint.getPageHeight(), iZoom);
+            Dimension iPageSize = new Dimension(iSize.width + 28, iSize.height + 28);
 
             iDocumentPanel.setDocument(image, iSize);
 
@@ -238,6 +232,15 @@ public class SSViewer extends JPanel {    private static final Logger LOG = Logg
 
         SwingUtilities.invokeLater(() -> getParent().repaint());
 
+    }
+
+    @Override
+    public void paint(Graphics graphics) {
+        double deviceScale = ReportPreviewScale.deviceScale(getGraphicsConfiguration());
+        if (iJasperPrint != null && Double.compare(iDeviceScale, deviceScale) != 0) {
+            refreshPage();
+        }
+        super.paint(graphics);
     }
 
     /**
@@ -302,7 +305,7 @@ public class SSViewer extends JPanel {    private static final Logger LOG = Logg
         sb.append(", iListenerMap=").append(iListenerMap);
         sb.append(", iPageIndex=").append(iPageIndex);
         sb.append(", iPagePanel=").append(iPagePanel);
-        sb.append(", iScale=").append(iScale);
+        sb.append(", iDeviceScale=").append(iDeviceScale);
         sb.append(", iZoom=").append(iZoom);
         sb.append('}');
         return sb.toString();
