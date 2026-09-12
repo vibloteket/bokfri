@@ -2,6 +2,7 @@ package org.fribok.bookkeeping;
 
 import com.jgoodies.looks.FontPolicies;
 import com.jgoodies.looks.plastic.Plastic3DLookAndFeel;
+import com.jgoodies.looks.plastic.PlasticLookAndFeel;
 
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
@@ -12,7 +13,6 @@ import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.data.util.SSConfig;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
-import se.swedsoft.bookkeeping.gui.util.SSDesktopTextScale;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSUnexpectedErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.frame.SSFrameManager;
 import se.swedsoft.bookkeeping.gui.util.graphics.SSIcon;
@@ -141,9 +141,7 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
             }
 
             UIManager.setLookAndFeel(lnfClassName);
-            SSDesktopTextScale.apply();
-        } catch (UnsupportedLookAndFeelException | ClassNotFoundException
-                | InstantiationException | IllegalAccessException e) {
+        } catch (UnsupportedLookAndFeelException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
             LOG.error("Unexpected error", e);
         }
         UIManager.put("OptionPane.yesButtonText", "Ja");
