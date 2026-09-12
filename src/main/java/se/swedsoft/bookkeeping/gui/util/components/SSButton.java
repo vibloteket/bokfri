@@ -2,6 +2,7 @@ package se.swedsoft.bookkeeping.gui.util.components;
 
 
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSUiMetrics;
 import se.swedsoft.bookkeeping.gui.util.graphics.SSIcon;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
 
@@ -102,8 +103,9 @@ public class SSButton extends JButton {
      *
      */
     public void setDefaultSize() {
-        setMaximumSize(new Dimension(40, 40));
-        setPreferredSize(new Dimension(40, 40));
+        Dimension size = SSUiMetrics.withControlHeight(this, new Dimension(40, 40), 40);
+        setMaximumSize(size);
+        setPreferredSize(size);
     }
 
     /**

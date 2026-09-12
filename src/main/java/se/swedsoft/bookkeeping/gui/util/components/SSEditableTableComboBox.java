@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.gui.util.components;
 
 
+import se.swedsoft.bookkeeping.gui.util.SSUiMetrics;
 import se.swedsoft.bookkeeping.gui.util.graphics.SSIcon;
 import se.swedsoft.bookkeeping.gui.util.table.SSTableSearchable;
 
@@ -42,9 +43,10 @@ public class SSEditableTableComboBox<T extends SSTableSearchable> extends JPanel
         iComboBox = new SSTableComboBox<>();
 
         iEditButton = new JButton("...");
-        iEditButton.setPreferredSize(new Dimension(20, 20));
-        iEditButton.setMaximumSize(new Dimension(20, 20));
-        iEditButton.setMinimumSize(new Dimension(20, 20));
+        Dimension buttonSize = SSUiMetrics.squareControlSize(iEditButton, 20);
+        iEditButton.setPreferredSize(buttonSize);
+        iEditButton.setMaximumSize(buttonSize);
+        iEditButton.setMinimumSize(buttonSize);
 
         createLayout();
 

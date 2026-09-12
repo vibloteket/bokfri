@@ -1,6 +1,8 @@
 package se.swedsoft.bookkeeping.gui.status;
 
 
+import se.swedsoft.bookkeeping.gui.util.SSUiMetrics;
+
 import javax.swing.*;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.Border;
@@ -47,9 +49,10 @@ public class SSStatusBar extends JPanel {
 
         Border iBorder = new StatusBorder();
 
-        setMinimumSize(new Dimension(-1, 24));
-        setMaximumSize(new Dimension(-1, 24));
-        setPreferredSize(new Dimension(-1, 24));
+        int statusHeight = SSUiMetrics.controlHeight(this, 24);
+        setMinimumSize(new Dimension(-1, statusHeight));
+        setMaximumSize(new Dimension(-1, statusHeight));
+        setPreferredSize(new Dimension(-1, statusHeight));
 
         setBorder(iBorder);
         setLayout(null);

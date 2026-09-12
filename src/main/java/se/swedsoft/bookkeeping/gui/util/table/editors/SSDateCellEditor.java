@@ -2,6 +2,7 @@ package se.swedsoft.bookkeeping.gui.util.table.editors;
 
 
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSUiMetrics;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.datechooser.SSDateChooser;
 import se.swedsoft.bookkeeping.util.SSDateUtil;
@@ -57,9 +58,10 @@ public class SSDateCellEditor extends AbstractCellEditor implements TableCellEdi
 
         iButton = new SSButton("ICON_CALENDAR16");
         iButton.setToolTipText(SSBundle.getBundle().getString("date.tooltip"));
-        iButton.setPreferredSize(new Dimension(20, 20));
-        iButton.setMaximumSize(new Dimension(20, 20));
-        iButton.setMinimumSize(new Dimension(20, 20));
+        Dimension buttonSize = SSUiMetrics.squareControlSize(iButton, 20);
+        iButton.setPreferredSize(buttonSize);
+        iButton.setMaximumSize(buttonSize);
+        iButton.setMinimumSize(buttonSize);
 
         iButton.addActionListener(e -> {
 

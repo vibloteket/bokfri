@@ -11,6 +11,7 @@ import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.SSSpreadsheetExchange;
+import se.swedsoft.bookkeeping.gui.util.SSUiMetrics;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSProgressDialog;
@@ -456,9 +457,10 @@ public class SSVoucherFrame extends SSDefaultTableFrame {
 
                 JButton iButton = new JButton("...");
 
-                iButton.setMaximumSize(new Dimension(18, 18));
-                iButton.setPreferredSize(new Dimension(18, 18));
-                iButton.setSize(new Dimension(18, 18));
+                Dimension buttonSize = SSUiMetrics.squareControlSize(iButton, 18);
+                iButton.setMaximumSize(buttonSize);
+                iButton.setPreferredSize(buttonSize);
+                iButton.setSize(buttonSize);
                 iButton.setToolTipText(
                         SSBundle.getBundle().getString("voucherframe.gotovoucher.tooltip"));
 

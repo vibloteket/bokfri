@@ -8,6 +8,7 @@ import net.sf.jasperreports.engine.JasperPrintManager;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.status.SSStatusBar;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSUiMetrics;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.filechooser.SSJasperFileChooser;
 import se.swedsoft.bookkeeping.gui.util.frame.SSDefaultTableFrame;
@@ -77,7 +78,8 @@ public class SSJasperPreviewFrame extends SSDefaultTableFrame implements Propert
 
         iZoomLevels = new JComboBox<>(SSZoomLevel.values());
         iZoomLevels.setEditable(true);
-        iZoomLevels.setMaximumSize(new Dimension(75, 20));
+        iZoomLevels.setMaximumSize(
+                SSUiMetrics.withControlHeight(iZoomLevels, new Dimension(75, 20), 20));
         iZoomLevels.setSelectedItem(SSZoomLevel.ZOOM_100);
 
         // Save

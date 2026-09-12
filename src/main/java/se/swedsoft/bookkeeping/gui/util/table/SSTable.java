@@ -5,6 +5,8 @@
 package se.swedsoft.bookkeeping.gui.util.table;
 
 
+import se.swedsoft.bookkeeping.gui.util.SSUiMetrics;
+
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -52,7 +54,7 @@ public class SSTable extends JTable {
         // Show the lines.
         setShowHorizontalLines(true);
         setShowVerticalLines(true);
-        setRowHeight(18);
+        updateRowHeight();
         setGridColor(new Color(192, 192, 192));
 
         // Disallow the reordering of the table headers.
@@ -87,6 +89,18 @@ public class SSTable extends JTable {
         this();
 
         setModel(dm);
+    }
+
+    @Override
+    public void updateUI() {
+        super.updateUI();
+        updateRowHeight();
+    }
+
+    private void updateRowHeight() {
+        if (getFont() != null) {
+            setRowHeight(SSUiMetrics.controlHeight(this, 18));
+        }
     }
 
     @Override

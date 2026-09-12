@@ -2,6 +2,7 @@ package se.swedsoft.bookkeeping.gui.util.components;
 
 
 import se.swedsoft.bookkeeping.gui.util.SSSelectionListener;
+import se.swedsoft.bookkeeping.gui.util.SSUiMetrics;
 import se.swedsoft.bookkeeping.gui.util.table.SSTable;
 import se.swedsoft.bookkeeping.gui.util.table.SSTableSearchable;
 import se.swedsoft.bookkeeping.gui.util.table.model.SSTableColumn;
@@ -71,9 +72,10 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
         iTextField = new SSTextField();
 
         iDropdownButton = new SSButton("ICON_DROPDOWN16");
-        iDropdownButton.setMinimumSize(new Dimension(20, 20));
-        iDropdownButton.setMaximumSize(new Dimension(20, 20));
-        iDropdownButton.setPreferredSize(new Dimension(20, 20));
+        Dimension buttonSize = SSUiMetrics.squareControlSize(iDropdownButton, 20);
+        iDropdownButton.setMinimumSize(buttonSize);
+        iDropdownButton.setMaximumSize(buttonSize);
+        iDropdownButton.setPreferredSize(buttonSize);
 
         createLayout();
 

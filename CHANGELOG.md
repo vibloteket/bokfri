@@ -20,6 +20,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   removed; modern order exchange is tracked separately.
 
 ### Fixed
+- Tables and compact input controls now derive their height from the active Swing font, and the
+  legacy fixed 13-point font override no longer prevents desktop text scaling from taking effect.
 - Report previews now render at the display's device-pixel scale while retaining their logical zoom,
   keeping text and lines sharp on HiDPI displays and when moving between differently scaled monitors.
 - Historical invoice and credit-invoice rows without a stored VAT code are now treated as tax-free
