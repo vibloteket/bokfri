@@ -3,6 +3,7 @@ package se.swedsoft.bookkeeping.gui.util.datechooser;
 
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
+import se.swedsoft.bookkeeping.gui.util.SSUiMetrics;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.datechooser.panel.SSCalendar;
 import se.swedsoft.bookkeeping.util.SSDateUtil;
@@ -77,9 +78,10 @@ public class SSDateChooser extends JPanel implements ActionListener, ChangeListe
 
         iSpinner = new JSpinner();
         iSpinner.setModel(iModel);
-        iSpinner.setPreferredSize(new Dimension(-1, 20));
-        iSpinner.setMaximumSize(new Dimension(-1, 20));
-        iSpinner.setMinimumSize(new Dimension(-1, 20));
+        int spinnerHeight = SSUiMetrics.controlHeight(iSpinner, 20);
+        iSpinner.setPreferredSize(new Dimension(-1, spinnerHeight));
+        iSpinner.setMaximumSize(new Dimension(-1, spinnerHeight));
+        iSpinner.setMinimumSize(new Dimension(-1, spinnerHeight));
 
         iEditor = new JSpinner.DateEditor(iSpinner, iDateFormatString);
         iSpinner.setEditor(iEditor);
@@ -95,9 +97,10 @@ public class SSDateChooser extends JPanel implements ActionListener, ChangeListe
 
         iCalendarButton = new SSButton("ICON_CALENDAR16");
         iCalendarButton.setToolTipText(SSBundle.getBundle().getString("date.tooltip"));
-        iCalendarButton.setPreferredSize(new Dimension(20, 20));
-        iCalendarButton.setMaximumSize(new Dimension(20, 20));
-        iCalendarButton.setMinimumSize(new Dimension(20, 20));
+        Dimension buttonSize = SSUiMetrics.squareControlSize(iCalendarButton, 20);
+        iCalendarButton.setPreferredSize(buttonSize);
+        iCalendarButton.setMaximumSize(buttonSize);
+        iCalendarButton.setMinimumSize(buttonSize);
 
         iCalendarButton.addActionListener(e -> {
 

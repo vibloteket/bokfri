@@ -1,6 +1,8 @@
 package se.swedsoft.bookkeeping.gui.util.datechooser.panel;
 
 
+import se.swedsoft.bookkeeping.gui.util.SSUiMetrics;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -318,9 +320,11 @@ public class SSDayChooser implements ActionListener {
          * Creates a button with no set text or icon.
          */
         public DayButton() {
-            setMinimumSize(new Dimension(27, 21));
-            setMaximumSize(new Dimension(27, 21));
-            setPreferredSize(new Dimension(27, 21));
+            int height = SSUiMetrics.controlHeight(this, 21);
+            Dimension size = new Dimension(Math.max(27, height), height);
+            setMinimumSize(size);
+            setMaximumSize(size);
+            setPreferredSize(size);
 
             setMargin(new Insets(0, 0, 0, 0));
 

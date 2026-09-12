@@ -1,11 +1,8 @@
 package org.fribok.bookkeeping;
 
+import com.jgoodies.looks.FontPolicies;
 import com.jgoodies.looks.plastic.Plastic3DLookAndFeel;
 import com.jgoodies.looks.plastic.PlasticLookAndFeel;
-import com.jgoodies.looks.FontPolicy;
-import com.jgoodies.looks.FontPolicies;
-import com.jgoodies.looks.FontSet;
-import com.jgoodies.looks.FontSets;
 
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
@@ -22,7 +19,6 @@ import se.swedsoft.bookkeeping.gui.util.graphics.SSIcon;
 
 import javax.swing.*;
 import java.awt.Cursor;
-import java.awt.Font;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -128,35 +124,21 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
         }
 
         try {
-	    String os = System.getProperty("os.name");
-	    FontSet fontSet = null;
-	    if (os.startsWith("Windows")) {
-		fontSet = FontSets.createDefaultFontSet(new Font(
-				   "arial unicode MS", Font.PLAIN, 13));
-	    } else {
-		fontSet = FontSets.createDefaultFontSet(new Font(
-				   "arial unicode", Font.PLAIN, 13));
-	    }
-	    FontPolicy fixedPolicy = FontPolicies.createFixedPolicy(fontSet);
-	    Plastic3DLookAndFeel.setFontPolicy(fixedPolicy);
-	    //Plastic3DLookAndFeel.setHighContrastFocusColorsEnabled(true);
-	    String lnfClassName = Plastic3DLookAndFeel.class.getName();  
-	    if (os.startsWith("Mac OS") || os.startsWith("Windows")) {
-		lnfClassName = UIManager.getSystemLookAndFeelClassName();
-	    } else {
-		String xdgCurrentDesktop = System.getenv("XDG_CURRENT_DESKTOP");
-		if ("Unity".equalsIgnoreCase(xdgCurrentDesktop)
-				|| "XFCE".equalsIgnoreCase(xdgCurrentDesktop)
-				|| "GNOME".equalsIgnoreCase(xdgCurrentDesktop)
-				|| "X-Cinnamon".equalsIgnoreCase(xdgCurrentDesktop)
-				|| "LXDE".equalsIgnoreCase(xdgCurrentDesktop)
-				) {
-			//lnfClassName = UIManager.getSystemLookAndFeelClassName();
-			//lnfClassName = PlasticLookAndFeel.class.getName();
-		} else {
-			lnfClassName = Plastic3DLookAndFeel.class.getName();
-		}
-	    }
+            String os = System.getProperty("os.name");
+            Plastic3DLookAndFeel.setFontPolicy(FontPolicies.getDefaultPlasticOnWindowsPolicy());
+            String lnfClassName = Plastic3DLookAndFeel.class.getName();
+            if (os.startsWith("Mac OS") || os.startsWith("Windows")) {
+                lnfClassName = UIManager.getSystemLookAndFeelClassName();
+            } else {
+                String xdgCurrentDesktop = System.getenv("XDG_CURRENT_DESKTOP");
+                if (!("Unity".equalsIgnoreCase(xdgCurrentDesktop)
+                        || "XFCE".equalsIgnoreCase(xdgCurrentDesktop)
+                        || "GNOME".equalsIgnoreCase(xdgCurrentDesktop)
+                        || "X-Cinnamon".equalsIgnoreCase(xdgCurrentDesktop)
+                        || "LXDE".equalsIgnoreCase(xdgCurrentDesktop))) {
+                    lnfClassName = Plastic3DLookAndFeel.class.getName();
+                }
+            }
 
             UIManager.setLookAndFeel(lnfClassName);
         } catch (UnsupportedLookAndFeelException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
