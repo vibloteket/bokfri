@@ -13,6 +13,7 @@ import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.data.util.SSConfig;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
+import se.swedsoft.bookkeeping.gui.util.SSUiScaleDiagnostics;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSUnexpectedErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.frame.SSFrameManager;
 import se.swedsoft.bookkeeping.gui.util.graphics.SSIcon;
@@ -148,6 +149,7 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
         UIManager.put("OptionPane.noButtonText", "Nej");
         UIManager.put("OptionPane.cancelButtonText", "Avbryt");
         UIManager.put("OptionPane.okButtonText", "OK");
+        SSUiScaleDiagnostics.logEnvironment();
         iRunning = true;
 
         // Print information to ease debugging
