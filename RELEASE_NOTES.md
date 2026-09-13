@@ -1,56 +1,71 @@
-# Bokfri 1.1.1
+# Bokfri 1.2.0
 
-Bokfri 1.1.1 förbättrar felåterkopplingen i desktopprogrammet, gör CLI-utdata
-tydligare och utökar PDF-exporten från kommandoraden. Installationspaketen är
-också ungefär 30–35 procent mindre tack vare en minimerad Java-runtime och
-renare paketering.
+Bokfri 1.2.0 moderniserar rapporter, kalkylbladsutbyte och den inbyggda
+databasmotorn. Versionen förbättrar också visningen på högupplösta skärmar och
+gör fler rapport- och registerflöden tillgängliga från kommandoraden.
 
 ## Viktigaste ändringarna
 
-- formulär i desktopprogrammet förklarar nu ofullständiga eller ogiltiga
-  uppgifter vid sparförsök i stället för att enbart inaktivera OK-knappen
-- oväntade GUI-fel visar kopierbar diagnostik och loggsökväg; loggmappen kan
-  öppnas direkt från feldialogen och dialogen Om Bokfri
-- `bokfri status` ger en samlad översikt över datakatalog, databasformat, valt
-  företag och bokföringsår samt CLI-loggens sökväg
-- oväntade CLI-fel skrivs med full diagnostik till `bokfri-cli.log`; `--verbose`
-  kan även visa detaljerna i terminalen utan att störa vanliga JSON-flöden
-- företag och bokföringsår markerar aktuellt val kompakt i listor, och
-  bokföringsår visas med det senaste först
-- `account list --filter TEXT` filtrerar konton efter nummer eller beskrivning
-- texttabeller och rapporter använder konsekventa, innehållsanpassade kolumner
-  med högerjusterade tal
-- balansrapport, resultatrapport, huvudbok, verifikationslista och enskild
-  verifikation kan exporteras till PDF från CLI med `--output`
-- försäljningsrapport, följesedel och plocklista hanterar decimalantal korrekt
-  och bevarar exakt decimalaritmetik för vikt och volym
-- installationspaketen innehåller en minimerad Java-runtime och endast
-  produktions-JAR:en; artefakterna är cirka 30–35 procent mindre än i 1.1.0
+- rapportmotorn har uppgraderats till JasperReports 7 och använder nu inbäddade,
+  plattformsoberoende rapportfonter för reproducerbara PDF-filer
+- rapportförhandsvisningen är skarp på HiDPI-skärmar och Windows-gränssnittets
+  text behåller läsbar storlek vid 125, 150 procent och högre bildskärmsskalning
+- PDF är nu det gemensamma presentations- och arkivformatet för rapporter;
+  äldre HTML-, RTF- och rapport-XLS-exporter har tagits bort
+- CLI:t kan exportera ett betydligt större urval av ekonomirapporter, register,
+  fakturadokument, betalningsflöden och påminnelser till PDF
+- kontoplaner, kunder, artiklar, leverantörer, verifikationer och
+  verifikationsmallar kan importeras och exporteras som `.xlsx` från både GUI
+  och CLI
+- gamla `.xls`-flöden har ersatts med `.xlsx`; JExcelAPI och Apache POI har
+  ersatts av den mindre fastexcel-lösningen
+- den inbyggda HSQLDB-motorn uppgraderas säkert från den äldre 1.8-katalogen
+  genom en verifierad stagingkopia och en automatisk rollback-säkerhetskopia
+- historiska fakturarader utan lagrad momskod och fakturor utan sparad
+  12-procentig momssats kan åter öppnas och skrivas ut korrekt
 
-## Databas och kompatibilitet
+## Databas och uppgradering
 
-Bokfri 1.1.1 använder samma databasformat 2 som Bokfri 1.1.0. Ingen ny
-migrering krävs vid uppgradering från 1.1.0. Säkerhetskopiering före uppgradering
-rekommenderas ändå som vanligt.
+Bokfri 1.2.0 använder HSQLDB 2.5.0. Vid första starten med en äldre Bokfri- eller
+Fribok-datakatalog:
 
-CLI-förenklingen ersätter de överlappande kommandona `paths`, `doctor`,
-`company current` och `year current` med:
+1. skapar Bokfri en verifierad rollback-säkerhetskopia,
+2. uppgraderar en separat stagingkopia av databasen,
+3. öppnar och verifierar den uppgraderade kopian,
+4. aktiverar den först när kontrollerna har lyckats.
 
-```text
-bokfri status
-```
+Originalkatalogen behålls i säkerhetskopieringsområdet. Avsluta andra Bokfri-
+och Fribok-processer före uppgraderingen och behåll både den automatiska
+säkerhetskopian och den gamla installationen tills innehållet har kontrollerats.
+En databas som har uppgraderats till HSQLDB 2.5 ska inte öppnas med en äldre
+Bokfri- eller Fribok-version.
+
+Bokfris logiska dataformat är fortfarande format 2. Vid uppgradering från
+Bokfri 1.1.1 är det alltså databasmotorns lagringsformat som migreras, inte
+bokföringsmodellens dataformat.
+
+## Ändrade och borttagna format
+
+- strukturerat registerutbyte använder nu `.xlsx` i stället för `.xls`
+- de äldre specialflödena för kund-/artikel-XML och E-butik.se har tagits bort
+- rapportförhandsvisningen exporterar PDF; strukturerad Excel-export sker via de
+  dedikerade registerflödena
+
+Ta gärna en separat säkerhetskopia innan uppgradering och verifiera kritiska
+import- och exportintegrationer mot de nya formaten.
 
 ## Kända begränsningar
 
 - Paketen är inte kodsignerade. Windows SmartScreen och macOS Gatekeeper kan
   därför visa en varning vid installation eller första start.
+- Ikonerna består fortfarande huvudsakligen av fasta PNG-bilder och kan se
+  mindre skarpa ut vid fraktionell bildskärmsskalning; detta påverkar inte text,
+  rapporter eller exporterade PDF-filer.
 - Kommandoradsgränssnittet täcker många centrala arbetsflöden men inte samtliga
   funktioner i desktopprogrammet.
-- Windows systemtema kan visa ett större vänsterindrag i menyer än andra
-  plattformar; Bokfri använder fortsatt standardbeteendet från Swing.
 
 En fullständig teknisk ändringslista finns i
-[CHANGELOG.md](https://github.com/vibloteket/bokfri/blob/v1.1.1/CHANGELOG.md).
+[CHANGELOG.md](https://github.com/vibloteket/bokfri/blob/v1.2.0/CHANGELOG.md).
 Kontrollsummor för installationsfilerna finns i `SHA256SUMS`.
 
 Problem och förbättringsförslag kan rapporteras på

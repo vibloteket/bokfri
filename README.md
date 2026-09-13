@@ -133,13 +133,13 @@ kopplas till JRXML-filer och hur kartan uppdateras. Fontkällor, licenser och in
 Den aktuella versionen kan köras från projektroten med:
 
 ```sh
-java -jar target/bokfri-1.1.2-SNAPSHOT-jar-with-dependencies.jar
+java -jar target/bokfri-1.2.0-jar-with-dependencies.jar
 ```
 
 Samma JAR kan starta kommandoradsgränssnittet genom att ett CLI-argument anges:
 
 ```sh
-java -jar target/bokfri-1.1.2-SNAPSHOT-jar-with-dependencies.jar version
+java -jar target/bokfri-1.2.0-jar-with-dependencies.jar version
 ```
 
 Några andra användbara kommandon:
