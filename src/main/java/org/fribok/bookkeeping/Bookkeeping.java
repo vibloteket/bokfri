@@ -101,13 +101,9 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
         String lnfClassName = Plastic3DLookAndFeel.class.getName();
         if (os.startsWith("Mac OS") || os.startsWith("Windows")) {
             lnfClassName = UIManager.getSystemLookAndFeelClassName();
-        } else if ("Unity".equalsIgnoreCase(xdgCurrentDesktop)
-                || "XFCE".equalsIgnoreCase(xdgCurrentDesktop)
-                || "GNOME".equalsIgnoreCase(xdgCurrentDesktop)
-                || "X-Cinnamon".equalsIgnoreCase(xdgCurrentDesktop)
-                || "LXDE".equalsIgnoreCase(xdgCurrentDesktop)) {
-            lnfClassName = UIManager.getSystemLookAndFeelClassName();
         }
+        // Preserve the traditional Plastic3D appearance on every Linux desktop.
+        // Do not install a Windows-only font policy: Plastic supplies platform defaults.
 
         UIManager.setLookAndFeel(lnfClassName);
         SSWindowsFontScale.apply();

@@ -24,7 +24,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   removed; modern order exchange is tracked separately.
 
 ### Fixed
-- Linux startup no longer requests a Windows-only JGoodies font policy when using Plastic Look & Feel.
+- Linux keeps its traditional Plastic3D appearance on all desktop environments, without requesting
+  the Windows-only JGoodies font policy that previously caused a startup failure.
 - Windows Look & Feel fonts no longer shrink inversely with Display Scale; tables and compact input
   controls retain readable text and font-derived dimensions at 125%, 150%, and higher scaling.
 - Report previews now render at the display's device-pixel scale while retaining their logical zoom,
