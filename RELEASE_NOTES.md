@@ -8,8 +8,9 @@ gör fler rapport- och registerflöden tillgängliga från kommandoraden.
 
 - rapportmotorn har uppgraderats till JasperReports 7 och använder nu inbäddade,
   plattformsoberoende rapportfonter för reproducerbara PDF-filer
-- rapportförhandsvisningen är skarp på HiDPI-skärmar och Windows-gränssnittets
-  text behåller läsbar storlek vid 125, 150 procent och högre bildskärmsskalning
+- rapportförhandsvisningen är skarp på HiDPI-skärmar, Windows-gränssnittets
+  text behåller läsbar storlek vid hög bildskärmsskalning och Linux använder
+  åter en plattformsneutral fontpolicy vid start
 - PDF är nu det gemensamma presentations- och arkivformatet för rapporter;
   äldre HTML-, RTF- och rapport-XLS-exporter har tagits bort
 - CLI:t kan exportera ett betydligt större urval av ekonomirapporter, register,

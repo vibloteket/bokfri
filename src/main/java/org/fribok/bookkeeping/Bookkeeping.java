@@ -1,6 +1,5 @@
 package org.fribok.bookkeeping;
 
-import com.jgoodies.looks.FontPolicies;
 import com.jgoodies.looks.plastic.Plastic3DLookAndFeel;
 
 import org.fribok.bookkeeping.app.Path;
@@ -96,6 +95,24 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
         }
     }
 
+    static void configureLookAndFeel(String os, String xdgCurrentDesktop)
+            throws UnsupportedLookAndFeelException, ClassNotFoundException,
+            InstantiationException, IllegalAccessException {
+        String lnfClassName = Plastic3DLookAndFeel.class.getName();
+        if (os.startsWith("Mac OS") || os.startsWith("Windows")) {
+            lnfClassName = UIManager.getSystemLookAndFeelClassName();
+        } else if ("Unity".equalsIgnoreCase(xdgCurrentDesktop)
+                || "XFCE".equalsIgnoreCase(xdgCurrentDesktop)
+                || "GNOME".equalsIgnoreCase(xdgCurrentDesktop)
+                || "X-Cinnamon".equalsIgnoreCase(xdgCurrentDesktop)
+                || "LXDE".equalsIgnoreCase(xdgCurrentDesktop)) {
+            lnfClassName = UIManager.getSystemLookAndFeelClassName();
+        }
+
+        UIManager.setLookAndFeel(lnfClassName);
+        SSWindowsFontScale.apply();
+    }
+
     private static boolean approveMigration(DataMigrationRequiredException exception) {
         String message = "Företaget använder dataformat " + exception.getFoundVersion()
                 + " och måste uppgraderas till format " + exception.getRequiredVersion() + ".\n\n"
@@ -124,24 +141,8 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
         }
 
         try {
-            String os = System.getProperty("os.name");
-            Plastic3DLookAndFeel.setFontPolicy(FontPolicies.getDefaultPlasticOnWindowsPolicy());
-            String lnfClassName = Plastic3DLookAndFeel.class.getName();
-            if (os.startsWith("Mac OS") || os.startsWith("Windows")) {
-                lnfClassName = UIManager.getSystemLookAndFeelClassName();
-            } else {
-                String xdgCurrentDesktop = System.getenv("XDG_CURRENT_DESKTOP");
-                if (!("Unity".equalsIgnoreCase(xdgCurrentDesktop)
-                        || "XFCE".equalsIgnoreCase(xdgCurrentDesktop)
-                        || "GNOME".equalsIgnoreCase(xdgCurrentDesktop)
-                        || "X-Cinnamon".equalsIgnoreCase(xdgCurrentDesktop)
-                        || "LXDE".equalsIgnoreCase(xdgCurrentDesktop))) {
-                    lnfClassName = Plastic3DLookAndFeel.class.getName();
-                }
-            }
-
-            UIManager.setLookAndFeel(lnfClassName);
-            SSWindowsFontScale.apply();
+            configureLookAndFeel(System.getProperty("os.name"),
+                    System.getenv("XDG_CURRENT_DESKTOP"));
         } catch (UnsupportedLookAndFeelException | ClassNotFoundException
                 | InstantiationException | IllegalAccessException e) {
             LOG.error("Unexpected error", e);
