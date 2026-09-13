@@ -9,7 +9,6 @@ import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.accountingyear.SSAccountingYearFrame;
 import se.swedsoft.bookkeeping.gui.company.util.SSCompanyTableModel;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
-import se.swedsoft.bookkeeping.gui.util.SSUiScaleDiagnostics;
 import se.swedsoft.bookkeeping.gui.util.components.SSButton;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSQueryDialog;
@@ -163,11 +162,6 @@ public class SSCompanyFrame extends SSDefaultTableFrame {
 
         iTable.getColumnModel().getColumn(0).setPreferredWidth(70);
         iTable.getColumnModel().getColumn(0).setMaxWidth(70);
-
-        SwingUtilities.invokeLater(() -> {
-            SSUiScaleDiagnostics.logComponent("company.table", iTable);
-            SSUiScaleDiagnostics.logComponent("company.showAtStartup", iShowAtStartup);
-        });
 
         iTable.addDblClickListener(e -> openSelectedCompany());
         JPanel iPanel = new JPanel();

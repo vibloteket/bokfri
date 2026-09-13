@@ -2,7 +2,6 @@ package org.fribok.bookkeeping;
 
 import com.jgoodies.looks.FontPolicies;
 import com.jgoodies.looks.plastic.Plastic3DLookAndFeel;
-import com.jgoodies.looks.plastic.PlasticLookAndFeel;
 
 import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
@@ -13,7 +12,7 @@ import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.data.util.SSConfig;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
-import se.swedsoft.bookkeeping.gui.util.SSUiScaleDiagnostics;
+import se.swedsoft.bookkeeping.gui.util.SSWindowsFontScale;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSUnexpectedErrorDialog;
 import se.swedsoft.bookkeeping.gui.util.frame.SSFrameManager;
 import se.swedsoft.bookkeeping.gui.util.graphics.SSIcon;
@@ -142,14 +141,15 @@ public class Bookkeeping {    private static final Logger LOG = LoggerFactory.ge
             }
 
             UIManager.setLookAndFeel(lnfClassName);
-        } catch (UnsupportedLookAndFeelException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+            SSWindowsFontScale.apply();
+        } catch (UnsupportedLookAndFeelException | ClassNotFoundException
+                | InstantiationException | IllegalAccessException e) {
             LOG.error("Unexpected error", e);
         }
         UIManager.put("OptionPane.yesButtonText", "Ja");
         UIManager.put("OptionPane.noButtonText", "Nej");
         UIManager.put("OptionPane.cancelButtonText", "Avbryt");
         UIManager.put("OptionPane.okButtonText", "OK");
-        SSUiScaleDiagnostics.logEnvironment();
         iRunning = true;
 
         // Print information to ease debugging
