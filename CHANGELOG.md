@@ -20,8 +20,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   removed; modern order exchange is tracked separately.
 
 ### Fixed
-- Tables and compact input controls now derive their height from the active Swing font instead of
-  clipping text at scaled display settings.
+- Windows Look & Feel fonts no longer shrink inversely with Display Scale; tables and compact input
+  controls retain readable text and font-derived dimensions at 125%, 150%, and higher scaling.
 - Report previews now render at the display's device-pixel scale while retaining their logical zoom,
   keeping text and lines sharp on HiDPI displays and when moving between differently scaled monitors.
 - Historical invoice and credit-invoice rows without a stored VAT code are now treated as tax-free

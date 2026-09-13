@@ -4,7 +4,6 @@ package se.swedsoft.bookkeeping.gui.about.panel;
 import org.fribok.bookkeeping.app.LogFile;
 import org.fribok.bookkeeping.app.Version;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
-import se.swedsoft.bookkeeping.gui.util.SSUiScaleDiagnostics;
 import se.swedsoft.bookkeeping.util.BrowserLaunch;
 
 import javax.swing.*;
@@ -53,11 +52,6 @@ public class SSAboutPanel {    private static final Logger LOG = LoggerFactory.g
                         + "</center></html>");
 
         iEditorPane.setText(iText);
-
-        SwingUtilities.invokeLater(() -> {
-            SSUiScaleDiagnostics.logComponent("about.html", iEditorPane);
-            SSUiScaleDiagnostics.logComponent("about.closeButton", iCloseButton);
-        });
 
         iEditorPane.addHyperlinkListener(
                 new HyperlinkListener() {
