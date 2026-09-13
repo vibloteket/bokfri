@@ -216,6 +216,29 @@ jobs:
         test -f "$CLI_LAUNCHER"
         java scripts/CliSmokeTest.java "$CLI_LAUNCHER"
 
+    - name: Install Linux GUI smoke-test dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb
+
+    - name: Run packaged GUI startup smoke test
+      shell: bash
+      run: |
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          GUI_LAUNCHER="dist/$APP_NAME/$APP_NAME.exe"
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+          GUI_LAUNCHER="dist/$APP_NAME.app/Contents/MacOS/$APP_NAME"
+        else
+          GUI_LAUNCHER="dist/$APP_NAME/bin/$APP_NAME"
+        fi
+        test -f "$GUI_LAUNCHER"
+        if [[ "$RUNNER_OS" == "Linux" ]]; then
+          xvfb-run -a "$GUI_LAUNCHER" --gui-smoke-test
+        else
+          "$GUI_LAUNCHER" --gui-smoke-test
+        fi
+
     - name: Verify minimal packaged runtime
       shell: bash
       run: |
@@ -325,9 +348,7 @@ jobs:
     # --- Linux steps ---
     - name: Install libfuse2
       if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libfuse2
+      run: sudo apt-get install -y libfuse2
 
     - name: Create AppImage
       if: runner.os == 'Linux'

@@ -8,6 +8,15 @@ public final class Launcher {
     private Launcher() {}
 
     public static void main(String[] args) {
+        if (args.length == 1 && args[0].equals("--gui-smoke-test")) {
+            LogFile.configure();
+            try {
+                GuiSmokeTest.main(new String[0]);
+            } catch (Exception exception) {
+                throw new IllegalStateException("Packaged GUI smoke test failed", exception);
+            }
+            return;
+        }
         if (args.length == 0) {
             LogFile.configure();
             Bookkeeping.main(args);

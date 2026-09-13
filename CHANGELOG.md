@@ -15,6 +15,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [1.2.0] - 2026-09-13
 
 ### Added
+- CI now starts and paints the packaged Swing application on Linux, Windows, and macOS before
+  publishing artifacts, catching platform-specific Look & Feel and runtime startup failures.
 - The CLI and graphical interface now import and export all six structured `.xlsx` data types—account
   plans, customers, products, suppliers, vouchers, and voucher templates—through shared,
   GUI-independent fastexcel services. JExcelAPI and its Log4j 1.2 dependency have been removed.
