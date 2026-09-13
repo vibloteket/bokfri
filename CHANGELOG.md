@@ -12,6 +12,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-13
+
 ### Added
 - The CLI and graphical interface now import and export all six structured `.xlsx` data types—account
   plans, customers, products, suppliers, vouchers, and voucher templates—through shared,
