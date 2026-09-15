@@ -12,6 +12,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Changed
+
+- CLI startup builds only the selected top-level command branch instead of inspecting all 141 command paths.
+  Root help still lists every command, with unchanged argument parsing, help text and diagnostics.
+
 ## [1.2.0] - 2026-09-13
 
 ### Added
