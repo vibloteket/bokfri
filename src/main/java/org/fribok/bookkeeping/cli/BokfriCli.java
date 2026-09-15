@@ -158,46 +158,47 @@ import java.util.concurrent.Callable;
 
 /** Headless command-line interface for Bokfri. */
 @Command(mixinStandardHelpOptions = true, name = "bokfri",
-        description = "Inspect and configure Bokfri without starting the Swing interface.",
-        subcommands = {
-            BokfriCli.VersionCommand.class,
-            BokfriCli.StatusCommand.class,
-            BokfriCli.DatabaseCommand.class,
-            BokfriCli.CompanyCommand.class,
-            BokfriCli.DemoCommand.class,
-            BokfriCli.AccountPlanCommand.class,
-            BokfriCli.YearCommand.class,
-            BokfriCli.AccountCommand.class,
-            BokfriCli.TrialBalanceCommand.class,
-            BokfriCli.BalanceSheetCommand.class,
-            BokfriCli.IncomeStatementCommand.class,
-            BokfriCli.GeneralLedgerCommand.class,
-            BokfriCli.AccountsReceivableCommand.class,
-            BokfriCli.CustomerClaimsCommand.class,
-            BokfriCli.AccountsPayableCommand.class,
-            BokfriCli.SupplierDebtsCommand.class,
-            BokfriCli.CustomerRevenueCommand.class,
-            BokfriCli.ProductRevenueCommand.class,
-            BokfriCli.SaleValuesCommand.class,
-            BokfriCli.SupplierRevenueCommand.class,
-            BokfriCli.SalesReportCommand.class,
-            BokfriCli.OpeningBalanceCommand.class,
-            BokfriCli.BackupCommand.class,
-            BokfriCli.SieCommand.class,
-            BokfriCli.CustomerCommand.class,
-            BokfriCli.ProductCommand.class,
-            BokfriCli.SupplierCommand.class,
-            BokfriCli.SupplierInvoiceCommand.class,
-            BokfriCli.SupplierCreditInvoiceCommand.class,
-            BokfriCli.InvoiceCommand.class,
-            BokfriCli.CreditInvoiceCommand.class,
-            BokfriCli.InpaymentCommand.class,
-            BokfriCli.OutpaymentCommand.class,
-            BokfriCli.VatCommand.class,
-            BokfriCli.VoucherCommand.class,
-            BokfriCli.VoucherTemplateCommand.class
-        })
+        description = "Inspect and configure Bokfri without starting the Swing interface.")
 public class BokfriCli implements Runnable {
+    static final List<Class<?>> SUBCOMMANDS = List.of(
+        BokfriCli.VersionCommand.class,
+        BokfriCli.StatusCommand.class,
+        BokfriCli.DatabaseCommand.class,
+        BokfriCli.CompanyCommand.class,
+        BokfriCli.DemoCommand.class,
+        BokfriCli.AccountPlanCommand.class,
+        BokfriCli.YearCommand.class,
+        BokfriCli.AccountCommand.class,
+        BokfriCli.TrialBalanceCommand.class,
+        BokfriCli.BalanceSheetCommand.class,
+        BokfriCli.IncomeStatementCommand.class,
+        BokfriCli.GeneralLedgerCommand.class,
+        BokfriCli.AccountsReceivableCommand.class,
+        BokfriCli.CustomerClaimsCommand.class,
+        BokfriCli.AccountsPayableCommand.class,
+        BokfriCli.SupplierDebtsCommand.class,
+        BokfriCli.CustomerRevenueCommand.class,
+        BokfriCli.ProductRevenueCommand.class,
+        BokfriCli.SaleValuesCommand.class,
+        BokfriCli.SupplierRevenueCommand.class,
+        BokfriCli.SalesReportCommand.class,
+        BokfriCli.OpeningBalanceCommand.class,
+        BokfriCli.BackupCommand.class,
+        BokfriCli.SieCommand.class,
+        BokfriCli.CustomerCommand.class,
+        BokfriCli.ProductCommand.class,
+        BokfriCli.SupplierCommand.class,
+        BokfriCli.SupplierInvoiceCommand.class,
+        BokfriCli.SupplierCreditInvoiceCommand.class,
+        BokfriCli.InvoiceCommand.class,
+        BokfriCli.CreditInvoiceCommand.class,
+        BokfriCli.InpaymentCommand.class,
+        BokfriCli.OutpaymentCommand.class,
+        BokfriCli.VatCommand.class,
+        BokfriCli.VoucherCommand.class,
+        BokfriCli.VoucherTemplateCommand.class
+    );
+
     enum OutputFormat { text, json }
 
     @Option(names = "--config", scope = CommandLine.ScopeType.INHERIT, hidden = true,
@@ -4214,7 +4215,10 @@ public class BokfriCli implements Runnable {
         if (System.getProperty("logback.configurationFile") == null) {
             System.setProperty("logback.configurationFile", "logback-cli.xml");
         }
-        CommandLine commandLine = new CommandLine(new BokfriCli());
+        return execute(CliCommandTree.forArgs(args), args, out, err);
+    }
+
+    static int execute(CommandLine commandLine, String[] args, PrintWriter out, PrintWriter err) {
         commandLine.setOut(out);
         commandLine.setErr(err);
         commandLine.setExecutionExceptionHandler((exception, command, parseResult) -> {

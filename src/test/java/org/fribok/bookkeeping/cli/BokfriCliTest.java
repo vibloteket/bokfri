@@ -166,7 +166,7 @@ class BokfriCliTest {
 
     @Test
     void removedOverviewCommandsAreNoLongerAvailable() {
-        CommandLine command = new CommandLine(new BokfriCli());
+        CommandLine command = CliCommandTree.fullTree();
 
         assertThat(command.getSubcommands()).doesNotContainKeys("paths", "doctor");
         assertThat(command.getSubcommands().get("company").getSubcommands()).doesNotContainKey("current");
@@ -176,7 +176,7 @@ class BokfriCliTest {
     @Test
     void everyCommandSupportsLongAndShortHelp() {
         List<List<String>> paths = new ArrayList<>();
-        collectCommandPaths(new CommandLine(new BokfriCli()), List.of(), paths);
+        collectCommandPaths(CliCommandTree.fullTree(), List.of(), paths);
 
         assertThat(paths).hasSize(141);
         for (List<String> path : paths) {
