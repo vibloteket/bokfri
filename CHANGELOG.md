@@ -22,6 +22,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Remove automatic `@argument-file` expansion. Normal `--file` inputs are unchanged.
 - Reject repeated value-bearing options across the entire command invocation, including repetitions with the same value.
   Repeated boolean switches remain allowed.
+- Use tabular CLI help and report unknown options or extra arguments even when `--help` is present (exit 2).
+  Valid help still works without otherwise-required inputs and exits 0.
 
 ## [1.2.0] - 2026-09-13
 

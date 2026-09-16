@@ -1,6 +1,6 @@
 # CLI parser migration
 
-The Commons CLI migration is on the feature branch, not yet released. The remaining help/error-policy difference below needs review before finalizing the change.
+The Commons CLI migration is on the feature branch, not yet released. The compatibility and help-policy changes below were approved during the migration review.
 
 ## Approved compatibility changes
 
@@ -30,13 +30,13 @@ The business command bodies, database lifecycle, explicit-apply/commit checks, J
 - Root with no command still reports usage and exit 2.
 - Existing empty standard `--version` output is retained for now; the `version` command prints version/build information.
 
-## Pending help-policy review
+## Approved help policy
 
 The new human-readable help uses Commons CLI's tabular formatter. It still lists all commands/options and keeps hidden options hidden, but layout and syntax-error wording differ.
 
-The draft also validates unmatched input even when help was requested. For example, `bokfri version --unknown --help` reports the unknown option, prints help, and exits 2. The old picocli path printed help and exited 0, masking unknown/extra arguments. Both versions allow `--help` without otherwise-required inputs and reject malformed explicitly supplied typed values.
+The parser validates unmatched input even when help was requested. For example, `bokfri version --unknown --help` reports the unknown option, prints help, and exits 2. The old picocli path printed help and exited 0, masking unknown/extra arguments. Both versions allow `--help` without otherwise-required inputs and reject malformed explicitly supplied typed values.
 
-This stricter unmatched-input behavior has not yet been approved. It must be accepted explicitly or adapted before merging; it is not part of the two approvals above.
+The stricter unmatched-input behavior was approved on 2026-09-16. Invalid invocations show the error and help on stderr with exit 2, without executing business code. Valid help uses stdout and exit 0, including when otherwise-required inputs are missing.
 
 ## Verification
 

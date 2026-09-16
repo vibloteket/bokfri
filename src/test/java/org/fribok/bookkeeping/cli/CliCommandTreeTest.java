@@ -152,6 +152,40 @@ class CliCommandTreeTest {
     }
 
     @Test
+    void helpDoesNotMaskUnknownOptionsOrExtraArguments() throws Exception {
+        for (String[] args : List.of(
+                new String[]{"group", "run", "--unknown", "--help"},
+                new String[]{"group", "run", "--help", "--unknown"},
+                new String[]{"group", "run", "extra", "--help"},
+                new String[]{"--help", "group", "run", "extra"},
+                new String[]{"group", "run", "--apply", "--unknown", "--help"})) {
+            Root root = new Root();
+            Result result = execute(root, args);
+            assertThat(result.code()).as("Arguments: %s", List.of(args)).isEqualTo(2);
+            assertThat(result.out()).isEmpty();
+            assertThat(result.err()).contains("Usage:");
+            assertThat(root.calls).isZero();
+            assertThat(root.applied).isZero();
+        }
+    }
+
+    @Test
+    void realHelpExamplesHaveApprovedExitCodes() {
+        for (String[] args : List.of(
+                new String[]{"version", "--unknown", "--help"},
+                new String[]{"version", "extra", "--help"},
+                new String[]{"voucher", "create", "--help"})) {
+            StringWriter out = new StringWriter();
+            StringWriter err = new StringWriter();
+            int code = BokfriCli.execute(args, new PrintWriter(out, true), new PrintWriter(err, true));
+            boolean validHelp = args[0].equals("voucher");
+            assertThat(code).as("Arguments: %s", List.of(args)).isEqualTo(validHelp ? 0 : 2);
+            assertThat(validHelp ? out.toString() : err.toString()).contains("Usage:");
+            assertThat(validHelp ? err.toString() : out.toString()).isEmpty();
+        }
+    }
+
+    @Test
     void enumErrorsListValuesWithoutExposingImplementationNames() {
         StringWriter out = new StringWriter();
         StringWriter err = new StringWriter();
