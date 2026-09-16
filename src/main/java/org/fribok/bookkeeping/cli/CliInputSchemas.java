@@ -1,6 +1,6 @@
 package org.fribok.bookkeeping.cli;
 
-import picocli.CommandLine.Command;
+import org.fribok.bookkeeping.cli.CliMetadata.Command;
 
 /** Schema subcommands for all JSON input contracts exposed by the CLI. */
 final class CliInputSchemas {

@@ -14,8 +14,14 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Changed
 
-- CLI startup builds only the selected top-level command branch instead of inspecting all 141 command paths.
-  Root help still lists every command, with unchanged argument parsing, help text and diagnostics.
+- Replace picocli with Apache Commons CLI, inspecting and binding only the selected command path at startup.
+  All commands remain listed in root help; accounting operations and JSON response shapes are unchanged.
+
+### CLI compatibility
+
+- Remove automatic `@argument-file` expansion. Normal `--file` inputs are unchanged.
+- Reject repeated value-bearing options across the entire command invocation, including repetitions with the same value.
+  Repeated boolean switches remain allowed.
 
 ## [1.2.0] - 2026-09-13
 
