@@ -67,10 +67,9 @@ import org.fribok.bookkeeping.service.voucher.VoucherService;
 import org.fribok.bookkeeping.service.year.AccountingYearService;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationIssue;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationResult;
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
+import org.fribok.bookkeeping.cli.CliMetadata.Command;
+import org.fribok.bookkeeping.cli.CliMetadata.Option;
+import org.fribok.bookkeeping.cli.CliMetadata.Parameters;
 import se.swedsoft.bookkeeping.calc.SSOCRNumber;
 import se.swedsoft.bookkeeping.calc.math.SSSaleMath;
 import se.swedsoft.bookkeeping.data.SSAccount;
@@ -160,78 +159,78 @@ import java.util.concurrent.Callable;
 @Command(mixinStandardHelpOptions = true, name = "bokfri",
         description = "Inspect and configure Bokfri without starting the Swing interface.")
 public class BokfriCli implements Runnable {
-    static final List<Class<?>> SUBCOMMANDS = List.of(
-        BokfriCli.VersionCommand.class,
-        BokfriCli.StatusCommand.class,
-        BokfriCli.DatabaseCommand.class,
-        BokfriCli.CompanyCommand.class,
-        BokfriCli.DemoCommand.class,
-        BokfriCli.AccountPlanCommand.class,
-        BokfriCli.YearCommand.class,
-        BokfriCli.AccountCommand.class,
-        BokfriCli.TrialBalanceCommand.class,
-        BokfriCli.BalanceSheetCommand.class,
-        BokfriCli.IncomeStatementCommand.class,
-        BokfriCli.GeneralLedgerCommand.class,
-        BokfriCli.AccountsReceivableCommand.class,
-        BokfriCli.CustomerClaimsCommand.class,
-        BokfriCli.AccountsPayableCommand.class,
-        BokfriCli.SupplierDebtsCommand.class,
-        BokfriCli.CustomerRevenueCommand.class,
-        BokfriCli.ProductRevenueCommand.class,
-        BokfriCli.SaleValuesCommand.class,
-        BokfriCli.SupplierRevenueCommand.class,
-        BokfriCli.SalesReportCommand.class,
-        BokfriCli.OpeningBalanceCommand.class,
-        BokfriCli.BackupCommand.class,
-        BokfriCli.SieCommand.class,
-        BokfriCli.CustomerCommand.class,
-        BokfriCli.ProductCommand.class,
-        BokfriCli.SupplierCommand.class,
-        BokfriCli.SupplierInvoiceCommand.class,
-        BokfriCli.SupplierCreditInvoiceCommand.class,
-        BokfriCli.InvoiceCommand.class,
-        BokfriCli.CreditInvoiceCommand.class,
-        BokfriCli.InpaymentCommand.class,
-        BokfriCli.OutpaymentCommand.class,
-        BokfriCli.VatCommand.class,
-        BokfriCli.VoucherCommand.class,
-        BokfriCli.VoucherTemplateCommand.class
+    static final List<CliCommandTree.Entry> SUBCOMMANDS = List.of(
+        new CliCommandTree.Entry("version", BokfriCli.VersionCommand.class),
+        new CliCommandTree.Entry("status", BokfriCli.StatusCommand.class),
+        new CliCommandTree.Entry("database", BokfriCli.DatabaseCommand.class),
+        new CliCommandTree.Entry("company", BokfriCli.CompanyCommand.class),
+        new CliCommandTree.Entry("demo", BokfriCli.DemoCommand.class),
+        new CliCommandTree.Entry("account-plan", BokfriCli.AccountPlanCommand.class),
+        new CliCommandTree.Entry("year", BokfriCli.YearCommand.class),
+        new CliCommandTree.Entry("account", BokfriCli.AccountCommand.class),
+        new CliCommandTree.Entry("trial-balance", BokfriCli.TrialBalanceCommand.class),
+        new CliCommandTree.Entry("balance-sheet", BokfriCli.BalanceSheetCommand.class),
+        new CliCommandTree.Entry("income-statement", BokfriCli.IncomeStatementCommand.class),
+        new CliCommandTree.Entry("general-ledger", BokfriCli.GeneralLedgerCommand.class),
+        new CliCommandTree.Entry("accounts-receivable", BokfriCli.AccountsReceivableCommand.class),
+        new CliCommandTree.Entry("customer-claims", BokfriCli.CustomerClaimsCommand.class),
+        new CliCommandTree.Entry("accounts-payable", BokfriCli.AccountsPayableCommand.class),
+        new CliCommandTree.Entry("supplier-debts", BokfriCli.SupplierDebtsCommand.class),
+        new CliCommandTree.Entry("customer-revenue", BokfriCli.CustomerRevenueCommand.class),
+        new CliCommandTree.Entry("product-revenue", BokfriCli.ProductRevenueCommand.class),
+        new CliCommandTree.Entry("sale-values", BokfriCli.SaleValuesCommand.class),
+        new CliCommandTree.Entry("supplier-revenue", BokfriCli.SupplierRevenueCommand.class),
+        new CliCommandTree.Entry("sales-report", BokfriCli.SalesReportCommand.class),
+        new CliCommandTree.Entry("opening-balance", BokfriCli.OpeningBalanceCommand.class),
+        new CliCommandTree.Entry("backup", BokfriCli.BackupCommand.class),
+        new CliCommandTree.Entry("sie", BokfriCli.SieCommand.class),
+        new CliCommandTree.Entry("customer", BokfriCli.CustomerCommand.class),
+        new CliCommandTree.Entry("product", BokfriCli.ProductCommand.class),
+        new CliCommandTree.Entry("supplier", BokfriCli.SupplierCommand.class),
+        new CliCommandTree.Entry("supplier-invoice", BokfriCli.SupplierInvoiceCommand.class),
+        new CliCommandTree.Entry("supplier-credit-invoice", BokfriCli.SupplierCreditInvoiceCommand.class),
+        new CliCommandTree.Entry("invoice", BokfriCli.InvoiceCommand.class),
+        new CliCommandTree.Entry("credit-invoice", BokfriCli.CreditInvoiceCommand.class),
+        new CliCommandTree.Entry("inpayment", BokfriCli.InpaymentCommand.class),
+        new CliCommandTree.Entry("outpayment", BokfriCli.OutpaymentCommand.class),
+        new CliCommandTree.Entry("vat", BokfriCli.VatCommand.class),
+        new CliCommandTree.Entry("voucher", BokfriCli.VoucherCommand.class),
+        new CliCommandTree.Entry("voucher-template", BokfriCli.VoucherTemplateCommand.class)
     );
 
     enum OutputFormat { text, json }
 
-    @Option(names = "--config", scope = CommandLine.ScopeType.INHERIT, hidden = true,
+    @Option(names = "--config", scope = CliMetadata.ScopeType.INHERIT, hidden = true,
             description = "Override the shared GUI/CLI selection file")
     java.nio.file.Path configPath;
 
-    @Option(names = "--data-dir", scope = CommandLine.ScopeType.INHERIT,
+    @Option(names = "--data-dir", scope = CliMetadata.ScopeType.INHERIT,
             description = "Override the Bokfri data directory")
     java.nio.file.Path dataDir;
 
-    @Option(names = "--company-id", scope = CommandLine.ScopeType.INHERIT,
+    @Option(names = "--company-id", scope = CliMetadata.ScopeType.INHERIT,
             description = "Override the company id")
     Integer companyId;
 
-    @Option(names = "--year-id", scope = CommandLine.ScopeType.INHERIT,
+    @Option(names = "--year-id", scope = CliMetadata.ScopeType.INHERIT,
             description = "Override the accounting year id")
     Integer yearId;
 
-    @Option(names = "--format", scope = CommandLine.ScopeType.INHERIT, defaultValue = "text",
+    @Option(names = "--format", scope = CliMetadata.ScopeType.INHERIT, defaultValue = "text",
             description = "Output format: ${COMPLETION-CANDIDATES}")
     OutputFormat format;
 
-    @Option(names = "--verbose", scope = CommandLine.ScopeType.INHERIT,
+    @Option(names = "--verbose", scope = CliMetadata.ScopeType.INHERIT,
             description = "Print diagnostic details for unexpected errors")
     boolean verbose;
 
     @Override
     public void run() {
-        throw new CommandLine.ParameterException(spec.commandLine(), "A command is required");
+        throw new CliSyntaxException(spec, "A command is required");
     }
 
-    @CommandLine.Spec
-    CommandLine.Model.CommandSpec spec;
+    @CliMetadata.Spec
+    CliContext spec;
 
     File selectionFile() {
         return (configPath != null ? configPath
@@ -275,12 +274,12 @@ public class BokfriCli implements Runnable {
     void output(Object value, String text) {
         if (format == OutputFormat.json) {
             try {
-                spec.commandLine().getOut().println(jsonMapper().writeValueAsString(value));
+                spec.out().println(jsonMapper().writeValueAsString(value));
             } catch (JsonProcessingException exception) {
                 throw new CliException("OUTPUT_FAILED", "Could not encode JSON output", exception);
             }
         } else {
-            spec.commandLine().getOut().println(text);
+            spec.out().println(text);
         }
     }
 
@@ -295,7 +294,7 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class CliCommand {
-        @CommandLine.ParentCommand
+        @CliMetadata.ParentCommand
         BokfriCli parent;
     }
 
@@ -417,14 +416,14 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "database", description = "Inspect and migrate the database format",
             subcommands = {DatabaseStatus.class, DatabaseMigrate.class})
     static class DatabaseCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A database command is required");
+            throw new CliSyntaxException(spec, "A database command is required");
         }
     }
 
     abstract static class DatabaseSubcommand implements Callable<Integer> {
-        @CommandLine.ParentCommand DatabaseCommand command;
+        @CliMetadata.ParentCommand DatabaseCommand command;
         BokfriCli root() { return command.parent; }
     }
 
@@ -496,15 +495,15 @@ public class BokfriCli implements Runnable {
             subcommands = {CompanyList.class, CompanyUse.class, CompanyCreate.class,
                     CliInputSchemas.Company.class})
     static class CompanyCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A company command is required");
+            throw new CliSyntaxException(spec, "A company command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "use", description = "Select the company shared with the graphical interface")
     static class CompanyUse implements Callable<Integer> {
-        @CommandLine.ParentCommand CompanyCommand command;
+        @CliMetadata.ParentCommand CompanyCommand command;
         @Parameters(index = "0", description = "Company id") int id;
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -527,11 +526,11 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(mixinStandardHelpOptions = true, name="create",description="Create a company from JSON") static class CompanyCreate implements Callable<Integer>{@CommandLine.ParentCommand CompanyCommand command;@Option(names="--file",required=true)String file;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);CompanyInput in=readCompanyInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=new SSNewCompany();co.setName(normalized(in.getName()));co.setCorporateID(normalized(in.getCorporateId()));co.setVATNumber(normalized(in.getVatNumber()));co.setEMail(normalized(in.getEmail()));co.setPhone(normalized(in.getPhone()));co.setContactPerson(normalized(in.getContactPerson()));co.setBankGiroNumber(normalized(in.getBankgiro()));co.setLogotype(normalized(in.getLogotype()));co.setVatPeriod(in.getVatPeriod());co.setReminderfee(in.getReminderFee());co.setDelayInterest(in.getDelayInterest());Map<SSDefaultAccount,Integer> defaultAccounts=new LinkedHashMap<>();for(SSDefaultAccount account:SSDefaultAccount.values()){defaultAccounts.put(account,account.getDefaultAccountNumber());}co.setDefaultAccounts(defaultAccounts);co.setCurrency(java.util.stream.Stream.concat(r.database().getCurrencies().stream(),se.swedsoft.bookkeeping.data.common.SSCurrency.getDefaultCurrencies().stream()).filter(x->in.getCurrency().equalsIgnoreCase(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_CURRENCY_NOT_FOUND","No currency has code "+in.getCurrency())));co.setPaymentTerm(java.util.stream.Stream.concat(r.database().getPaymentTerms().stream(),se.swedsoft.bookkeeping.data.common.SSPaymentTerm.getDefaultPaymentTerms().stream()).filter(x->in.getPaymentTerms().equals(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_PAYMENT_TERMS_NOT_FOUND","No payment terms have code "+in.getPaymentTerms())));co.setStandardUnit(java.util.stream.Stream.concat(r.database().getUnits().stream(),se.swedsoft.bookkeeping.data.common.SSUnit.getDefaultUnits().stream()).filter(x->in.getStandardUnit().equals(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_UNIT_NOT_FOUND","No unit has code "+in.getStandardUnit())));new CompanyService(r.database()).create(co);root.output(Map.of("id",co.getId(),"name",co.getName()),"Created company "+co.getId()+" - "+co.getName());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="create",description="Create a company from JSON") static class CompanyCreate implements Callable<Integer>{@CliMetadata.ParentCommand CompanyCommand command;@Option(names="--file",required=true)String file;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);CompanyInput in=readCompanyInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=new SSNewCompany();co.setName(normalized(in.getName()));co.setCorporateID(normalized(in.getCorporateId()));co.setVATNumber(normalized(in.getVatNumber()));co.setEMail(normalized(in.getEmail()));co.setPhone(normalized(in.getPhone()));co.setContactPerson(normalized(in.getContactPerson()));co.setBankGiroNumber(normalized(in.getBankgiro()));co.setLogotype(normalized(in.getLogotype()));co.setVatPeriod(in.getVatPeriod());co.setReminderfee(in.getReminderFee());co.setDelayInterest(in.getDelayInterest());Map<SSDefaultAccount,Integer> defaultAccounts=new LinkedHashMap<>();for(SSDefaultAccount account:SSDefaultAccount.values()){defaultAccounts.put(account,account.getDefaultAccountNumber());}co.setDefaultAccounts(defaultAccounts);co.setCurrency(java.util.stream.Stream.concat(r.database().getCurrencies().stream(),se.swedsoft.bookkeeping.data.common.SSCurrency.getDefaultCurrencies().stream()).filter(x->in.getCurrency().equalsIgnoreCase(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_CURRENCY_NOT_FOUND","No currency has code "+in.getCurrency())));co.setPaymentTerm(java.util.stream.Stream.concat(r.database().getPaymentTerms().stream(),se.swedsoft.bookkeeping.data.common.SSPaymentTerm.getDefaultPaymentTerms().stream()).filter(x->in.getPaymentTerms().equals(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_PAYMENT_TERMS_NOT_FOUND","No payment terms have code "+in.getPaymentTerms())));co.setStandardUnit(java.util.stream.Stream.concat(r.database().getUnits().stream(),se.swedsoft.bookkeeping.data.common.SSUnit.getDefaultUnits().stream()).filter(x->in.getStandardUnit().equals(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_UNIT_NOT_FOUND","No unit has code "+in.getStandardUnit())));new CompanyService(r.database()).create(co);root.output(Map.of("id",co.getId(),"name",co.getName()),"Created company "+co.getId()+" - "+co.getName());return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List companies")
     static class CompanyList implements Callable<Integer> {
-        @CommandLine.ParentCommand CompanyCommand command;
+        @CliMetadata.ParentCommand CompanyCommand command;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(false, false);
@@ -558,15 +557,15 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "demo", description = "Manage the bundled demo company",
             subcommands = DemoRecreate.class)
     static class DemoCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A demo command is required");
+            throw new CliSyntaxException(spec, "A demo command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "recreate", description = "Replace the bundled demo company")
     static class DemoRecreate implements Callable<Integer> {
-        @CommandLine.ParentCommand DemoCommand command;
+        @CliMetadata.ParentCommand DemoCommand command;
         @Option(names = "--commit", description = "Apply the replacement") boolean commit;
 
         @Override public Integer call() {
@@ -615,12 +614,12 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name="account-plan",description="Inspect and exchange account plans",subcommands={AccountPlanList.class,AccountPlanPdf.class,AccountPlanExport.class,AccountPlanImport.class})
-    static class AccountPlanCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An account-plan command is required");}}
-    @Command(mixinStandardHelpOptions = true, name="list") static class AccountPlanList implements Callable<Integer>{@CommandLine.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),table(plans,"No account plans found",right("Id","id"),left("Name","name"),right("Assessment year","assessmentYear"),right("Accounts","accountCount")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    static class AccountPlanCommand extends CliCommand implements Runnable{@CliMetadata.Spec CliContext spec;public void run(){throw new CliSyntaxException(spec,"An account-plan command is required");}}
+    @Command(mixinStandardHelpOptions = true, name="list") static class AccountPlanList implements Callable<Integer>{@CliMetadata.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),table(plans,"No account plans found",right("Id","id"),left("Name","name"),right("Assessment year","assessmentYear"),right("Accounts","accountCount")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name="export", description="Export an account plan as Excel XLSX")
     static class AccountPlanExport implements Callable<Integer> {
-        @CommandLine.ParentCommand AccountPlanCommand command;
+        @CliMetadata.ParentCommand AccountPlanCommand command;
         @Option(names="--id", required=true, description="Account-plan id") int id;
         @Option(names="--output", required=true) java.nio.file.Path output;
         @Option(names="--overwrite") boolean overwrite;
@@ -647,7 +646,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name="import", description="Preview or import an Excel XLSX account plan")
     static class AccountPlanImport implements Callable<Integer> {
-        @CommandLine.ParentCommand AccountPlanCommand command;
+        @CliMetadata.ParentCommand AccountPlanCommand command;
         @Option(names="--file", required=true) java.nio.file.Path file;
         @Option(names="--apply", description="Store the imported account plan") boolean apply;
         public Integer call() {
@@ -679,7 +678,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name="pdf", description="Generate the selected accounting year's account plan as PDF")
     static class AccountPlanPdf implements Callable<Integer> {
-        @CommandLine.ParentCommand AccountPlanCommand command;
+        @CliMetadata.ParentCommand AccountPlanCommand command;
         @Option(names="--output",required=true) java.nio.file.Path output;
         @Option(names="--overwrite") boolean overwrite;
         public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSAccountPlanPrinter(y.getAccountPlan()),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("accountPlan",y.getAccountPlan().getName());x.put("selection",selectedContext(c,co,y));root.output(x,"Created account-plan PDF "+pdf);return 0;}catch(Exception e){throw databaseFailure(e);}}}
@@ -688,15 +687,15 @@ public class BokfriCli implements Runnable {
             subcommands = {YearList.class, YearUse.class, YearCreate.class,
                     CliInputSchemas.Year.class})
     static class YearCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A year command is required");
+            throw new CliSyntaxException(spec, "A year command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "use", description = "Select the accounting year shared with the graphical interface")
     static class YearUse implements Callable<Integer> {
-        @CommandLine.ParentCommand YearCommand command;
+        @CliMetadata.ParentCommand YearCommand command;
         @Parameters(index = "0", description = "Accounting year id") int id;
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -716,11 +715,11 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(mixinStandardHelpOptions = true, name="create",description="Create an accounting year from JSON") static class YearCreate implements Callable<Integer>{@CommandLine.ParentCommand YearCommand command;@Option(names="--file",required=true)String file;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);AccountingYearInput in=readAccountingYearInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());AccountingYearService s=new AccountingYearService(r.database());List<SSAccountPlan> matches=s.accountPlans().stream().filter(p->in.getAccountPlanId()!=null&&in.getAccountPlanId().equals(p.getId())||in.getAccountPlanName()!=null&&in.getAccountPlanName().equals(p.getName())).toList();if(matches.size()!=1)throw new CliException("ACCOUNT_PLAN_NOT_FOUND","Account plan must match exactly one plan");SSNewAccountingYear y=s.create(in.getFrom(),in.getTo(),matches.get(0));Map<String,Object>x=new LinkedHashMap<>();x.put("id",y.getId());x.put("from",y.getLocalFrom());x.put("to",y.getLocalTo());x.put("accountPlan",y.getAccountPlan().getName());x.put("companyId",co.getId());root.output(x,"Created accounting year "+y.toRenderString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="create",description="Create an accounting year from JSON") static class YearCreate implements Callable<Integer>{@CliMetadata.ParentCommand YearCommand command;@Option(names="--file",required=true)String file;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);AccountingYearInput in=readAccountingYearInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());AccountingYearService s=new AccountingYearService(r.database());List<SSAccountPlan> matches=s.accountPlans().stream().filter(p->in.getAccountPlanId()!=null&&in.getAccountPlanId().equals(p.getId())||in.getAccountPlanName()!=null&&in.getAccountPlanName().equals(p.getName())).toList();if(matches.size()!=1)throw new CliException("ACCOUNT_PLAN_NOT_FOUND","Account plan must match exactly one plan");SSNewAccountingYear y=s.create(in.getFrom(),in.getTo(),matches.get(0));Map<String,Object>x=new LinkedHashMap<>();x.put("id",y.getId());x.put("from",y.getLocalFrom());x.put("to",y.getLocalTo());x.put("accountPlan",y.getAccountPlan().getName());x.put("companyId",co.getId());root.output(x,"Created accounting year "+y.toRenderString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List accounting years for the selected company")
     static class YearList implements Callable<Integer> {
-        @CommandLine.ParentCommand YearCommand command;
+        @CliMetadata.ParentCommand YearCommand command;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, false);
@@ -754,15 +753,15 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "account", description = "Inspect accounts",
             subcommands = {AccountList.class, AccountBalanceCommand.class})
     static class AccountCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "An account command is required");
+            throw new CliSyntaxException(spec, "An account command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List accounts for the selected year")
     static class AccountList implements Callable<Integer> {
-        @CommandLine.ParentCommand AccountCommand command;
+        @CliMetadata.ParentCommand AccountCommand command;
         @Option(names = "--filter", description = "Filter by account number or description")
         String filter;
 
@@ -808,7 +807,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "trial-balance", description = "Show account opening, movement, and closing balances")
     static class TrialBalanceCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names = "--from") java.time.LocalDate from;
         @Option(names = "--to") java.time.LocalDate to;
         public Integer call() {
@@ -833,7 +832,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "accounts-receivable",
             description = "Generate the customer accounts-receivable report")
     static class AccountsReceivableCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names = "--date", required = true) java.time.LocalDate date;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
@@ -858,7 +857,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "customer-claims",
             description = "Generate the outstanding customer-claims report")
     static class CustomerClaimsCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names = "--date", required = true) java.time.LocalDate date;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
@@ -883,7 +882,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "accounts-payable",
             description = "Generate the supplier accounts-payable report")
     static class AccountsPayableCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names = "--date", required = true) java.time.LocalDate date;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
@@ -907,7 +906,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "supplier-debts",
             description = "Generate the outstanding supplier-debts report")
     static class SupplierDebtsCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names = "--date", required = true) java.time.LocalDate date;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
@@ -931,7 +930,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "customer-revenue",
             description = "Generate customer revenue for a period")
     static class CustomerRevenueCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names="--from",required=true) java.time.LocalDate from;
         @Option(names="--to",required=true) java.time.LocalDate to;
         @Option(names="--output",required=true) java.nio.file.Path output;
@@ -941,7 +940,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "product-revenue",
             description = "Generate product revenue for a period")
     static class ProductRevenueCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names="--from",required=true) java.time.LocalDate from;
         @Option(names="--to",required=true) java.time.LocalDate to;
         @Option(names="--output",required=true) java.nio.file.Path output;
@@ -951,7 +950,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "sale-values",
             description = "Generate monthly sales values")
     static class SaleValuesCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names="--from",required=true) java.time.LocalDate from;
         @Option(names="--to",required=true) java.time.LocalDate to;
         @Option(names="--output",required=true) java.nio.file.Path output;
@@ -961,7 +960,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "supplier-revenue",
             description = "Generate supplier revenue for a period")
     static class SupplierRevenueCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names="--from",required=true) java.time.LocalDate from;
         @Option(names="--to",required=true) java.time.LocalDate to;
         @Option(names="--output",required=true) java.nio.file.Path output;
@@ -971,7 +970,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "sales-report",
             description = "Generate the sales report for a period")
     static class SalesReportCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names = "--from", required = true) java.time.LocalDate from;
         @Option(names = "--to", required = true) java.time.LocalDate to;
         @Option(names = "--sort", defaultValue = "Product") SSSaleReportPrinter.SortingMode sorting;
@@ -1004,7 +1003,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "balance-sheet", description = "Show balance accounts and current result at a date")
     static class BalanceSheetCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names = "--date") java.time.LocalDate date;
         @Option(names = "--output", description = "Write the GUI balance report as PDF")
         java.nio.file.Path output;
@@ -1034,7 +1033,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "income-statement", description = "Show income, expenses, and result for a period")
     static class IncomeStatementCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names = "--from") java.time.LocalDate from;
         @Option(names = "--to") java.time.LocalDate to;
         @Option(names = "--output", description = "Write the GUI income statement as PDF")
@@ -1062,7 +1061,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "general-ledger", description = "Show transactions and running balance for an account")
     static class GeneralLedgerCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand BokfriCli root;
+        @CliMetadata.ParentCommand BokfriCli root;
         @Option(names = "--account", required = true) int account;
         @Option(names = "--from") java.time.LocalDate from;
         @Option(names = "--to") java.time.LocalDate to;
@@ -1099,7 +1098,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "balance", description = "Show an account balance at a date")
     static class AccountBalanceCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand AccountCommand command;
+        @CliMetadata.ParentCommand AccountCommand command;
         @Parameters(index = "0") int account;
         @Option(names = "--date") java.time.LocalDate date;
         public Integer call() {
@@ -1329,26 +1328,26 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name="opening-balance",description="Inspect and manage opening balances",subcommands={OpeningBalanceShow.class,OpeningBalanceValidate.class,OpeningBalanceSet.class,OpeningBalanceCarryForward.class,CliInputSchemas.OpeningBalance.class})
-    static class OpeningBalanceCommand extends CliCommand implements Runnable{@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"An opening-balance command is required");}}
-    @Command(mixinStandardHelpOptions = true, name="show") static class OpeningBalanceShow implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());OpeningBalancePlan p=new OpeningBalanceService(r.database()).current(y);Map<String,Object>x=openingBalanceDetails(p);x.put("selection",selectedContext(c,co,y));root.output(x,"Opening balance\nDebit: "+money(p.debitTotal())+"\nCredit: "+money(p.creditTotal()));return 0;}catch(Exception e){throw databaseFailure(e);}}}
-    abstract static class OpeningBalanceFileCommand implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);OpeningBalanceInput in=readOpeningBalanceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());Map<Integer,java.math.BigDecimal> values=new LinkedHashMap<>();for(var row:in.getBalances()){if(values.put(row.getAccount(),row.getAmount())!=null)throw new CliException("OPENING_BALANCE_INVALID","Duplicate account: "+row.getAccount());}OpeningBalanceService s=new OpeningBalanceService(r.database());OpeningBalancePlan p=persist()?s.replace(y,values):s.validate(y,values);Map<String,Object>x=openingBalanceDetails(p);x.put("written",persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Opening balance updated":"Opening balance is valid; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
+    static class OpeningBalanceCommand extends CliCommand implements Runnable{@CliMetadata.Spec CliContext spec;public void run(){throw new CliSyntaxException(spec,"An opening-balance command is required");}}
+    @Command(mixinStandardHelpOptions = true, name="show") static class OpeningBalanceShow implements Callable<Integer>{@CliMetadata.ParentCommand OpeningBalanceCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());OpeningBalancePlan p=new OpeningBalanceService(r.database()).current(y);Map<String,Object>x=openingBalanceDetails(p);x.put("selection",selectedContext(c,co,y));root.output(x,"Opening balance\nDebit: "+money(p.debitTotal())+"\nCredit: "+money(p.creditTotal()));return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    abstract static class OpeningBalanceFileCommand implements Callable<Integer>{@CliMetadata.ParentCommand OpeningBalanceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);OpeningBalanceInput in=readOpeningBalanceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());Map<Integer,java.math.BigDecimal> values=new LinkedHashMap<>();for(var row:in.getBalances()){if(values.put(row.getAccount(),row.getAmount())!=null)throw new CliException("OPENING_BALANCE_INVALID","Duplicate account: "+row.getAccount());}OpeningBalanceService s=new OpeningBalanceService(r.database());OpeningBalancePlan p=persist()?s.replace(y,values):s.validate(y,values);Map<String,Object>x=openingBalanceDetails(p);x.put("written",persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Opening balance updated":"Opening balance is valid; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
     @Command(mixinStandardHelpOptions = true, name="validate") static class OpeningBalanceValidate extends OpeningBalanceFileCommand{boolean persist(){return false;}}
     @Command(mixinStandardHelpOptions = true, name="set") static class OpeningBalanceSet extends OpeningBalanceFileCommand{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
-    @Command(mixinStandardHelpOptions = true, name="carry-forward") static class OpeningBalanceCarryForward implements Callable<Integer>{@CommandLine.ParentCommand OpeningBalanceCommand command;@Option(names="--from-year-id",required=true)int fromYearId;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear to=r.selectYear(co,c.yearId());SSNewAccountingYear from=r.database().getYearsForCompany(co).stream().filter(y->y.getId()==fromYearId).findFirst().orElseThrow(()->new CliException("YEAR_NOT_FOUND","No source year has id "+fromYearId));OpeningBalancePlan p=new OpeningBalanceService(r.database()).carryForward(from,to,commit);Map<String,Object>x=openingBalanceDetails(p);x.put("fromYearId",fromYearId);x.put("toYearId",to.getId());x.put("committed",commit);x.put("selection",selectedContext(c,co,to));String adjustment=p.adjustment()==null?"":"\nAdjusted account "+p.adjustment().account()+" by "+money(p.adjustment().amount())+" to preserve balance";root.output(x,(commit?"Opening balances carried forward":"Carry-forward preview; no changes written")+adjustment);return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="carry-forward") static class OpeningBalanceCarryForward implements Callable<Integer>{@CliMetadata.ParentCommand OpeningBalanceCommand command;@Option(names="--from-year-id",required=true)int fromYearId;@Option(names="--commit")boolean commit;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear to=r.selectYear(co,c.yearId());SSNewAccountingYear from=r.database().getYearsForCompany(co).stream().filter(y->y.getId()==fromYearId).findFirst().orElseThrow(()->new CliException("YEAR_NOT_FOUND","No source year has id "+fromYearId));OpeningBalancePlan p=new OpeningBalanceService(r.database()).carryForward(from,to,commit);Map<String,Object>x=openingBalanceDetails(p);x.put("fromYearId",fromYearId);x.put("toYearId",to.getId());x.put("committed",commit);x.put("selection",selectedContext(c,co,to));String adjustment=p.adjustment()==null?"":"\nAdjusted account "+p.adjustment().account()+" by "+money(p.adjustment().amount())+" to preserve balance";root.output(x,(commit?"Opening balances carried forward":"Carry-forward preview; no changes written")+adjustment);return 0;}catch(IllegalArgumentException e){throw new CliException("OPENING_BALANCE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "backup", description = "Create, list, verify, and restore full backups",
             subcommands = {BackupCreate.class, BackupList.class, BackupVerify.class,
                     BackupRestore.class})
     static class BackupCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A backup command is required");
+            throw new CliSyntaxException(spec, "A backup command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "create", description = "Create a full backup archive")
     static class BackupCreate implements Callable<Integer> {
-        @CommandLine.ParentCommand BackupCommand command;
+        @CliMetadata.ParentCommand BackupCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite", description = "Replace an existing output file") boolean overwrite;
         @Override public Integer call() {
@@ -1373,7 +1372,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List backups created by this data directory")
     static class BackupList implements Callable<Integer> {
-        @CommandLine.ParentCommand BackupCommand command;
+        @CliMetadata.ParentCommand BackupCommand command;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(false, false);
@@ -1392,7 +1391,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "verify", description = "Verify a full backup archive")
     static class BackupVerify implements Callable<Integer> {
-        @CommandLine.ParentCommand BackupCommand command;
+        @CliMetadata.ParentCommand BackupCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -1419,7 +1418,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "restore", description = "Preview or restore a full backup to a data directory")
     static class BackupRestore implements Callable<Integer> {
-        @CommandLine.ParentCommand BackupCommand command;
+        @CliMetadata.ParentCommand BackupCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
         @Option(names = "--target-data-dir", required = true) java.nio.file.Path targetDataDirectory;
         @Option(names = "--overwrite", description = "Replace an existing target database") boolean overwrite;
@@ -1452,15 +1451,15 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "sie", description = "Import and export Swedish SIE files",
             subcommands = {SieExport.class, SieImport.class})
     static class SieCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A SIE command is required");
+            throw new CliSyntaxException(spec, "A SIE command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "export", description = "Export the selected accounting year")
     static class SieExport implements Callable<Integer> {
-        @CommandLine.ParentCommand SieCommand command;
+        @CliMetadata.ParentCommand SieCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--type", defaultValue = "4E", description = "SIE type: 1, 2, 3, or 4E")
         String type;
@@ -1505,7 +1504,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "import", description = "Preview or import into the selected accounting year")
     static class SieImport implements Callable<Integer> {
-        @CommandLine.ParentCommand SieCommand command;
+        @CliMetadata.ParentCommand SieCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
         @Option(names = "--commit", description = "Apply the import; preview is the default") boolean commit;
         @Option(names = "--vouchers-only", description = "Import only SIE type 4 vouchers")
@@ -1551,15 +1550,15 @@ public class BokfriCli implements Runnable {
                     CustomerSpreadsheetImport.class, CustomerValidate.class, CustomerCreate.class,
                     CliInputSchemas.Customer.class})
     static class CustomerCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A customer command is required");
+            throw new CliSyntaxException(spec, "A customer command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List customers")
     static class CustomerList implements Callable<Integer> {
-        @CommandLine.ParentCommand CustomerCommand command;
+        @CliMetadata.ParentCommand CustomerCommand command;
         @Option(names = "--output", description = "Write the GUI customer list as PDF")
         java.nio.file.Path output;
         @Option(names = "--overwrite", description = "Replace an existing output file")
@@ -1593,7 +1592,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "export",
             description = "Export customers as Excel XLSX")
     static class CustomerSpreadsheetExport implements Callable<Integer> {
-        @CommandLine.ParentCommand CustomerCommand command;
+        @CliMetadata.ParentCommand CustomerCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
@@ -1619,7 +1618,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "import",
             description = "Preview or import customers from Excel XLSX")
     static class CustomerSpreadsheetImport implements Callable<Integer> {
-        @CommandLine.ParentCommand CustomerCommand command;
+        @CliMetadata.ParentCommand CustomerCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
         @Option(names = "--apply", description = "Store valid, non-duplicate customers") boolean apply;
         @Override public Integer call() {
@@ -1657,7 +1656,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "show", description = "Show one customer by number")
     static class CustomerShow implements Callable<Integer> {
-        @CommandLine.ParentCommand CustomerCommand command;
+        @CliMetadata.ParentCommand CustomerCommand command;
         @Parameters(index = "0") String number;
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -1679,7 +1678,7 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class CustomerOperation implements Callable<Integer> {
-        @CommandLine.ParentCommand CustomerCommand command;
+        @CliMetadata.ParentCommand CustomerCommand command;
         @Option(names = "--file", required = true, description = "Customer JSON file, or - for stdin")
         String file;
 
@@ -1734,15 +1733,15 @@ public class BokfriCli implements Runnable {
                     ProductSpreadsheetImport.class, ProductValidate.class, ProductCreate.class,
                     CliInputSchemas.Product.class})
     static class ProductCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A product command is required");
+            throw new CliSyntaxException(spec, "A product command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List products")
     static class ProductList implements Callable<Integer> {
-        @CommandLine.ParentCommand ProductCommand command;
+        @CliMetadata.ParentCommand ProductCommand command;
         @Option(names = "--output", description = "Write the product list as PDF")
         java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
@@ -1775,7 +1774,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "export",
             description = "Export products as Excel XLSX")
     static class ProductSpreadsheetExport implements Callable<Integer> {
-        @CommandLine.ParentCommand ProductCommand command;
+        @CliMetadata.ParentCommand ProductCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
@@ -1803,7 +1802,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "import",
             description = "Preview or import products from Excel XLSX")
     static class ProductSpreadsheetImport implements Callable<Integer> {
-        @CommandLine.ParentCommand ProductCommand command;
+        @CliMetadata.ParentCommand ProductCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
         @Option(names = "--apply", description = "Store valid, non-duplicate products") boolean apply;
         @Override public Integer call() {
@@ -1844,7 +1843,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "show", description = "Show one product by number")
     static class ProductShow implements Callable<Integer> {
-        @CommandLine.ParentCommand ProductCommand command;
+        @CliMetadata.ParentCommand ProductCommand command;
         @Parameters(index = "0") String number;
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -1866,7 +1865,7 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class ProductOperation implements Callable<Integer> {
-        @CommandLine.ParentCommand ProductCommand command;
+        @CliMetadata.ParentCommand ProductCommand command;
         @Option(names = "--file", required = true, description = "Product JSON file, or - for stdin")
         String file;
 
@@ -1922,15 +1921,15 @@ public class BokfriCli implements Runnable {
                     SupplierSpreadsheetImport.class, SupplierValidate.class, SupplierCreate.class,
                     CliInputSchemas.Supplier.class})
     static class SupplierCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A supplier command is required");
+            throw new CliSyntaxException(spec, "A supplier command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List suppliers")
     static class SupplierList implements Callable<Integer> {
-        @CommandLine.ParentCommand SupplierCommand command;
+        @CliMetadata.ParentCommand SupplierCommand command;
         @Option(names = "--output", description = "Write the supplier list as PDF")
         java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
@@ -1961,7 +1960,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "export",
             description = "Export suppliers as Excel XLSX")
     static class SupplierSpreadsheetExport implements Callable<Integer> {
-        @CommandLine.ParentCommand SupplierCommand command;
+        @CliMetadata.ParentCommand SupplierCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
@@ -1988,7 +1987,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "import",
             description = "Preview or import suppliers from Excel XLSX")
     static class SupplierSpreadsheetImport implements Callable<Integer> {
-        @CommandLine.ParentCommand SupplierCommand command;
+        @CliMetadata.ParentCommand SupplierCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
         @Option(names = "--apply", description = "Store valid, non-duplicate suppliers") boolean apply;
         @Override public Integer call() {
@@ -2034,7 +2033,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "show", description = "Show one supplier by number")
     static class SupplierShow implements Callable<Integer> {
-        @CommandLine.ParentCommand SupplierCommand command;
+        @CliMetadata.ParentCommand SupplierCommand command;
         @Parameters(index = "0") String number;
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -2054,7 +2053,7 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class SupplierOperation implements Callable<Integer> {
-        @CommandLine.ParentCommand SupplierCommand command;
+        @CliMetadata.ParentCommand SupplierCommand command;
         @Option(names = "--file", required = true, description = "Supplier JSON file, or - for stdin")
         String file;
         abstract boolean persist();
@@ -2096,38 +2095,38 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name="supplier-invoice",description="Inspect, create, and book supplier invoices",subcommands={SupplierInvoiceList.class,SupplierInvoiceShow.class,SupplierInvoiceJournal.class,SupplierInvoiceValidate.class,SupplierInvoiceCreate.class,CliInputSchemas.SupplierInvoice.class})
-    static class SupplierInvoiceCommand extends CliCommand implements Runnable {@CommandLine.Spec CommandLine.Model.CommandSpec spec;public void run(){throw new CommandLine.ParameterException(spec.commandLine(),"A supplier-invoice command is required");}}
-    @Command(mixinStandardHelpOptions = true, name="list") static class SupplierInvoiceList implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--output")java.nio.file.Path output;@Option(names="--overwrite")boolean overwrite;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<SSSupplierInvoice> items=new SupplierInvoiceService(r.database()).list();List<Map<String,Object>> x=items.stream().map(BokfriCli::supplierInvoiceDetails).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("count",x.size());result.put("supplierInvoices",x);if(output!=null)addPdf(result,exportPdf(new SSSupplierInvoiceListPrinter(new java.util.ArrayList<>(items)),output,overwrite));root.output(result,table(x,"No supplier invoices found",right("Number","number"),left("Date","date"),left("Supplier","supplierName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
-    @Command(mixinStandardHelpOptions = true, name="show") static class SupplierInvoiceShow implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Parameters(index="0")int number;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierInvoice i=new SupplierInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+number));Map<String,Object>x=supplierInvoiceDetails(i);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Supplier invoice "+number+"\nSupplier: "+i.getSupplierName()+"\nTotal: "+x.get("total"));return 0;}catch(Exception e){throw databaseFailure(e);}}}
-    abstract static class SupplierInvoiceOperation implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierInvoiceInput input=readSupplierInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SSSupplierInvoice i=toSupplierInvoice(input,r);SupplierInvoiceService s=new SupplierInvoiceService(r.database());var v=s.validate(i);if(!v.valid())throw supplierInvoiceValidationFailure(v);Map<String,Object>x=supplierInvoiceDetails(i);x.put("number",s.nextNumber());x.put("dryRun",!persist());x.put("created",persist());x.put("selection",selectedContext(c,co,y));if(persist()){s.create(i);x.put("number",i.getNumber());}root.output(x,persist()?"Created supplier invoice "+i.getNumber():"Supplier invoice is valid; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    static class SupplierInvoiceCommand extends CliCommand implements Runnable {@CliMetadata.Spec CliContext spec;public void run(){throw new CliSyntaxException(spec,"A supplier-invoice command is required");}}
+    @Command(mixinStandardHelpOptions = true, name="list") static class SupplierInvoiceList implements Callable<Integer>{@CliMetadata.ParentCommand SupplierInvoiceCommand command;@Option(names="--output")java.nio.file.Path output;@Option(names="--overwrite")boolean overwrite;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<SSSupplierInvoice> items=new SupplierInvoiceService(r.database()).list();List<Map<String,Object>> x=items.stream().map(BokfriCli::supplierInvoiceDetails).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("count",x.size());result.put("supplierInvoices",x);if(output!=null)addPdf(result,exportPdf(new SSSupplierInvoiceListPrinter(new java.util.ArrayList<>(items)),output,overwrite));root.output(result,table(x,"No supplier invoices found",right("Number","number"),left("Date","date"),left("Supplier","supplierName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="show") static class SupplierInvoiceShow implements Callable<Integer>{@CliMetadata.ParentCommand SupplierInvoiceCommand command;@Parameters(index="0")int number;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierInvoice i=new SupplierInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+number));Map<String,Object>x=supplierInvoiceDetails(i);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Supplier invoice "+number+"\nSupplier: "+i.getSupplierName()+"\nTotal: "+x.get("total"));return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    abstract static class SupplierInvoiceOperation implements Callable<Integer>{@CliMetadata.ParentCommand SupplierInvoiceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierInvoiceInput input=readSupplierInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SSSupplierInvoice i=toSupplierInvoice(input,r);SupplierInvoiceService s=new SupplierInvoiceService(r.database());var v=s.validate(i);if(!v.valid())throw supplierInvoiceValidationFailure(v);Map<String,Object>x=supplierInvoiceDetails(i);x.put("number",s.nextNumber());x.put("dryRun",!persist());x.put("created",persist());x.put("selection",selectedContext(c,co,y));if(persist()){s.create(i);x.put("number",i.getNumber());}root.output(x,persist()?"Created supplier invoice "+i.getNumber():"Supplier invoice is valid; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
     @Command(mixinStandardHelpOptions = true, name="validate") static class SupplierInvoiceValidate extends SupplierInvoiceOperation{boolean persist(){return false;}}
     @Command(mixinStandardHelpOptions = true, name="create") static class SupplierInvoiceCreate extends SupplierInvoiceOperation{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
-    @Command(mixinStandardHelpOptions = true, name="journal") static class SupplierInvoiceJournal implements Callable<Integer>{@CommandLine.ParentCommand SupplierInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;@Option(names="--output")java.nio.file.Path output;@Option(names="--overwrite")boolean overwrite;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierInvoiceService s=new SupplierInvoiceService(r.database());SupplierInvoiceJournalPlan p=s.planJournal(from,to);if(p.invoices().isEmpty())throw new CliException("SUPPLIER_INVOICE_JOURNAL_EMPTY","No unbooked supplier invoices exist in the selected period");Map<String,Object>x=supplierInvoiceJournalDetails(p);x.put("committed",commit);x.put("selection",selectedContext(c,co,y));if(output!=null)addPdf(x,exportPdf(new SSSupplierInvoicejournalPrinter(new java.util.ArrayList<>(p.invoices()),p.journalNumber(),p.to()),output,overwrite));if(commit)x.put("voucherNumber",s.commitJournal(p).voucherNumber());root.output(x,commit?"Committed supplier invoice journal "+p.journalNumber():"Supplier invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="journal") static class SupplierInvoiceJournal implements Callable<Integer>{@CliMetadata.ParentCommand SupplierInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;@Option(names="--output")java.nio.file.Path output;@Option(names="--overwrite")boolean overwrite;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierInvoiceService s=new SupplierInvoiceService(r.database());SupplierInvoiceJournalPlan p=s.planJournal(from,to);if(p.invoices().isEmpty())throw new CliException("SUPPLIER_INVOICE_JOURNAL_EMPTY","No unbooked supplier invoices exist in the selected period");Map<String,Object>x=supplierInvoiceJournalDetails(p);x.put("committed",commit);x.put("selection",selectedContext(c,co,y));if(output!=null)addPdf(x,exportPdf(new SSSupplierInvoicejournalPrinter(new java.util.ArrayList<>(p.invoices()),p.journalNumber(),p.to()),output,overwrite));if(commit)x.put("voucherNumber",s.commitJournal(p).voucherNumber());root.output(x,commit?"Committed supplier invoice journal "+p.journalNumber():"Supplier invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "supplier-credit-invoice", description = "Credit booked supplier invoices",
             subcommands = {SupplierCreditInvoiceList.class, SupplierCreditInvoiceShow.class,
                     SupplierCreditInvoiceValidate.class, SupplierCreditInvoiceCreate.class,
                     SupplierCreditInvoiceJournal.class, CliInputSchemas.SupplierCreditInvoice.class})
     static class SupplierCreditInvoiceCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
-        public void run() { throw new CommandLine.ParameterException(spec.commandLine(),
+        @CliMetadata.Spec CliContext spec;
+        public void run() { throw new CliSyntaxException(spec,
                 "A supplier-credit-invoice command is required"); }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "list")
     static class SupplierCreditInvoiceList implements Callable<Integer> {
-        @CommandLine.ParentCommand SupplierCreditInvoiceCommand command;
+        @CliMetadata.ParentCommand SupplierCreditInvoiceCommand command;
         @Option(names="--output") java.nio.file.Path output; @Option(names="--overwrite") boolean overwrite; public Integer call() { BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<SSSupplierCreditInvoice> items=new SupplierCreditInvoiceService(r.database()).list();List<Map<String,Object>> rows=items.stream().map(BokfriCli::supplierCreditInvoiceDetails).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("supplierCreditInvoices",rows);result.put("count",rows.size());if(output!=null)addPdf(result,exportPdf(new SSSupplierCreditInvoiceListPrinter(new java.util.ArrayList<>(items)),output,overwrite));root.output(result,table(rows,"No supplier credit invoices found",right("Number","number"),left("Date","date"),left("Supplier","supplierName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);} }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "show")
     static class SupplierCreditInvoiceShow implements Callable<Integer> {
-        @CommandLine.ParentCommand SupplierCreditInvoiceCommand command; @Parameters(index="0") int number;
+        @CliMetadata.ParentCommand SupplierCreditInvoiceCommand command; @Parameters(index="0") int number;
         public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSSupplierCreditInvoice invoice=new SupplierCreditInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("SUPPLIER_CREDIT_INVOICE_NOT_FOUND","No supplier credit invoice has number "+number));Map<String,Object>x=supplierCreditInvoiceDetails(invoice);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Supplier credit invoice "+number);return 0;}catch(Exception e){throw databaseFailure(e);} }
     }
 
     abstract static class SupplierCreditInvoiceOperation implements Callable<Integer> {
-        @CommandLine.ParentCommand SupplierCreditInvoiceCommand command;
+        @CliMetadata.ParentCommand SupplierCreditInvoiceCommand command;
         @Option(names="--file",required=true) String file;
         abstract boolean persist();
         public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierCreditInvoiceInput input=readSupplierCreditInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierCreditInvoiceService service=new SupplierCreditInvoiceService(r.database());SSSupplierInvoice original=new SupplierInvoiceService(r.database()).find(input.getSupplierInvoiceNumber()).orElseThrow(()->new CliException("SUPPLIER_INVOICE_NOT_FOUND","No supplier invoice has number "+input.getSupplierInvoiceNumber()));SSSupplierCreditInvoice credit=persist()?service.create(original,input.getDate(),input.getAmount()):service.preview(original,input.getDate(),input.getAmount());Map<String,Object>x=supplierCreditInvoiceDetails(credit);x.put("created",persist());x.put("dryRun",!persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Created supplier credit invoice "+credit.getNumber():"Supplier credit invoice is valid; no changes written");return 0;}catch(CliException e){throw e;}catch(IllegalArgumentException e){throw new CliException("SUPPLIER_CREDIT_INVOICE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);} }
@@ -2138,7 +2137,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name="journal")
     static class SupplierCreditInvoiceJournal implements Callable<Integer> {
-        @CommandLine.ParentCommand SupplierCreditInvoiceCommand command;
+        @CliMetadata.ParentCommand SupplierCreditInvoiceCommand command;
         @Option(names="--from",required=true) java.time.LocalDate from;
         @Option(names="--to",required=true) java.time.LocalDate to;
         @Option(names="--commit") boolean commit;
@@ -2152,15 +2151,15 @@ public class BokfriCli implements Runnable {
                     InvoiceReminder.class, InvoiceDeliveryNote.class, InvoicePickingList.class, InvoiceJournal.class,
                     InvoiceValidate.class, InvoiceCreate.class, CliInputSchemas.Invoice.class})
     static class InvoiceCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "An invoice command is required");
+            throw new CliSyntaxException(spec, "An invoice command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List customer invoices")
     static class InvoiceList implements Callable<Integer> {
-        @CommandLine.ParentCommand InvoiceCommand command;
+        @CliMetadata.ParentCommand InvoiceCommand command;
         @Option(names = "--from") java.time.LocalDate from;
         @Option(names = "--to") java.time.LocalDate to;
         @Option(names = "--output", description = "Write the invoice list as PDF")
@@ -2196,7 +2195,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "show", description = "Show one customer invoice by number")
     static class InvoiceShow implements Callable<Integer> {
-        @CommandLine.ParentCommand InvoiceCommand command;
+        @CliMetadata.ParentCommand InvoiceCommand command;
         @Parameters(index = "0") int number;
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -2220,7 +2219,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "journal", description = "Preview or commit an invoice journal for a period")
     static class InvoiceJournal implements Callable<Integer> {
-        @CommandLine.ParentCommand InvoiceCommand command;
+        @CliMetadata.ParentCommand InvoiceCommand command;
         @Option(names = "--from", required = true) java.time.LocalDate from;
         @Option(names = "--to", required = true) java.time.LocalDate to;
         @Option(names = "--commit", description = "Persist the voucher and mark invoices entered")
@@ -2274,7 +2273,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "pdf", description = "Generate a PDF for an existing invoice")
     static class InvoicePdf implements Callable<Integer> {
-        @CommandLine.ParentCommand InvoiceCommand command;
+        @CliMetadata.ParentCommand InvoiceCommand command;
         @Parameters(index = "0", description = "Invoice number") int number;
         @Option(names = "--output", required = true, description = "Destination PDF file")
         java.nio.file.Path output;
@@ -2327,7 +2326,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "reminder",
             description = "Generate a payment reminder for an outstanding invoice")
     static class InvoiceReminder implements Callable<Integer> {
-        @CommandLine.ParentCommand InvoiceCommand command;
+        @CliMetadata.ParentCommand InvoiceCommand command;
         @Parameters(index = "0") int number;
         @Option(names = "--date", required = true) java.time.LocalDate date;
         @Option(names = "--language", defaultValue = "sv-SE") String language;
@@ -2376,7 +2375,7 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class InvoiceSalesDocument implements Callable<Integer> {
-        @CommandLine.ParentCommand InvoiceCommand command;
+        @CliMetadata.ParentCommand InvoiceCommand command;
         @Parameters(index = "0", description = "Invoice number") int number;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--language", defaultValue = "sv-SE") String language;
@@ -2432,7 +2431,7 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class InvoiceOperation implements Callable<Integer> {
-        @CommandLine.ParentCommand InvoiceCommand command;
+        @CliMetadata.ParentCommand InvoiceCommand command;
         @Option(names = "--file", required = true, description = "Invoice JSON file, or - for stdin")
         String file;
 
@@ -2489,24 +2488,24 @@ public class BokfriCli implements Runnable {
                     CreditInvoiceValidate.class, CreditInvoiceCreate.class, CreditInvoiceJournal.class,
                     CliInputSchemas.CreditInvoice.class})
     static class CreditInvoiceCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
-        @Override public void run() { throw new CommandLine.ParameterException(spec.commandLine(), "A credit-invoice command is required"); }
+        @CliMetadata.Spec CliContext spec;
+        @Override public void run() { throw new CliSyntaxException(spec, "A credit-invoice command is required"); }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "list") static class CreditInvoiceList implements Callable<Integer> {
-        @CommandLine.ParentCommand CreditInvoiceCommand command;
+        @CliMetadata.ParentCommand CreditInvoiceCommand command;
         @Option(names="--output") java.nio.file.Path output; @Option(names="--overwrite") boolean overwrite; public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<SSCreditInvoice> items=new CreditInvoiceService(r.database()).list();List<Map<String,Object>> rows=items.stream().map(BokfriCli::creditInvoiceDetails).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("creditInvoices",rows);result.put("count",rows.size());if(output!=null)addPdf(result,exportPdf(new SSCreditInvoiceListPrinter(new java.util.ArrayList<>(items)),output,overwrite));root.output(result,table(rows,"No credit invoices found",right("Number","number"),left("Date","date"),left("Customer","customerName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}
     }
 
     @Command(mixinStandardHelpOptions = true, name = "show") static class CreditInvoiceShow implements Callable<Integer> {
-        @CommandLine.ParentCommand CreditInvoiceCommand command; @Parameters(index="0") int number;
+        @CliMetadata.ParentCommand CreditInvoiceCommand command; @Parameters(index="0") int number;
         public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSCreditInvoice i=new CreditInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("CREDIT_INVOICE_NOT_FOUND","No credit invoice has number "+number));Map<String,Object>x=creditInvoiceDetails(i);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Credit invoice "+number+" for invoice "+i.getCreditingNr());return 0;}catch(CliException e){throw e;}catch(Exception e){throw databaseFailure(e);}}
     }
 
     @Command(mixinStandardHelpOptions = true, name = "pdf",
             description = "Generate a PDF for an existing credit invoice")
     static class CreditInvoicePdf implements Callable<Integer> {
-        @CommandLine.ParentCommand CreditInvoiceCommand command;
+        @CliMetadata.ParentCommand CreditInvoiceCommand command;
         @Parameters(index = "0", description = "Credit invoice number") int number;
         @Option(names = "--output", required = true, description = "Destination PDF file")
         java.nio.file.Path output;
@@ -2537,14 +2536,14 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class CreditInvoiceOperation implements Callable<Integer> {
-        @CommandLine.ParentCommand CreditInvoiceCommand command; @Option(names="--file",required=true) String file; abstract boolean persist();
+        @CliMetadata.ParentCommand CreditInvoiceCommand command; @Option(names="--file",required=true) String file; abstract boolean persist();
         public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);CreditInvoiceInput input=readCreditInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());SSInvoice original=new InvoiceService(r.database()).find(input.getInvoiceNumber()).orElseThrow(()->new CliException("INVOICE_NOT_FOUND","No invoice has number "+input.getInvoiceNumber()));SSCreditInvoice credit=persist()?s.create(original,input.getDate(),input.getAmount()):s.preview(original,input.getDate(),input.getAmount());Map<String,Object>x=creditInvoiceDetails(credit);x.put("created",persist());x.put("dryRun",!persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Created credit invoice "+credit.getNumber():"Credit invoice is valid; no changes written");return 0;}catch(CliException e){throw e;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
     }
     @Command(mixinStandardHelpOptions = true, name="validate") static class CreditInvoiceValidate extends CreditInvoiceOperation {boolean persist(){return false;}}
     @Command(mixinStandardHelpOptions = true, name="create") static class CreditInvoiceCreate extends CreditInvoiceOperation {@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
 
     @Command(mixinStandardHelpOptions = true, name="journal") static class CreditInvoiceJournal implements Callable<Integer> {
-        @CommandLine.ParentCommand CreditInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;
+        @CliMetadata.ParentCommand CreditInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;
         public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());CreditInvoiceJournalPlan p=s.planJournal(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("from",from);x.put("to",to);x.put("creditInvoiceNumbers",p.invoices().stream().map(SSCreditInvoice::getNumber).toList());x.put("invoiceCount",p.invoices().size());x.put("rows",voucherRows(p.voucher()));x.put("debitTotal",money(voucherDebit(p.voucher())));x.put("creditTotal",money(voucherCredit(p.voucher())));x.put("committed",commit);if(commit){CreditInvoiceJournalResult done=s.commitJournal(p);x.put("voucherNumber",done.voucherNumber());}x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Credit invoice journal committed":"Credit invoice journal preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_JOURNAL_EMPTY",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
     }
 
@@ -2553,15 +2552,15 @@ public class BokfriCli implements Runnable {
                     InpaymentPdfList.class, InpaymentValidate.class, InpaymentCreate.class,
                     CliInputSchemas.Inpayment.class})
     static class InpaymentCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "An inpayment command is required");
+            throw new CliSyntaxException(spec, "An inpayment command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List customer inpayments")
     static class InpaymentList implements Callable<Integer> {
-        @CommandLine.ParentCommand InpaymentCommand command;
+        @CliMetadata.ParentCommand InpaymentCommand command;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, false);
@@ -2582,7 +2581,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "pdf-list",
             description = "Generate the customer inpayment list as PDF")
     static class InpaymentPdfList implements Callable<Integer> {
-        @CommandLine.ParentCommand InpaymentCommand command;
+        @CliMetadata.ParentCommand InpaymentCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
@@ -2605,7 +2604,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "show", description = "Show one customer inpayment")
     static class InpaymentShow implements Callable<Integer> {
-        @CommandLine.ParentCommand InpaymentCommand command;
+        @CliMetadata.ParentCommand InpaymentCommand command;
         @Parameters(index = "0") int number;
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -2626,7 +2625,7 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class InpaymentOperation implements Callable<Integer> {
-        @CommandLine.ParentCommand InpaymentCommand command;
+        @CliMetadata.ParentCommand InpaymentCommand command;
         @Option(names = "--file", required = true, description = "Inpayment JSON file, or - for stdin")
         String file;
         abstract boolean persist();
@@ -2674,7 +2673,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "journal", description = "Preview or commit an inpayment journal")
     static class InpaymentJournal implements Callable<Integer> {
-        @CommandLine.ParentCommand InpaymentCommand command;
+        @CliMetadata.ParentCommand InpaymentCommand command;
         @Option(names = "--from", required = true) java.time.LocalDate from;
         @Option(names = "--to", required = true) java.time.LocalDate to;
         @Option(names = "--commit") boolean commit;
@@ -2724,15 +2723,15 @@ public class BokfriCli implements Runnable {
                     OutpaymentPdfList.class, OutpaymentValidate.class, OutpaymentCreate.class,
                     CliInputSchemas.Outpayment.class})
     static class OutpaymentCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "An outpayment command is required");
+            throw new CliSyntaxException(spec, "An outpayment command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List supplier outpayments")
     static class OutpaymentList implements Callable<Integer> {
-        @CommandLine.ParentCommand OutpaymentCommand command;
+        @CliMetadata.ParentCommand OutpaymentCommand command;
         @Override public Integer call() {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(true, false);
@@ -2753,7 +2752,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "pdf-list",
             description = "Generate the supplier outpayment list as PDF")
     static class OutpaymentPdfList implements Callable<Integer> {
-        @CommandLine.ParentCommand OutpaymentCommand command;
+        @CliMetadata.ParentCommand OutpaymentCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
@@ -2775,7 +2774,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "show", description = "Show one supplier outpayment")
     static class OutpaymentShow implements Callable<Integer> {
-        @CommandLine.ParentCommand OutpaymentCommand command;
+        @CliMetadata.ParentCommand OutpaymentCommand command;
         @Parameters(index = "0") int number;
         @Override public Integer call() {
             BokfriCli root = command.parent;
@@ -2796,7 +2795,7 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class OutpaymentOperation implements Callable<Integer> {
-        @CommandLine.ParentCommand OutpaymentCommand command;
+        @CliMetadata.ParentCommand OutpaymentCommand command;
         @Option(names = "--file", required = true, description = "Outpayment JSON file, or - for stdin")
         String file;
         abstract boolean persist();
@@ -2844,7 +2843,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "journal", description = "Preview or commit an outpayment journal")
     static class OutpaymentJournal implements Callable<Integer> {
-        @CommandLine.ParentCommand OutpaymentCommand command;
+        @CliMetadata.ParentCommand OutpaymentCommand command;
         @Option(names = "--from", required = true) java.time.LocalDate from;
         @Option(names = "--to", required = true) java.time.LocalDate to;
         @Option(names = "--commit") boolean commit;
@@ -2891,14 +2890,14 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "vat", description = "Calculate and settle VAT",
             subcommands = {VatReportCommand.class, VatControlCommand.class, VatSettle.class})
     static class VatCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A VAT command is required");
+            throw new CliSyntaxException(spec, "A VAT command is required");
         }
     }
 
     abstract static class VatPeriodCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand VatCommand command;
+        @CliMetadata.ParentCommand VatCommand command;
         @Option(names = "--from", required = true) java.time.LocalDate from;
         @Option(names = "--to", required = true) java.time.LocalDate to;
         BokfriCli root() { return command.parent; }
@@ -2906,7 +2905,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "report", description = "Calculate VAT for a period or the selected accounting year")
     static class VatReportCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand VatCommand command;
+        @CliMetadata.ParentCommand VatCommand command;
         @Option(names = "--from") java.time.LocalDate from;
         @Option(names = "--to") java.time.LocalDate to;
         @Option(names = "--output", description = "Write the VAT report as PDF")
@@ -2959,7 +2958,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "control",
             description = "Generate the VAT control report")
     static class VatControlCommand implements Callable<Integer> {
-        @CommandLine.ParentCommand VatCommand command;
+        @CliMetadata.ParentCommand VatCommand command;
         @Option(names="--from") java.time.LocalDate from;
         @Option(names="--to") java.time.LocalDate to;
         @Option(names="--start-voucher",defaultValue="1") int startVoucher;
@@ -2999,15 +2998,15 @@ public class BokfriCli implements Runnable {
                     VoucherSpreadsheetImport.class, VoucherValidate.class, VoucherCreate.class,
                     CliInputSchemas.Voucher.class})
     static class VoucherCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(), "A voucher command is required");
+            throw new CliSyntaxException(spec, "A voucher command is required");
         }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List vouchers in the selected accounting year")
     static class VoucherList implements Callable<Integer> {
-        @CommandLine.ParentCommand VoucherCommand command;
+        @CliMetadata.ParentCommand VoucherCommand command;
         @Option(names = "--from", description = "Only vouchers on or after this date")
         java.time.LocalDate from;
         @Option(names = "--to", description = "Only vouchers on or before this date")
@@ -3060,7 +3059,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "export",
             description = "Export vouchers as Excel XLSX")
     static class VoucherSpreadsheetExport implements Callable<Integer> {
-        @CommandLine.ParentCommand VoucherCommand command;
+        @CliMetadata.ParentCommand VoucherCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
@@ -3088,7 +3087,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "import",
             description = "Preview or import vouchers from Excel XLSX")
     static class VoucherSpreadsheetImport implements Callable<Integer> {
-        @CommandLine.ParentCommand VoucherCommand command;
+        @CliMetadata.ParentCommand VoucherCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
         @Option(names = "--apply", description = "Store valid, non-duplicate vouchers") boolean apply;
         @Override public Integer call() {
@@ -3132,7 +3131,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "show", description = "Show one voucher by number")
     static class VoucherShow implements Callable<Integer> {
-        @CommandLine.ParentCommand VoucherCommand command;
+        @CliMetadata.ParentCommand VoucherCommand command;
         @Parameters(index = "0", description = "Voucher number")
         int number;
         @Option(names = "--output", description = "Write the GUI voucher as PDF")
@@ -3165,7 +3164,7 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class VoucherOperation implements Callable<Integer> {
-        @CommandLine.ParentCommand VoucherCommand command;
+        @CliMetadata.ParentCommand VoucherCommand command;
         @Option(names = "--file", required = true, description = "Voucher JSON file, or - for stdin")
         String file;
 
@@ -3216,9 +3215,9 @@ public class BokfriCli implements Runnable {
             description = "Exchange voucher templates",
             subcommands = {VoucherTemplateExport.class, VoucherTemplateImport.class})
     static class VoucherTemplateCommand extends CliCommand implements Runnable {
-        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+        @CliMetadata.Spec CliContext spec;
         @Override public void run() {
-            throw new CommandLine.ParameterException(spec.commandLine(),
+            throw new CliSyntaxException(spec,
                     "A voucher-template command is required");
         }
     }
@@ -3226,7 +3225,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "export",
             description = "Export voucher templates as Excel XLSX")
     static class VoucherTemplateExport implements Callable<Integer> {
-        @CommandLine.ParentCommand VoucherTemplateCommand command;
+        @CliMetadata.ParentCommand VoucherTemplateCommand command;
         @Option(names = "--output", required = true) java.nio.file.Path output;
         @Option(names = "--overwrite") boolean overwrite;
         @Override public Integer call() {
@@ -3253,7 +3252,7 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name = "import",
             description = "Preview or import voucher templates from Excel XLSX")
     static class VoucherTemplateImport implements Callable<Integer> {
-        @CommandLine.ParentCommand VoucherTemplateCommand command;
+        @CliMetadata.ParentCommand VoucherTemplateCommand command;
         @Option(names = "--file", required = true) java.nio.file.Path file;
         @Option(names = "--apply", description = "Store non-duplicate voucher templates") boolean apply;
         @Override public Integer call() {
@@ -4215,68 +4214,71 @@ public class BokfriCli implements Runnable {
         if (System.getProperty("logback.configurationFile") == null) {
             System.setProperty("logback.configurationFile", "logback-cli.xml");
         }
-        return execute(CliCommandTree.forArgs(args), args, out, err);
+        BokfriCli root = new BokfriCli();
+        CommonsCliParser parser = new CommonsCliParser(CliCommandTree.root(), root, out, err);
+        try {
+            return parser.execute(args);
+        } catch (CliSyntaxException exception) {
+            parser.report(exception);
+            return 2;
+        } catch (Exception exception) {
+            return executionFailure(root, args, exception, err);
+        }
     }
 
-    static int execute(CommandLine commandLine, String[] args, PrintWriter out, PrintWriter err) {
-        commandLine.setOut(out);
-        commandLine.setErr(err);
-        commandLine.setExecutionExceptionHandler((exception, command, parseResult) -> {
-            boolean internal = !(exception instanceof CliException);
-            CliException failure = internal
-                    ? new CliException("INTERNAL_ERROR", "An unexpected error occurred.", exception)
-                    : (CliException) exception;
-            BokfriCli root = (BokfriCli) command.getCommandSpec().root().userObject();
-            ResolvedContext context = root.resolveContext(false, false);
-            String diagnostic = null;
-            String logFailure = null;
-            if (internal) {
-                diagnostic = CliLog.diagnostic(context.dataDir(), args, exception);
-                try {
-                    CliLog.append(context.dataDir(), diagnostic);
-                } catch (java.io.IOException logException) {
-                    logFailure = logException.getMessage();
-                }
+    private static int executionFailure(BokfriCli root, String[] args, Exception exception, PrintWriter err) {
+        boolean internal = !(exception instanceof CliException);
+        CliException failure = internal
+                ? new CliException("INTERNAL_ERROR", "An unexpected error occurred.", exception)
+                : (CliException) exception;
+        ResolvedContext context = root.resolveContext(false, false);
+        String diagnostic = null;
+        String logFailure = null;
+        if (internal) {
+            diagnostic = CliLog.diagnostic(context.dataDir(), args, exception);
+            try {
+                CliLog.append(context.dataDir(), diagnostic);
+            } catch (java.io.IOException logException) {
+                logFailure = logException.getMessage();
             }
-            if (root.format == OutputFormat.json) {
-                try {
-                    Map<String, Object> error = new LinkedHashMap<>();
-                    error.put("code", failure.getCode());
-                    error.put("message", failure.getMessage());
-                    if (failure.getDetails() != null) {
-                        error.put("details", failure.getDetails());
-                    }
-                    if (internal) {
-                        error.put("logFile", CliLog.file(context.dataDir()).toString());
-                        if (root.verbose) {
-                            error.put("diagnostic", diagnostic);
-                        }
-                        if (logFailure != null) {
-                            error.put("logWriteError", logFailure);
-                        }
-                    }
-                    err.println(jsonMapper().writeValueAsString(Map.of("error", error)));
-                } catch (JsonProcessingException jsonException) {
-                    err.println(failure.getCode() + ": " + failure.getMessage());
+        }
+        if (root.format == OutputFormat.json) {
+            try {
+                Map<String, Object> error = new LinkedHashMap<>();
+                error.put("code", failure.getCode());
+                error.put("message", failure.getMessage());
+                if (failure.getDetails() != null) {
+                    error.put("details", failure.getDetails());
                 }
-            } else {
-                err.println(failure.getCode() + ": " + failure.getMessage());
                 if (internal) {
-                    err.println("Details were written to: " + CliLog.file(context.dataDir()));
-                    if (logFailure != null) {
-                        err.println("Could not write the log file: " + logFailure);
-                    }
+                    error.put("logFile", CliLog.file(context.dataDir()).toString());
                     if (root.verbose) {
-                        err.println();
-                        err.print(diagnostic);
-                    } else {
-                        err.println("Run the command again with --verbose to print diagnostic details.");
+                        error.put("diagnostic", diagnostic);
+                    }
+                    if (logFailure != null) {
+                        error.put("logWriteError", logFailure);
                     }
                 }
+                err.println(jsonMapper().writeValueAsString(Map.of("error", error)));
+            } catch (JsonProcessingException jsonException) {
+                err.println(failure.getCode() + ": " + failure.getMessage());
             }
-            return internal ? 70 : 1;
-        });
-        return commandLine.execute(args);
+        } else {
+            err.println(failure.getCode() + ": " + failure.getMessage());
+            if (internal) {
+                err.println("Details were written to: " + CliLog.file(context.dataDir()));
+                if (logFailure != null) {
+                    err.println("Could not write the log file: " + logFailure);
+                }
+                if (root.verbose) {
+                    err.println();
+                    err.print(diagnostic);
+                } else {
+                    err.println("Run the command again with --verbose to print diagnostic details.");
+                }
+            }
+        }
+        return internal ? 70 : 1;
     }
 
     public static void main(String[] args) {

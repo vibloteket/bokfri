@@ -1,54 +1,87 @@
 package org.fribok.bookkeeping.cli;
 
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Model.CommandSpec;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-/** Builds only the requested top-level command branch, leaving other branches as help entries. */
+/** Lazy catalogue; unselected root branches do not require annotation or field inspection. */
 final class CliCommandTree {
-    private CliCommandTree() {
+    record Entry(String name, Class<?> type) {
     }
 
-    static CommandLine forArgs(String[] args) {
-        CommandLine selector = build(null);
-        // Let picocli handle option values, inherited options, '--' and @argument files.
-        // Unrecognised branch arguments are expected: only the root is fully modelled here.
-        selector.getCommandSpec().parser().collectErrors(true);
-        selector.getSubcommands().values().forEach(command -> command.getCommandSpec().parser().collectErrors(true));
-        CommandLine.ParseResult parsed;
-        try {
-            parsed = selector.parseArgs(args);
-        } catch (CommandLine.InitializationException | CommandLine.ParameterException exception) {
-            // For example, an unreadable @file: let the normal execute path report the original error.
-            return fullTree();
+    private final Class<?> type;
+    private final String name;
+    private final String qualifiedName;
+    private final List<Entry> entries;
+    private CliMetadata.Command metadata;
+    private Map<String, CliCommandTree> children;
+
+    private CliCommandTree(Class<?> type, String name, String prefix, List<Entry> entries) {
+        this.type = type;
+        this.name = name;
+        qualifiedName = prefix.isEmpty() ? name : prefix + " " + name;
+        this.entries = entries;
+    }
+
+    static CliCommandTree root() {
+        return new CliCommandTree(BokfriCli.class, "bokfri", "", BokfriCli.SUBCOMMANDS);
+    }
+
+    static CliCommandTree of(Class<?> type) {
+        return new CliCommandTree(type, declaration(type).name(), "", null);
+    }
+
+    private static CliMetadata.Command declaration(Class<?> type) {
+        CliMetadata.Command result = type.getAnnotation(CliMetadata.Command.class);
+        if (result == null) {
+            throw new IllegalArgumentException("Missing command declaration: " + type.getName());
         }
-        String selected = parsed.hasSubcommand() ? parsed.subcommand().commandSpec().name() : null;
-        // Use a fresh root so the selection parse cannot leak option values or parser settings.
-        return build(selected);
+        return result;
     }
 
-    /** Full annotation-driven tree for selection failures, compatibility tests and command discovery. */
-    static CommandLine fullTree() {
-        CommandLine root = new CommandLine(new BokfriCli());
-        for (Class<?> type : BokfriCli.SUBCOMMANDS) {
-            root.addSubcommand(new CommandLine(type));
+    private CliMetadata.Command metadata() {
+        if (metadata == null) {
+            metadata = declaration(type);
         }
-        return root;
+        return metadata;
     }
 
-    private static CommandLine build(String selected) {
-        CommandLine root = new CommandLine(new BokfriCli());
-        for (Class<?> type : BokfriCli.SUBCOMMANDS) {
-            Command metadata = type.getAnnotation(Command.class);
-            if (metadata.name().equals(selected)) {
-                root.addSubcommand(new CommandLine(type));
-            } else {
-                CommandSpec summary = CommandSpec.create().name(metadata.name()).aliases(metadata.aliases());
-                summary.usageMessage().description(metadata.description()).header(metadata.header())
-                        .hidden(metadata.hidden());
-                root.addSubcommand(new CommandLine(summary));
+    Map<String, CliCommandTree> getSubcommands() {
+        if (children == null) {
+            List<Entry> definitions = entries == null
+                    ? java.util.Arrays.stream(metadata().subcommands())
+                            .map(child -> new Entry(declaration(child).name(), child)).toList()
+                    : entries;
+            Map<String, CliCommandTree> result = new LinkedHashMap<>();
+            for (Entry entry : definitions) {
+                CliCommandTree child = new CliCommandTree(entry.type(), entry.name(), qualifiedName, null);
+                if (result.put(entry.name(), child) != null) {
+                    throw new IllegalArgumentException("Duplicate command: " + child.qualifiedName());
+                }
             }
+            children = Collections.unmodifiableMap(result);
         }
-        return root;
+        return children;
+    }
+
+    Class<?> type() {
+        return type;
+    }
+
+    String name() {
+        return name;
+    }
+
+    String qualifiedName() {
+        return qualifiedName;
+    }
+
+    String description() {
+        return String.join(" ", metadata().description());
+    }
+
+    boolean hasChildren() {
+        return entries == null ? metadata().subcommands().length > 0 : !entries.isEmpty();
     }
 }

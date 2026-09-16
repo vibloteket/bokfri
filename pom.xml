@@ -429,9 +429,9 @@
     </dependency>
     <!-- command-line interface -->
     <dependency>
-      <groupId>info.picocli</groupId>
-      <artifactId>picocli</artifactId>
-      <version>4.7.7</version>
+      <groupId>commons-cli</groupId>
+      <artifactId>commons-cli</artifactId>
+      <version>1.11.0</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

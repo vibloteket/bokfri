@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.fribok.bookkeeping.service.spreadsheet.AccountPlanSpreadsheetService;
 import org.junit.jupiter.api.Test;
-import picocli.CommandLine;
 import org.junit.jupiter.api.io.TempDir;
 import se.swedsoft.bookkeeping.data.SSAccountPlan;
 
@@ -166,7 +165,7 @@ class BokfriCliTest {
 
     @Test
     void removedOverviewCommandsAreNoLongerAvailable() {
-        CommandLine command = CliCommandTree.fullTree();
+        CliCommandTree command = CliCommandTree.root();
 
         assertThat(command.getSubcommands()).doesNotContainKeys("paths", "doctor");
         assertThat(command.getSubcommands().get("company").getSubcommands()).doesNotContainKey("current");
@@ -176,7 +175,7 @@ class BokfriCliTest {
     @Test
     void everyCommandSupportsLongAndShortHelp() {
         List<List<String>> paths = new ArrayList<>();
-        collectCommandPaths(CliCommandTree.fullTree(), List.of(), paths);
+        collectCommandPaths(CliCommandTree.root(), List.of(), paths);
 
         assertThat(paths).hasSize(141);
         for (List<String> path : paths) {
@@ -731,7 +730,7 @@ class BokfriCliTest {
                 .doesNotContain("generated", "\t");
     }
 
-    private static void collectCommandPaths(CommandLine command, List<String> prefix,
+    private static void collectCommandPaths(CliCommandTree command, List<String> prefix,
                                             List<List<String>> paths) {
         paths.add(List.copyOf(prefix));
         command.getSubcommands().forEach((name, subcommand) -> {
