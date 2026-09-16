@@ -14,6 +14,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Changed
 
+- Document the staged migration design for replacing Java-serialized HSQLDB `OTHER` columns with
+  explicit tables, constraints, checksummed schema history, rollback backups, and semantic verification.
+  This design step does not change the active database format.
 - Replace picocli with Apache Commons CLI, inspecting and binding only the selected command path at startup.
   All commands remain listed in root help; accounting operations and JSON response shapes are unchanged.
 
