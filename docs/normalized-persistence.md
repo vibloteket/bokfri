@@ -143,7 +143,7 @@ CREATE TABLE voucher_row (
     result_unit_number VARCHAR(255),
     debit DECIMAL(38, 10),
     credit DECIMAL(38, 10),
-    edited_at TIMESTAMP,
+    edited_at TIMESTAMP WITH TIME ZONE,
     edited_signature VARCHAR(255),
     crossed BOOLEAN NOT NULL,
     added BOOLEAN NOT NULL,
@@ -163,6 +163,27 @@ CREATE TABLE voucher_row (
 - Project and result-unit foreign keys are deferred until those tables are normalized in the same activation candidate.
 - `java.rmi.server.UID` appears in the obsolete `SSAccountingYear`; active `SSNewAccountingYear` uses the database integer ID. Fixtures must confirm which class variants remain stored.
 
+## Date and time semantics
+
+The schema distinguishes civil business dates from instants. The distinction is part of the data contract, not a JDBC formatting detail.
+
+- Business dates such as accounting-year boundaries, voucher/invoice/payment dates, due dates and budget periods use Java `LocalDate` and SQL `DATE`. They have no time or time zone and must remain the same calendar date on every computer.
+- New event times such as row edits, schema installation and future audit events use Java `Instant` and SQL `TIMESTAMP WITH TIME ZONE`. Writers persist an unambiguous instant, canonically represented in UTC; user-facing rendering uses `Europe/Stockholm`.
+- Persistent event code obtains time from an injectable `Clock`, not directly from the host default time zone. Timestamp precision must be measured and round-trip tested through the supported HSQLDB/JDBC version.
+
+Legacy serialized event fields use Java `LocalDateTime` and therefore contain no zone. Bokfri is a Swedish accounting application, so the compatibility rule is to interpret such values in the IANA zone `Europe/Stockholm`, never as a fixed `UTC+01:00` offset. This preserves Swedish daylight-saving rules. The resulting instant is stored in the normalized timestamp column; the migration must not silently use `ZoneId.systemDefault()`.
+
+Daylight-saving transitions require explicit deterministic handling:
+
+1. With one valid Stockholm offset, use it.
+2. In a spring gap, move the local value forward by the transition gap duration.
+3. In an autumn overlap, choose the earlier offset (the first occurrence, normally summer time).
+4. Count and report every gap adjustment and overlap resolution in the migration result.
+
+The source and destination semantic fingerprints apply the same conversion rule. Canonical fingerprint values are ISO `YYYY-MM-DD` for business dates and UTC instants for event times. Migration tests must cover ordinary winter and summer values, a Stockholm spring gap, an autumn overlap, null values and the timestamp precision retained by HSQLDB.
+
+Technical filenames may contain a formatted timestamp for uniqueness, but filenames are not authoritative event times. New persisted metadata records the actual instant independently.
+
 ## Schema history
 
 Data format 2 identifies the current application format, but `BOKFRI_METADATA` is not yet a sequential, checksummed migration history. Add a dedicated table before the first normalized schema migration:
@@ -173,7 +194,7 @@ CREATE TABLE bokfri_schema_history (
     description VARCHAR(255) NOT NULL,
     script_name VARCHAR(255) NOT NULL UNIQUE,
     script_sha256 CHAR(64) NOT NULL,
-    installed_at TIMESTAMP NOT NULL,
+    installed_at TIMESTAMP WITH TIME ZONE NOT NULL,
     application_version VARCHAR(64) NOT NULL
 );
 ```
@@ -221,7 +242,7 @@ The accounting-core fingerprint contains:
 - debit and credit totals per voucher, year and company;
 - SHA-256 of canonical length-prefixed values for each domain and for the aggregate.
 
-Canonical values use UTF-8, ISO dates/timestamps, exact `BigDecimal.toPlainString()` values with documented scale handling, explicit null markers and deterministic key ordering. Fingerprints ignore generated destination IDs but do not ignore row order, null/empty differences, decimal values or relationship direction.
+Canonical values use UTF-8, ISO `YYYY-MM-DD` business dates, UTC event instants, exact `BigDecimal.toPlainString()` values with documented scale handling, explicit null markers and deterministic key ordering. Legacy `LocalDateTime` values are first resolved with the documented `Europe/Stockholm` transition rules. Fingerprints ignore generated destination IDs but do not ignore row order, null/empty differences, decimal values or relationship direction.
 
 A mismatch aborts activation and reports the first differing domain plus counts/totals; a bare hash mismatch is not actionable enough.
 
