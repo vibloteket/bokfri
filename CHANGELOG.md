@@ -12,6 +12,12 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Added
+
+- Add the migration foundation for ordered, SHA-256-verified SQL schema history and deterministic
+  conversion of legacy Swedish local timestamps to UTC instants. It is not yet connected to normal
+  startup and does not change or migrate the active database schema.
+
 ### Changed
 
 - Document the staged migration design for replacing Java-serialized HSQLDB `OTHER` columns with
