@@ -17,6 +17,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Add the migration foundation for ordered, SHA-256-verified SQL schema history and deterministic
   conversion of legacy Swedish local timestamps to UTC instants. It is not yet connected to normal
   startup and does not change or migrate the active database schema.
+- Add typed, length-prefixed semantic fingerprint primitives with per-domain counts and accounting
+  totals, plus read-only detection of abandoned normalized-migration directories. No active database
+  data or startup behavior changes yet.
 
 ### Changed
 
