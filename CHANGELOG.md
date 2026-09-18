@@ -20,6 +20,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Add typed, length-prefixed semantic fingerprint primitives with per-domain counts and accounting
   totals, plus read-only detection of abandoned normalized-migration directories. No active database
   data or startup behavior changes yet.
+- Add the first versioned normalized accounting-core staging schema for companies, years, accounts,
+  balances, budgets, vouchers, and voucher rows, with explicit SQL types and enforced relationships.
+  It remains isolated from startup and active user databases.
 
 ### Changed
 
