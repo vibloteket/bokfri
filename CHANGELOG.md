@@ -26,6 +26,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Add the first legacy-to-normalized accounting-core converter with independent source/destination
   fingerprints, exact accounting controls, correction links, and reported Swedish DST resolutions.
   Conversion still targets only a caller-provided staging database.
+- Add file-backed normalized staging-catalog creation with clean shutdown, durable reopen and a second
+  fingerprint comparison. The candidate remains separate from the active database and is never activated.
 
 ### Changed
 

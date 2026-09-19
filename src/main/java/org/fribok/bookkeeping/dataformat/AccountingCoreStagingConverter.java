@@ -245,6 +245,12 @@ public final class AccountingCoreStagingConverter {
         }
     }
 
+    /** Reads and fingerprints a normalized catalog, used after a durable reopen. */
+    public SemanticFingerprint fingerprintNormalized(Connection connection) throws SQLException {
+        Objects.requireNonNull(connection, "connection");
+        return fingerprint(readNormalized(connection));
+    }
+
     private static Snapshot readNormalized(Connection connection) throws SQLException {
         Snapshot snapshot = new Snapshot();
         query(connection, "SELECT legacy_id,name,corporate_id,vat_number,currency_code FROM company ORDER BY legacy_id",
