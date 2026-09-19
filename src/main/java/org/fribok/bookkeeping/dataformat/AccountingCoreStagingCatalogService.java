@@ -52,12 +52,14 @@ public final class AccountingCoreStagingCatalogService {
                 throw new IOException("HSQLDB driver is unavailable", exception);
             }
             AccountingCoreStagingConverter.ConversionResult conversion;
+            CompanyDetailsStagingConverter.ConversionResult companyDetails;
             try (Connection normalized = DriverManager.getConnection(url, "sa", "")) {
                 try {
                     normalized.setAutoCommit(false);
                     new SchemaMigrationRunner(clock).migrate(
                             normalized, NormalizedSchemaMigrations.load());
                     conversion = new AccountingCoreStagingConverter().convert(legacy, normalized);
+                    companyDetails = new CompanyDetailsStagingConverter().convert(legacy, normalized);
                     shutdown(normalized, "SHUTDOWN SCRIPT");
                 } catch (SQLException | RuntimeException failure) {
                     shutdownAfterFailure(normalized, failure);
@@ -66,9 +68,12 @@ public final class AccountingCoreStagingCatalogService {
             }
 
             SemanticFingerprint reopened;
+            SemanticFingerprint reopenedCompanyDetails;
             try (Connection verification = DriverManager.getConnection(url, "sa", "")) {
                 verification.setReadOnly(true);
                 reopened = new AccountingCoreStagingConverter()
+                        .fingerprintNormalized(verification);
+                reopenedCompanyDetails = new CompanyDetailsStagingConverter()
                         .fingerprintNormalized(verification);
                 shutdown(verification, "SHUTDOWN");
             }
@@ -77,10 +82,16 @@ public final class AccountingCoreStagingCatalogService {
                 throw new IOException("Durable staging fingerprint mismatch after reopen: "
                         + String.join("; ", differences));
             }
+            var companyDifferences = companyDetails.destinationFingerprint()
+                    .differences(reopenedCompanyDetails);
+            if (!companyDifferences.isEmpty()) {
+                throw new IOException("Durable company-details fingerprint mismatch after reopen: "
+                        + String.join("; ", companyDifferences));
+            }
             requireCatalogFiles(database);
             success = true;
             return new StagingCatalogResult(staging, database,
-                    conversion, reopened, clock.instant());
+                    conversion, companyDetails, reopened, reopenedCompanyDetails, clock.instant());
         } finally {
             if (!success) {
                 deleteTree(staging);
@@ -132,6 +143,8 @@ public final class AccountingCoreStagingCatalogService {
 
     public record StagingCatalogResult(Path stagingDirectory, Path database,
                                        AccountingCoreStagingConverter.ConversionResult conversion,
+                                       CompanyDetailsStagingConverter.ConversionResult companyDetails,
                                        SemanticFingerprint durableFingerprint,
+                                       SemanticFingerprint durableCompanyDetailsFingerprint,
                                        Instant completedAt) {}
 }

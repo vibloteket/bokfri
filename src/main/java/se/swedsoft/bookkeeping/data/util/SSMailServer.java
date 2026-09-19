@@ -106,7 +106,7 @@ public class SSMailServer implements Serializable {
         }
     }
 
-    private String getName() {
+    public String getName() {
         return name;
     }
 
