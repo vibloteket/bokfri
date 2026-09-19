@@ -23,6 +23,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Add the first versioned normalized accounting-core staging schema for companies, years, accounts,
   balances, budgets, vouchers, and voucher rows, with explicit SQL types and enforced relationships.
   It remains isolated from startup and active user databases.
+- Add the first legacy-to-normalized accounting-core converter with independent source/destination
+  fingerprints, exact accounting controls, correction links, and reported Swedish DST resolutions.
+  Conversion still targets only a caller-provided staging database.
 
 ### Changed
 
