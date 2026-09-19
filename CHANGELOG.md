@@ -44,6 +44,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   staging, preserving raw prices/weight/volume and company-scoped dimension references.
 - Add the normalized customer-invoice staging schema and converter for sale snapshots, addresses,
   account overrides, ordered rows, invoice state, and embedded voucher snapshots, with durable fingerprints.
+- Add the matching normalized customer-credit-invoice staging schema, including credited-invoice number,
+  sale/address/account/row snapshots and embedded voucher graph; conversion follows separately.
 
 ### Changed
 
