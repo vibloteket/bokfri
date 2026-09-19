@@ -8,6 +8,10 @@ import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 import se.swedsoft.bookkeeping.data.common.SSCurrency;
+import se.swedsoft.bookkeeping.data.common.SSDeliveryTerm;
+import se.swedsoft.bookkeeping.data.common.SSDeliveryWay;
+import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
+import se.swedsoft.bookkeeping.data.common.SSUnit;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -46,6 +50,11 @@ class AccountingCoreStagingConverterTest {
             assertThat(result.daylightSavingGapAdjustments()).isEqualTo(1);
             assertThat(result.daylightSavingOverlapResolutions()).isEqualTo(1);
             assertThat(count(target, "company")).isEqualTo(1);
+            assertThat(count(target, "currency")).isEqualTo(2);
+            assertThat(count(target, "unit_definition")).isEqualTo(1);
+            assertThat(count(target, "payment_term")).isEqualTo(1);
+            assertThat(count(target, "delivery_term")).isEqualTo(1);
+            assertThat(count(target, "delivery_way")).isEqualTo(1);
             assertThat(count(target, "voucher_row")).isEqualTo(3);
         }
     }
@@ -57,6 +66,17 @@ class AccountingCoreStagingConverterTest {
         company.setCorporateID("556000-0001");
         company.setVATNumber("SE556000000101");
         company.setCurrency(new SSCurrency("SEK", "Svenska kronor"));
+        company.setStandardUnit(new SSUnit("st", "styck"));
+        company.setPaymentTerm(new SSPaymentTerm("30", "30 dagar netto"));
+        company.setDeliveryTerm(new SSDeliveryTerm("FK", "Fritt kund"));
+        company.setDeliveryWay(new SSDeliveryWay("P", "Post"));
+        try (var statement = connection.prepareStatement(
+                "INSERT INTO tbl_currency (code,currency) VALUES (?,?)")) {
+            SSCurrency eur = new SSCurrency("EUR", "Euro");
+            eur.setExchangeRate(new BigDecimal("11.125"));
+            statement.setString(1, eur.getName()); statement.setObject(2, eur);
+            statement.executeUpdate();
+        }
         try (var statement = connection.prepareStatement(
                 "INSERT INTO tbl_company (id,company) VALUES (?,?)")) {
             statement.setInt(1, 7);

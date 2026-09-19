@@ -28,6 +28,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   Conversion still targets only a caller-provided staging database.
 - Add file-backed normalized staging-catalog creation with clean shutdown, durable reopen and a second
   fingerprint comparison. The candidate remains separate from the active database and is never activated.
+- Normalize shared currencies, units, payment terms, delivery terms, and delivery ways in staging and
+  include them in source/destination fingerprints, including lookup values referenced only by companies.
 
 ### Changed
 

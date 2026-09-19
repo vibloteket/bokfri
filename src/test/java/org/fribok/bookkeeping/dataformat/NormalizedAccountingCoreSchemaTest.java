@@ -32,7 +32,8 @@ class NormalizedAccountingCoreSchemaTest {
             }
             assertThat(applicationTables).containsExactly(
                     "account", "account_plan", "accounting_year", "bokfri_schema_history",
-                    "budget_entry", "company", "opening_balance", "voucher", "voucher_row");
+                    "budget_entry", "company", "currency", "delivery_term", "delivery_way",
+                    "opening_balance", "payment_term", "unit_definition", "voucher", "voucher_row");
             try (var columns = connection.getMetaData().getColumns(null, null, "%", "%")) {
                 while (columns.next()) {
                     assertThat(columns.getInt("DATA_TYPE"))
@@ -47,7 +48,7 @@ class NormalizedAccountingCoreSchemaTest {
     @Test
     void appliesPackagedSchemaAndRoundTripsCoreTypes() throws Exception {
         try (Connection connection = connection()) {
-            assertThat(migrate(connection)).containsExactly(1);
+            assertThat(migrate(connection)).containsExactly(1, 2);
             assertThat(migrate(connection)).isEmpty();
 
             long company = insertCompany(connection, 7, null);
