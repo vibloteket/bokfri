@@ -5,6 +5,7 @@ import se.swedsoft.bookkeeping.data.SSAccountPlan;
 import se.swedsoft.bookkeeping.data.SSMonth;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 import se.swedsoft.bookkeeping.data.common.SSCurrency;
@@ -62,6 +63,7 @@ public final class AccountingCoreStagingConverter {
     private static Snapshot readLegacy(Connection connection) throws SQLException {
         Snapshot snapshot = new Snapshot();
         readLegacyLookups(connection, snapshot);
+        readCustomerLookups(connection, snapshot);
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
                      "SELECT id, company FROM tbl_company ORDER BY id")) {
@@ -159,6 +161,24 @@ public final class AccountingCoreStagingConverter {
         }
         snapshot.sort();
         return snapshot;
+    }
+
+    private static void readCustomerLookups(Connection connection, Snapshot snapshot)
+            throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT customer FROM tbl_customer")) {
+            while (result.next()) {
+                SSCustomer customer = (SSCustomer) result.getObject(1);
+                SSCurrency currency = customer.getStoredInvoiceCurrency();
+                if (currency != null) {
+                    snapshot.addLookup("currency", currency.getName(), currency.getDescription(),
+                            currency.getExchangeRate());
+                }
+                addCompanyLookup(snapshot, "payment-term", customer.getPaymentTerm());
+                addCompanyLookup(snapshot, "delivery-term", customer.getDeliveryTerm());
+                addCompanyLookup(snapshot, "delivery-way", customer.getDeliveryWay());
+            }
+        }
     }
 
     private static void readLegacyLookups(Connection connection, Snapshot snapshot)
