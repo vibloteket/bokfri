@@ -357,6 +357,11 @@ public class SSSupplier implements Serializable, SSTableSearchable {
         return SSDB.getInstance().getCurrency(iCurrency).orElse(null);
     }
 
+    /** Returns the persisted currency reference without consulting the global database. */
+    public SSCurrency getStoredCurrency() {
+        return iCurrency;
+    }
+
     /**
      *
      * @param iCurrency
