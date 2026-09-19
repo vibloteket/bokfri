@@ -40,6 +40,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   embedded currencies and terms, exact limits/discounts, flags, null/empty text, and key validation.
 - Normalize the complete supplier register and address in staging, including supplier-only currency
   and term lookups, payout metadata, null/empty text, and scalar/object number validation.
+- Normalize products, localized descriptions, account overrides, and ordered parcel components in
+  staging, preserving raw prices/weight/volume and company-scoped dimension references.
 
 ### Changed
 

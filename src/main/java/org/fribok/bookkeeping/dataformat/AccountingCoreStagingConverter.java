@@ -6,6 +6,7 @@ import se.swedsoft.bookkeeping.data.SSMonth;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSCustomer;
+import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
@@ -66,6 +67,7 @@ public final class AccountingCoreStagingConverter {
         readLegacyLookups(connection, snapshot);
         readCustomerLookups(connection, snapshot);
         readSupplierLookups(connection, snapshot);
+        readProductLookups(connection, snapshot);
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
                      "SELECT id, company FROM tbl_company ORDER BY id")) {
@@ -163,6 +165,17 @@ public final class AccountingCoreStagingConverter {
         }
         snapshot.sort();
         return snapshot;
+    }
+
+    private static void readProductLookups(Connection connection, Snapshot snapshot)
+            throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT product FROM tbl_product")) {
+            while (result.next()) {
+                SSProduct product = (SSProduct) result.getObject(1);
+                addCompanyLookup(snapshot, "unit", product.getUnit());
+            }
+        }
     }
 
     private static void readSupplierLookups(Connection connection, Snapshot snapshot)
