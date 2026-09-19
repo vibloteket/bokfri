@@ -6,6 +6,7 @@ import se.swedsoft.bookkeeping.data.SSMonth;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSCustomer;
+import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.SSVoucher;
@@ -68,6 +69,7 @@ public final class AccountingCoreStagingConverter {
         readCustomerLookups(connection, snapshot);
         readSupplierLookups(connection, snapshot);
         readProductLookups(connection, snapshot);
+        readInvoiceLookups(connection, snapshot);
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
                      "SELECT id, company FROM tbl_company ORDER BY id")) {
@@ -165,6 +167,27 @@ public final class AccountingCoreStagingConverter {
         }
         snapshot.sort();
         return snapshot;
+    }
+
+    private static void readInvoiceLookups(Connection connection, Snapshot snapshot)
+            throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT invoice FROM tbl_invoice")) {
+            while (result.next()) {
+                SSInvoice invoice = (SSInvoice) result.getObject(1);
+                SSCurrency currency = invoice.getCurrency();
+                if (currency != null) {
+                    snapshot.addLookup("currency", currency.getName(), currency.getDescription(),
+                            currency.getExchangeRate());
+                }
+                addCompanyLookup(snapshot, "payment-term", invoice.getPaymentTerm());
+                addCompanyLookup(snapshot, "delivery-term", invoice.getDeliveryTerm());
+                addCompanyLookup(snapshot, "delivery-way", invoice.getDeliveryWay());
+                for (se.swedsoft.bookkeeping.data.base.SSSaleRow row : invoice.getRows()) {
+                    addCompanyLookup(snapshot, "unit", row.getUnit());
+                }
+            }
+        }
     }
 
     private static void readProductLookups(Connection connection, Snapshot snapshot)
