@@ -3,6 +3,7 @@ package se.swedsoft.bookkeeping.calc.util;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.Map;
 
 
 /**
@@ -56,6 +57,11 @@ public class SSAutoIncrement implements Serializable {
      */
     public void setNumber(String iKey, int iNumber) {
         iNumbers.put(iKey, iNumber);
+    }
+
+    /** Returns an immutable snapshot of all persisted counters. */
+    public Map<String, Integer> getNumbers() {
+        return Map.copyOf(iNumbers);
     }
 
     public String toString() {
