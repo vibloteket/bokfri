@@ -8,7 +8,8 @@ public final class NormalizedSchemaMigrations {
     private static final List<String> RESOURCES = List.of(
             "/db/normalized/V1__create_accounting_core.sql",
             "/db/normalized/V2__create_shared_lookups.sql",
-            "/db/normalized/V3__expand_company.sql");
+            "/db/normalized/V3__expand_company.sql",
+            "/db/normalized/V4__create_accounting_dimensions.sql");
 
     private NormalizedSchemaMigrations() {}
 

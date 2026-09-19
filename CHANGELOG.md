@@ -32,6 +32,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   include them in source/destination fingerprints, including lookup values referenced only by companies.
 - Flatten company contact, banking, tax, address, mail, standard-text, default-account, and numbering
   settings into explicit staging columns/tables with independent source/destination fingerprints.
+- Normalize company-scoped projects and result units in staging, preserving nullable text, concluded
+  state/date, and rejecting disagreement between legacy table keys and serialized object identifiers.
 
 ### Changed
 
