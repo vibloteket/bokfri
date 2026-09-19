@@ -9,7 +9,8 @@ public final class NormalizedSchemaMigrations {
             "/db/normalized/V1__create_accounting_core.sql",
             "/db/normalized/V2__create_shared_lookups.sql",
             "/db/normalized/V3__expand_company.sql",
-            "/db/normalized/V4__create_accounting_dimensions.sql");
+            "/db/normalized/V4__create_accounting_dimensions.sql",
+            "/db/normalized/V5__create_accounting_templates.sql");
 
     private NormalizedSchemaMigrations() {}
 

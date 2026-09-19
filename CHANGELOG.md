@@ -34,6 +34,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   settings into explicit staging columns/tables with independent source/destination fingerprints.
 - Normalize company-scoped projects and result units in staging, preserving nullable text, concluded
   state/date, and rejecting disagreement between legacy table keys and serialized object identifiers.
+- Normalize voucher templates and automatic distributions with ordered child rows, exact decimal
+  values, dimension references, legacy Swedish modification times, and table/object key validation.
 
 ### Changed
 
