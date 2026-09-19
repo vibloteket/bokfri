@@ -53,11 +53,16 @@ public final class AccountingCoreStagingCatalogService {
             }
             AccountingCoreStagingConverter.ConversionResult conversion;
             try (Connection normalized = DriverManager.getConnection(url, "sa", "")) {
-                normalized.setAutoCommit(false);
-                new SchemaMigrationRunner(clock).migrate(
-                        normalized, NormalizedSchemaMigrations.load());
-                conversion = new AccountingCoreStagingConverter().convert(legacy, normalized);
-                shutdown(normalized, "SHUTDOWN SCRIPT");
+                try {
+                    normalized.setAutoCommit(false);
+                    new SchemaMigrationRunner(clock).migrate(
+                            normalized, NormalizedSchemaMigrations.load());
+                    conversion = new AccountingCoreStagingConverter().convert(legacy, normalized);
+                    shutdown(normalized, "SHUTDOWN SCRIPT");
+                } catch (SQLException | RuntimeException failure) {
+                    shutdownAfterFailure(normalized, failure);
+                    throw failure;
+                }
             }
 
             SemanticFingerprint reopened;
@@ -95,6 +100,14 @@ public final class AccountingCoreStagingCatalogService {
     private static void shutdown(Connection connection, String command) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute(command);
+        }
+    }
+
+    private static void shutdownAfterFailure(Connection connection, Exception failure) {
+        try {
+            shutdown(connection, "SHUTDOWN");
+        } catch (SQLException shutdownFailure) {
+            failure.addSuppressed(shutdownFailure);
         }
     }
 

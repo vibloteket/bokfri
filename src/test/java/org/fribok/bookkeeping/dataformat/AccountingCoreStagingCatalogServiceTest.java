@@ -42,7 +42,8 @@ class AccountingCoreStagingCatalogServiceTest {
             assertThat(result.stagingDirectory()).isDirectory();
             assertThat(result.stagingDirectory().getFileName().toString())
                     .startsWith(MigrationRecoveryInspector.NORMALIZED_STAGING_PREFIX);
-            assertThat(result.database().toString()).endsWith("db/JFSDB");
+            assertThat(result.database()).isEqualTo(
+                    result.stagingDirectory().resolve("db").resolve("JFSDB"));
             assertThat(Path.of(result.database() + ".properties")).isRegularFile();
             assertThat(Path.of(result.database() + ".script")).isRegularFile();
             assertThat(result.completedAt()).isEqualTo(COMPLETED_AT);
