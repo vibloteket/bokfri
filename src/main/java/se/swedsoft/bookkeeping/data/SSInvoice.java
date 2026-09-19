@@ -183,6 +183,11 @@ public class SSInvoice extends SSSale {
         return iType;
     }
 
+    /** Returns the persisted invoice type without applying the NORMAL default. */
+    public SSInvoiceType getStoredType() {
+        return iType;
+    }
+
     /**
      *
      * @param iType
@@ -264,6 +269,11 @@ public class SSInvoice extends SSSale {
         if (iVoucher == null) {
             generateVoucher();
         }
+        return iVoucher;
+    }
+
+    /** Returns the persisted voucher snapshot without generating one. */
+    public SSVoucher getStoredVoucher() {
         return iVoucher;
     }
 

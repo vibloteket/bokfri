@@ -35,7 +35,9 @@ class NormalizedAccountingCoreSchemaTest {
                     "auto_distribution_row", "bokfri_schema_history",
                     "budget_entry", "company", "company_address", "company_auto_increment",
                     "company_default_account", "company_standard_text", "currency", "customer",
-                    "customer_address", "delivery_term",
+                    "customer_address", "customer_invoice", "customer_invoice_address",
+                    "customer_invoice_default_account", "customer_invoice_row",
+                    "customer_invoice_voucher", "customer_invoice_voucher_row", "delivery_term",
                     "delivery_way", "opening_balance", "payment_term", "product", "product_component",
                     "product_default_account", "product_description", "project", "result_unit",
                     "supplier", "supplier_address", "unit_definition", "voucher", "voucher_row", "voucher_template",
@@ -54,7 +56,7 @@ class NormalizedAccountingCoreSchemaTest {
     @Test
     void appliesPackagedSchemaAndRoundTripsCoreTypes() throws Exception {
         try (Connection connection = connection()) {
-            assertThat(migrate(connection)).containsExactly(1, 2, 3, 4, 5, 6, 7, 8);
+            assertThat(migrate(connection)).containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9);
             assertThat(migrate(connection)).isEmpty();
 
             long company = insertCompany(connection, 7, null);
