@@ -6,6 +6,7 @@ import se.swedsoft.bookkeeping.data.SSMonth;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSCustomer;
+import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 import se.swedsoft.bookkeeping.data.common.SSCurrency;
@@ -64,6 +65,7 @@ public final class AccountingCoreStagingConverter {
         Snapshot snapshot = new Snapshot();
         readLegacyLookups(connection, snapshot);
         readCustomerLookups(connection, snapshot);
+        readSupplierLookups(connection, snapshot);
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
                      "SELECT id, company FROM tbl_company ORDER BY id")) {
@@ -161,6 +163,24 @@ public final class AccountingCoreStagingConverter {
         }
         snapshot.sort();
         return snapshot;
+    }
+
+    private static void readSupplierLookups(Connection connection, Snapshot snapshot)
+            throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT supplier FROM tbl_supplier")) {
+            while (result.next()) {
+                SSSupplier supplier = (SSSupplier) result.getObject(1);
+                SSCurrency currency = supplier.getStoredCurrency();
+                if (currency != null) {
+                    snapshot.addLookup("currency", currency.getName(), currency.getDescription(),
+                            currency.getExchangeRate());
+                }
+                addCompanyLookup(snapshot, "payment-term", supplier.getPaymentTerm());
+                addCompanyLookup(snapshot, "delivery-term", supplier.getDeliveryTerm());
+                addCompanyLookup(snapshot, "delivery-way", supplier.getDeliveryWay());
+            }
+        }
     }
 
     private static void readCustomerLookups(Connection connection, Snapshot snapshot)

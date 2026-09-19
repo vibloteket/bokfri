@@ -11,7 +11,8 @@ public final class NormalizedSchemaMigrations {
             "/db/normalized/V3__expand_company.sql",
             "/db/normalized/V4__create_accounting_dimensions.sql",
             "/db/normalized/V5__create_accounting_templates.sql",
-            "/db/normalized/V6__create_customer_register.sql");
+            "/db/normalized/V6__create_customer_register.sql",
+            "/db/normalized/V7__create_supplier_register.sql");
 
     private NormalizedSchemaMigrations() {}
 
