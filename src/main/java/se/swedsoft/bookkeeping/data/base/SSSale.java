@@ -295,6 +295,11 @@ public abstract class SSSale implements SSTableSearchable, Serializable {
         return iDelayInterest;
     }
 
+    /** Returns persisted delay interest without replacing null with zero. */
+    public BigDecimal getStoredDelayInterest() {
+        return iDelayInterest;
+    }
+
     /**
      *
      * @param iDelayInterest
@@ -399,6 +404,11 @@ public abstract class SSSale implements SSTableSearchable, Serializable {
      *
      * @return
      */
+    /** Returns the three persisted tax rates without applying defaults. */
+    public List<BigDecimal> getStoredTaxRates() {
+        return Arrays.asList(iTaxRate1, iTaxRate2, iTaxRate3);
+    }
+
     public BigDecimal getTaxRate1() {
         if (iTaxRate1 == null) {
             iTaxRate1 = new BigDecimal(25);

@@ -42,6 +42,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   and term lookups, payout metadata, null/empty text, and scalar/object number validation.
 - Normalize products, localized descriptions, account overrides, and ordered parcel components in
   staging, preserving raw prices/weight/volume and company-scoped dimension references.
+- Add the normalized customer-invoice staging schema for sale snapshots, addresses, account overrides,
+  ordered rows, invoice state, and embedded voucher snapshots; conversion follows separately.
 
 ### Changed
 
