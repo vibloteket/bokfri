@@ -53,6 +53,7 @@ public final class AccountingCoreStagingCatalogService {
             }
             AccountingCoreStagingConverter.ConversionResult conversion;
             CompanyDetailsStagingConverter.ConversionResult companyDetails;
+            AccountingDimensionsStagingConverter.ConversionResult accountingDimensions;
             try (Connection normalized = DriverManager.getConnection(url, "sa", "")) {
                 try {
                     normalized.setAutoCommit(false);
@@ -60,6 +61,8 @@ public final class AccountingCoreStagingCatalogService {
                             normalized, NormalizedSchemaMigrations.load());
                     conversion = new AccountingCoreStagingConverter().convert(legacy, normalized);
                     companyDetails = new CompanyDetailsStagingConverter().convert(legacy, normalized);
+                    accountingDimensions = new AccountingDimensionsStagingConverter()
+                            .convert(legacy, normalized);
                     shutdown(normalized, "SHUTDOWN SCRIPT");
                 } catch (SQLException | RuntimeException failure) {
                     shutdownAfterFailure(normalized, failure);
@@ -69,11 +72,14 @@ public final class AccountingCoreStagingCatalogService {
 
             SemanticFingerprint reopened;
             SemanticFingerprint reopenedCompanyDetails;
+            SemanticFingerprint reopenedAccountingDimensions;
             try (Connection verification = DriverManager.getConnection(url, "sa", "")) {
                 verification.setReadOnly(true);
                 reopened = new AccountingCoreStagingConverter()
                         .fingerprintNormalized(verification);
                 reopenedCompanyDetails = new CompanyDetailsStagingConverter()
+                        .fingerprintNormalized(verification);
+                reopenedAccountingDimensions = new AccountingDimensionsStagingConverter()
                         .fingerprintNormalized(verification);
                 shutdown(verification, "SHUTDOWN");
             }
@@ -88,10 +94,17 @@ public final class AccountingCoreStagingCatalogService {
                 throw new IOException("Durable company-details fingerprint mismatch after reopen: "
                         + String.join("; ", companyDifferences));
             }
+            var dimensionDifferences = accountingDimensions.destinationFingerprint()
+                    .differences(reopenedAccountingDimensions);
+            if (!dimensionDifferences.isEmpty()) {
+                throw new IOException("Durable accounting-dimensions fingerprint mismatch after reopen: "
+                        + String.join("; ", dimensionDifferences));
+            }
             requireCatalogFiles(database);
             success = true;
             return new StagingCatalogResult(staging, database,
-                    conversion, companyDetails, reopened, reopenedCompanyDetails, clock.instant());
+                    conversion, companyDetails, accountingDimensions, reopened,
+                    reopenedCompanyDetails, reopenedAccountingDimensions, clock.instant());
         } finally {
             if (!success) {
                 deleteTree(staging);
@@ -144,7 +157,9 @@ public final class AccountingCoreStagingCatalogService {
     public record StagingCatalogResult(Path stagingDirectory, Path database,
                                        AccountingCoreStagingConverter.ConversionResult conversion,
                                        CompanyDetailsStagingConverter.ConversionResult companyDetails,
+                                       AccountingDimensionsStagingConverter.ConversionResult accountingDimensions,
                                        SemanticFingerprint durableFingerprint,
                                        SemanticFingerprint durableCompanyDetailsFingerprint,
+                                       SemanticFingerprint durableAccountingDimensionsFingerprint,
                                        Instant completedAt) {}
 }
