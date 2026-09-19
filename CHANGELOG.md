@@ -38,6 +38,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   values, dimension references, legacy Swedish modification times, and table/object key validation.
 - Normalize the complete customer register and invoice/delivery addresses in staging, including
   embedded currencies and terms, exact limits/discounts, flags, null/empty text, and key validation.
+- Normalize the complete supplier register and address in staging, including supplier-only currency
+  and term lookups, payout metadata, null/empty text, and scalar/object number validation.
 
 ### Changed
 
