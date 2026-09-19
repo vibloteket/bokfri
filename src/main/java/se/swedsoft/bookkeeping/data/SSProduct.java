@@ -320,6 +320,11 @@ public class SSProduct implements SSTableSearchable, Serializable {
         return iUnitprice;
     }
 
+    /** Returns the persisted selling price without applying display rounding. */
+    public BigDecimal getStoredSellingPrice() {
+        return iUnitprice;
+    }
+
     /**
      *
      * @param iUnitprice
@@ -590,6 +595,11 @@ public class SSProduct implements SSTableSearchable, Serializable {
         return iWeight;
     }
 
+    /** Returns the persisted weight without replacing null with zero. */
+    public BigDecimal getStoredWeight() {
+        return iWeight;
+    }
+
     /**
      *
      * @param iWeight
@@ -612,6 +622,11 @@ public class SSProduct implements SSTableSearchable, Serializable {
         return iVolume;
     }
 
+    /** Returns the persisted volume without replacing null with zero. */
+    public BigDecimal getStoredVolume() {
+        return iVolume;
+    }
+
     /**
      *
      * @param iVolume
@@ -627,6 +642,12 @@ public class SSProduct implements SSTableSearchable, Serializable {
      * @param iDefaultAccount
      * @return
      */
+    /** Returns an immutable snapshot of explicitly persisted account overrides. */
+    public Map<SSDefaultAccount, Integer> getStoredDefaultAccounts() {
+        return iDefaultAccounts == null ? Map.of()
+                : Collections.unmodifiableMap(new HashMap<>(iDefaultAccounts));
+    }
+
     public Integer getDefaultAccount(SSDefaultAccount iDefaultAccount) {
         if (iDefaultAccounts == null) {
             iDefaultAccounts = new HashMap<>();

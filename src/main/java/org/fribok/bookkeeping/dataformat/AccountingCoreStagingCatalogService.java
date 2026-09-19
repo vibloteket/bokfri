@@ -57,6 +57,7 @@ public final class AccountingCoreStagingCatalogService {
             AccountingTemplatesStagingConverter.ConversionResult accountingTemplates;
             CustomerRegisterStagingConverter.ConversionResult customers;
             SupplierRegisterStagingConverter.ConversionResult suppliers;
+            ProductRegisterStagingConverter.ConversionResult products;
             try (Connection normalized = DriverManager.getConnection(url, "sa", "")) {
                 try {
                     normalized.setAutoCommit(false);
@@ -70,6 +71,7 @@ public final class AccountingCoreStagingCatalogService {
                             .convert(legacy, normalized);
                     customers = new CustomerRegisterStagingConverter().convert(legacy, normalized);
                     suppliers = new SupplierRegisterStagingConverter().convert(legacy, normalized);
+                    products = new ProductRegisterStagingConverter().convert(legacy, normalized);
                     shutdown(normalized, "SHUTDOWN SCRIPT");
                 } catch (SQLException | RuntimeException failure) {
                     shutdownAfterFailure(normalized, failure);
@@ -83,6 +85,7 @@ public final class AccountingCoreStagingCatalogService {
             SemanticFingerprint reopenedAccountingTemplates;
             SemanticFingerprint reopenedCustomers;
             SemanticFingerprint reopenedSuppliers;
+            SemanticFingerprint reopenedProducts;
             try (Connection verification = DriverManager.getConnection(url, "sa", "")) {
                 verification.setReadOnly(true);
                 reopened = new AccountingCoreStagingConverter()
@@ -96,6 +99,8 @@ public final class AccountingCoreStagingCatalogService {
                 reopenedCustomers = new CustomerRegisterStagingConverter()
                         .fingerprintNormalized(verification);
                 reopenedSuppliers = new SupplierRegisterStagingConverter()
+                        .fingerprintNormalized(verification);
+                reopenedProducts = new ProductRegisterStagingConverter()
                         .fingerprintNormalized(verification);
                 shutdown(verification, "SHUTDOWN");
             }
@@ -132,12 +137,17 @@ public final class AccountingCoreStagingCatalogService {
                 throw new IOException("Durable supplier-register fingerprint mismatch after reopen: "
                         + String.join("; ", supplierDifferences));
             }
+            var productDifferences = products.destinationFingerprint().differences(reopenedProducts);
+            if (!productDifferences.isEmpty()) {
+                throw new IOException("Durable product-register fingerprint mismatch after reopen: "
+                        + String.join("; ", productDifferences));
+            }
             requireCatalogFiles(database);
             success = true;
             return new StagingCatalogResult(staging, database,
                     conversion, companyDetails, accountingDimensions, accountingTemplates, customers,
-                    suppliers, reopened, reopenedCompanyDetails, reopenedAccountingDimensions,
-                    reopenedAccountingTemplates, reopenedCustomers, reopenedSuppliers,
+                    suppliers, products, reopened, reopenedCompanyDetails, reopenedAccountingDimensions,
+                    reopenedAccountingTemplates, reopenedCustomers, reopenedSuppliers, reopenedProducts,
                     clock.instant());
         } finally {
             if (!success) {
@@ -195,11 +205,13 @@ public final class AccountingCoreStagingCatalogService {
                                        AccountingTemplatesStagingConverter.ConversionResult accountingTemplates,
                                        CustomerRegisterStagingConverter.ConversionResult customers,
                                        SupplierRegisterStagingConverter.ConversionResult suppliers,
+                                       ProductRegisterStagingConverter.ConversionResult products,
                                        SemanticFingerprint durableFingerprint,
                                        SemanticFingerprint durableCompanyDetailsFingerprint,
                                        SemanticFingerprint durableAccountingDimensionsFingerprint,
                                        SemanticFingerprint durableAccountingTemplatesFingerprint,
                                        SemanticFingerprint durableCustomerRegisterFingerprint,
                                        SemanticFingerprint durableSupplierRegisterFingerprint,
+                                       SemanticFingerprint durableProductRegisterFingerprint,
                                        Instant completedAt) {}
 }
