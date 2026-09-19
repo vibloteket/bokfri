@@ -7,6 +7,11 @@ import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
+import se.swedsoft.bookkeeping.data.common.SSCurrency;
+import se.swedsoft.bookkeeping.data.common.SSDeliveryTerm;
+import se.swedsoft.bookkeeping.data.common.SSDeliveryWay;
+import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
+import se.swedsoft.bookkeeping.data.common.SSUnit;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -56,15 +61,26 @@ public final class AccountingCoreStagingConverter {
 
     private static Snapshot readLegacy(Connection connection) throws SQLException {
         Snapshot snapshot = new Snapshot();
+        readLegacyLookups(connection, snapshot);
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
                      "SELECT id, company FROM tbl_company ORDER BY id")) {
             while (result.next()) {
                 int id = result.getInt(1);
                 SSNewCompany company = (SSNewCompany) result.getObject(2);
+                String currencyCode = company.getCurrency() == null
+                        ? null : company.getCurrency().getName();
                 snapshot.companies.add(new CompanyRow(id, company.getName(),
-                        company.getCorporateID(), company.getVATNumber(),
-                        company.getCurrency() == null ? null : company.getCurrency().getName()));
+                        company.getCorporateID(), company.getVATNumber(), currencyCode));
+                if (company.getCurrency() != null) {
+                    snapshot.addLookup("currency", currencyCode,
+                            company.getCurrency().getDescription(),
+                            company.getCurrency().getExchangeRate());
+                }
+                addCompanyLookup(snapshot, "unit", company.getStandardUnit());
+                addCompanyLookup(snapshot, "payment-term", company.getPaymentTerm());
+                addCompanyLookup(snapshot, "delivery-term", company.getDeliveryTerm());
+                addCompanyLookup(snapshot, "delivery-way", company.getDeliveryWay());
             }
         }
         try (Statement statement = connection.createStatement();
@@ -145,7 +161,97 @@ public final class AccountingCoreStagingConverter {
         return snapshot;
     }
 
+    private static void readLegacyLookups(Connection connection, Snapshot snapshot)
+            throws SQLException {
+        readLegacyLookupTable(connection, snapshot, "tbl_currency", "currency", "currency");
+        readLegacyLookupTable(connection, snapshot, "tbl_unit", "unit", "unit");
+        readLegacyLookupTable(connection, snapshot, "tbl_paymentterm", "paymentterm", "payment-term");
+        readLegacyLookupTable(connection, snapshot, "tbl_deliveryterm", "deliveryterm", "delivery-term");
+        readLegacyLookupTable(connection, snapshot, "tbl_deliveryway", "deliveryway", "delivery-way");
+    }
+
+    private static void readLegacyLookupTable(Connection connection, Snapshot snapshot,
+                                               String table, String objectColumn, String type)
+            throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT " + objectColumn + " FROM "
+                     + table)) {
+            while (result.next()) {
+                Object value = result.getObject(1);
+                if (value instanceof SSCurrency currency) {
+                    snapshot.addLookup(type, currency.getName(), currency.getDescription(),
+                            currency.getExchangeRate());
+                } else if (value instanceof SSUnit unit) {
+                    snapshot.addLookup(type, unit.getName(), unit.getDescription(), null);
+                } else if (value instanceof SSPaymentTerm term) {
+                    snapshot.addLookup(type, term.getName(), term.getDescription(), null);
+                } else if (value instanceof SSDeliveryTerm term) {
+                    snapshot.addLookup(type, term.getName(), term.getDescription(), null);
+                } else if (value instanceof SSDeliveryWay way) {
+                    snapshot.addLookup(type, way.getName(), way.getDescription(), null);
+                } else {
+                    throw new SQLException("Unexpected legacy lookup object in " + table + ": "
+                            + (value == null ? "null" : value.getClass().getName()));
+                }
+            }
+        }
+    }
+
+    private static void addCompanyLookup(Snapshot snapshot, String type, Object value)
+            throws SQLException {
+        if (value instanceof SSUnit unit) {
+            snapshot.addLookup(type, unit.getName(), unit.getDescription(), null);
+        } else if (value instanceof SSPaymentTerm term) {
+            snapshot.addLookup(type, term.getName(), term.getDescription(), null);
+        } else if (value instanceof SSDeliveryTerm term) {
+            snapshot.addLookup(type, term.getName(), term.getDescription(), null);
+        } else if (value instanceof SSDeliveryWay way) {
+            snapshot.addLookup(type, way.getName(), way.getDescription(), null);
+        } else if (value != null) {
+            throw new SQLException("Unexpected company lookup object: " + value.getClass().getName());
+        }
+    }
+
+    private static void writeLookups(Connection connection, Snapshot snapshot) throws SQLException {
+        for (LookupRow row : snapshot.lookups.values()) {
+            String table = switch (row.type) {
+                case "currency" -> "currency";
+                case "unit" -> "unit_definition";
+                case "payment-term" -> "payment_term";
+                case "delivery-term" -> "delivery_term";
+                case "delivery-way" -> "delivery_way";
+                default -> throw new SQLException("Unknown lookup type " + row.type);
+            };
+            String sql = "currency".equals(row.type)
+                    ? "INSERT INTO currency (code,description,exchange_rate) VALUES (?,?,?)"
+                    : "INSERT INTO " + table + " (name,description) VALUES (?,?)";
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, row.name); statement.setString(2, row.description);
+                if ("currency".equals(row.type)) statement.setBigDecimal(3, row.exchangeRate);
+                statement.executeUpdate();
+            }
+        }
+    }
+
+    private static void readNormalizedLookups(Connection connection, Snapshot snapshot)
+            throws SQLException {
+        query(connection, "SELECT code,description,exchange_rate FROM currency ORDER BY code",
+                r -> snapshot.addLookup("currency", r.getString(1), r.getString(2),
+                        r.getBigDecimal(3)));
+        readNormalizedLookupTable(connection, snapshot, "unit_definition", "unit");
+        readNormalizedLookupTable(connection, snapshot, "payment_term", "payment-term");
+        readNormalizedLookupTable(connection, snapshot, "delivery_term", "delivery-term");
+        readNormalizedLookupTable(connection, snapshot, "delivery_way", "delivery-way");
+    }
+
+    private static void readNormalizedLookupTable(Connection connection, Snapshot snapshot,
+                                                   String table, String type) throws SQLException {
+        query(connection, "SELECT name,description FROM " + table + " ORDER BY name",
+                r -> snapshot.addLookup(type, r.getString(1), r.getString(2), null));
+    }
+
     private static void writeNormalized(Connection connection, Snapshot snapshot) throws SQLException {
+        writeLookups(connection, snapshot);
         Map<Integer, Long> companies = new HashMap<>();
         for (CompanyRow row : snapshot.companies) {
             try (PreparedStatement statement = connection.prepareStatement(
@@ -253,6 +359,7 @@ public final class AccountingCoreStagingConverter {
 
     private static Snapshot readNormalized(Connection connection) throws SQLException {
         Snapshot snapshot = new Snapshot();
+        readNormalizedLookups(connection, snapshot);
         query(connection, "SELECT legacy_id,name,corporate_id,vat_number,currency_code FROM company ORDER BY legacy_id",
                 result -> snapshot.companies.add(new CompanyRow(result.getInt(1), result.getString(2),
                         result.getString(3), result.getString(4), result.getString(5))));
@@ -309,6 +416,11 @@ public final class AccountingCoreStagingConverter {
 
     private static SemanticFingerprint fingerprint(Snapshot s) {
         SemanticFingerprintBuilder builder = new SemanticFingerprintBuilder();
+        var lookups = builder.domain("shared-lookups");
+        for (LookupRow r : s.lookups.values()) lookups.startRecord(r.type + "/" + r.name)
+                .writeString(r.type).writeString(r.name).writeString(r.description)
+                .writeDecimal(canonicalAmount(r.exchangeRate));
+        lookups.finish();
         var companies = builder.domain("companies");
         for (CompanyRow r : s.companies) companies.startRecord(Integer.toString(r.legacyId))
                 .writeInteger(r.legacyId).writeString(r.name).writeString(r.corporateId)
@@ -357,6 +469,10 @@ public final class AccountingCoreStagingConverter {
         domain.finish();
     }
 
+    private static boolean sameDecimal(BigDecimal first, BigDecimal second) {
+        return first == null ? second == null : second != null && first.compareTo(second) == 0;
+    }
+
     private static BigDecimal canonicalAmount(BigDecimal value) {
         if (value == null) {
             return null;
@@ -381,6 +497,12 @@ public final class AccountingCoreStagingConverter {
             long vouchers, long voucherRows, long daylightSavingGapAdjustments,
             long daylightSavingOverlapResolutions) {}
     @FunctionalInterface private interface SqlRow { void accept(ResultSet result) throws SQLException; }
+    private record LookupKey(String type,String name) implements Comparable<LookupKey> {
+        @Override public int compareTo(LookupKey other) {
+            int typeOrder=type.compareTo(other.type); return typeOrder!=0?typeOrder:name.compareTo(other.name);
+        }
+    }
+    private record LookupRow(String type,String name,String description,BigDecimal exchangeRate){}
     private record CompanyRow(int legacyId,String name,String corporateId,String vatNumber,String currencyCode){}
     private record YearRow(int legacyId,int companyLegacyId,java.time.LocalDate from,java.time.LocalDate to,Integer planLegacyId,String planName,String baseName,String assessmentYear,String planType){}
     private record AccountRow(int yearLegacyId,Integer number,String description,String sruCode,String vatCode,String reportCode,boolean active,boolean projectRequired,boolean resultUnitRequired){}
@@ -391,10 +513,19 @@ public final class AccountingCoreStagingConverter {
     private record YearVoucher(int yearLegacyId,int voucherNumber){}
 
     private static final class Snapshot {
+        final Map<LookupKey,LookupRow> lookups=new java.util.TreeMap<>();
         final List<CompanyRow> companies=new ArrayList<>(); final List<YearRow> years=new ArrayList<>();
         final List<AccountRow> accounts=new ArrayList<>(); final List<AmountRow> openingBalances=new ArrayList<>();
         final List<AmountRow> budgets=new ArrayList<>(); final List<VoucherRow> vouchers=new ArrayList<>();
         final List<VoucherLine> rows=new ArrayList<>(); long gapAdjustments; long overlapResolutions;
+        void addLookup(String type,String name,String description,BigDecimal exchangeRate) throws SQLException {
+            if(name==null) return;
+            LookupKey key=new LookupKey(type,name); LookupRow value=new LookupRow(type,name,description,exchangeRate);
+            LookupRow previous=lookups.putIfAbsent(key,value);
+            if(previous!=null && (!Objects.equals(previous.description,description)
+                    || !sameDecimal(previous.exchangeRate,exchangeRate)))
+                throw new SQLException("Conflicting legacy lookup value for "+type+" "+name);
+        }
         void sort(){
             companies.sort(Comparator.comparingInt(CompanyRow::legacyId)); years.sort(Comparator.comparingInt(YearRow::legacyId));
             accounts.sort(Comparator.comparingInt(AccountRow::yearLegacyId).thenComparing(AccountRow::number,Comparator.nullsFirst(Integer::compareTo)));
