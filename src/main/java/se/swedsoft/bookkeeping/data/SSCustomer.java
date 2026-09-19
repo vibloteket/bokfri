@@ -452,6 +452,11 @@ public class SSCustomer implements Serializable, SSTableSearchable {
         return SSDB.getInstance().getCurrency(iInvoiceCurrency).orElse(null);
     }
 
+    /** Returns the persisted currency reference without consulting the global database. */
+    public SSCurrency getStoredInvoiceCurrency() {
+        return iInvoiceCurrency;
+    }
+
     /**
      *
      * @param iInvoiceCurrency

@@ -36,6 +36,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   state/date, and rejecting disagreement between legacy table keys and serialized object identifiers.
 - Normalize voucher templates and automatic distributions with ordered child rows, exact decimal
   values, dimension references, legacy Swedish modification times, and table/object key validation.
+- Normalize the complete customer register and invoice/delivery addresses in staging, including
+  embedded currencies and terms, exact limits/discounts, flags, null/empty text, and key validation.
 
 ### Changed
 
