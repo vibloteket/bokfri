@@ -48,6 +48,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   sale/address/account/row snapshots and embedded voucher graph.
 - Convert complete legacy customer credit invoices into staging with source/target/durable fingerprints,
   preserving all snapshot fields, ordered rows, embedded vouchers, and Swedish DST decisions.
+- Add the normalized periodic-invoice staging schema for templates, generated instances, added flags,
+  and ordered rows; conversion follows separately.
 
 ### Changed
 
