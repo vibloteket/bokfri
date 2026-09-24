@@ -49,7 +49,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Convert complete legacy customer credit invoices into staging with source/target/durable fingerprints,
   preserving all snapshot fields, ordered rows, embedded vouchers, and Swedish DST decisions.
 - Add the normalized periodic-invoice staging schema for templates, generated instances, added flags,
-  and ordered rows; conversion follows separately.
+  and ordered rows.
+- Convert complete legacy periodic invoices into staging with template, generated instances, added
+  flags, and ordered rows, verified by source/target/durable fingerprints.
 
 ### Changed
 

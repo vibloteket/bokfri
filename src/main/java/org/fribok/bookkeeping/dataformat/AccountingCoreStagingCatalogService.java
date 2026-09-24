@@ -60,6 +60,7 @@ public final class AccountingCoreStagingCatalogService {
             ProductRegisterStagingConverter.ConversionResult products;
             CustomerInvoiceStagingConverter.ConversionResult customerInvoices;
             CustomerCreditInvoiceStagingConverter.ConversionResult customerCreditInvoices;
+            PeriodicInvoiceStagingConverter.ConversionResult periodicInvoices;
             try (Connection normalized = DriverManager.getConnection(url, "sa", "")) {
                 try {
                     normalized.setAutoCommit(false);
@@ -76,6 +77,7 @@ public final class AccountingCoreStagingCatalogService {
                     products = new ProductRegisterStagingConverter().convert(legacy, normalized);
                     customerInvoices = new CustomerInvoiceStagingConverter().convert(legacy, normalized);
                     customerCreditInvoices = new CustomerCreditInvoiceStagingConverter().convert(legacy, normalized);
+                    periodicInvoices = new PeriodicInvoiceStagingConverter().convert(legacy, normalized);
                     shutdown(normalized, "SHUTDOWN SCRIPT");
                 } catch (SQLException | RuntimeException failure) {
                     shutdownAfterFailure(normalized, failure);
@@ -92,6 +94,7 @@ public final class AccountingCoreStagingCatalogService {
             SemanticFingerprint reopenedProducts;
             SemanticFingerprint reopenedCustomerInvoices;
             SemanticFingerprint reopenedCustomerCreditInvoices;
+            SemanticFingerprint reopenedPeriodicInvoices;
             try (Connection verification = DriverManager.getConnection(url, "sa", "")) {
                 verification.setReadOnly(true);
                 reopened = new AccountingCoreStagingConverter()
@@ -111,6 +114,8 @@ public final class AccountingCoreStagingCatalogService {
                 reopenedCustomerInvoices = new CustomerInvoiceStagingConverter()
                         .fingerprintNormalized(verification);
                 reopenedCustomerCreditInvoices = new CustomerCreditInvoiceStagingConverter()
+                        .fingerprintNormalized(verification);
+                reopenedPeriodicInvoices = new PeriodicInvoiceStagingConverter()
                         .fingerprintNormalized(verification);
                 shutdown(verification, "SHUTDOWN");
             }
@@ -164,14 +169,20 @@ public final class AccountingCoreStagingCatalogService {
                 throw new IOException("Durable customer-credit-invoice fingerprint mismatch after reopen: "
                         + String.join("; ", creditInvoiceDifferences));
             }
+            var periodicDifferences = periodicInvoices.destinationFingerprint()
+                    .differences(reopenedPeriodicInvoices);
+            if (!periodicDifferences.isEmpty()) {
+                throw new IOException("Durable periodic-invoice fingerprint mismatch after reopen: "
+                        + String.join("; ", periodicDifferences));
+            }
             requireCatalogFiles(database);
             success = true;
             return new StagingCatalogResult(staging, database,
                     conversion, companyDetails, accountingDimensions, accountingTemplates, customers,
-                    suppliers, products, customerInvoices, customerCreditInvoices, reopened,
-                    reopenedCompanyDetails, reopenedAccountingDimensions, reopenedAccountingTemplates,
-                    reopenedCustomers, reopenedSuppliers, reopenedProducts, reopenedCustomerInvoices,
-                    reopenedCustomerCreditInvoices,
+                    suppliers, products, customerInvoices, customerCreditInvoices, periodicInvoices,
+                    reopened, reopenedCompanyDetails, reopenedAccountingDimensions,
+                    reopenedAccountingTemplates, reopenedCustomers, reopenedSuppliers, reopenedProducts,
+                    reopenedCustomerInvoices, reopenedCustomerCreditInvoices, reopenedPeriodicInvoices,
                     clock.instant());
         } finally {
             if (!success) {
@@ -232,6 +243,7 @@ public final class AccountingCoreStagingCatalogService {
                                        ProductRegisterStagingConverter.ConversionResult products,
                                        CustomerInvoiceStagingConverter.ConversionResult customerInvoices,
                                        CustomerCreditInvoiceStagingConverter.ConversionResult customerCreditInvoices,
+                                       PeriodicInvoiceStagingConverter.ConversionResult periodicInvoices,
                                        SemanticFingerprint durableFingerprint,
                                        SemanticFingerprint durableCompanyDetailsFingerprint,
                                        SemanticFingerprint durableAccountingDimensionsFingerprint,
@@ -241,5 +253,6 @@ public final class AccountingCoreStagingCatalogService {
                                        SemanticFingerprint durableProductRegisterFingerprint,
                                        SemanticFingerprint durableCustomerInvoiceFingerprint,
                                        SemanticFingerprint durableCustomerCreditInvoiceFingerprint,
+                                       SemanticFingerprint durablePeriodicInvoiceFingerprint,
                                        Instant completedAt) {}
 }
