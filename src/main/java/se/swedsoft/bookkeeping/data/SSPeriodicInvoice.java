@@ -158,7 +158,11 @@ public class SSPeriodicInvoice implements Serializable {
         if (iTemplate == null) {
             iTemplate = new SSInvoice(SSInvoiceType.NORMAL);
         }
+        return iTemplate;
+    }
 
+    /** Returns the persisted template without generating a default. */
+    public SSInvoice getStoredTemplate() {
         return iTemplate;
     }
 
@@ -321,6 +325,14 @@ public class SSPeriodicInvoice implements Serializable {
      * @param iInvoice
      * @return
      */
+    /** Returns the added flags for persisted instances, keyed by invoice number. */
+    public Map<Integer, Boolean> getStoredAdded() {
+        if (iAdded == null) {
+            iAdded = new HashMap<>();
+        }
+        return iAdded;
+    }
+
     public boolean isAdded(SSInvoice iInvoice) {
         if (iAdded == null) {
             iAdded = new HashMap<>();
