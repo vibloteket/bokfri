@@ -7,6 +7,8 @@ import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInvoice;
+import se.swedsoft.bookkeeping.data.SSInpaymentRow;
+import se.swedsoft.bookkeeping.data.SSOutpaymentRow;
 import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.SSVoucher;
@@ -70,6 +72,7 @@ public final class AccountingCoreStagingConverter {
         readSupplierLookups(connection, snapshot);
         readProductLookups(connection, snapshot);
         readInvoiceLookups(connection, snapshot);
+        readPaymentLookups(connection, snapshot);
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
                      "SELECT id, company FROM tbl_company ORDER BY id")) {
@@ -167,6 +170,38 @@ public final class AccountingCoreStagingConverter {
         }
         snapshot.sort();
         return snapshot;
+    }
+
+    private static void readPaymentLookups(Connection connection, Snapshot snapshot)
+            throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT inpayment FROM tbl_inpayment")) {
+            while (result.next()) {
+                se.swedsoft.bookkeeping.data.SSInpayment payment =
+                        (se.swedsoft.bookkeeping.data.SSInpayment) result.getObject(1);
+                for (SSInpaymentRow row : payment.getRows()) {
+                    if (row.getInvoiceCurrency() != null) {
+                        snapshot.addLookup("currency", row.getInvoiceCurrency().getName(),
+                                row.getInvoiceCurrency().getDescription(),
+                                row.getInvoiceCurrency().getExchangeRate());
+                    }
+                }
+            }
+        }
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT outpayment FROM tbl_outpayment")) {
+            while (result.next()) {
+                se.swedsoft.bookkeeping.data.SSOutpayment payment =
+                        (se.swedsoft.bookkeeping.data.SSOutpayment) result.getObject(1);
+                for (SSOutpaymentRow row : payment.getRows()) {
+                    if (row.getInvoiceCurrency() != null) {
+                        snapshot.addLookup("currency", row.getInvoiceCurrency().getName(),
+                                row.getInvoiceCurrency().getDescription(),
+                                row.getInvoiceCurrency().getExchangeRate());
+                    }
+                }
+            }
+        }
     }
 
     private static void readInvoiceLookups(Connection connection, Snapshot snapshot)
