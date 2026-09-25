@@ -48,7 +48,9 @@ class NormalizedAccountingCoreSchemaTest {
                     "periodic_invoice_instance", "periodic_invoice_instance_row",
                     "periodic_invoice_template_row", "product", "product_component",
                     "product_default_account", "product_description", "project", "result_unit",
-                    "supplier", "supplier_address", "unit_definition", "voucher", "voucher_row", "voucher_template",
+                    "supplier", "supplier_address", "supplier_invoice", "supplier_invoice_default_account",
+                    "supplier_invoice_row", "supplier_invoice_voucher", "supplier_invoice_voucher_row",
+                    "unit_definition", "voucher", "voucher_row", "voucher_template",
                     "voucher_template_row");
             try (var columns = connection.getMetaData().getColumns(null, null, "%", "%")) {
                 while (columns.next()) {
@@ -64,7 +66,7 @@ class NormalizedAccountingCoreSchemaTest {
     @Test
     void appliesPackagedSchemaAndRoundTripsCoreTypes() throws Exception {
         try (Connection connection = connection()) {
-            assertThat(migrate(connection)).containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+            assertThat(migrate(connection)).containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
             assertThat(migrate(connection)).isEmpty();
 
             long company = insertCompany(connection, 7, null);
