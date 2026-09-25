@@ -284,6 +284,11 @@ public class SSOutpayment implements SSTableSearchable, Serializable {
         return iDifference;
     }
 
+    /** Returns the persisted difference voucher without generating one. */
+    public SSVoucher getStoredDifference() {
+        return iDifference;
+    }
+
     /**
      *
      * @param iDifference
