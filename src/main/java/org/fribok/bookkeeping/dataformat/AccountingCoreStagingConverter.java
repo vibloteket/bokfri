@@ -565,6 +565,12 @@ public final class AccountingCoreStagingConverter {
         return fingerprint(readNormalized(connection));
     }
 
+    /** Reads and fingerprints a legacy object catalog without converting it. */
+    public SemanticFingerprint fingerprintLegacy(Connection connection) throws SQLException {
+        Objects.requireNonNull(connection, "connection");
+        return fingerprint(readLegacy(connection));
+    }
+
     private static Snapshot readNormalized(Connection connection) throws SQLException {
         Snapshot snapshot = new Snapshot();
         readNormalizedLookups(connection, snapshot);
@@ -627,7 +633,7 @@ public final class AccountingCoreStagingConverter {
         var lookups = builder.domain("shared-lookups");
         for (LookupRow r : s.lookups.values()) lookups.startRecord(r.type + "/" + r.name)
                 .writeString(r.type).writeString(r.name).writeString(r.description)
-                .writeDecimal(canonicalAmount(r.exchangeRate));
+                .writeDecimal(canon(r.exchangeRate));
         lookups.finish();
         var companies = builder.domain("companies");
         for (CompanyRow r : s.companies) companies.startRecord(Integer.toString(r.legacyId))
@@ -652,10 +658,10 @@ public final class AccountingCoreStagingConverter {
         for (VoucherLine r : s.rows) rows.startRecord(r.yearLegacyId + "/" + r.voucherNumber + "/" + r.rowNumber)
                 .writeInteger(r.yearLegacyId).writeInteger(r.rowNumber).writeInteger(r.accountNumber)
                 .writeString(r.projectNumber).writeString(r.resultUnitNumber)
-                .writeDecimal(canonicalAmount(r.debit)).writeDecimal(canonicalAmount(r.credit))
+                .writeDecimal(canon(r.debit)).writeDecimal(canon(r.credit))
                 .writeInstant(r.editedAt).writeString(r.editedSignature)
                 .writeBoolean(r.crossed).writeBoolean(r.added)
-                .addDebit(canonicalAmount(r.debit)).addCredit(canonicalAmount(r.credit));
+                .addDebit(canon(r.debit)).addCredit(canon(r.credit));
         rows.finish();
         return builder.finish();
     }
@@ -673,7 +679,7 @@ public final class AccountingCoreStagingConverter {
         var domain = b.domain(name);
         for (AmountRow r : values) domain.startRecord(r.yearLegacyId + "/" + r.accountNumber + "/" + r.periodStart)
                 .writeInteger(r.yearLegacyId).writeInteger(r.accountNumber).writeDate(r.periodStart)
-                .writeDate(r.periodEnd).writeDecimal(canonicalAmount(r.amount));
+                .writeDate(r.periodEnd).writeDecimal(canon(r.amount));
         domain.finish();
     }
 
@@ -681,12 +687,7 @@ public final class AccountingCoreStagingConverter {
         return first == null ? second == null : second != null && first.compareTo(second) == 0;
     }
 
-    private static BigDecimal canonicalAmount(BigDecimal value) {
-        if (value == null) {
-            return null;
-        }
-        return value.signum() == 0 ? BigDecimal.ZERO : value.stripTrailingZeros();
-    }
+    private static BigDecimal canon(BigDecimal value) { return CanonicalValues.amount(value); }
 
     private static void query(Connection c, String sql, SqlRow consumer) throws SQLException {
         try (Statement statement = c.createStatement(); ResultSet result = statement.executeQuery(sql)) {

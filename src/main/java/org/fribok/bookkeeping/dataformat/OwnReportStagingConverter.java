@@ -83,7 +83,7 @@ public final class OwnReportStagingConverter {
         return b.finish();
     }
 
-    private static BigDecimal canon(BigDecimal v) { return v == null ? null : v.signum() == 0 ? BigDecimal.ZERO : v.stripTrailingZeros(); }
+    private static BigDecimal canon(BigDecimal value) { return CanonicalValues.amount(value); }
     private static void setInteger(PreparedStatement p, int i, Integer v) throws SQLException { if (v == null) p.setNull(i, Types.INTEGER); else p.setInt(i, v); }
     private static void setBoolean(PreparedStatement p, int i, Boolean v) throws SQLException { if (v == null) p.setNull(i, Types.BOOLEAN); else p.setBoolean(i, v); }
     private static Integer nullableInteger(ResultSet r, int i) throws SQLException { int v = r.getInt(i); return r.wasNull() ? null : v; }

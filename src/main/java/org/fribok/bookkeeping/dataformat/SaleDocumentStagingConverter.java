@@ -124,7 +124,7 @@ public final class SaleDocumentStagingConverter {
     private static String parentColumn(Kind k) { return k == Kind.ORDER ? "order_id" : "tender_id"; }
     private static long key(int legacyId, Kind kind) { return ((long) legacyId << 1) | (kind == Kind.ORDER ? 0 : 1); }
     private static String name(Object v) { if (v instanceof se.swedsoft.bookkeeping.data.common.SSPaymentTerm x) return x.getName(); if (v instanceof se.swedsoft.bookkeeping.data.common.SSDeliveryTerm x) return x.getName(); if (v instanceof se.swedsoft.bookkeeping.data.common.SSDeliveryWay x) return x.getName(); return null; }
-    private static BigDecimal canon(BigDecimal v) { return v == null ? null : v.signum() == 0 ? BigDecimal.ZERO : v.stripTrailingZeros(); }
+    private static BigDecimal canon(BigDecimal value) { return CanonicalValues.amount(value); }
     private static void setInteger(PreparedStatement p, int i, Integer v) throws SQLException { if (v == null) p.setNull(i, Types.INTEGER); else p.setInt(i, v); }
     private static Integer nullableInteger(ResultSet r, int i) throws SQLException { int v = r.getInt(i); return r.wasNull() ? null : v; }
     private static long key(PreparedStatement p) throws SQLException { try (ResultSet r = p.getGeneratedKeys()) { if (!r.next()) throw new SQLException("Missing generated sale-document key"); return r.getLong(1); } }

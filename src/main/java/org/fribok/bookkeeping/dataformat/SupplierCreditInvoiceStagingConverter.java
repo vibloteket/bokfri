@@ -82,7 +82,7 @@ public final class SupplierCreditInvoiceStagingConverter {
         return b.finish();
     }
 
-    private static BigDecimal canon(BigDecimal v) { return v == null ? null : v.signum() == 0 ? BigDecimal.ZERO : v.stripTrailingZeros(); }
+    private static BigDecimal canon(BigDecimal value) { return CanonicalValues.amount(value); }
     private static void setInteger(PreparedStatement p, int i, Integer v) throws SQLException { if (v == null) p.setNull(i, Types.INTEGER); else p.setInt(i, v); }
     private static Integer nullableInteger(ResultSet r, int i) throws SQLException { int v = r.getInt(i); return r.wasNull() ? null : v; }
     private static long key(PreparedStatement p) throws SQLException { try (ResultSet r = p.getGeneratedKeys()) { if (!r.next()) throw new SQLException("Missing generated supplier-credit-invoice key"); return r.getLong(1); } }

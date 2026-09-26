@@ -67,6 +67,15 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   rows, preserving stock quantity, change, dates and text, verified by durable fingerprints.
 - Normalize own reports in staging with headings, account-row snapshots, and monthly budgets, completing
   explicit representation of every legacy `OTHER` domain table.
+- Add an end-to-end migration of the real v1.0.1 database fixture: engine upgrade, all converters,
+  durable staging reopen, matching fingerprints, and a reopened-source fingerprint proving the legacy
+  catalog's accounting data is unchanged.
+
+### Fixed
+
+- Normalize fingerprint decimal comparison to the staging storage contract (30 fractional digits,
+  half-up) so legacy values stored with floating-point-expanded precision compare equal to what the
+  explicit columns actually store. Preserve standard texts whose value is null.
 
 ### Changed
 

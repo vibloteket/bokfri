@@ -211,9 +211,7 @@ public final class AccountingTemplatesStagingConverter {
         return builder.finish();
     }
 
-    private static BigDecimal canonical(BigDecimal value) {
-        return value == null ? null : value.signum() == 0 ? BigDecimal.ZERO : value.stripTrailingZeros();
-    }
+    private static BigDecimal canonical(BigDecimal value) { return CanonicalValues.amount(value); }
     private static OffsetDateTime offset(Instant value) { return value == null ? null : OffsetDateTime.ofInstant(value, ZoneOffset.UTC); }
     private static void setInteger(PreparedStatement s,int i,Integer v)throws SQLException{if(v==null)s.setNull(i,java.sql.Types.INTEGER);else s.setInt(i,v);}
     private static Integer nullableInteger(ResultSet r,int i)throws SQLException{int v=r.getInt(i);return r.wasNull()?null:v;}
