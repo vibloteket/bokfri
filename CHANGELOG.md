@@ -65,6 +65,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   rows with supplier article numbers, default accounts, and linked invoice snapshot number.
 - Normalize in/out deliveries and inventory counts in staging with headers and ordered product/quantity
   rows, preserving stock quantity, change, dates and text, verified by durable fingerprints.
+- Normalize own reports in staging with headings, account-row snapshots, and monthly budgets, completing
+  explicit representation of every legacy `OTHER` domain table.
 
 ### Changed
 
