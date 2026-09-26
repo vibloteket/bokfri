@@ -9,6 +9,8 @@ import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSInpaymentRow;
 import se.swedsoft.bookkeeping.data.SSOutpaymentRow;
+import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
+import se.swedsoft.bookkeeping.data.SSSupplierInvoiceRow;
 import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.SSVoucher;
@@ -73,6 +75,7 @@ public final class AccountingCoreStagingConverter {
         readProductLookups(connection, snapshot);
         readInvoiceLookups(connection, snapshot);
         readPaymentLookups(connection, snapshot);
+        readSupplierInvoiceLookups(connection, snapshot);
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
                      "SELECT id, company FROM tbl_company ORDER BY id")) {
@@ -170,6 +173,25 @@ public final class AccountingCoreStagingConverter {
         }
         snapshot.sort();
         return snapshot;
+    }
+
+    private static void readSupplierInvoiceLookups(Connection connection, Snapshot snapshot)
+            throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT supplierinvoice FROM tbl_supplierinvoice")) {
+            while (result.next()) {
+                SSSupplierInvoice invoice = (SSSupplierInvoice) result.getObject(1);
+                if (invoice.getCurrency() != null) {
+                    snapshot.addLookup("currency", invoice.getCurrency().getName(),
+                            invoice.getCurrency().getDescription(),
+                            invoice.getCurrency().getExchangeRate());
+                }
+                addCompanyLookup(snapshot, "payment-term", invoice.getPaymentTerm());
+                for (SSSupplierInvoiceRow row : invoice.getRows()) {
+                    addCompanyLookup(snapshot, "unit", row.getUnit());
+                }
+            }
+        }
     }
 
     private static void readPaymentLookups(Connection connection, Snapshot snapshot)

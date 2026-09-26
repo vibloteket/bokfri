@@ -54,6 +54,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   flags, and ordered rows, verified by source/target/durable fingerprints.
 - Normalize customer inpayments and supplier outpayments in staging with headers, ordered payment rows,
   default accounts, and main/difference voucher snapshots, verified by fingerprints.
+- Normalize supplier invoices in staging with ordered rows, account overrides, and main/correction
+  voucher snapshots, preserving exact tax/rounding sums and BGC/entered/stock flags.
 
 ### Changed
 

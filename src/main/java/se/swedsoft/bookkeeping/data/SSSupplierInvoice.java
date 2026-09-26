@@ -279,6 +279,11 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
         this.iPaymentTerm = iPaymentTerm;
     }
 
+    /** Returns the persisted payment term without applying defaults. */
+    public SSPaymentTerm getPaymentTerm() {
+        return iPaymentTerm;
+    }
+
     // //////////////////////////////////////////////////
 
     /**
