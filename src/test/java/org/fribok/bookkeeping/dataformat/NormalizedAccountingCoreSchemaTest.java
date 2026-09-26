@@ -42,9 +42,10 @@ class NormalizedAccountingCoreSchemaTest {
                     "customer_invoice_default_account", "customer_invoice_row",
                     "customer_invoice_voucher", "customer_invoice_voucher_row", "customer_order",
                     "customer_order_address", "customer_order_default_account", "customer_order_row",
-                    "delivery_term",
-                    "delivery_way", "inpayment", "inpayment_default_account", "inpayment_row",
-                    "inpayment_voucher", "inpayment_voucher_row", "opening_balance", "outpayment",
+                    "delivery_term", "delivery_way", "indelivery", "indelivery_row", "inpayment",
+                    "inpayment_default_account", "inpayment_row", "inpayment_voucher",
+                    "inpayment_voucher_row", "inventory", "inventory_row", "opening_balance",
+                    "outdelivery", "outdelivery_row", "outpayment",
                     "outpayment_default_account", "outpayment_row", "outpayment_voucher",
                     "outpayment_voucher_row", "payment_term", "periodic_invoice",
                     "periodic_invoice_instance", "periodic_invoice_instance_row",
@@ -75,7 +76,7 @@ class NormalizedAccountingCoreSchemaTest {
     void appliesPackagedSchemaAndRoundTripsCoreTypes() throws Exception {
         try (Connection connection = connection()) {
             assertThat(migrate(connection))
-                    .containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+                    .containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17);
             assertThat(migrate(connection)).isEmpty();
 
             long company = insertCompany(connection, 7, null);

@@ -63,6 +63,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   verified by durable fingerprints.
 - Normalize purchase orders in staging with supplier snapshot, delivery/supplier addresses, ordered
   rows with supplier article numbers, default accounts, and linked invoice snapshot number.
+- Normalize in/out deliveries and inventory counts in staging with headers and ordered product/quantity
+  rows, preserving stock quantity, change, dates and text, verified by durable fingerprints.
 
 ### Changed
 

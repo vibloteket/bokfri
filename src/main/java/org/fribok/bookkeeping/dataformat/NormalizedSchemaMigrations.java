@@ -21,7 +21,8 @@ public final class NormalizedSchemaMigrations {
             "/db/normalized/V13__create_supplier_invoices.sql",
             "/db/normalized/V14__create_supplier_credit_invoices.sql",
             "/db/normalized/V15__create_orders_and_tenders.sql",
-            "/db/normalized/V16__create_purchase_orders.sql");
+            "/db/normalized/V16__create_purchase_orders.sql",
+            "/db/normalized/V17__create_stock_documents.sql");
 
     private NormalizedSchemaMigrations() {}
 
