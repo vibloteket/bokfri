@@ -58,6 +58,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   voucher snapshots, preserving exact tax/rounding sums and BGC/entered/stock flags.
 - Normalize supplier credit invoices in staging with the credited-invoice snapshot number, ordered rows,
   account overrides, and main/correction voucher snapshots, verified by durable fingerprints.
+- Normalize customer orders and tenders in staging with complete sale snapshots, addresses, default
+  accounts, ordered rows, and document links (invoice/periodic-invoice/purchase-order numbers, expiry),
+  verified by durable fingerprints.
 
 ### Changed
 
