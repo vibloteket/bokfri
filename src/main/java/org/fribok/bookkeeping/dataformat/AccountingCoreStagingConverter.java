@@ -13,6 +13,8 @@ import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoiceRow;
 import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSOrder;
+import se.swedsoft.bookkeeping.data.SSPurchaseOrder;
+import se.swedsoft.bookkeeping.data.SSPurchaseOrderRow;
 import se.swedsoft.bookkeeping.data.SSTender;
 import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSSupplier;
@@ -81,6 +83,7 @@ public final class AccountingCoreStagingConverter {
         readSupplierInvoiceLookups(connection, snapshot);
         readSupplierCreditInvoiceLookups(connection, snapshot);
         readSaleDocumentLookups(connection, snapshot);
+        readPurchaseOrderLookups(connection, snapshot);
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
                      "SELECT id, company FROM tbl_company ORDER BY id")) {
@@ -178,6 +181,26 @@ public final class AccountingCoreStagingConverter {
         }
         snapshot.sort();
         return snapshot;
+    }
+
+    private static void readPurchaseOrderLookups(Connection connection, Snapshot snapshot)
+            throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT purchaseorder FROM tbl_purchaseorder")) {
+            while (result.next()) {
+                SSPurchaseOrder order = (SSPurchaseOrder) result.getObject(1);
+                if (order.getCurrency() != null) {
+                    snapshot.addLookup("currency", order.getCurrency().getName(),
+                            order.getCurrency().getDescription(), order.getCurrency().getExchangeRate());
+                }
+                addCompanyLookup(snapshot, "payment-term", order.getPaymentTerm());
+                addCompanyLookup(snapshot, "delivery-term", order.getDeliveryTerm());
+                addCompanyLookup(snapshot, "delivery-way", order.getDeliveryWay());
+                for (SSPurchaseOrderRow row : order.getRows()) {
+                    addCompanyLookup(snapshot, "unit", row.getUnit());
+                }
+            }
+        }
     }
 
     private static void readSaleDocumentLookups(Connection connection, Snapshot snapshot)

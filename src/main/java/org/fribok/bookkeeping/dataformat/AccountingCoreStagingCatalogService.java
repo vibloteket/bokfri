@@ -65,6 +65,7 @@ public final class AccountingCoreStagingCatalogService {
             SupplierInvoiceStagingConverter.ConversionResult supplierInvoices;
             SupplierCreditInvoiceStagingConverter.ConversionResult supplierCreditInvoices;
             SaleDocumentStagingConverter.ConversionResult saleDocuments;
+            PurchaseOrderStagingConverter.ConversionResult purchaseOrders;
             try (Connection normalized = DriverManager.getConnection(url, "sa", "")) {
                 try {
                     normalized.setAutoCommit(false);
@@ -87,6 +88,7 @@ public final class AccountingCoreStagingCatalogService {
                     supplierCreditInvoices = new SupplierCreditInvoiceStagingConverter()
                             .convert(legacy, normalized);
                     saleDocuments = new SaleDocumentStagingConverter().convert(legacy, normalized);
+                    purchaseOrders = new PurchaseOrderStagingConverter().convert(legacy, normalized);
                     shutdown(normalized, "SHUTDOWN SCRIPT");
                 } catch (SQLException | RuntimeException failure) {
                     shutdownAfterFailure(normalized, failure);
@@ -108,6 +110,7 @@ public final class AccountingCoreStagingCatalogService {
             SemanticFingerprint reopenedSupplierInvoices;
             SemanticFingerprint reopenedSupplierCreditInvoices;
             SemanticFingerprint reopenedSaleDocuments;
+            SemanticFingerprint reopenedPurchaseOrders;
             try (Connection verification = DriverManager.getConnection(url, "sa", "")) {
                 verification.setReadOnly(true);
                 reopened = new AccountingCoreStagingConverter()
@@ -137,6 +140,8 @@ public final class AccountingCoreStagingCatalogService {
                 reopenedSupplierCreditInvoices = new SupplierCreditInvoiceStagingConverter()
                         .fingerprintNormalized(verification);
                 reopenedSaleDocuments = new SaleDocumentStagingConverter()
+                        .fingerprintNormalized(verification);
+                reopenedPurchaseOrders = new PurchaseOrderStagingConverter()
                         .fingerprintNormalized(verification);
                 shutdown(verification, "SHUTDOWN");
             }
@@ -219,16 +224,23 @@ public final class AccountingCoreStagingCatalogService {
                 throw new IOException("Durable sale-document fingerprint mismatch after reopen: "
                         + String.join("; ", saleDocumentDifferences));
             }
+            var purchaseOrderDifferences = purchaseOrders.destinationFingerprint()
+                    .differences(reopenedPurchaseOrders);
+            if (!purchaseOrderDifferences.isEmpty()) {
+                throw new IOException("Durable purchase-order fingerprint mismatch after reopen: "
+                        + String.join("; ", purchaseOrderDifferences));
+            }
             requireCatalogFiles(database);
             success = true;
             return new StagingCatalogResult(staging, database,
                     conversion, companyDetails, accountingDimensions, accountingTemplates, customers,
                     suppliers, products, customerInvoices, customerCreditInvoices, periodicInvoices,
-                    payments, supplierInvoices, supplierCreditInvoices, saleDocuments, reopened,
-                    reopenedCompanyDetails, reopenedAccountingDimensions, reopenedAccountingTemplates,
-                    reopenedCustomers, reopenedSuppliers, reopenedProducts, reopenedCustomerInvoices,
-                    reopenedCustomerCreditInvoices, reopenedPeriodicInvoices, reopenedPayments,
-                    reopenedSupplierInvoices, reopenedSupplierCreditInvoices, reopenedSaleDocuments,
+                    payments, supplierInvoices, supplierCreditInvoices, saleDocuments, purchaseOrders,
+                    reopened, reopenedCompanyDetails, reopenedAccountingDimensions,
+                    reopenedAccountingTemplates, reopenedCustomers, reopenedSuppliers, reopenedProducts,
+                    reopenedCustomerInvoices, reopenedCustomerCreditInvoices, reopenedPeriodicInvoices,
+                    reopenedPayments, reopenedSupplierInvoices, reopenedSupplierCreditInvoices,
+                    reopenedSaleDocuments, reopenedPurchaseOrders,
                     clock.instant());
         } finally {
             if (!success) {
@@ -294,6 +306,7 @@ public final class AccountingCoreStagingCatalogService {
                                        SupplierInvoiceStagingConverter.ConversionResult supplierInvoices,
                                        SupplierCreditInvoiceStagingConverter.ConversionResult supplierCreditInvoices,
                                        SaleDocumentStagingConverter.ConversionResult saleDocuments,
+                                       PurchaseOrderStagingConverter.ConversionResult purchaseOrders,
                                        SemanticFingerprint durableFingerprint,
                                        SemanticFingerprint durableCompanyDetailsFingerprint,
                                        SemanticFingerprint durableAccountingDimensionsFingerprint,
@@ -308,5 +321,6 @@ public final class AccountingCoreStagingCatalogService {
                                        SemanticFingerprint durableSupplierInvoiceFingerprint,
                                        SemanticFingerprint durableSupplierCreditInvoiceFingerprint,
                                        SemanticFingerprint durableSaleDocumentFingerprint,
+                                       SemanticFingerprint durablePurchaseOrderFingerprint,
                                        Instant completedAt) {}
 }
