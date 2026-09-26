@@ -61,6 +61,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Normalize customer orders and tenders in staging with complete sale snapshots, addresses, default
   accounts, ordered rows, and document links (invoice/periodic-invoice/purchase-order numbers, expiry),
   verified by durable fingerprints.
+- Normalize purchase orders in staging with supplier snapshot, delivery/supplier addresses, ordered
+  rows with supplier article numbers, default accounts, and linked invoice snapshot number.
 
 ### Changed
 
