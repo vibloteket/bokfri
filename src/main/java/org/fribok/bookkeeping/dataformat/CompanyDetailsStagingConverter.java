@@ -126,7 +126,7 @@ public final class CompanyDetailsStagingConverter {
         for (AddressRow row : snapshot.addresses) insert(connection, "company_address",
                 row.companyLegacyId, row.type, row.values());
         for (NamedValue row : snapshot.standardTexts) insert(connection, "company_standard_text",
-                row.companyLegacyId, row.name, List.of(row.value));
+                row.companyLegacyId, row.name, java.util.Collections.singletonList(row.value));
         for (NamedNumber row : snapshot.defaultAccounts) insertNumber(connection,
                 "company_default_account", row);
         for (NamedNumber row : snapshot.counters) insertNumber(connection,
