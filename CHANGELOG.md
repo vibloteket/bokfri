@@ -70,6 +70,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Add an end-to-end migration of the real v1.0.1 database fixture: engine upgrade, all converters,
   durable staging reopen, matching fingerprints, and a reopened-source fingerprint proving the legacy
   catalog's accounting data is unchanged.
+- Add the normalized activation service: verified physical rollback archive, retained source, atomic
+  staging swap with rollback on failure, and recovery-state detection; end-to-end test activates a real
+  converted fixture and reopens a functional normalized catalog with no `OTHER` columns.
 
 ### Fixed
 
