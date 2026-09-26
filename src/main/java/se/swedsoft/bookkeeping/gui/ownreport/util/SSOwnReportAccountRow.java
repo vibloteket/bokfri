@@ -41,6 +41,12 @@ public class SSOwnReportAccountRow implements Serializable {
         }
     }
 
+    /** Creates a row with explicit account and budget, without reading global SSDB state. */
+    public SSOwnReportAccountRow(SSAccount account, Map<SSMonth, BigDecimal> budget) {
+        iAccount = account;
+        iBudget = budget == null ? new HashMap<>() : budget;
+    }
+
     public SSAccount getAccount() {
         return iAccount;
     }

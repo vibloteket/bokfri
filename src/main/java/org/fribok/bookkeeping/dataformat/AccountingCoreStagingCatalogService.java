@@ -67,6 +67,7 @@ public final class AccountingCoreStagingCatalogService {
             SaleDocumentStagingConverter.ConversionResult saleDocuments;
             PurchaseOrderStagingConverter.ConversionResult purchaseOrders;
             StockDocumentStagingConverter.ConversionResult stockDocuments;
+            OwnReportStagingConverter.ConversionResult ownReports;
             try (Connection normalized = DriverManager.getConnection(url, "sa", "")) {
                 try {
                     normalized.setAutoCommit(false);
@@ -91,6 +92,7 @@ public final class AccountingCoreStagingCatalogService {
                     saleDocuments = new SaleDocumentStagingConverter().convert(legacy, normalized);
                     purchaseOrders = new PurchaseOrderStagingConverter().convert(legacy, normalized);
                     stockDocuments = new StockDocumentStagingConverter().convert(legacy, normalized);
+                    ownReports = new OwnReportStagingConverter().convert(legacy, normalized);
                     shutdown(normalized, "SHUTDOWN SCRIPT");
                 } catch (SQLException | RuntimeException failure) {
                     shutdownAfterFailure(normalized, failure);
@@ -114,6 +116,7 @@ public final class AccountingCoreStagingCatalogService {
             SemanticFingerprint reopenedSaleDocuments;
             SemanticFingerprint reopenedPurchaseOrders;
             SemanticFingerprint reopenedStockDocuments;
+            SemanticFingerprint reopenedOwnReports;
             try (Connection verification = DriverManager.getConnection(url, "sa", "")) {
                 verification.setReadOnly(true);
                 reopened = new AccountingCoreStagingConverter()
@@ -147,6 +150,8 @@ public final class AccountingCoreStagingCatalogService {
                 reopenedPurchaseOrders = new PurchaseOrderStagingConverter()
                         .fingerprintNormalized(verification);
                 reopenedStockDocuments = new StockDocumentStagingConverter()
+                        .fingerprintNormalized(verification);
+                reopenedOwnReports = new OwnReportStagingConverter()
                         .fingerprintNormalized(verification);
                 shutdown(verification, "SHUTDOWN");
             }
@@ -241,17 +246,24 @@ public final class AccountingCoreStagingCatalogService {
                 throw new IOException("Durable stock fingerprint mismatch after reopen: "
                         + String.join("; ", stockDifferences));
             }
+            var ownReportDifferences = ownReports.destinationFingerprint()
+                    .differences(reopenedOwnReports);
+            if (!ownReportDifferences.isEmpty()) {
+                throw new IOException("Durable own-report fingerprint mismatch after reopen: "
+                        + String.join("; ", ownReportDifferences));
+            }
             requireCatalogFiles(database);
             success = true;
             return new StagingCatalogResult(staging, database,
                     conversion, companyDetails, accountingDimensions, accountingTemplates, customers,
                     suppliers, products, customerInvoices, customerCreditInvoices, periodicInvoices,
                     payments, supplierInvoices, supplierCreditInvoices, saleDocuments, purchaseOrders,
-                    stockDocuments, reopened, reopenedCompanyDetails, reopenedAccountingDimensions,
+                    stockDocuments, ownReports, reopened, reopenedCompanyDetails, reopenedAccountingDimensions,
                     reopenedAccountingTemplates, reopenedCustomers, reopenedSuppliers, reopenedProducts,
                     reopenedCustomerInvoices, reopenedCustomerCreditInvoices, reopenedPeriodicInvoices,
                     reopenedPayments, reopenedSupplierInvoices, reopenedSupplierCreditInvoices,
                     reopenedSaleDocuments, reopenedPurchaseOrders, reopenedStockDocuments,
+                    reopenedOwnReports,
                     clock.instant());
         } finally {
             if (!success) {
@@ -319,6 +331,7 @@ public final class AccountingCoreStagingCatalogService {
                                        SaleDocumentStagingConverter.ConversionResult saleDocuments,
                                        PurchaseOrderStagingConverter.ConversionResult purchaseOrders,
                                        StockDocumentStagingConverter.ConversionResult stockDocuments,
+                                       OwnReportStagingConverter.ConversionResult ownReports,
                                        SemanticFingerprint durableFingerprint,
                                        SemanticFingerprint durableCompanyDetailsFingerprint,
                                        SemanticFingerprint durableAccountingDimensionsFingerprint,
@@ -335,5 +348,6 @@ public final class AccountingCoreStagingCatalogService {
                                        SemanticFingerprint durableSaleDocumentFingerprint,
                                        SemanticFingerprint durablePurchaseOrderFingerprint,
                                        SemanticFingerprint durableStockDocumentFingerprint,
+                                       SemanticFingerprint durableOwnReportFingerprint,
                                        Instant completedAt) {}
 }
