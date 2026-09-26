@@ -12,6 +12,8 @@ import se.swedsoft.bookkeeping.data.SSOutpaymentRow;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoiceRow;
 import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
+import se.swedsoft.bookkeeping.data.SSOrder;
+import se.swedsoft.bookkeeping.data.SSTender;
 import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.SSVoucher;
@@ -78,6 +80,7 @@ public final class AccountingCoreStagingConverter {
         readPaymentLookups(connection, snapshot);
         readSupplierInvoiceLookups(connection, snapshot);
         readSupplierCreditInvoiceLookups(connection, snapshot);
+        readSaleDocumentLookups(connection, snapshot);
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
                      "SELECT id, company FROM tbl_company ORDER BY id")) {
@@ -175,6 +178,34 @@ public final class AccountingCoreStagingConverter {
         }
         snapshot.sort();
         return snapshot;
+    }
+
+    private static void readSaleDocumentLookups(Connection connection, Snapshot snapshot)
+            throws SQLException {
+        readSaleDocumentLookupTable(connection, snapshot, "tbl_order", "iorder", true);
+        readSaleDocumentLookupTable(connection, snapshot, "tbl_tender", "tender", false);
+    }
+
+    private static void readSaleDocumentLookupTable(Connection connection, Snapshot snapshot,
+                                                     String table, String column, boolean order)
+            throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT " + column + " FROM " + table)) {
+            while (result.next()) {
+                se.swedsoft.bookkeeping.data.base.SSSale sale =
+                        (se.swedsoft.bookkeeping.data.base.SSSale) result.getObject(1);
+                if (sale.getCurrency() != null) {
+                    snapshot.addLookup("currency", sale.getCurrency().getName(),
+                            sale.getCurrency().getDescription(), sale.getCurrency().getExchangeRate());
+                }
+                addCompanyLookup(snapshot, "payment-term", sale.getPaymentTerm());
+                addCompanyLookup(snapshot, "delivery-term", sale.getDeliveryTerm());
+                addCompanyLookup(snapshot, "delivery-way", sale.getDeliveryWay());
+                for (se.swedsoft.bookkeeping.data.base.SSSaleRow row : sale.getRows()) {
+                    addCompanyLookup(snapshot, "unit", row.getUnit());
+                }
+            }
+        }
     }
 
     private static void readSupplierCreditInvoiceLookups(Connection connection, Snapshot snapshot)
