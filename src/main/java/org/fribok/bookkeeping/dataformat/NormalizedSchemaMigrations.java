@@ -18,7 +18,8 @@ public final class NormalizedSchemaMigrations {
             "/db/normalized/V10__create_customer_credit_invoices.sql",
             "/db/normalized/V11__create_periodic_invoices.sql",
             "/db/normalized/V12__create_payments.sql",
-            "/db/normalized/V13__create_supplier_invoices.sql");
+            "/db/normalized/V13__create_supplier_invoices.sql",
+            "/db/normalized/V14__create_supplier_credit_invoices.sql");
 
     private NormalizedSchemaMigrations() {}
 
