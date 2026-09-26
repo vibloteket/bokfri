@@ -73,6 +73,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Add the normalized activation service: verified physical rollback archive, retained source, atomic
   staging swap with rollback on failure, and recovery-state detection; end-to-end test activates a real
   converted fixture and reopens a functional normalized catalog with no `OTHER` columns.
+- Add a normalized accounting-core reader that rebuilds companies, years, account plans, accounts, and
+  vouchers from explicit columns, with a parity test proving the real v1.0.1 fixture reads identically
+  from legacy and normalized representations.
 
 ### Fixed
 
