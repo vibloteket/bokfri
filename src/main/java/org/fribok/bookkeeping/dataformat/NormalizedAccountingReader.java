@@ -124,11 +124,12 @@ public final class NormalizedAccountingReader {
             if (b != null) voucher.setCorrectedBy(byId.get(b));
         }
         try (var statement = connection.prepareStatement(
-                "SELECT r.voucher_id,r.row_number,r.account_number,r.project_number,"
+                "SELECT r.voucher_id,r.row_number,a.number,r.project_number,"
                         + "r.result_unit_number,r.debit,r.credit,r.edited_at,r.edited_signature,"
                         + "r.crossed,r.added FROM voucher_row r "
                         + "JOIN voucher v ON v.id=r.voucher_id "
                         + "JOIN accounting_year y ON y.id=v.accounting_year_id "
+                        + "LEFT JOIN account a ON a.id=r.account_id "
                         + "WHERE y.legacy_id=? ORDER BY v.number,r.row_number")) {
             statement.setInt(1, yearLegacyId);
             try (ResultSet result = statement.executeQuery()) {
