@@ -574,7 +574,7 @@ public class BokfriCli implements Runnable {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(false, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
-                List<Map<String, Object>> companies = runtime.database().getCompanies().stream().map(company -> {
+                List<Map<String, Object>> companies = runtime.getCompanies().stream().map(company -> {
                     Map<String, Object> item = new LinkedHashMap<>();
                     item.put("selected", Objects.equals(context.companyId(), company.getId()));
                     item.put("id", company.getId());
@@ -764,7 +764,7 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                List<Map<String, Object>> years = runtime.database().getYearsForCompany(company).stream()
+                List<Map<String, Object>> years = runtime.getYears(company).stream()
                         .sorted(Comparator.comparing(SSNewAccountingYear::getLocalFrom)
                                 .thenComparing(SSNewAccountingYear::getLocalTo)
                                 .thenComparing(SSNewAccountingYear::getId)
@@ -811,7 +811,7 @@ public class BokfriCli implements Runnable {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
                 String normalizedFilter = filter == null ? null : filter.strip().toLowerCase(Locale.ROOT);
-                List<Map<String, Object>> accounts = runtime.database().getAccounts().stream()
+                List<Map<String, Object>> accounts = runtime.getAccounts().stream()
                         .filter(account -> normalizedFilter == null || normalizedFilter.isEmpty()
                                 || Integer.toString(account.getNumber()).contains(normalizedFilter)
                                 || Objects.toString(account.getDescription(), "")

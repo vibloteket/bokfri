@@ -87,6 +87,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Add `bokfri database normalize` as an explicit, one-way CLI entry to the normalized migration
   pipeline, with JSON output, idempotent no-op on an already-normalized database, and verified
   backup/retained-source artifacts.
+- Add the runtime storage dispatch: the CLI runtime selects legacy SSDB or the normalized stores
+  by the recorded data format, so a normalized (format 3) database opens without starting legacy
+  object storage. Ported read commands (`status`, `company list/use`, `year list/use`,
+  `account list`) work on normalized storage; unported commands fail fast with a clear
+  `NORMALIZED_STORAGE_UNSUPPORTED` error instead of touching legacy tables.
 
 ### Fixed
 
