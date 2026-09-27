@@ -12,6 +12,8 @@ import java.sql.Statement;
 public final class DataFormatManager {
     public static final int LEGACY_DATA_FORMAT_VERSION = 1;
     public static final int CURRENT_DATA_FORMAT_VERSION = 2;
+    /** Format written when the normalized schema is activated; not yet required by startup. */
+    public static final int NORMALIZED_DATA_FORMAT_VERSION = 3;
 
     private static final String TABLE_NAME = "BOKFRI_METADATA";
     private static final String FORMAT_KEY = "data_format_version";
@@ -81,7 +83,9 @@ public final class DataFormatManager {
         try (Connection connection = java.sql.DriverManager.getConnection(
                 "jdbc:hsqldb:file:" + database, "sa", "")) {
             connection.setAutoCommit(false);
-            int version = checkSupported(connection);
+            // inspect must report known-future formats (e.g. a normalized database) without
+            // rejecting them; startup enforcement stays in checkAndInitialize/checkSupported.
+            int version = detect(connection);
             try (Statement statement = connection.createStatement()) {
                 statement.execute("SHUTDOWN");
             }
@@ -124,6 +128,14 @@ public final class DataFormatManager {
     public static void recordCurrentVersion(Connection connection) throws SQLException {
         createMetadataTable(connection);
         put(connection, FORMAT_KEY, Integer.toString(CURRENT_DATA_FORMAT_VERSION));
+        put(connection, APPLICATION_KEY, Version.APP_VERSION);
+        connection.commit();
+    }
+
+    /** Records an explicit format version after a validated migration. */
+    public static void recordVersion(Connection connection, int version) throws SQLException {
+        createMetadataTable(connection);
+        put(connection, FORMAT_KEY, Integer.toString(version));
         put(connection, APPLICATION_KEY, Version.APP_VERSION);
         connection.commit();
     }
