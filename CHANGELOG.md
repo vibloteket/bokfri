@@ -76,6 +76,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Add a normalized accounting-core reader that rebuilds companies, years, account plans, accounts, and
   vouchers from explicit columns, with a parity test proving the real v1.0.1 fixture reads identically
   from legacy and normalized representations.
+- Add a normalized accounting-core writer with transactional add/update/delete for companies, years,
+  plans/accounts, and vouchers with ordered rows, including dependency-ordered company deletion and
+  legacy Swedish edit-time conversion.
 
 ### Fixed
 
