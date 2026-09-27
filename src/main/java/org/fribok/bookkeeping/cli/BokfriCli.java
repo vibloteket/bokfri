@@ -9,6 +9,7 @@ import org.fribok.bookkeeping.app.Path;
 import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.DataMigrationService;
+import org.fribok.bookkeeping.dataformat.NormalizedMigrationService;
 import org.fribok.bookkeeping.service.backup.BackupDetails;
 import org.fribok.bookkeeping.service.backup.BackupRestorePlan;
 import org.fribok.bookkeeping.service.backup.BackupService;
@@ -414,7 +415,7 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "database", description = "Inspect and migrate the database format",
-            subcommands = {DatabaseStatus.class, DatabaseMigrate.class})
+            subcommands = {DatabaseStatus.class, DatabaseMigrate.class, DatabaseNormalize.class})
     static class DatabaseCommand extends CliCommand implements Runnable {
         @CliMetadata.Spec CliContext spec;
         @Override public void run() {
@@ -484,6 +485,44 @@ public class BokfriCli implements Runnable {
                 result.put("backup", backup.toString());
                 root.output(result, "Database migrated from format " + before.format()
                         + " to format " + after.format() + "\nBackup: " + backup);
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "normalize",
+            description = "Convert the database to the normalized schema (explicit, one-way)")
+    static class DatabaseNormalize extends DatabaseSubcommand {
+        @Override public Integer call() {
+            BokfriCli root = root();
+            java.nio.file.Path data = root.resolveContext(false, false).dataDir();
+            try {
+                DataFormatManager.DataFormatStatus before = DataFormatManager.inspect(data);
+                if (!before.exists()) {
+                    throw new CliException("DATABASE_NOT_FOUND",
+                            "No database exists in " + data);
+                }
+                if (before.format() == DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION) {
+                    Map<String, Object> result = Map.of("normalized", false,
+                            "format", before.format());
+                    root.output(result, "Database is already normalized (format "
+                            + before.format() + "); nothing was done");
+                    return 0;
+                }
+                NormalizedMigrationService.MigrationResult result =
+                        new NormalizedMigrationService(java.time.Clock.systemUTC()).migrate(data);
+                Map<String, Object> out = new LinkedHashMap<>();
+                out.put("normalized", true);
+                out.put("fromFormat", before.format());
+                out.put("toFormat", DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION);
+                out.put("backup", result.activation().rollbackArchive().toString());
+                out.put("retainedSource", result.activation().retainedSource().toString());
+                root.output(out, "Database normalized from format " + before.format()
+                        + " to format " + DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION
+                        + "\nBackup: " + result.activation().rollbackArchive()
+                        + "\nRetained source: " + result.activation().retainedSource());
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
