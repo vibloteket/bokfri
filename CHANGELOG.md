@@ -81,6 +81,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   legacy Swedish edit-time conversion.
 - Add an SSDB-shaped normalized accounting store facade (current company/year selection, core CRUD,
   caller-owned transactions) and normalized register reads/writes for customers, suppliers, and products.
+- Add the opt-in normalized migration service that composes engine upgrade, staging conversion,
+  fingerprint verification, activation with rollback artifacts, and data format 3 recording. It is
+  explicit and not part of startup; inspection now reports known normalized formats without rejection.
 
 ### Fixed
 
