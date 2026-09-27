@@ -92,6 +92,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   object storage. Ported read commands (`status`, `company list/use`, `year list/use`,
   `account list`) work on normalized storage; unported commands fail fast with a clear
   `NORMALIZED_STORAGE_UNSUPPORTED` error instead of touching legacy tables.
+- Port the voucher write path and register read paths to normalized storage: `voucher list/create`
+  and `customer/supplier/product list` work on a normalized database through runtime dispatch
+  helpers, and the register store reads the shared currency/unit/payment-term lookups plus
+  company-scoped projects and result units.
 
 ### Fixed
 

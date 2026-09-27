@@ -65,6 +65,7 @@ import org.fribok.bookkeeping.service.product.ProductValidationResult;
 import org.fribok.bookkeeping.service.vat.VatService;
 import org.fribok.bookkeeping.service.vat.VatSettlementPlan;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
+import org.fribok.bookkeeping.service.voucher.VoucherValidator;
 import org.fribok.bookkeeping.service.year.AccountingYearService;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationIssue;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationResult;
@@ -1607,8 +1608,11 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                CustomerService service = new CustomerService(runtime.database());
-                List<SSCustomer> listedCustomers = service.list();
+                List<SSCustomer> listedCustomers = runtime.isNormalized()
+                        ? runtime.getCustomers().stream()
+                                .sorted(Comparator.comparing(SSCustomer::getNumber,
+                                        Comparator.nullsLast(String::compareTo))).toList()
+                        : new CustomerService(runtime.database()).list();
                 List<Map<String, Object>> customers = listedCustomers.stream()
                         .map(BokfriCli::customerSummary).toList();
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -1789,8 +1793,11 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                ProductService service = new ProductService(runtime.database());
-                List<SSProduct> listedProducts = service.list();
+                List<SSProduct> listedProducts = runtime.isNormalized()
+                        ? runtime.getProducts().stream()
+                                .sorted(Comparator.comparing(SSProduct::getNumber,
+                                        Comparator.nullsLast(String::compareTo))).toList()
+                        : new ProductService(runtime.database()).list();
                 List<Map<String, Object>> products = listedProducts.stream()
                         .map(BokfriCli::productDetails).toList();
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -1977,7 +1984,11 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                List<SSSupplier> listedSuppliers = new SupplierService(runtime.database()).list();
+                List<SSSupplier> listedSuppliers = runtime.isNormalized()
+                        ? runtime.getSuppliers().stream()
+                                .sorted(Comparator.comparing(SSSupplier::getNumber,
+                                        Comparator.nullsLast(String::compareTo))).toList()
+                        : new SupplierService(runtime.database()).list();
                 List<Map<String, Object>> suppliers = listedSuppliers.stream()
                         .map(BokfriCli::supplierDetails).toList();
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -3066,8 +3077,12 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                VoucherService service = new VoucherService(runtime.database());
-                java.util.stream.Stream<SSVoucher> filtered = service.list().stream()
+                VoucherService service = runtime.isNormalized() ? null : new VoucherService(runtime.database());
+                List<SSVoucher> listed = runtime.isNormalized()
+                        ? runtime.getVouchers().stream()
+                                .sorted(Comparator.comparingInt(SSVoucher::getNumber)).toList()
+                        : service.list();
+                java.util.stream.Stream<SSVoucher> filtered = listed.stream()
                         .filter(voucher -> from == null || !voucher.getLocalDate().isBefore(from))
                         .filter(voucher -> to == null || !voucher.getLocalDate().isAfter(to));
                 if (limit != null) {
@@ -3079,7 +3094,7 @@ public class BokfriCli implements Runnable {
                 result.put("count", vouchers.size());
                 result.put("vouchers", vouchers);
                 if (output != null) {
-                    List<SSVoucher> selectedVouchers = filteredVouchers(service.list(), from, to, limit);
+                    List<SSVoucher> selectedVouchers = filteredVouchers(listed, from, to, limit);
                     SSVoucherListPrinter printer = new SSVoucherListPrinter(
                             new java.util.ArrayList<>(selectedVouchers));
                     addPdf(result, exportPdf(printer, output, overwrite));
@@ -3216,17 +3231,18 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
+                if (!runtime.isNormalized()) {
+                    runtime.database().init(false);
+                }
                 SSVoucher voucher = toVoucher(input, runtime);
-                VoucherService service = new VoucherService(runtime.database());
-                VoucherValidationResult validation = service.validate(voucher);
+                VoucherValidationResult validation = VoucherValidator.validate(voucher, year);
                 Map<String, Object> result = voucherResult(context, company, year, voucher,
-                        validation, persist(), service.nextNumber());
+                        validation, persist(), runtime.nextVoucherNumber());
                 if (!validation.valid()) {
                     throw validationFailure(validation);
                 }
                 if (persist()) {
-                    service.create(voucher);
+                    runtime.addVoucher(voucher);
                     result.put("number", voucher.getNumber());
                     result.put("created", true);
                 }
@@ -3880,13 +3896,14 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    private static SSVoucher toVoucher(VoucherInput input, BokfriRuntime runtime) {
+    private static SSVoucher toVoucher(VoucherInput input, BokfriRuntime runtime)
+            throws java.sql.SQLException {
         SSVoucher voucher = new SSVoucher(0);
         voucher.setLocalDate(input.getDate());
         voucher.setDescription(input.getDescription());
-        List<SSAccount> accounts = runtime.database().getAccounts();
-        List<SSNewProject> projects = runtime.database().getProjects();
-        List<SSNewResultUnit> resultUnits = runtime.database().getResultUnits();
+        List<SSAccount> accounts = runtime.getAccounts();
+        List<SSNewProject> projects = runtime.getProjects();
+        List<SSNewResultUnit> resultUnits = runtime.getResultUnits();
         for (VoucherInput.Row inputRow : input.getRows()) {
             SSVoucherRow row = new SSVoucherRow();
             row.setAccount(accounts.stream()

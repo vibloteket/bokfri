@@ -70,6 +70,47 @@ class NormalizedRegisterStoreTest {
         }
     }
 
+    @Test
+    void lookupsAndDimensionsRoundTrip() throws Exception {
+        try (Connection connection = connection()) {
+            migrate(connection);
+            NormalizedAccountingWriter writer =
+                    new NormalizedAccountingWriter(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+            SSNewCompany company = new SSNewCompany();
+            company.setId(7);
+            writer.addCompany(connection, company);
+            try (var statement = connection.createStatement()) {
+                statement.executeUpdate("INSERT INTO currency (code,description,exchange_rate) "
+                        + "VALUES ('SEK','Svensk krona',1)");
+                statement.executeUpdate("INSERT INTO unit_definition (name,description) "
+                        + "VALUES ('st','Styck')");
+                statement.executeUpdate("INSERT INTO payment_term (name,description) "
+                        + "VALUES ('30 dagar','Netto 30')");
+                statement.executeUpdate("INSERT INTO project (company_id,number,name,concluded) "
+                        + "SELECT id,'P1','Projekt ett',false FROM company WHERE legacy_id=7");
+                statement.executeUpdate("INSERT INTO result_unit (company_id,number,name) "
+                        + "SELECT id,'R1','Enhet ett' FROM company WHERE legacy_id=7");
+            }
+            connection.commit();
+
+            NormalizedRegisterStore store = new NormalizedRegisterStore(connection);
+            assertThat(store.getCurrencies()).hasSize(1);
+            assertThat(store.getCurrencies().get(0).getName()).isEqualTo("SEK");
+            assertThat(store.getCurrencies().get(0).getExchangeRate())
+                    .isEqualByComparingTo("1");
+            assertThat(store.getUnits()).hasSize(1);
+            assertThat(store.getUnits().get(0).getName()).isEqualTo("st");
+            assertThat(store.getPaymentTerms()).hasSize(1);
+            assertThat(store.getPaymentTerms().get(0).getName()).isEqualTo("30 dagar");
+            assertThat(store.getProjects(7)).hasSize(1);
+            assertThat(store.getProjects(7).get(0).getNumber()).isEqualTo("P1");
+            assertThat(store.getProjects(7).get(0).isConcluded(java.time.LocalDate.now()))
+                    .isFalse();
+            assertThat(store.getResultUnits(7)).hasSize(1);
+            assertThat(store.getResultUnits(7).get(0).getNumber()).isEqualTo("R1");
+        }
+    }
+
     private static Connection connection() throws Exception {
         Class.forName("org.hsqldb.jdbcDriver");
         Connection connection = DriverManager.getConnection(
