@@ -79,6 +79,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Add a normalized accounting-core writer with transactional add/update/delete for companies, years,
   plans/accounts, and vouchers with ordered rows, including dependency-ordered company deletion and
   legacy Swedish edit-time conversion.
+- Add an SSDB-shaped normalized accounting store facade (current company/year selection, core CRUD,
+  caller-owned transactions) as the switch point for the runtime migration away from object storage.
 
 ### Fixed
 
