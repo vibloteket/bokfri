@@ -373,6 +373,59 @@ class BokfriCliTest {
     }
 
     @Test
+    void portedCommandsWorkOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-cli-data");
+        extractLegacyDatabase(data.resolve("db"));
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        assertThat(companies.exitCode()).isZero();
+        JsonNode companyList = new ObjectMapper().readTree(companies.stdout()).path("companies");
+        assertThat(companyList).isNotEmpty();
+        int companyId = companyList.get(0).path("id").asInt();
+
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        assertThat(years.exitCode()).isZero();
+        JsonNode yearList = new ObjectMapper().readTree(years.stdout()).path("years");
+        assertThat(yearList).isNotEmpty();
+        int yearId = yearList.get(0).path("id").asInt();
+
+        Result accounts = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json", "account", "list");
+        assertThat(accounts.exitCode()).isZero();
+        assertThat(new ObjectMapper().readTree(accounts.stdout()).path("accounts")).isNotEmpty();
+
+        Result status = execute("--data-dir", data.toString(), "status");
+        assertThat(status.stdout()).contains("format 3");
+    }
+
+    @Test
+    void unportedCommandsFailClearlyOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-cli-blocked");
+        extractLegacyDatabase(data.resolve("db"));
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        int yearId = new ObjectMapper().readTree(years.stdout())
+                .path("years").get(0).path("id").asInt();
+
+        Result vouchers = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json", "voucher", "list");
+
+        assertThat(vouchers.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(vouchers.stderr()).at("/error/code").asText())
+                .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
+    }
+
+    @Test
     void databaseMigrateIsIdempotentForCurrentFormat() throws Exception {
         Path data = temporaryDirectory.resolve("current-data");
         execute("--data-dir", data.toString(), "company", "list");
