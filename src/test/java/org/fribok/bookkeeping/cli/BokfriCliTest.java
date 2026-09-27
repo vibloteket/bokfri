@@ -177,7 +177,7 @@ class BokfriCliTest {
         List<List<String>> paths = new ArrayList<>();
         collectCommandPaths(CliCommandTree.root(), List.of(), paths);
 
-        assertThat(paths).hasSize(141);
+        assertThat(paths).hasSize(142);
         for (List<String> path : paths) {
             for (String helpOption : List.of("--help", "-h")) {
                 List<String> arguments = new ArrayList<>(path);
@@ -332,6 +332,44 @@ class BokfriCliTest {
         assertThat(Path.of(result.path("backup").asText())).exists();
         assertThat(companies.exitCode()).isZero();
         assertThat(companies.stdout()).contains("Exempelföretag");
+    }
+
+    @Test
+    void databaseNormalizeConvertsLegacyFixtureToFormat3() throws Exception {
+        Path data = temporaryDirectory.resolve("normalize-data");
+        extractLegacyDatabase(data.resolve("db"));
+
+        Result normalized = execute("--data-dir", data.toString(), "--format", "json",
+                "database", "normalize");
+        Result status = execute("--data-dir", data.toString(), "--format", "json",
+                "database", "status");
+
+        assertThat(normalized.exitCode()).isZero();
+        JsonNode result = new ObjectMapper().readTree(normalized.stdout());
+        assertThat(result.path("normalized").asBoolean()).isTrue();
+        assertThat(result.path("toFormat").asInt()).isEqualTo(3);
+        assertThat(Path.of(result.path("backup").asText())).exists();
+        assertThat(Path.of(result.path("retainedSource").asText())).isDirectory();
+        JsonNode after = new ObjectMapper().readTree(status.stdout());
+        assertThat(after.path("format").asInt()).isEqualTo(3);
+
+        Result again = execute("--data-dir", data.toString(), "--format", "json",
+                "database", "normalize");
+        assertThat(again.exitCode()).isZero();
+        assertThat(new ObjectMapper().readTree(again.stdout()).path("normalized").asBoolean())
+                .isFalse();
+    }
+
+    @Test
+    void databaseNormalizeRejectsMissingDatabase() throws Exception {
+        Path data = temporaryDirectory.resolve("normalize-empty");
+
+        Result normalized = execute("--data-dir", data.toString(), "--format", "json",
+                "database", "normalize");
+
+        assertThat(normalized.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(normalized.stderr()).at("/error/code").asText())
+                .isEqualTo("DATABASE_NOT_FOUND");
     }
 
     @Test

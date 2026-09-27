@@ -80,7 +80,13 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   plans/accounts, and vouchers with ordered rows, including dependency-ordered company deletion and
   legacy Swedish edit-time conversion.
 - Add an SSDB-shaped normalized accounting store facade (current company/year selection, core CRUD,
-  caller-owned transactions) as the switch point for the runtime migration away from object storage.
+  caller-owned transactions) and normalized register reads/writes for customers, suppliers, and products.
+- Add the opt-in normalized migration service that composes engine upgrade, staging conversion,
+  fingerprint verification, activation with rollback artifacts, and data format 3 recording. It is
+  explicit and not part of startup; inspection now reports known normalized formats without rejection.
+- Add `bokfri database normalize` as an explicit, one-way CLI entry to the normalized migration
+  pipeline, with JSON output, idempotent no-op on an already-normalized database, and verified
+  backup/retained-source artifacts.
 
 ### Fixed
 
