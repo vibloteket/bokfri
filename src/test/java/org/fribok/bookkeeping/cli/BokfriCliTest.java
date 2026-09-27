@@ -416,13 +416,65 @@ class BokfriCliTest {
         int yearId = new ObjectMapper().readTree(years.stdout())
                 .path("years").get(0).path("id").asInt();
 
-        Result vouchers = execute("--data-dir", data.toString(), "--company-id",
+        Result invoices = execute("--data-dir", data.toString(), "--company-id",
                 Integer.toString(companyId), "--year-id", Integer.toString(yearId),
-                "--format", "json", "voucher", "list");
+                "--format", "json", "invoice", "list");
 
-        assertThat(vouchers.exitCode()).isEqualTo(1);
-        assertThat(new ObjectMapper().readTree(vouchers.stderr()).at("/error/code").asText())
+        assertThat(invoices.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(invoices.stderr()).at("/error/code").asText())
                 .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
+    }
+
+    @Test
+    void voucherCreateAndRegisterListsWorkOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-voucher-data");
+        extractLegacyDatabase(data.resolve("db"));
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode yearNode = new ObjectMapper().readTree(years.stdout()).path("years").get(0);
+        int yearId = yearNode.path("id").asInt();
+        String yearFrom = yearNode.path("from").asText();
+
+        String[] context = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+        Result accounts = execute(concat(context, "account", "list"));
+        JsonNode accountList = new ObjectMapper().readTree(accounts.stdout()).path("accounts");
+        int firstAccount = accountList.get(0).path("number").asInt();
+        int secondAccount = accountList.get(1).path("number").asInt();
+
+        Path voucherFile = temporaryDirectory.resolve("normalized-voucher.json");
+        Files.writeString(voucherFile, String.format(
+                "{\"date\":\"%s\",\"description\":\"Normalized voucher\",\"rows\":["
+                        + "{\"account\":%d,\"debit\":100.00},"
+                        + "{\"account\":%d,\"credit\":100.00}]}",
+                yearFrom, firstAccount, secondAccount));
+
+        Result created = execute(concat(context, "voucher", "create", "--file",
+                voucherFile.toString()));
+        assertThat(created.exitCode()).as(created.stderr()).isZero();
+        JsonNode createdJson = new ObjectMapper().readTree(created.stdout());
+        assertThat(createdJson.path("created").asBoolean()).isTrue();
+        int number = createdJson.path("number").asInt();
+        assertThat(number).isPositive();
+
+        Result listed = execute(concat(context, "voucher", "list"));
+        assertThat(listed.exitCode()).isZero();
+        assertThat(new ObjectMapper().readTree(listed.stdout()).path("vouchers"))
+                .anySatisfy(voucher -> {
+                    assertThat(voucher.path("number").asInt()).isEqualTo(number);
+                    assertThat(voucher.path("description").asText()).isEqualTo("Normalized voucher");
+                });
+
+        assertThat(execute(concat(context, "customer", "list")).exitCode()).isZero();
+        assertThat(execute(concat(context, "supplier", "list")).exitCode()).isZero();
+        assertThat(execute(concat(context, "product", "list")).exitCode()).isZero();
     }
 
     @Test

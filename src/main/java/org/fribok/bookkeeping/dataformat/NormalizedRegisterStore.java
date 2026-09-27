@@ -1,8 +1,13 @@
 package org.fribok.bookkeeping.dataformat;
 
 import se.swedsoft.bookkeeping.data.SSCustomer;
+import se.swedsoft.bookkeeping.data.SSNewProject;
+import se.swedsoft.bookkeeping.data.SSNewResultUnit;
 import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSSupplier;
+import se.swedsoft.bookkeeping.data.common.SSCurrency;
+import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
+import se.swedsoft.bookkeeping.data.common.SSUnit;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -151,6 +156,96 @@ public final class NormalizedRegisterStore {
 
     public void deleteProduct(int companyLegacyId, String number) throws SQLException {
         deleteByNumber("product", companyLegacyId, number);
+    }
+
+    /** Reads the shared currency lookup, ordered by code. */
+    public List<SSCurrency> getCurrencies() throws SQLException {
+        List<SSCurrency> currencies = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT code,description,exchange_rate FROM currency ORDER BY code");
+             ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                SSCurrency currency = new SSCurrency();
+                currency.setName(result.getString(1));
+                currency.setDescription(result.getString(2));
+                currency.setExchangeRate(result.getBigDecimal(3));
+                currencies.add(currency);
+            }
+        }
+        return currencies;
+    }
+
+    /** Reads the shared unit lookup, ordered by name. */
+    public List<SSUnit> getUnits() throws SQLException {
+        List<SSUnit> units = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT name,description FROM unit_definition ORDER BY name");
+             ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                units.add(new SSUnit(result.getString(1), result.getString(2)));
+            }
+        }
+        return units;
+    }
+
+    /** Reads the shared payment term lookup, ordered by name. */
+    public List<SSPaymentTerm> getPaymentTerms() throws SQLException {
+        List<SSPaymentTerm> terms = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT name,description FROM payment_term ORDER BY name");
+             ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                terms.add(new SSPaymentTerm(result.getString(1), result.getString(2)));
+            }
+        }
+        return terms;
+    }
+
+    /** Reads the projects of a company, ordered by number. */
+    public List<SSNewProject> getProjects(int companyLegacyId) throws SQLException {
+        List<SSNewProject> projects = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT p.number,p.name,p.description,p.concluded,p.concluded_on FROM project p "
+                        + "WHERE p.company_id=(SELECT id FROM company WHERE legacy_id=?) "
+                        + "ORDER BY p.number")) {
+            statement.setInt(1, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    SSNewProject project = new SSNewProject();
+                    project.setNumber(result.getString(1));
+                    project.setName(result.getString(2));
+                    project.setDescription(result.getString(3));
+                    project.setConcluded(result.getBoolean(4));
+                    java.sql.Date concludedOn = result.getDate(5);
+                    if (concludedOn != null) {
+                        project.setLocalConcludedDate(concludedOn.toLocalDate());
+                    }
+                    projects.add(project);
+                }
+            }
+        }
+        return projects;
+    }
+
+    /** Reads the result units of a company, ordered by number. */
+    public List<SSNewResultUnit> getResultUnits(int companyLegacyId) throws SQLException {
+        List<SSNewResultUnit> units = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT r.number,r.name,r.description FROM result_unit r "
+                        + "WHERE r.company_id=(SELECT id FROM company WHERE legacy_id=?) "
+                        + "ORDER BY r.number")) {
+            statement.setInt(1, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    SSNewResultUnit unit = new SSNewResultUnit();
+                    unit.setNumber(result.getString(1));
+                    unit.setName(result.getString(2));
+                    unit.setDescription(result.getString(3));
+                    units.add(unit);
+                }
+            }
+        }
+        return units;
     }
 
     private void deleteByNumber(String table, int companyLegacyId, String number)

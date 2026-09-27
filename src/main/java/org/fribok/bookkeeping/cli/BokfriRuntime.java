@@ -5,8 +5,17 @@ import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
 import org.fribok.bookkeeping.dataformat.NormalizedRegisterStore;
 import se.swedsoft.bookkeeping.data.SSAccount;
+import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSNewProject;
+import se.swedsoft.bookkeeping.data.SSNewResultUnit;
+import se.swedsoft.bookkeeping.data.SSProduct;
+import se.swedsoft.bookkeeping.data.SSSupplier;
+import se.swedsoft.bookkeeping.data.SSVoucher;
+import se.swedsoft.bookkeeping.data.common.SSCurrency;
+import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
+import se.swedsoft.bookkeeping.data.common.SSUnit;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 
 import java.io.IOException;
@@ -137,6 +146,92 @@ public final class BokfriRuntime implements AutoCloseable {
     /** Lists the accounts of the selected accounting year from the active storage. */
     public List<SSAccount> getAccounts() throws SQLException {
         return isNormalized() ? normalizedStore.getAccounts() : database().getAccounts();
+    }
+
+    /** Lists the vouchers of the selected accounting year from the active storage. */
+    public List<SSVoucher> getVouchers() throws SQLException {
+        return isNormalized() ? normalizedStore.getVouchers() : database().getVouchers();
+    }
+
+    /** Returns the next free voucher number in the selected accounting year. */
+    public int nextVoucherNumber() throws SQLException {
+        if (isNormalized()) {
+            return normalizedStore.getVouchers().stream()
+                    .mapToInt(SSVoucher::getNumber).max().orElse(0) + 1;
+        }
+        return database().getLastVoucherNumber() + 1;
+    }
+
+    /**
+     * Adds a voucher to the selected accounting year, assigning the next free number and
+     * committing, mirroring the legacy {@code SSDB.addVoucher(voucher, false)} contract.
+     */
+    public void addVoucher(SSVoucher voucher) throws SQLException {
+        if (isNormalized()) {
+            voucher.setNumber(nextVoucherNumber());
+            normalizedStore.addVoucher(voucher);
+            connection.commit();
+            return;
+        }
+        database().addVoucher(voucher, false);
+    }
+
+    /** Lists the customers of the selected company from the active storage. */
+    public List<SSCustomer> getCustomers() throws SQLException {
+        return isNormalized()
+                ? registerStore.getCustomers(requireCurrentCompany().getId())
+                : database().getCustomers();
+    }
+
+    /** Lists the suppliers of the selected company from the active storage. */
+    public List<SSSupplier> getSuppliers() throws SQLException {
+        return isNormalized()
+                ? registerStore.getSuppliers(requireCurrentCompany().getId())
+                : database().getSuppliers();
+    }
+
+    /** Lists the products of the selected company from the active storage. */
+    public List<SSProduct> getProducts() throws SQLException {
+        return isNormalized()
+                ? registerStore.getProducts(requireCurrentCompany().getId())
+                : database().getProducts();
+    }
+
+    /** Lists the projects of the selected company from the active storage. */
+    public List<SSNewProject> getProjects() throws SQLException {
+        return isNormalized()
+                ? registerStore.getProjects(requireCurrentCompany().getId())
+                : database().getProjects();
+    }
+
+    /** Lists the result units of the selected company from the active storage. */
+    public List<SSNewResultUnit> getResultUnits() throws SQLException {
+        return isNormalized()
+                ? registerStore.getResultUnits(requireCurrentCompany().getId())
+                : database().getResultUnits();
+    }
+
+    /** Lists the shared currency lookup from the active storage. */
+    public List<SSCurrency> getCurrencies() throws SQLException {
+        return isNormalized() ? registerStore.getCurrencies() : database().getCurrencies();
+    }
+
+    /** Lists the shared unit lookup from the active storage. */
+    public List<SSUnit> getUnits() throws SQLException {
+        return isNormalized() ? registerStore.getUnits() : database().getUnits();
+    }
+
+    /** Lists the shared payment term lookup from the active storage. */
+    public List<SSPaymentTerm> getPaymentTerms() throws SQLException {
+        return isNormalized() ? registerStore.getPaymentTerms() : database().getPaymentTerms();
+    }
+
+    private SSNewCompany requireCurrentCompany() {
+        SSNewCompany company = normalizedStore().getCurrentCompany();
+        if (company == null) {
+            throw new CliException("COMPANY_REQUIRED", "No company is selected");
+        }
+        return company;
     }
 
     public SSNewCompany selectCompany(int companyId) throws SQLException {
