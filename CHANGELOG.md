@@ -84,6 +84,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Add the opt-in normalized migration service that composes engine upgrade, staging conversion,
   fingerprint verification, activation with rollback artifacts, and data format 3 recording. It is
   explicit and not part of startup; inspection now reports known normalized formats without rejection.
+- Add `bokfri database normalize` as an explicit, one-way CLI entry to the normalized migration
+  pipeline, with JSON output, idempotent no-op on an already-normalized database, and verified
+  backup/retained-source artifacts.
 
 ### Fixed
 
