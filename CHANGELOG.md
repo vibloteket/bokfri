@@ -96,6 +96,13 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   and `customer/supplier/product list` work on a normalized database through runtime dispatch
   helpers, and the register store reads the shared currency/unit/payment-term lookups plus
   company-scoped projects and result units.
+- Extend the normalized register store to full fidelity: customers with invoice/delivery
+  addresses, suppliers with address and outpayment number, and products with tax code, unit,
+  project/result-unit, locale descriptions, default accounts, and component rows round-trip
+  through explicit columns, with deletes cascading over child rows. Normalized company
+  read/write now carries VAT rates, `customer/supplier/product create` work on normalized
+  storage, and opening a normalized runtime clears stale legacy singleton selection so
+  domain-object constructors never observe it.
 
 ### Fixed
 

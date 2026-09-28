@@ -27,12 +27,16 @@ public final class NormalizedAccountingWriter {
     /** Inserts a company and returns the generated key. */
     public long addCompany(Connection connection, SSNewCompany company) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
-                "INSERT INTO company (legacy_id,name,corporate_id,vat_number) VALUES (?,?,?,?)",
+                "INSERT INTO company (legacy_id,name,corporate_id,vat_number,"
+                        + "tax_rate_1,tax_rate_2,tax_rate_3) VALUES (?,?,?,?,?,?,?)",
                 Statement.RETURN_GENERATED_KEYS)) {
             statement.setInt(1, company.getId());
             statement.setString(2, company.getName());
             statement.setString(3, company.getCorporateID());
             statement.setString(4, company.getVATNumber());
+            statement.setBigDecimal(5, company.getTaxRate1());
+            statement.setBigDecimal(6, company.getTaxRate2());
+            statement.setBigDecimal(7, company.getTaxRate3());
             statement.executeUpdate();
             return generatedKey(statement);
         }
@@ -41,11 +45,15 @@ public final class NormalizedAccountingWriter {
     /** Updates the company identified by its legacy id. */
     public void updateCompany(Connection connection, SSNewCompany company) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
-                "UPDATE company SET name=?,corporate_id=?,vat_number=? WHERE legacy_id=?")) {
+                "UPDATE company SET name=?,corporate_id=?,vat_number=?,"
+                        + "tax_rate_1=?,tax_rate_2=?,tax_rate_3=? WHERE legacy_id=?")) {
             statement.setString(1, company.getName());
             statement.setString(2, company.getCorporateID());
             statement.setString(3, company.getVATNumber());
-            statement.setInt(4, company.getId());
+            statement.setBigDecimal(4, company.getTaxRate1());
+            statement.setBigDecimal(5, company.getTaxRate2());
+            statement.setBigDecimal(6, company.getTaxRate3());
+            statement.setInt(7, company.getId());
             if (statement.executeUpdate() != 1) {
                 throw new SQLException("No company with legacy id " + company.getId());
             }

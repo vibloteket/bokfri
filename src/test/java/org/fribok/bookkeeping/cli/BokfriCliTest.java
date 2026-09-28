@@ -478,6 +478,63 @@ class BokfriCliTest {
     }
 
     @Test
+    void registerCreateWorksOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-register-data");
+        extractLegacyDatabase(data.resolve("db"));
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        int yearId = new ObjectMapper().readTree(years.stdout())
+                .path("years").get(0).path("id").asInt();
+        String[] context = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+        Result accounts = execute(concat(context, "account", "list"));
+        int salesAccount = new ObjectMapper().readTree(accounts.stdout())
+                .path("accounts").get(0).path("number").asInt();
+
+        Path customerFile = temporaryDirectory.resolve("normalized-customer.json");
+        Files.writeString(customerFile, "{\"number\":\"K100\",\"name\":\"Testkund AB\","
+                + "\"invoiceAddress\":{\"name\":\"Testkund AB\",\"address1\":\"Box 1\","
+                + "\"city\":\"Stockholm\"}}");
+        Result customer = execute(concat(context, "customer", "create", "--file",
+                customerFile.toString()));
+        assertThat(customer.exitCode()).as(customer.stderr()).isZero();
+
+        Path supplierFile = temporaryDirectory.resolve("normalized-supplier.json");
+        Files.writeString(supplierFile, "{\"number\":\"L100\",\"name\":\"Testlev AB\"}");
+        Result supplier = execute(concat(context, "supplier", "create", "--file",
+                supplierFile.toString()));
+        assertThat(supplier.exitCode()).as(supplier.stderr()).isZero();
+
+        Path productFile = temporaryDirectory.resolve("normalized-product.json");
+        Files.writeString(productFile, String.format(
+                "{\"number\":\"A100\",\"description\":\"Testartikel\",\"sellingPrice\":12.50,"
+                        + "\"vatRate\":25,\"salesAccount\":%d}", salesAccount));
+        Result product = execute(concat(context, "product", "create", "--file",
+                productFile.toString()));
+        assertThat(product.exitCode()).as(product.stderr()).isZero();
+
+        Result customers = execute(concat(context, "customer", "list"));
+        assertThat(customers.exitCode()).isZero();
+        assertThat(new ObjectMapper().readTree(customers.stdout()).path("customers"))
+                .anySatisfy(item -> assertThat(item.path("number").asText()).isEqualTo("K100"));
+        Result suppliers = execute(concat(context, "supplier", "list"));
+        assertThat(suppliers.exitCode()).isZero();
+        assertThat(new ObjectMapper().readTree(suppliers.stdout()).path("suppliers"))
+                .anySatisfy(item -> assertThat(item.path("number").asText()).isEqualTo("L100"));
+        Result products = execute(concat(context, "product", "list"));
+        assertThat(products.exitCode()).isZero();
+        assertThat(new ObjectMapper().readTree(products.stdout()).path("products"))
+                .anySatisfy(item -> assertThat(item.path("number").asText()).isEqualTo("A100"));
+    }
+
+    @Test
     void databaseMigrateIsIdempotentForCurrentFormat() throws Exception {
         Path data = temporaryDirectory.resolve("current-data");
         execute("--data-dir", data.toString(), "company", "list");
