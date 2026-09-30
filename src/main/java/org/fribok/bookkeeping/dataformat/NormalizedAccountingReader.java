@@ -23,13 +23,26 @@ public final class NormalizedAccountingReader {
         List<SSNewCompany> companies = new ArrayList<>();
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
-                     "SELECT legacy_id,name,corporate_id,vat_number FROM company ORDER BY legacy_id")) {
+                     "SELECT legacy_id,name,corporate_id,vat_number,"
+                             + "tax_rate_1,tax_rate_2,tax_rate_3 FROM company ORDER BY legacy_id")) {
             while (result.next()) {
                 SSNewCompany company = new SSNewCompany();
                 company.setId(result.getInt(1));
                 company.setName(result.getString(2));
                 company.setCorporateID(result.getString(3));
                 company.setVATNumber(result.getString(4));
+                java.math.BigDecimal taxRate1 = result.getBigDecimal(5);
+                if (taxRate1 != null) {
+                    company.setTaxrate1(taxRate1);
+                }
+                java.math.BigDecimal taxRate2 = result.getBigDecimal(6);
+                if (taxRate2 != null) {
+                    company.setTaxrate2(taxRate2);
+                }
+                java.math.BigDecimal taxRate3 = result.getBigDecimal(7);
+                if (taxRate3 != null) {
+                    company.setTaxrate3(taxRate3);
+                }
                 companies.add(company);
             }
         }

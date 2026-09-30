@@ -21,6 +21,7 @@ import org.fribok.bookkeeping.service.creditinvoice.CreditInvoiceService;
 import org.fribok.bookkeeping.service.customer.CustomerService;
 import org.fribok.bookkeeping.service.customer.CustomerValidationIssue;
 import org.fribok.bookkeeping.service.customer.CustomerValidationResult;
+import org.fribok.bookkeeping.service.customer.CustomerValidator;
 import org.fribok.bookkeeping.service.demo.DemoCompanyResult;
 import org.fribok.bookkeeping.service.demo.DemoCompanyService;
 import org.fribok.bookkeeping.service.inpayment.InpaymentJournalPlan;
@@ -48,6 +49,7 @@ import org.fribok.bookkeeping.service.sie.SieImportService;
 import org.fribok.bookkeeping.service.supplier.SupplierService;
 import org.fribok.bookkeeping.service.supplier.SupplierValidationIssue;
 import org.fribok.bookkeeping.service.supplier.SupplierValidationResult;
+import org.fribok.bookkeeping.service.supplier.SupplierValidator;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceJournalPlan;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceService;
 import org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceValidationIssue;
@@ -62,6 +64,7 @@ import org.fribok.bookkeeping.service.suppliercreditinvoice.SupplierCreditInvoic
 import org.fribok.bookkeeping.service.suppliercreditinvoice.SupplierCreditInvoiceService;
 import org.fribok.bookkeeping.service.product.ProductValidationIssue;
 import org.fribok.bookkeeping.service.product.ProductValidationResult;
+import org.fribok.bookkeeping.service.product.ProductValidator;
 import org.fribok.bookkeeping.service.vat.VatService;
 import org.fribok.bookkeeping.service.vat.VatSettlementPlan;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
@@ -1734,13 +1737,13 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSCustomer customer = toCustomer(input, runtime);
-                CustomerService service = new CustomerService(runtime.database());
-                CustomerValidationResult validation = service.validate(customer);
+                CustomerValidationResult validation =
+                        CustomerValidator.validate(customer, runtime.getCustomers());
                 if (!validation.valid()) {
                     throw customerValidationFailure(validation);
                 }
                 if (persist()) {
-                    service.create(customer);
+                    runtime.addCustomer(customer);
                 }
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("valid", true);
@@ -1925,13 +1928,13 @@ public class BokfriCli implements Runnable {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
                 SSProduct product = toProduct(input, runtime);
-                ProductService service = new ProductService(runtime.database());
-                ProductValidationResult validation = service.validate(product);
+                ProductValidationResult validation =
+                        ProductValidator.validate(product, runtime.getProducts());
                 if (!validation.valid()) {
                     throw productValidationFailure(validation);
                 }
                 if (persist()) {
-                    service.create(product);
+                    runtime.addProduct(product);
                 }
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("valid", true);
@@ -2113,11 +2116,11 @@ public class BokfriCli implements Runnable {
             SupplierInput input = readSupplierInput(file);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                SupplierService service = new SupplierService(runtime.database());
-                SSSupplier supplier = toSupplier(input, runtime, service);
-                SupplierValidationResult validation = service.validate(supplier);
+                SSSupplier supplier = toSupplier(input, runtime, runtime.nextOutpaymentNumber());
+                SupplierValidationResult validation =
+                        SupplierValidator.validate(supplier, runtime.getSuppliers());
                 if (!validation.valid()) { throw supplierValidationFailure(validation); }
-                if (persist()) { service.create(supplier); }
+                if (persist()) { runtime.addSupplier(supplier); }
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("valid", true);
                 result.put("dryRun", !persist());
@@ -3476,7 +3479,7 @@ public class BokfriCli implements Runnable {
     }
 
     private static SSSupplier toSupplier(SupplierInput input, BokfriRuntime runtime,
-            SupplierService service) {
+            int nextOutpaymentNumber) throws java.sql.SQLException {
         SSSupplier supplier = new SSSupplier();
         supplier.setNumber(normalized(input.getNumber()));
         supplier.setName(normalized(input.getName()));
@@ -3491,20 +3494,20 @@ public class BokfriCli implements Runnable {
         supplier.setPlusGiro(normalized(input.getPlusgiro()));
         supplier.setComment(normalized(input.getComment()));
         supplier.setOutpaymentNumber(input.getOutpaymentNumber() == null
-                ? service.nextOutpaymentNumber() : input.getOutpaymentNumber());
+                ? nextOutpaymentNumber : input.getOutpaymentNumber());
         if (input.getAddress() != null) {
             SSAddress address = toAddress(input.getAddress());
             if (address.getName().isBlank()) { address.setName(orEmpty(input.getName())); }
             supplier.setAddress(address);
         }
         if (input.getCurrency() != null) {
-            supplier.setCurrency(runtime.database().getCurrencies().stream()
+            supplier.setCurrency(runtime.getCurrencies().stream()
                     .filter(item -> input.getCurrency().equalsIgnoreCase(item.getName()))
                     .findFirst().orElseThrow(() -> new CliException("SUPPLIER_CURRENCY_NOT_FOUND",
                             "No currency has code " + input.getCurrency())));
         }
         if (input.getPaymentTerms() != null) {
-            supplier.setPaymentTerm(runtime.database().getPaymentTerms().stream()
+            supplier.setPaymentTerm(runtime.getPaymentTerms().stream()
                     .filter(item -> input.getPaymentTerms().equals(item.getName()))
                     .findFirst().orElseThrow(() -> new CliException("SUPPLIER_PAYMENT_TERMS_NOT_FOUND",
                             "No payment terms have code " + input.getPaymentTerms())));
@@ -3584,7 +3587,8 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    private static SSProduct toProduct(ProductInput input, BokfriRuntime runtime) {
+    private static SSProduct toProduct(ProductInput input, BokfriRuntime runtime)
+            throws java.sql.SQLException {
         SSProduct product = new SSProduct();
         product.setNumber(normalized(input.getNumber()));
         product.setDescription(normalized(input.getDescription()));
@@ -3592,29 +3596,29 @@ public class BokfriCli implements Runnable {
             product.setSellingPrice(input.getSellingPrice());
         }
         if (input.getVatRate() != null) {
-            product.setTaxCode(taxCode(input.getVatRate(), runtime.database().getCurrentCompany()));
+            product.setTaxCode(taxCode(input.getVatRate(), runtime.currentCompany()));
         }
         if (input.getUnit() != null) {
-            product.setUnit(runtime.database().getUnits().stream()
+            product.setUnit(runtime.getUnits().stream()
                     .filter(item -> input.getUnit().equals(item.getName()))
                     .findFirst().orElseThrow(() -> new CliException("PRODUCT_UNIT_NOT_FOUND",
                             "No unit has code " + input.getUnit())));
         }
         if (input.getSalesAccount() != null) {
-            SSAccount account = runtime.database().getAccounts().stream()
+            SSAccount account = runtime.getAccounts().stream()
                     .filter(item -> input.getSalesAccount().equals(item.getNumber()))
                     .findFirst().orElseThrow(() -> new CliException("PRODUCT_ACCOUNT_NOT_FOUND",
                             "No account has number " + input.getSalesAccount()));
             product.setDefaultAccount(SSDefaultAccount.Sales, account);
         }
         if (input.getProject() != null) {
-            product.setProject(runtime.database().getProjects().stream()
+            product.setProject(runtime.getProjects().stream()
                     .filter(item -> input.getProject().equals(item.getNumber()))
                     .findFirst().orElseThrow(() -> new CliException("PRODUCT_PROJECT_NOT_FOUND",
                             "No project has number " + input.getProject())));
         }
         if (input.getResultUnit() != null) {
-            product.setResultUnit(runtime.database().getResultUnits().stream()
+            product.setResultUnit(runtime.getResultUnits().stream()
                     .filter(item -> input.getResultUnit().equals(item.getNumber()))
                     .findFirst().orElseThrow(() -> new CliException("PRODUCT_RESULT_UNIT_NOT_FOUND",
                             "No result unit has number " + input.getResultUnit())));
@@ -3680,7 +3684,8 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    private static SSInvoice toInvoice(InvoiceInput input, BokfriRuntime runtime) {
+    private static SSInvoice toInvoice(InvoiceInput input, BokfriRuntime runtime)
+            throws java.sql.SQLException {
         SSInvoice invoice = new SSInvoice(se.swedsoft.bookkeeping.data.common.SSInvoiceType.NORMAL);
         SSCustomer customer = runtime.database().getCustomer(input.getCustomerNumber())
                 .orElseThrow(() -> new CliException("INVOICE_CUSTOMER_NOT_FOUND",
@@ -3708,7 +3713,7 @@ public class BokfriCli implements Runnable {
     }
 
     private static SSSaleRow toInvoiceRow(InvoiceInput.Row input, int rowNumber,
-            BokfriRuntime runtime) {
+            BokfriRuntime runtime) throws java.sql.SQLException {
         SSSaleRow row = new SSSaleRow();
         if (input.getProductNumber() != null) {
             SSProduct product = runtime.database().getProduct(input.getProductNumber())
@@ -3731,7 +3736,7 @@ public class BokfriCli implements Runnable {
             row.setDiscount(input.getDiscount());
         }
         if (input.getSalesAccount() != null) {
-            SSAccount account = runtime.database().getAccounts().stream()
+            SSAccount account = runtime.getAccounts().stream()
                     .filter(item -> input.getSalesAccount().equals(item.getNumber()))
                     .findFirst().orElseThrow(() -> new CliException("INVOICE_ACCOUNT_NOT_FOUND",
                             "No account has number " + input.getSalesAccount()));
@@ -3812,7 +3817,8 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    private static SSCustomer toCustomer(CustomerInput input, BokfriRuntime runtime) {
+    private static SSCustomer toCustomer(CustomerInput input, BokfriRuntime runtime)
+            throws java.sql.SQLException {
         SSCustomer customer = new SSCustomer();
         customer.setNumber(normalized(input.getNumber()));
         customer.setName(normalized(input.getName()));
@@ -3834,14 +3840,14 @@ public class BokfriCli implements Runnable {
             customer.setDeliveryAddress(toAddress(input.getDeliveryAddress()));
         }
         if (input.getCurrency() != null) {
-            SSCurrency currency = runtime.database().getCurrencies().stream()
+            SSCurrency currency = runtime.getCurrencies().stream()
                     .filter(item -> input.getCurrency().equalsIgnoreCase(item.getName()))
                     .findFirst().orElseThrow(() -> new CliException("CUSTOMER_CURRENCY_NOT_FOUND",
                             "No currency has code " + input.getCurrency()));
             customer.setInvoiceCurrency(currency);
         }
         if (input.getPaymentTerms() != null) {
-            SSPaymentTerm paymentTerm = runtime.database().getPaymentTerms().stream()
+            SSPaymentTerm paymentTerm = runtime.getPaymentTerms().stream()
                     .filter(item -> input.getPaymentTerms().equals(item.getName()))
                     .findFirst().orElseThrow(() -> new CliException("CUSTOMER_PAYMENT_TERMS_NOT_FOUND",
                             "No payment terms have code " + input.getPaymentTerms()));
@@ -3949,8 +3955,8 @@ public class BokfriCli implements Runnable {
         result.put("ourContact", customer.getOurContactPerson());
         result.put("yourContact", customer.getYourContactPerson());
         result.put("discount", decimal(customer.getDiscount()));
-        result.put("currency", customer.getInvoiceCurrency() == null
-                ? null : customer.getInvoiceCurrency().getName());
+        result.put("currency", customer.getStoredInvoiceCurrency() == null
+                ? null : customer.getStoredInvoiceCurrency().getName());
         result.put("comment", customer.getComment());
         result.put("invoiceAddress", customer.getInvoiceAddress());
         result.put("deliveryAddress", customer.getDeliveryAddress());
@@ -3990,7 +3996,8 @@ public class BokfriCli implements Runnable {
         result.put("bankgiro", supplier.getBankgiro());
         result.put("plusgiro", supplier.getPlusgiro());
         result.put("outpaymentNumber", supplier.getOutpaymentNumber());
-        result.put("currency", supplier.getCurrency() == null ? null : supplier.getCurrency().getName());
+        result.put("currency", supplier.getStoredCurrency() == null
+                ? null : supplier.getStoredCurrency().getName());
         result.put("paymentTerms", supplier.getPaymentTerm() == null
                 ? null : supplier.getPaymentTerm().getName());
         result.put("comment", supplier.getComment());

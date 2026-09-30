@@ -74,6 +74,13 @@ public final class BokfriRuntime implements AutoCloseable {
             connection.setAutoCommit(false);
             int format = DataFormatManager.detect(connection);
             if (format >= DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION) {
+                // Domain-object constructors read defaults from the global SSDB singleton;
+                // a normalized runtime must not observe stale legacy selection state since
+                // the legacy store is never started. Both calls are safe without a legacy
+                // connection (null selection short-circuits before any database access).
+                SSDB stale = SSDB.getInstance();
+                stale.setCurrentYear(null);
+                stale.setCurrentCompany(null);
                 return new BokfriRuntime(connection, format);
             }
             format = DataFormatManager.checkAndInitialize(connection, databaseExisted);
@@ -183,6 +190,19 @@ public final class BokfriRuntime implements AutoCloseable {
                 : database().getCustomers();
     }
 
+    /**
+     * Adds a customer to the selected company, committing in normalized mode, mirroring the
+     * legacy internal-commit contract of {@code SSDB.addCustomer}.
+     */
+    public void addCustomer(SSCustomer customer) throws SQLException {
+        if (isNormalized()) {
+            registerStore.addCustomer(requireCurrentCompany().getId(), customer);
+            connection.commit();
+            return;
+        }
+        database().addCustomer(customer);
+    }
+
     /** Lists the suppliers of the selected company from the active storage. */
     public List<SSSupplier> getSuppliers() throws SQLException {
         return isNormalized()
@@ -190,11 +210,44 @@ public final class BokfriRuntime implements AutoCloseable {
                 : database().getSuppliers();
     }
 
+    /** Adds a supplier to the selected company, committing in normalized mode. */
+    public void addSupplier(SSSupplier supplier) throws SQLException {
+        if (isNormalized()) {
+            registerStore.addSupplier(requireCurrentCompany().getId(), supplier);
+            connection.commit();
+            return;
+        }
+        database().addSupplier(supplier);
+    }
+
+    /** Returns the next free outpayment number across the selected company's suppliers. */
+    public int nextOutpaymentNumber() throws SQLException {
+        return getSuppliers().stream().map(SSSupplier::getOutpaymentNumber)
+                .filter(java.util.Objects::nonNull).max(Integer::compareTo).orElse(0) + 1;
+    }
+
     /** Lists the products of the selected company from the active storage. */
     public List<SSProduct> getProducts() throws SQLException {
         return isNormalized()
                 ? registerStore.getProducts(requireCurrentCompany().getId())
                 : database().getProducts();
+    }
+
+    /** Adds a product to the selected company, committing in normalized mode. */
+    public void addProduct(SSProduct product) throws SQLException {
+        if (isNormalized()) {
+            registerStore.addProduct(requireCurrentCompany().getId(), product);
+            connection.commit();
+            return;
+        }
+        database().addProduct(product);
+    }
+
+    /** Returns the selected company in the active storage. */
+    public SSNewCompany currentCompany() {
+        return isNormalized()
+                ? normalizedStore.getCurrentCompany()
+                : database().getCurrentCompany();
     }
 
     /** Lists the projects of the selected company from the active storage. */
