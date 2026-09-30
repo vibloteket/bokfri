@@ -149,6 +149,18 @@ public class SSSaleMath {
      * @return the total sum
      */
     public static BigDecimal getTotalSum(SSSale iSale) {
+        return getTotalSum(iSale, SSDB.getInstance().getCurrentCompany().isRoundingOff());
+    }
+
+    /**
+     * Returns the rounded total sum for a sale, with the company's rounding behaviour
+     * supplied explicitly so the calculation works without the global database singleton.
+     *
+     * @param iSale the sale
+     * @param roundingOff the company's rounding flag
+     * @return the total sum
+     */
+    public static BigDecimal getTotalSum(SSSale iSale, boolean roundingOff) {
         // Get the tax sum
         Map<SSTaxCode, BigDecimal> iTaxSum = getTaxSum(iSale);
 
@@ -164,7 +176,7 @@ public class SSSaleMath {
         } else {
             iSum = iNetSum.add(iTaxSum1).add(iTaxSum2).add(iTaxSum3);
         }
-        if (!SSDB.getInstance().getCurrentCompany().isRoundingOff()) {
+        if (!roundingOff) {
             return iSum.setScale(0, RoundingMode.HALF_UP);
         } else {
             return iSum;
@@ -180,6 +192,18 @@ public class SSSaleMath {
      * @return the total sum
      */
     public static BigDecimal getRounding(SSSale iSale) {
+        return getRounding(iSale, SSDB.getInstance().getCurrentCompany().isRoundingOff());
+    }
+
+    /**
+     * Returns the rounding for a sale, with the company's rounding behaviour supplied
+     * explicitly so the calculation works without the global database singleton.
+     *
+     * @param iSale the sale
+     * @param roundingOff the company's rounding flag
+     * @return the rounding
+     */
+    public static BigDecimal getRounding(SSSale iSale, boolean roundingOff) {
         // Get the tax sum
         Map<SSTaxCode, BigDecimal> iTaxSum = getTaxSum(iSale);
 
@@ -195,12 +219,11 @@ public class SSSaleMath {
         } else {
             iSum = iNetSum.add(iTaxSum1).add(iTaxSum2).add(iTaxSum3);
         }
-        if (!SSDB.getInstance().getCurrentCompany().isRoundingOff()) {
+        if (!roundingOff) {
             return iSum.setScale(0, RoundingMode.HALF_UP).subtract(iSum);
         } else {
             return new BigDecimal(0);
         }
-        // return iSum.subtract( iSum.setScale(0, RoundingMode.HALF_UP) );
     }
 
     /**

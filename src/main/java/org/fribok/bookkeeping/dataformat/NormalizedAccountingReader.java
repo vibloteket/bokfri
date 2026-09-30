@@ -24,7 +24,7 @@ public final class NormalizedAccountingReader {
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
                      "SELECT legacy_id,name,corporate_id,vat_number,"
-                             + "tax_rate_1,tax_rate_2,tax_rate_3 FROM company ORDER BY legacy_id")) {
+                             + "tax_rate_1,tax_rate_2,tax_rate_3,rounding_off FROM company ORDER BY legacy_id")) {
             while (result.next()) {
                 SSNewCompany company = new SSNewCompany();
                 company.setId(result.getInt(1));
@@ -43,6 +43,7 @@ public final class NormalizedAccountingReader {
                 if (taxRate3 != null) {
                     company.setTaxrate3(taxRate3);
                 }
+                company.setRoundingOff(result.getBoolean(8));
                 companies.add(company);
             }
         }

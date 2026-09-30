@@ -3,9 +3,11 @@ package org.fribok.bookkeeping.cli;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore;
 import org.fribok.bookkeeping.dataformat.NormalizedRegisterStore;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSCustomer;
+import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSNewProject;
@@ -42,6 +44,7 @@ public final class BokfriRuntime implements AutoCloseable {
     private final Connection connection;
     private final NormalizedAccountingStore normalizedStore;
     private final NormalizedRegisterStore registerStore;
+    private final NormalizedInvoiceStore invoiceStore;
     private final int dataFormat;
 
     private BokfriRuntime(SSDB database, int dataFormat) {
@@ -50,6 +53,7 @@ public final class BokfriRuntime implements AutoCloseable {
         this.connection = null;
         this.normalizedStore = null;
         this.registerStore = null;
+        this.invoiceStore = null;
     }
 
     private BokfriRuntime(Connection connection, int dataFormat) {
@@ -58,6 +62,7 @@ public final class BokfriRuntime implements AutoCloseable {
         this.connection = connection;
         this.normalizedStore = new NormalizedAccountingStore(connection, Clock.systemDefaultZone());
         this.registerStore = new NormalizedRegisterStore(connection);
+        this.invoiceStore = new NormalizedInvoiceStore(connection);
     }
 
     public static BokfriRuntime open(Path dataDir)
@@ -134,6 +139,15 @@ public final class BokfriRuntime implements AutoCloseable {
                     "Normalized storage is not active for this database (data format " + dataFormat + ")");
         }
         return registerStore;
+    }
+
+    /** Returns the normalized customer invoice store. */
+    public NormalizedInvoiceStore invoiceStore() {
+        if (invoiceStore == null) {
+            throw new CliException("LEGACY_STORAGE",
+                    "Normalized storage is not active for this database (data format " + dataFormat + ")");
+        }
+        return invoiceStore;
     }
 
     /** Lists all companies from the active storage. */
@@ -241,6 +255,61 @@ public final class BokfriRuntime implements AutoCloseable {
             return;
         }
         database().addProduct(product);
+    }
+
+    /** Lists the customer invoices of the selected company from the active storage. */
+    public List<SSInvoice> getInvoices() throws SQLException {
+        return isNormalized()
+                ? invoiceStore.getInvoices(requireCurrentCompany().getId())
+                : database().getInvoices();
+    }
+
+    /**
+     * Returns the number the next created invoice receives, mirroring the legacy contract:
+     * one above the greater of the highest existing number and the company's "invoice"
+     * auto-increment counter.
+     */
+    public int nextInvoiceNumber() throws SQLException {
+        if (isNormalized()) {
+            return invoiceStore.nextInvoiceNumber(requireCurrentCompany().getId());
+        }
+        SSDB database = database();
+        return database.getInvoices().stream()
+                .map(SSInvoice::getNumber)
+                .filter(java.util.Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(database.getCurrentCompany().getAutoIncrement().getNumber("invoice")) + 1;
+    }
+
+    /** Adds an unbooked invoice to the selected company, committing in normalized mode. */
+    public void addInvoice(SSInvoice invoice) throws SQLException {
+        if (isNormalized()) {
+            invoice.setNumber(invoiceStore.nextInvoiceNumber(requireCurrentCompany().getId()));
+            invoiceStore.addInvoice(requireCurrentCompany().getId(), invoice);
+            connection.commit();
+            return;
+        }
+        database().addInvoice(invoice);
+    }
+
+    /** Finds a customer of the selected company by number in the active storage. */
+    public java.util.Optional<SSCustomer> findCustomer(String number) throws SQLException {
+        if (isNormalized()) {
+            return getCustomers().stream()
+                    .filter(customer -> java.util.Objects.equals(number, customer.getNumber()))
+                    .findFirst();
+        }
+        return database().getCustomer(number);
+    }
+
+    /** Finds a product of the selected company by number in the active storage. */
+    public java.util.Optional<SSProduct> findProduct(String number) throws SQLException {
+        if (isNormalized()) {
+            return getProducts().stream()
+                    .filter(product -> java.util.Objects.equals(number, product.getNumber()))
+                    .findFirst();
+        }
+        return database().getProduct(number);
     }
 
     /** Returns the selected company in the active storage. */

@@ -416,12 +416,12 @@ class BokfriCliTest {
         int yearId = new ObjectMapper().readTree(years.stdout())
                 .path("years").get(0).path("id").asInt();
 
-        Result invoices = execute("--data-dir", data.toString(), "--company-id",
+        Result inpayments = execute("--data-dir", data.toString(), "--company-id",
                 Integer.toString(companyId), "--year-id", Integer.toString(yearId),
-                "--format", "json", "invoice", "list");
+                "--format", "json", "inpayment", "list");
 
-        assertThat(invoices.exitCode()).isEqualTo(1);
-        assertThat(new ObjectMapper().readTree(invoices.stderr()).at("/error/code").asText())
+        assertThat(inpayments.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(inpayments.stderr()).at("/error/code").asText())
                 .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
     }
 
@@ -532,6 +532,67 @@ class BokfriCliTest {
         assertThat(products.exitCode()).isZero();
         assertThat(new ObjectMapper().readTree(products.stdout()).path("products"))
                 .anySatisfy(item -> assertThat(item.path("number").asText()).isEqualTo("A100"));
+    }
+
+    @Test
+    void invoiceCreateListAndShowWorkOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-invoice-data");
+        extractLegacyDatabase(data.resolve("db"));
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode yearNode = new ObjectMapper().readTree(years.stdout()).path("years").get(0);
+        int yearId = yearNode.path("id").asInt();
+        String yearFrom = yearNode.path("from").asText();
+        String[] context = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+        Result accounts = execute(concat(context, "account", "list"));
+        int salesAccount = new ObjectMapper().readTree(accounts.stdout())
+                .path("accounts").get(0).path("number").asInt();
+
+        Path customerFile = temporaryDirectory.resolve("invoice-customer.json");
+        Files.writeString(customerFile, "{\"number\":\"K100\",\"name\":\"Fakturakund AB\"}");
+        assertThat(execute(concat(context, "customer", "create", "--file",
+                customerFile.toString())).exitCode()).isZero();
+
+        Path invoiceFile = temporaryDirectory.resolve("normalized-invoice.json");
+        Files.writeString(invoiceFile, String.format(
+                "{\"customerNumber\":\"K100\",\"date\":\"%s\",\"rows\":["
+                        + "{\"description\":\"Konsultarbete\",\"quantity\":2,\"unitPrice\":500,"
+                        + "\"vatRate\":25,\"salesAccount\":%d}]}", yearFrom, salesAccount));
+        Result created = execute(concat(context, "invoice", "create", "--file",
+                invoiceFile.toString()));
+        assertThat(created.exitCode()).as(created.stderr()).isZero();
+        JsonNode createdJson = new ObjectMapper().readTree(created.stdout());
+        int invoiceNumber = createdJson.path("number").asInt();
+        assertThat(invoiceNumber).isPositive();
+        assertThat(createdJson.path("total").asText()).isEqualTo("1250.00");
+        // Details are built before the number is assigned, matching legacy create output.
+        assertThat(createdJson.path("balance").isNull()).isTrue();
+
+        Result listed = execute(concat(context, "invoice", "list"));
+        assertThat(listed.exitCode()).isZero();
+        assertThat(new ObjectMapper().readTree(listed.stdout()).path("invoices"))
+                .anySatisfy(invoice -> {
+                    assertThat(invoice.path("number").asInt()).isEqualTo(invoiceNumber);
+                    assertThat(invoice.path("customerName").asText()).isEqualTo("Fakturakund AB");
+                    assertThat(invoice.path("total").asText()).isEqualTo("1250.00");
+                });
+
+        Result shown = execute(concat(context, "invoice", "show",
+                Integer.toString(invoiceNumber)));
+        assertThat(shown.exitCode()).as(shown.stderr()).isZero();
+        JsonNode details = new ObjectMapper().readTree(shown.stdout());
+        assertThat(details.path("rowCount").asInt()).isEqualTo(1);
+        assertThat(details.path("rows").get(0).path("description").asText())
+                .isEqualTo("Konsultarbete");
+        assertThat(details.path("rows").get(0).path("account").asInt()).isEqualTo(salesAccount);
     }
 
     @Test
