@@ -19,6 +19,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class NormalizedRegisterStoreTest {
 
+    @org.junit.jupiter.api.BeforeEach
+    void clearLegacySingletonSelection() {
+        // Domain-object constructors copy defaults (currency, payment terms, ...) from the
+        // global SSDB singleton's current company. In a shared test JVM that state can leak
+        // between test classes and would make the store persist unintended lookup references.
+        se.swedsoft.bookkeeping.data.system.SSDB stale =
+                se.swedsoft.bookkeeping.data.system.SSDB.getInstance();
+        stale.setCurrentYear(null);
+        stale.setCurrentCompany(null);
+    }
+
     @Test
     void registersRoundTrip() throws Exception {
         try (Connection connection = connection()) {
