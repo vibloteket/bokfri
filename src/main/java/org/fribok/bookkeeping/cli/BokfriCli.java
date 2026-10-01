@@ -29,6 +29,7 @@ import org.fribok.bookkeeping.service.inpayment.InpaymentJournalResult;
 import org.fribok.bookkeeping.service.inpayment.InpaymentService;
 import org.fribok.bookkeeping.service.inpayment.InpaymentValidationIssue;
 import org.fribok.bookkeeping.service.inpayment.InpaymentValidationResult;
+import org.fribok.bookkeeping.service.inpayment.InpaymentValidator;
 import org.fribok.bookkeeping.service.invoice.InvoiceJournalPlan;
 import org.fribok.bookkeeping.service.invoice.InvoiceJournalResult;
 import org.fribok.bookkeeping.service.invoice.InvoiceService;
@@ -2575,7 +2576,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "list") static class CreditInvoiceList implements Callable<Integer> {
         @CliMetadata.ParentCommand CreditInvoiceCommand command;
-        @Option(names="--output") java.nio.file.Path output; @Option(names="--overwrite") boolean overwrite; public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);List<SSCreditInvoice> items=new CreditInvoiceService(r.database()).list();List<Map<String,Object>> rows=items.stream().map(i->{try{return creditInvoiceDetails(i,r);}catch(java.sql.SQLException e){throw new RuntimeException(e);}}).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("creditInvoices",rows);result.put("count",rows.size());if(output!=null)addPdf(result,exportPdf(new SSCreditInvoiceListPrinter(new java.util.ArrayList<>(items)),output,overwrite));root.output(result,table(rows,"No credit invoices found",right("Number","number"),left("Date","date"),left("Customer","customerName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}
+        @Option(names="--output") java.nio.file.Path output; @Option(names="--overwrite") boolean overwrite; public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());if(!r.isNormalized())r.database().init(false);List<SSCreditInvoice> items=r.getCreditInvoices().stream().sorted(java.util.Comparator.comparing(SSCreditInvoice::getNumber,java.util.Comparator.nullsLast(Integer::compareTo))).toList();List<Map<String,Object>> rows=items.stream().map(i->{try{return creditInvoiceDetails(i,r);}catch(java.sql.SQLException e){throw new RuntimeException(e);}}).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("creditInvoices",rows);result.put("count",rows.size());if(output!=null)addPdf(result,exportPdf(new SSCreditInvoiceListPrinter(new java.util.ArrayList<>(items)),output,overwrite));root.output(result,table(rows,"No credit invoices found",right("Number","number"),left("Date","date"),left("Customer","customerName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}
     }
 
     @Command(mixinStandardHelpOptions = true, name = "show") static class CreditInvoiceShow implements Callable<Integer> {
@@ -2617,8 +2618,72 @@ public class BokfriCli implements Runnable {
     }
 
     abstract static class CreditInvoiceOperation implements Callable<Integer> {
-        @CliMetadata.ParentCommand CreditInvoiceCommand command; @Option(names="--file",required=true) String file; abstract boolean persist();
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);CreditInvoiceInput input=readCreditInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());SSInvoice original=new InvoiceService(r.database()).find(input.getInvoiceNumber()).orElseThrow(()->new CliException("INVOICE_NOT_FOUND","No invoice has number "+input.getInvoiceNumber()));SSCreditInvoice credit=persist()?s.create(original,input.getDate(),input.getAmount()):s.preview(original,input.getDate(),input.getAmount());Map<String,Object>x=creditInvoiceDetails(credit,r);x.put("created",persist());x.put("dryRun",!persist());x.put("selection",selectedContext(c,co,y));root.output(x,persist()?"Created credit invoice "+credit.getNumber():"Credit invoice is valid; no changes written");return 0;}catch(CliException e){throw e;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_INVALID",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
+        @CliMetadata.ParentCommand CreditInvoiceCommand command;
+        @Option(names = "--file", required = true) String file;
+        abstract boolean persist();
+        public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext c = root.resolveContext(true, true);
+            CreditInvoiceInput input = readCreditInvoiceInput(file);
+            try (BokfriRuntime r = root.openRuntime(c.dataDir())) {
+                SSNewCompany co = r.selectCompany(c.companyId());
+                SSNewAccountingYear y = r.selectYear(co, c.yearId());
+                if (!r.isNormalized()) {
+                    r.database().init(false);
+                }
+                SSInvoice original = r.findInvoice(input.getInvoiceNumber())
+                        .orElseThrow(() -> new CliException("INVOICE_NOT_FOUND",
+                                "No invoice has number " + input.getInvoiceNumber()));
+                if (!original.isEntered()) {
+                    throw new CliException("CREDIT_INVOICE_INVALID",
+                            "Original invoice must be entered before crediting");
+                }
+                java.math.BigDecimal balance = r.invoiceBalance(original);
+                if (balance.signum() <= 0) {
+                    throw new CliException("CREDIT_INVOICE_INVALID",
+                            "Original invoice has no remaining balance to credit");
+                }
+                if (input.getAmount() != null && (input.getAmount().signum() <= 0
+                        || input.getAmount().compareTo(balance) > 0)) {
+                    throw new CliException("CREDIT_INVOICE_INVALID",
+                            "Credit amount must be positive and not exceed invoice balance");
+                }
+                SSCreditInvoice credit = new SSCreditInvoice(original);
+                credit.setNumber(r.nextCreditInvoiceNumber());
+                credit.setLocalDate(input.getDate() == null
+                        ? java.time.LocalDate.now() : input.getDate());
+                if (input.getAmount() != null) {
+                    java.math.BigDecimal total = r.isNormalized()
+                            ? SSSaleMath.getTotalSum(original, co.isRoundingOff())
+                            : SSSaleMath.getTotalSum(original);
+                    java.math.BigDecimal factor = input.getAmount().divide(total, 12,
+                            java.math.RoundingMode.HALF_UP);
+                    credit.getRows().forEach(row -> row.setUnitprice(
+                            row.getUnitprice().multiply(factor)));
+                }
+                // The booked voucher snapshot is generated by the journal flow; the
+                // singleton-backed generation path is unavailable in normalized mode.
+                if (!r.isNormalized()) {
+                    credit.generateVoucher();
+                }
+                if (persist()) {
+                    credit.setNumber(null);
+                    r.addCreditInvoice(credit);
+                }
+                Map<String, Object> x = creditInvoiceDetails(credit, r);
+                x.put("created", persist());
+                x.put("dryRun", !persist());
+                x.put("selection", selectedContext(c, co, y));
+                root.output(x, persist()
+                        ? "Created credit invoice " + credit.getNumber()
+                        : "Credit invoice is valid; no changes written");
+                return 0;
+            } catch (CliException e) {
+                throw e;
+            } catch (Exception e) {
+                throw databaseFailure(e);
+            }
+        }
     }
     @Command(mixinStandardHelpOptions = true, name="validate") static class CreditInvoiceValidate extends CreditInvoiceOperation {boolean persist(){return false;}}
     @Command(mixinStandardHelpOptions = true, name="create") static class CreditInvoiceCreate extends CreditInvoiceOperation {@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
@@ -2647,9 +2712,13 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                runtime.database().init(false);
-                List<Map<String, Object>> items = new InpaymentService(runtime.database()).list()
-                        .stream().map(BokfriCli::inpaymentDetails).toList();
+                if (!runtime.isNormalized()) {
+                    runtime.database().init(false);
+                }
+                List<Map<String, Object>> items = runtime.getInpayments().stream()
+                        .sorted(Comparator.comparing(SSInpayment::getNumber,
+                                Comparator.nullsLast(Integer::compareTo)))
+                        .map(BokfriCli::inpaymentDetails).toList();
                 root.output(Map.of("selection", selectedCompanyContext(context, company),
                                 "count", items.size(), "inpayments", items),
                         table(items, "No inpayments found", right("Number", "number"),
@@ -2692,8 +2761,13 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                runtime.database().init(false);
-                SSInpayment item = new InpaymentService(runtime.database()).find(number)
+                if (!runtime.isNormalized()) {
+                    runtime.database().init(false);
+                }
+                SSInpayment item = runtime.getInpayments().stream()
+                        .filter(candidate -> candidate.getNumber() != null
+                                && candidate.getNumber() == number)
+                        .findFirst()
                         .orElseThrow(() -> new CliException("INPAYMENT_NOT_FOUND",
                                 "No inpayment has number " + number));
                 Map<String, Object> result = inpaymentDetails(item);
@@ -2718,18 +2792,26 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
+                if (!runtime.isNormalized()) {
+                    runtime.database().init(false);
+                }
                 SSInpayment item = toInpayment(input, runtime);
-                InpaymentService service = new InpaymentService(runtime.database());
-                InpaymentValidationResult validation = service.validate(item);
+                InpaymentValidationResult validation = InpaymentValidator.validate(item,
+                        runtime.getInvoices(), invoice -> {
+                            try {
+                                return runtime.invoiceBalance(invoice);
+                            } catch (java.sql.SQLException exception) {
+                                throw new IllegalStateException(exception);
+                            }
+                        });
                 if (!validation.valid()) { throw inpaymentValidationFailure(validation); }
                 Map<String, Object> result = inpaymentDetails(item);
-                result.put("number", service.nextNumber());
+                result.put("number", runtime.nextInpaymentNumber());
                 result.put("dryRun", !persist());
                 result.put("created", persist());
                 result.put("selection", selectedContext(context, company, year));
                 if (persist()) {
-                    service.create(item);
+                    runtime.addInpayment(item);
                     result.put("number", item.getNumber());
                 }
                 root.output(result, persist()
@@ -3568,7 +3650,8 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    private static SSInpayment toInpayment(InpaymentInput input, BokfriRuntime runtime) {
+    private static SSInpayment toInpayment(InpaymentInput input, BokfriRuntime runtime)
+            throws java.sql.SQLException {
         SSInpayment item = new SSInpayment();
         item.setLocalDate(input.getDate());
         item.setText(normalized(input.getText()));
@@ -3585,7 +3668,11 @@ public class BokfriCli implements Runnable {
             rows.add(row);
         }
         item.setRows(rows);
-        item.generateVoucher();
+        // The voucher snapshot is only needed when booking; the journal flow regenerates it.
+        // In normalized mode the singleton-backed generation path is unavailable by design.
+        if (!runtime.isNormalized()) {
+            item.generateVoucher();
+        }
         return item;
     }
 
@@ -4119,22 +4206,7 @@ public class BokfriCli implements Runnable {
     /** Outstanding balance, dispatched to the active storage for credit/inpayment sums. */
     private static java.math.BigDecimal invoiceBalance(SSInvoice invoice, BokfriRuntime runtime)
             throws java.sql.SQLException {
-        if (invoice.getNumber() == null) {
-            return null;
-        }
-        if (!runtime.isNormalized()) {
-            return se.swedsoft.bookkeeping.calc.math.SSInvoiceMath.getSaldo(invoice);
-        }
-        if (invoice.getType() == se.swedsoft.bookkeeping.data.common.SSInvoiceType.CASH) {
-            return java.math.BigDecimal.ZERO;
-        }
-        boolean roundingOff = runtime.currentCompany().isRoundingOff();
-        int companyId = runtime.currentCompany().getId();
-        return invoiceTotal(invoice, runtime)
-                .subtract(runtime.invoiceStore().creditInvoiceSum(companyId, invoice.getNumber(),
-                        roundingOff))
-                .subtract(runtime.invoiceStore().inpaymentSum(companyId, invoice.getNumber()))
-                .setScale(2, java.math.RoundingMode.HALF_UP);
+        return invoice.getNumber() == null ? null : runtime.invoiceBalance(invoice);
     }
 
     private static Map<String, Object> creditInvoiceDetails(SSCreditInvoice invoice,

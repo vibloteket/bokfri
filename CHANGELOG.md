@@ -109,6 +109,12 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   `invoice list/show/create/validate` to normalized storage. Sale totals and rounding can now
   be computed without the global SSDB singleton via explicit rounding-flag overloads, and the
   normalized company read/write carries the rounding flag.
+- Extend the normalized invoice store to credit invoices (crediting number, same child tables)
+  and add the normalized inpayment store with rows, default accounts, and main/difference
+  voucher snapshots; numbering mirrors the legacy auto-increment counter floors. Port
+  `credit-invoice list/show/create/validate` and `inpayment list/show/create/validate` to
+  normalized storage, with balance-aware validation supplied by the runtime instead of the
+  global singleton.
 
 ### Fixed
 

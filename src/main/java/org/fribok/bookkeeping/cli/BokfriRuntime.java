@@ -3,10 +3,13 @@ package org.fribok.bookkeeping.cli;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
+import org.fribok.bookkeeping.dataformat.NormalizedInpaymentStore;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore;
 import org.fribok.bookkeeping.dataformat.NormalizedRegisterStore;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSCustomer;
+import se.swedsoft.bookkeeping.data.SSCreditInvoice;
+import se.swedsoft.bookkeeping.data.SSInpayment;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
@@ -45,6 +48,7 @@ public final class BokfriRuntime implements AutoCloseable {
     private final NormalizedAccountingStore normalizedStore;
     private final NormalizedRegisterStore registerStore;
     private final NormalizedInvoiceStore invoiceStore;
+    private final NormalizedInpaymentStore inpaymentStore;
     private final int dataFormat;
 
     private BokfriRuntime(SSDB database, int dataFormat) {
@@ -54,6 +58,7 @@ public final class BokfriRuntime implements AutoCloseable {
         this.normalizedStore = null;
         this.registerStore = null;
         this.invoiceStore = null;
+        this.inpaymentStore = null;
     }
 
     private BokfriRuntime(Connection connection, int dataFormat) {
@@ -63,6 +68,7 @@ public final class BokfriRuntime implements AutoCloseable {
         this.normalizedStore = new NormalizedAccountingStore(connection, Clock.systemDefaultZone());
         this.registerStore = new NormalizedRegisterStore(connection);
         this.invoiceStore = new NormalizedInvoiceStore(connection);
+        this.inpaymentStore = new NormalizedInpaymentStore(connection);
     }
 
     public static BokfriRuntime open(Path dataDir)
@@ -290,6 +296,95 @@ public final class BokfriRuntime implements AutoCloseable {
             return;
         }
         database().addInvoice(invoice);
+    }
+
+    /** Returns the normalized inpayment store. */
+    public NormalizedInpaymentStore inpaymentStore() {
+        if (inpaymentStore == null) {
+            throw new CliException("LEGACY_STORAGE",
+                    "Normalized storage is not active for this database (data format " + dataFormat + ")");
+        }
+        return inpaymentStore;
+    }
+
+    /** Finds an invoice of the selected company by number in the active storage. */
+    public java.util.Optional<SSInvoice> findInvoice(int number) throws SQLException {
+        return getInvoices().stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(invoice -> invoice.getNumber() != null && invoice.getNumber() == number)
+                .findFirst();
+    }
+
+    /** Outstanding invoice balance in the active storage. */
+    public java.math.BigDecimal invoiceBalance(SSInvoice invoice) throws SQLException {
+        if (!isNormalized()) {
+            return se.swedsoft.bookkeeping.calc.math.SSInvoiceMath.getSaldo(invoice);
+        }
+        if (invoice.getType() == se.swedsoft.bookkeeping.data.common.SSInvoiceType.CASH) {
+            return java.math.BigDecimal.ZERO;
+        }
+        boolean roundingOff = currentCompany().isRoundingOff();
+        int companyId = currentCompany().getId();
+        return se.swedsoft.bookkeeping.calc.math.SSSaleMath.getTotalSum(invoice, roundingOff)
+                .subtract(invoiceStore.creditInvoiceSum(companyId, invoice.getNumber(), roundingOff))
+                .subtract(invoiceStore.inpaymentSum(companyId, invoice.getNumber()))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
+    /** Lists the credit invoices of the selected company from the active storage. */
+    public List<SSCreditInvoice> getCreditInvoices() throws SQLException {
+        return isNormalized()
+                ? invoiceStore.getCreditInvoices(requireCurrentCompany().getId())
+                : database().getCreditInvoices();
+    }
+
+    /** Returns the number the next created credit invoice receives in the active storage. */
+    public int nextCreditInvoiceNumber() throws SQLException {
+        if (isNormalized()) {
+            return invoiceStore.nextCreditInvoiceNumber(requireCurrentCompany().getId());
+        }
+        return new org.fribok.bookkeeping.service.creditinvoice.CreditInvoiceService(database())
+                .nextNumber();
+    }
+
+    /** Adds a credit invoice to the selected company, committing in normalized mode. */
+    public void addCreditInvoice(SSCreditInvoice creditInvoice) throws SQLException {
+        if (isNormalized()) {
+            creditInvoice.setNumber(
+                    invoiceStore.nextCreditInvoiceNumber(requireCurrentCompany().getId()));
+            invoiceStore.addCreditInvoice(requireCurrentCompany().getId(), creditInvoice);
+            connection.commit();
+            return;
+        }
+        database().addCreditInvoice(creditInvoice);
+    }
+
+    /** Lists the inpayments of the selected company from the active storage. */
+    public List<SSInpayment> getInpayments() throws SQLException {
+        return isNormalized()
+                ? inpaymentStore.getInpayments(requireCurrentCompany().getId())
+                : database().getInpayments();
+    }
+
+    /** Returns the number the next created inpayment receives in the active storage. */
+    public int nextInpaymentNumber() throws SQLException {
+        if (isNormalized()) {
+            return inpaymentStore.nextInpaymentNumber(requireCurrentCompany().getId());
+        }
+        return new org.fribok.bookkeeping.service.inpayment.InpaymentService(database())
+                .nextNumber();
+    }
+
+    /** Adds an inpayment to the selected company, committing in normalized mode. */
+    public void addInpayment(SSInpayment inpayment) throws SQLException {
+        if (isNormalized()) {
+            inpayment.setNumber(
+                    inpaymentStore.nextInpaymentNumber(requireCurrentCompany().getId()));
+            inpaymentStore.addInpayment(requireCurrentCompany().getId(), inpayment);
+            connection.commit();
+            return;
+        }
+        database().addInpayment(inpayment);
     }
 
     /** Finds a customer of the selected company by number in the active storage. */
