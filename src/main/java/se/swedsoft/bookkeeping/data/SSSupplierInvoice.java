@@ -444,7 +444,7 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
 
         if (iSupplier != null) {
             iSupplierName = iSupplier.getName();
-            iCurrency = iSupplier.getCurrency();
+            iCurrency = iSupplier.getStoredCurrency();
         }
     }
 
