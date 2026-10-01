@@ -704,7 +704,7 @@ public abstract class SSSale implements SSTableSearchable, Serializable {
         iPaymentTerm = iCustomer.getPaymentTerm();
         iDeliveryTerm = iCustomer.getDeliveryTerm();
         iDeliveryWay = iCustomer.getDeliveryWay();
-        iCurrency = iCustomer.getInvoiceCurrency();
+        iCurrency = iCustomer.getStoredInvoiceCurrency();
 
         // this.iCurrency.setExchangeRate(iCustomer.getInvoiceCurrency() == null ? null : iCustomer.getInvoiceCurrency().getExchangeRate());
         iTaxFree = iCustomer.getTaxFree();

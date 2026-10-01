@@ -103,6 +103,12 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   read/write now carries VAT rates, `customer/supplier/product create` work on normalized
   storage, and opening a normalized runtime clears stale legacy singleton selection so
   domain-object constructors never observe it.
+- Add the normalized customer invoice store with full fidelity (header, addresses, default
+  accounts, ordered rows, booked voucher snapshot) plus legacy-compatible invoice numbering
+  (auto-increment counter floor) and credit/inpayment sums for balances. Port
+  `invoice list/show/create/validate` to normalized storage. Sale totals and rounding can now
+  be computed without the global SSDB singleton via explicit rounding-flag overloads, and the
+  normalized company read/write carries the rounding flag.
 
 ### Fixed
 
