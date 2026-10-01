@@ -184,6 +184,57 @@ class NormalizedInvoiceStoreTest {
         }
     }
 
+    @Test
+    void creditInvoicesRoundTripWithCreditingNumber() throws Exception {
+        try (Connection connection = connection()) {
+            migrate(connection);
+            NormalizedAccountingWriter writer =
+                    new NormalizedAccountingWriter(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+            SSNewCompany company = new SSNewCompany();
+            company.setId(13);
+            writer.addCompany(connection, company);
+            connection.commit();
+            NormalizedInvoiceStore store = new NormalizedInvoiceStore(connection);
+
+            se.swedsoft.bookkeeping.data.SSCreditInvoice credit =
+                    new se.swedsoft.bookkeeping.data.SSCreditInvoice();
+            credit.setNumber(9001);
+            credit.setCreditingNr(2001);
+            credit.setLocalDate(LocalDate.of(2026, 2, 1));
+            credit.setLocalDueDate(LocalDate.of(2026, 2, 1));
+            credit.setCustomerNr("K1");
+            credit.setCustomerName("Kund AB");
+            credit.setTaxRate1(new BigDecimal("25"));
+            credit.setEntered(true);
+            SSSaleRow row = new SSSaleRow();
+            row.setDescription("Kreditrad");
+            row.setUnitprice(new BigDecimal("100"));
+            row.setQuantity(1);
+            row.setTaxCode(SSTaxCode.TAXRATE_1);
+            row.setAccountNr(3010);
+            credit.setRows(List.of(row));
+            store.addCreditInvoice(13, credit);
+            connection.commit();
+
+            List<se.swedsoft.bookkeeping.data.SSCreditInvoice> read = store.getCreditInvoices(13);
+            assertThat(read).hasSize(1);
+            se.swedsoft.bookkeeping.data.SSCreditInvoice restored = read.get(0);
+            assertThat(restored.getNumber()).isEqualTo(9001);
+            assertThat(restored.getCreditingNr()).isEqualTo(2001);
+            assertThat(restored.getCustomerName()).isEqualTo("Kund AB");
+            assertThat(restored.isEntered()).isTrue();
+            assertThat(restored.getRows()).hasSize(1);
+            assertThat(restored.getRows().get(0).getDescription()).isEqualTo("Kreditrad");
+
+            // The credit sum for the credited invoice now reflects the credit invoice total.
+            assertThat(store.creditInvoiceSum(13, 2001, true)).isEqualByComparingTo("125");
+            // Filtered reads only return credit invoices crediting that invoice.
+            assertThat(store.getCreditInvoices(13, 2001)).hasSize(1);
+            assertThat(store.getCreditInvoices(13, 4711)).isEmpty();
+            assertThat(store.nextCreditInvoiceNumber(13)).isEqualTo(9002);
+        }
+    }
+
     private static Connection connection() throws Exception {
         Class.forName("org.hsqldb.jdbcDriver");
         Connection connection = DriverManager.getConnection(

@@ -416,12 +416,12 @@ class BokfriCliTest {
         int yearId = new ObjectMapper().readTree(years.stdout())
                 .path("years").get(0).path("id").asInt();
 
-        Result inpayments = execute("--data-dir", data.toString(), "--company-id",
+        Result outpayments = execute("--data-dir", data.toString(), "--company-id",
                 Integer.toString(companyId), "--year-id", Integer.toString(yearId),
-                "--format", "json", "inpayment", "list");
+                "--format", "json", "outpayment", "list");
 
-        assertThat(inpayments.exitCode()).isEqualTo(1);
-        assertThat(new ObjectMapper().readTree(inpayments.stderr()).at("/error/code").asText())
+        assertThat(outpayments.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(outpayments.stderr()).at("/error/code").asText())
                 .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
     }
 
@@ -593,6 +593,63 @@ class BokfriCliTest {
         assertThat(details.path("rows").get(0).path("description").asText())
                 .isEqualTo("Konsultarbete");
         assertThat(details.path("rows").get(0).path("account").asInt()).isEqualTo(salesAccount);
+    }
+
+    @Test
+    void creditInvoiceAndInpaymentReadsWorkOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-credit-data");
+        extractLegacyDatabase(data.resolve("db"));
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        int yearId = new ObjectMapper().readTree(years.stdout())
+                .path("years").get(0).path("id").asInt();
+        String[] context = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+
+        Result credits = execute(concat(context, "credit-invoice", "list"));
+        assertThat(credits.exitCode()).as(credits.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(credits.stdout()).has("creditInvoices")).isTrue();
+
+        Result inpayments = execute(concat(context, "inpayment", "list"));
+        assertThat(inpayments.exitCode()).as(inpayments.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(inpayments.stdout()).has("inpayments")).isTrue();
+
+        // Crediting an unbooked invoice must fail validation through the ported path, not
+        // with a storage error.
+        Path customerFile = temporaryDirectory.resolve("credit-customer.json");
+        Files.writeString(customerFile, "{\"number\":\"K200\",\"name\":\"Kreditkund AB\"}");
+        execute(concat(context, "customer", "create", "--file", customerFile.toString()));
+        Result accounts = execute(concat(context, "account", "list"));
+        int salesAccount = new ObjectMapper().readTree(accounts.stdout())
+                .path("accounts").get(0).path("number").asInt();
+        Result yearInfo = execute(concat(context, "year", "list"));
+        String yearFrom = new ObjectMapper().readTree(yearInfo.stdout())
+                .path("years").get(0).path("from").asText();
+        Path invoiceFile = temporaryDirectory.resolve("credit-invoice.json");
+        Files.writeString(invoiceFile, String.format(
+                "{\"customerNumber\":\"K200\",\"date\":\"%s\",\"rows\":["
+                        + "{\"description\":\"Rad\",\"quantity\":1,\"unitPrice\":100,"
+                        + "\"vatRate\":25,\"salesAccount\":%d}]}", yearFrom, salesAccount));
+        Result invoice = execute(concat(context, "invoice", "create", "--file",
+                invoiceFile.toString()));
+        int invoiceNumber = new ObjectMapper().readTree(invoice.stdout()).path("number").asInt();
+
+        Path creditFile = temporaryDirectory.resolve("credit-input.json");
+        Files.writeString(creditFile, String.format("{\"invoiceNumber\":%d,\"date\":\"%s\",\"amount\":100}",
+                invoiceNumber, yearFrom));
+        Result credit = execute(concat(context, "credit-invoice", "create", "--file",
+                creditFile.toString()));
+        assertThat(credit.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(credit.stderr()).at("/error/code").asText())
+                .isEqualTo("CREDIT_INVOICE_INVALID");
+        assertThat(credit.stderr()).doesNotContain("NORMALIZED_STORAGE_UNSUPPORTED");
     }
 
     @Test
