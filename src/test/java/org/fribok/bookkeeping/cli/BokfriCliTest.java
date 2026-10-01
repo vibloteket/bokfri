@@ -416,12 +416,12 @@ class BokfriCliTest {
         int yearId = new ObjectMapper().readTree(years.stdout())
                 .path("years").get(0).path("id").asInt();
 
-        Result outpayments = execute("--data-dir", data.toString(), "--company-id",
+        Result report = execute("--data-dir", data.toString(), "--company-id",
                 Integer.toString(companyId), "--year-id", Integer.toString(yearId),
-                "--format", "json", "outpayment", "list");
+                "--format", "json", "invoice", "journal", "--from", "2020-01-01", "--to", "2030-12-31");
 
-        assertThat(outpayments.exitCode()).isEqualTo(1);
-        assertThat(new ObjectMapper().readTree(outpayments.stderr()).at("/error/code").asText())
+        assertThat(report.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(report.stderr()).at("/error/code").asText())
                 .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
     }
 
@@ -650,6 +650,63 @@ class BokfriCliTest {
         assertThat(new ObjectMapper().readTree(credit.stderr()).at("/error/code").asText())
                 .isEqualTo("CREDIT_INVOICE_INVALID");
         assertThat(credit.stderr()).doesNotContain("NORMALIZED_STORAGE_UNSUPPORTED");
+    }
+
+    @Test
+    void supplierSideWorksOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-supplier-data");
+        extractLegacyDatabase(data.resolve("db"));
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode yearNode = new ObjectMapper().readTree(years.stdout()).path("years").get(0);
+        int yearId = yearNode.path("id").asInt();
+        String yearFrom = yearNode.path("from").asText();
+        String[] context = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+        Result accounts = execute(concat(context, "account", "list"));
+        int expenseAccount = new ObjectMapper().readTree(accounts.stdout())
+                .path("accounts").get(0).path("number").asInt();
+
+        Path supplierFile = temporaryDirectory.resolve("si-supplier.json");
+        Files.writeString(supplierFile, "{\"number\":\"L100\",\"name\":\"Leverantör AB\"}");
+        assertThat(execute(concat(context, "supplier", "create", "--file",
+                supplierFile.toString())).exitCode()).isZero();
+
+        Path invoiceFile = temporaryDirectory.resolve("supplier-invoice.json");
+        Files.writeString(invoiceFile, String.format(
+                "{\"supplierNumber\":\"L100\",\"date\":\"%s\",\"vat\":50,\"rows\":["
+                        + "{\"description\":\"Inköp\",\"quantity\":2,\"unitPrice\":100,"
+                        + "\"account\":%d}]}", yearFrom, expenseAccount));
+        Result created = execute(concat(context, "supplier-invoice", "create", "--file",
+                invoiceFile.toString()));
+        assertThat(created.exitCode()).as(created.stderr()).isZero();
+        int invoiceNumber = new ObjectMapper().readTree(created.stdout()).path("number").asInt();
+        assertThat(invoiceNumber).isPositive();
+
+        Result listed = execute(concat(context, "supplier-invoice", "list"));
+        assertThat(listed.exitCode()).isZero();
+        assertThat(new ObjectMapper().readTree(listed.stdout()).path("supplierInvoices"))
+                .anySatisfy(invoice -> {
+                    assertThat(invoice.path("number").asInt()).isEqualTo(invoiceNumber);
+                    assertThat(invoice.path("supplierName").asText()).isEqualTo("Leverantör AB");
+                });
+
+        Result shown = execute(concat(context, "supplier-invoice", "show",
+                Integer.toString(invoiceNumber)));
+        assertThat(shown.exitCode()).as(shown.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(shown.stdout()).path("supplierNumber").asText())
+                .isEqualTo("L100");
+
+        assertThat(execute(concat(context, "supplier-credit-invoice", "list")).exitCode())
+                .isZero();
+        assertThat(execute(concat(context, "outpayment", "list")).exitCode()).isZero();
     }
 
     @Test

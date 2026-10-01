@@ -5,18 +5,23 @@ import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
 import org.fribok.bookkeeping.dataformat.NormalizedInpaymentStore;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore;
+import org.fribok.bookkeeping.dataformat.NormalizedOutpaymentStore;
 import org.fribok.bookkeeping.dataformat.NormalizedRegisterStore;
+import org.fribok.bookkeeping.dataformat.NormalizedSupplierInvoiceStore;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSInpayment;
 import se.swedsoft.bookkeeping.data.SSInvoice;
+import se.swedsoft.bookkeeping.data.SSOutpayment;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSNewProject;
 import se.swedsoft.bookkeeping.data.SSNewResultUnit;
 import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSSupplier;
+import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
+import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.common.SSCurrency;
 import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
@@ -49,6 +54,8 @@ public final class BokfriRuntime implements AutoCloseable {
     private final NormalizedRegisterStore registerStore;
     private final NormalizedInvoiceStore invoiceStore;
     private final NormalizedInpaymentStore inpaymentStore;
+    private final NormalizedSupplierInvoiceStore supplierInvoiceStore;
+    private final NormalizedOutpaymentStore outpaymentStore;
     private final int dataFormat;
 
     private BokfriRuntime(SSDB database, int dataFormat) {
@@ -59,6 +66,8 @@ public final class BokfriRuntime implements AutoCloseable {
         this.registerStore = null;
         this.invoiceStore = null;
         this.inpaymentStore = null;
+        this.supplierInvoiceStore = null;
+        this.outpaymentStore = null;
     }
 
     private BokfriRuntime(Connection connection, int dataFormat) {
@@ -69,6 +78,8 @@ public final class BokfriRuntime implements AutoCloseable {
         this.registerStore = new NormalizedRegisterStore(connection);
         this.invoiceStore = new NormalizedInvoiceStore(connection);
         this.inpaymentStore = new NormalizedInpaymentStore(connection);
+        this.supplierInvoiceStore = new NormalizedSupplierInvoiceStore(connection);
+        this.outpaymentStore = new NormalizedOutpaymentStore(connection);
     }
 
     public static BokfriRuntime open(Path dataDir)
@@ -385,6 +396,125 @@ public final class BokfriRuntime implements AutoCloseable {
             return;
         }
         database().addInpayment(inpayment);
+    }
+
+    /** Returns the normalized outpayment store. */
+    public NormalizedOutpaymentStore outpaymentStore() {
+        if (outpaymentStore == null) {
+            throw new CliException("LEGACY_STORAGE",
+                    "Normalized storage is not active for this database (data format " + dataFormat + ")");
+        }
+        return outpaymentStore;
+    }
+
+    /** Lists the supplier invoices of the selected company from the active storage. */
+    public List<SSSupplierInvoice> getSupplierInvoices() throws SQLException {
+        return isNormalized()
+                ? supplierInvoiceStore.getSupplierInvoices(requireCurrentCompany().getId())
+                : database().getSupplierInvoices();
+    }
+
+    /** Finds a supplier invoice of the selected company by number in the active storage. */
+    public java.util.Optional<SSSupplierInvoice> findSupplierInvoice(int number)
+            throws SQLException {
+        return getSupplierInvoices().stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(invoice -> invoice.getNumber() != null && invoice.getNumber() == number)
+                .findFirst();
+    }
+
+    /** Returns the next supplier invoice number in the active storage. */
+    public int nextSupplierInvoiceNumber() throws SQLException {
+        if (isNormalized()) {
+            return supplierInvoiceStore.nextSupplierInvoiceNumber(
+                    requireCurrentCompany().getId());
+        }
+        return new org.fribok.bookkeeping.service.supplierinvoice.SupplierInvoiceService(
+                database()).nextNumber();
+    }
+
+    /** Adds a supplier invoice to the selected company, committing in normalized mode. */
+    public void addSupplierInvoice(SSSupplierInvoice invoice) throws SQLException {
+        if (isNormalized()) {
+            invoice.setNumber(supplierInvoiceStore.nextSupplierInvoiceNumber(
+                    requireCurrentCompany().getId()));
+            supplierInvoiceStore.addSupplierInvoice(requireCurrentCompany().getId(), invoice);
+            connection.commit();
+            return;
+        }
+        database().addSupplierInvoice(invoice);
+    }
+
+    /** Outstanding supplier invoice balance in the active storage. */
+    public java.math.BigDecimal supplierInvoiceBalance(SSSupplierInvoice invoice)
+            throws SQLException {
+        if (!isNormalized()) {
+            return se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.getSaldo(invoice);
+        }
+        int companyId = requireCurrentCompany().getId();
+        return se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.getTotalSum(invoice)
+                .subtract(supplierInvoiceStore.supplierCreditInvoiceSum(companyId,
+                        invoice.getNumber()))
+                .subtract(outpaymentStore.outpaymentSum(companyId, invoice.getNumber()));
+    }
+
+    /** Lists the supplier credit invoices of the selected company from the active storage. */
+    public List<SSSupplierCreditInvoice> getSupplierCreditInvoices() throws SQLException {
+        return isNormalized()
+                ? supplierInvoiceStore.getSupplierCreditInvoices(requireCurrentCompany().getId())
+                : database().getSupplierCreditInvoices();
+    }
+
+    /** Returns the next supplier credit invoice number in the active storage. */
+    public int nextSupplierCreditInvoiceNumber() throws SQLException {
+        if (isNormalized()) {
+            return supplierInvoiceStore.nextSupplierCreditInvoiceNumber(
+                    requireCurrentCompany().getId());
+        }
+        return new org.fribok.bookkeeping.service.suppliercreditinvoice
+                .SupplierCreditInvoiceService(database()).nextNumber();
+    }
+
+    /** Adds a supplier credit invoice to the selected company, committing in normalized mode. */
+    public void addSupplierCreditInvoice(SSSupplierCreditInvoice creditInvoice)
+            throws SQLException {
+        if (isNormalized()) {
+            creditInvoice.setNumber(supplierInvoiceStore.nextSupplierCreditInvoiceNumber(
+                    requireCurrentCompany().getId()));
+            supplierInvoiceStore.addSupplierCreditInvoice(requireCurrentCompany().getId(),
+                    creditInvoice);
+            connection.commit();
+            return;
+        }
+        database().addSupplierCreditInvoice(creditInvoice);
+    }
+
+    /** Lists the outpayments of the selected company from the active storage. */
+    public List<SSOutpayment> getOutpayments() throws SQLException {
+        return isNormalized()
+                ? outpaymentStore.getOutpayments(requireCurrentCompany().getId())
+                : database().getOutpayments();
+    }
+
+    /** Returns the number the next created outpayment receives in the active storage. */
+    public int nextOutpaymentVoucherNumber() throws SQLException {
+        if (isNormalized()) {
+            return outpaymentStore.nextOutpaymentNumber(requireCurrentCompany().getId());
+        }
+        return new org.fribok.bookkeeping.service.outpayment.OutpaymentService(database())
+                .nextNumber();
+    }
+
+    /** Adds an outpayment to the selected company, committing in normalized mode. */
+    public void addOutpayment(SSOutpayment outpayment) throws SQLException {
+        if (isNormalized()) {
+            outpayment.setNumber(
+                    outpaymentStore.nextOutpaymentNumber(requireCurrentCompany().getId()));
+            outpaymentStore.addOutpayment(requireCurrentCompany().getId(), outpayment);
+            connection.commit();
+            return;
+        }
+        database().addOutpayment(outpayment);
     }
 
     /** Finds a customer of the selected company by number in the active storage. */

@@ -115,6 +115,13 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   `credit-invoice list/show/create/validate` and `inpayment list/show/create/validate` to
   normalized storage, with balance-aware validation supplied by the runtime instead of the
   global singleton.
+- Add the normalized supplier invoice store (supplier invoices and supplier credit invoices
+  with rows, default accounts, and main/correction voucher snapshots) and outpayment store,
+  with legacy counter-floor numbering and credit/outpayment sums for balances. Port
+  `supplier-invoice list/show/create/validate`, `supplier-credit-invoice list/show/create/validate`,
+  and `outpayment list/show/create/validate` to normalized storage. `SSSupplierInvoice.setSupplier`
+  now copies the supplier's stored currency reference instead of resolving it through the
+  global SSDB singleton.
 
 ### Fixed
 
