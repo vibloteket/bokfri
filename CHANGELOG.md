@@ -128,6 +128,12 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   register store carries company auto-increment counters with legacy read/bump semantics.
   `invoice journal` preview and commit work on a normalized database. Normalized reads now
   initialize empty default-account maps so booking never trips over null maps.
+- Port all remaining booking journals to normalized storage: credit-invoice, inpayment,
+  outpayment, supplier-invoice, and supplier-credit-invoice journal preview/commit. All
+  `generateVoucher` variants (credit invoice, inpayment, outpayment, supplier invoice,
+  supplier credit invoice) gained collaborator-supplied overloads, and every store can mark
+  its documents entered with voucher snapshot replacement. Payment rows are now built field
+  by field in the CLI so the static legacy saldo map is never consulted.
 
 ### Fixed
 

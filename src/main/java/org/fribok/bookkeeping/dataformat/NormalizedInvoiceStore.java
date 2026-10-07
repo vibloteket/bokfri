@@ -284,19 +284,30 @@ public final class NormalizedInvoiceStore {
      */
     public void markInvoiceEntered(int companyLegacyId, int number, SSVoucher voucher)
             throws SQLException {
+        markEntered(Kind.INVOICE, companyLegacyId, number, voucher);
+    }
+
+    /** Marks a credit invoice as booked and replaces its voucher snapshot. */
+    public void markCreditInvoiceEntered(int companyLegacyId, int number, SSVoucher voucher)
+            throws SQLException {
+        markEntered(Kind.CREDIT, companyLegacyId, number, voucher);
+    }
+
+    private void markEntered(Kind kind, int companyLegacyId, int number, SSVoucher voucher)
+            throws SQLException {
         long id;
         try (PreparedStatement statement = connection.prepareStatement(
-                "UPDATE customer_invoice SET entered=true WHERE number=? "
+                "UPDATE " + kind.table + " SET entered=true WHERE number=? "
                         + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
             statement.setInt(1, number);
             statement.setInt(2, companyLegacyId);
             if (statement.executeUpdate() != 1) {
-                throw new SQLException("No invoice " + number + " for company "
+                throw new SQLException("No " + kind.table + " " + number + " for company "
                         + companyLegacyId);
             }
         }
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT id FROM customer_invoice WHERE number=? "
+                "SELECT id FROM " + kind.table + " WHERE number=? "
                         + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
             statement.setInt(1, number);
             statement.setInt(2, companyLegacyId);
@@ -306,17 +317,17 @@ public final class NormalizedInvoiceStore {
             }
         }
         try (PreparedStatement statement = connection.prepareStatement(
-                "DELETE FROM customer_invoice_voucher_row WHERE invoice_id=?")) {
+                "DELETE FROM " + kind.voucherRowTable() + " WHERE " + kind.idColumn() + "=?")) {
             statement.setLong(1, id);
             statement.executeUpdate();
         }
         try (PreparedStatement statement = connection.prepareStatement(
-                "DELETE FROM customer_invoice_voucher WHERE invoice_id=?")) {
+                "DELETE FROM " + kind.voucherTable() + " WHERE " + kind.idColumn() + "=?")) {
             statement.setLong(1, id);
             statement.executeUpdate();
         }
         if (voucher != null) {
-            insertVoucherSnapshot(Kind.INVOICE, id, voucher);
+            insertVoucherSnapshot(kind, id, voucher);
         }
     }
 

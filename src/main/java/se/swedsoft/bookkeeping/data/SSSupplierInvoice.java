@@ -727,13 +727,19 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
      * @return
      */
     public SSVoucher generateVoucher() {
+        return generateVoucher(SSDB.getInstance().getCurrentAccountPlan(),
+                SSDB.getInstance().getProjects(), SSDB.getInstance().getResultUnits());
+    }
+
+    /**
+     * Generates the booking voucher with collaborators supplied explicitly, so the
+     * calculation works without the global database singleton (normalized storage).
+     */
+    public SSVoucher generateVoucher(SSAccountPlan iAccountPlan, List<SSNewProject> projects,
+            List<SSNewResultUnit> resultUnits) {
         iVoucher = new SSVoucher();
         String iDescription = SSBundle.getBundle().getString(
                 "supplierinvoiceframe.voucherdescription");
-
-        SSNewCompany     iCompany = SSDB.getInstance().getCurrentCompany();
-
-        SSAccountPlan iAccountPlan = SSDB.getInstance().getCurrentAccountPlan();
 
         iVoucher = new SSVoucher();
         iVoucher.setLocalDate(SSDateUtil.today());
@@ -771,9 +777,8 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
 
             iVoucherRow.setDebet(iRow.getSum().orElse(null));
             iVoucherRow.setAccount(iRow.getAccount(iAccountPlan.getAccounts()));
-            iVoucherRow.setProject(iRow.getProject(SSDB.getInstance().getProjects()));
-            iVoucherRow.setResultUnit(
-                    iRow.getResultUnit(SSDB.getInstance().getResultUnits()));
+            iVoucherRow.setProject(iRow.getProject(projects));
+            iVoucherRow.setResultUnit(iRow.getResultUnit(resultUnits));
 
             if (iVoucherRow.getAccountNr() != null) {
                 iVoucher.addVoucherRow(iVoucherRow);

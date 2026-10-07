@@ -382,6 +382,89 @@ public final class BokfriRuntime implements AutoCloseable {
         database().updateInvoice(invoice);
     }
 
+    /** Generates the booking voucher for an invoice or credit invoice in the active storage. */
+    public SSVoucher generateInvoiceVoucher(SSInvoice invoice) throws SQLException {
+        if (isNormalized()) {
+            return invoice.generateVoucher(currentAccountPlan(),
+                    currentCompany().isRoundingOff(), getProjects(), getResultUnits());
+        }
+        return invoice.generateVoucher();
+    }
+
+    /** Generates the booking voucher for a supplier invoice or credit in the active storage. */
+    public SSVoucher generateSupplierInvoiceVoucher(SSSupplierInvoice invoice)
+            throws SQLException {
+        if (isNormalized()) {
+            return invoice.generateVoucher(currentAccountPlan(), getProjects(), getResultUnits());
+        }
+        return invoice.generateVoucher();
+    }
+
+    /** Generates the booking voucher for an inpayment in the active storage. */
+    public SSVoucher generateInpaymentVoucher(SSInpayment inpayment) throws SQLException {
+        return isNormalized()
+                ? inpayment.generateVoucher(currentAccountPlan())
+                : inpayment.generateVoucher();
+    }
+
+    /** Generates the booking voucher for an outpayment in the active storage. */
+    public SSVoucher generateOutpaymentVoucher(SSOutpayment outpayment) throws SQLException {
+        return isNormalized()
+                ? outpayment.generateVoucher(currentAccountPlan())
+                : outpayment.generateVoucher();
+    }
+
+    /** Marks a credit invoice as booked and stores its voucher snapshot. */
+    public void markCreditInvoiceEntered(SSCreditInvoice invoice) throws SQLException {
+        if (isNormalized()) {
+            invoiceStore.markCreditInvoiceEntered(requireCurrentCompany().getId(),
+                    invoice.getNumber(), invoice.getStoredVoucher());
+            return;
+        }
+        database().updateCreditInvoice(invoice);
+    }
+
+    /** Marks a supplier invoice as booked and stores its voucher snapshot. */
+    public void markSupplierInvoiceEntered(SSSupplierInvoice invoice) throws SQLException {
+        if (isNormalized()) {
+            supplierInvoiceStore.markSupplierInvoiceEntered(requireCurrentCompany().getId(),
+                    invoice.getNumber(), invoice.getVoucher());
+            return;
+        }
+        database().updateSupplierInvoice(invoice);
+    }
+
+    /** Marks a supplier credit invoice as booked and stores its voucher snapshot. */
+    public void markSupplierCreditInvoiceEntered(SSSupplierCreditInvoice invoice)
+            throws SQLException {
+        if (isNormalized()) {
+            supplierInvoiceStore.markSupplierCreditInvoiceEntered(requireCurrentCompany().getId(),
+                    invoice.getNumber(), invoice.getVoucher());
+            return;
+        }
+        database().updateSupplierCreditInvoice(invoice);
+    }
+
+    /** Marks an inpayment as booked and stores its voucher snapshots. */
+    public void markInpaymentEntered(SSInpayment inpayment) throws SQLException {
+        if (isNormalized()) {
+            inpaymentStore.markEntered(requireCurrentCompany().getId(), inpayment.getNumber(),
+                    inpayment.getVoucher(), inpayment.getStoredDifference());
+            return;
+        }
+        database().updateInpayment(inpayment);
+    }
+
+    /** Marks an outpayment as booked and stores its voucher snapshots. */
+    public void markOutpaymentEntered(SSOutpayment outpayment) throws SQLException {
+        if (isNormalized()) {
+            outpaymentStore.markEntered(requireCurrentCompany().getId(), outpayment.getNumber(),
+                    outpayment.getVoucher(), outpayment.getStoredDifference());
+            return;
+        }
+        database().updateOutpayment(outpayment);
+    }
+
     /** Lists the credit invoices of the selected company from the active storage. */
     public List<SSCreditInvoice> getCreditInvoices() throws SQLException {
         return isNormalized()

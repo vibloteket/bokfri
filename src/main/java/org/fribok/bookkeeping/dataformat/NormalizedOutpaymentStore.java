@@ -187,6 +187,48 @@ public final class NormalizedOutpaymentStore {
         insertVoucher(id, "difference", outpayment.getStoredDifference());
     }
 
+
+    /**
+     * Marks a outpayment as booked and replaces its main and difference voucher snapshots,
+     * mirroring the legacy update after setEntered().
+     */
+    public void markEntered(int companyLegacyId, int number, SSVoucher voucher,
+            SSVoucher difference) throws SQLException {
+        long id;
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE outpayment SET entered=true WHERE number=? "
+                        + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setInt(1, number);
+            statement.setInt(2, companyLegacyId);
+            if (statement.executeUpdate() != 1) {
+                throw new SQLException("No outpayment " + number + " for company "
+                        + companyLegacyId);
+            }
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT id FROM outpayment WHERE number=? "
+                        + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setInt(1, number);
+            statement.setInt(2, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                result.next();
+                id = result.getLong(1);
+            }
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM outpayment_voucher_row WHERE outpayment_id=?")) {
+            statement.setLong(1, id);
+            statement.executeUpdate();
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM outpayment_voucher WHERE outpayment_id=?")) {
+            statement.setLong(1, id);
+            statement.executeUpdate();
+        }
+        insertVoucher(id, "main", voucher);
+        insertVoucher(id, "difference", difference);
+    }
+
     // ------------------------------------------------------------------ internals
 
     private void readRows(String idFilter, Map<Long, SSOutpayment> byId,

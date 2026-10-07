@@ -397,10 +397,17 @@ public class SSInpayment implements SSTableSearchable, Serializable {
      * @return
      */
     public SSVoucher generateVoucher() {
+        return generateVoucher(SSDB.getInstance().getCurrentAccountPlan());
+    }
+
+    /**
+     * Generates the booking voucher with the account plan supplied explicitly, so the
+     * calculation works without the global database singleton (normalized storage).
+     */
+    public SSVoucher generateVoucher(SSAccountPlan iAccountPlan) {
         String iDescription = SSBundle.getBundle().getString(
                 "inpaymentframe.voucherdescription");
 
-        SSAccountPlan iAccountPlan = SSDB.getInstance().getCurrentAccountPlan();
 
         BigDecimal iSum = SSInpaymentMath.getSum(this);
         BigDecimal iCurrencyRateDifference = SSInpaymentMath.getCurrencyRateDifference(

@@ -416,9 +416,13 @@ class BokfriCliTest {
         int yearId = new ObjectMapper().readTree(years.stdout())
                 .path("years").get(0).path("id").asInt();
 
+        JsonNode yearInfo = new ObjectMapper().readTree(execute("--data-dir", data.toString(),
+                "--company-id", Integer.toString(companyId), "--format", "json", "year", "list")
+                .stdout()).path("years").get(0);
         Result report = execute("--data-dir", data.toString(), "--company-id",
                 Integer.toString(companyId), "--year-id", Integer.toString(yearId),
-                "--format", "json", "credit-invoice", "journal", "--from", "2020-01-01", "--to", "2030-12-31");
+                "--format", "json", "vat", "report", "--from", yearInfo.path("from").asText(),
+                "--to", yearInfo.path("to").asText());
 
         assertThat(report.exitCode()).isEqualTo(1);
         assertThat(new ObjectMapper().readTree(report.stderr()).at("/error/code").asText())
@@ -771,6 +775,68 @@ class BokfriCliTest {
         assertThat(new ObjectMapper().readTree(vouchers.stdout()).path("vouchers"))
                 .anySatisfy(voucher -> assertThat(voucher.path("description").asText())
                         .startsWith("Fakturajournal nr"));
+    }
+
+    @Test
+    void fullInvoiceToPaymentCycleWorksOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-cycle-data");
+        extractLegacyDatabase(data.resolve("db"));
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode yearNode = new ObjectMapper().readTree(years.stdout()).path("years").get(0);
+        int yearId = yearNode.path("id").asInt();
+        String yearFrom = yearNode.path("from").asText();
+        String yearTo = yearNode.path("to").asText();
+        String[] context = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+        Result accounts = execute(concat(context, "account", "list"));
+        int salesAccount = new ObjectMapper().readTree(accounts.stdout())
+                .path("accounts").get(0).path("number").asInt();
+
+        Path customerFile = temporaryDirectory.resolve("cycle-customer.json");
+        Files.writeString(customerFile, "{\"number\":\"K400\",\"name\":\"Cykelkund AB\"}");
+        execute(concat(context, "customer", "create", "--file", customerFile.toString()));
+        Path invoiceFile = temporaryDirectory.resolve("cycle-invoice.json");
+        Files.writeString(invoiceFile, String.format(
+                "{\"customerNumber\":\"K400\",\"date\":\"%s\",\"rows\":["
+                        + "{\"description\":\"Uppdrag\",\"quantity\":1,\"unitPrice\":1000,"
+                        + "\"vatRate\":25,\"salesAccount\":%d}]}", yearFrom, salesAccount));
+        Result invoice = execute(concat(context, "invoice", "create", "--file",
+                invoiceFile.toString()));
+        int invoiceNumber = new ObjectMapper().readTree(invoice.stdout()).path("number").asInt();
+
+        // Book the invoice.
+        Result booked = execute(concat(context, "invoice", "journal", "--from", yearFrom,
+                "--to", yearTo, "--commit"));
+        assertThat(booked.exitCode()).as(booked.stderr()).isZero();
+
+        // Pay it in full.
+        Path inpaymentFile = temporaryDirectory.resolve("cycle-inpayment.json");
+        Files.writeString(inpaymentFile, String.format(
+                "{\"date\":\"%s\",\"text\":\"Betalning\",\"rows\":["
+                        + "{\"invoiceNumber\":%d,\"amount\":1250}]}", yearFrom, invoiceNumber));
+        Result inpayment = execute(concat(context, "inpayment", "create", "--file",
+                inpaymentFile.toString()));
+        assertThat(inpayment.exitCode()).as(inpayment.stderr()).isZero();
+
+        // Book the inpayment.
+        Result paymentBooked = execute(concat(context, "inpayment", "journal", "--from",
+                yearFrom, "--to", yearTo, "--commit"));
+        assertThat(paymentBooked.exitCode()).as(paymentBooked.stderr()).isZero();
+
+        // The invoice is fully paid: balance zero.
+        Result shown = execute(concat(context, "invoice", "show",
+                Integer.toString(invoiceNumber)));
+        JsonNode details = new ObjectMapper().readTree(shown.stdout());
+        assertThat(details.path("entered").asBoolean()).isTrue();
+        assertThat(details.path("balance").asText()).isEqualTo("0.00");
     }
 
     @Test

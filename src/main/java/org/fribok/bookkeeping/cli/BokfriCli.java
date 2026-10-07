@@ -2158,7 +2158,7 @@ public class BokfriCli implements Runnable {
     abstract static class SupplierInvoiceOperation implements Callable<Integer>{@CliMetadata.ParentCommand SupplierInvoiceCommand command;@Option(names="--file",required=true)String file;abstract boolean persist();public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);SupplierInvoiceInput input=readSupplierInvoiceInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());if(!r.isNormalized())r.database().init(false);SSSupplierInvoice i=toSupplierInvoice(input,r);var v=SupplierInvoiceValidator.validate(i);if(!v.valid())throw supplierInvoiceValidationFailure(v);Map<String,Object>x=supplierInvoiceDetails(i,r);x.put("number",r.nextSupplierInvoiceNumber());x.put("dryRun",!persist());x.put("created",persist());x.put("selection",selectedContext(c,co,y));if(persist()){r.addSupplierInvoice(i);x.put("number",i.getNumber());}root.output(x,persist()?"Created supplier invoice "+i.getNumber():"Supplier invoice is valid; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
     @Command(mixinStandardHelpOptions = true, name="validate") static class SupplierInvoiceValidate extends SupplierInvoiceOperation{boolean persist(){return false;}}
     @Command(mixinStandardHelpOptions = true, name="create") static class SupplierInvoiceCreate extends SupplierInvoiceOperation{@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
-    @Command(mixinStandardHelpOptions = true, name="journal") static class SupplierInvoiceJournal implements Callable<Integer>{@CliMetadata.ParentCommand SupplierInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;@Option(names="--output")java.nio.file.Path output;@Option(names="--overwrite")boolean overwrite;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierInvoiceService s=new SupplierInvoiceService(r.database());SupplierInvoiceJournalPlan p=s.planJournal(from,to);if(p.invoices().isEmpty())throw new CliException("SUPPLIER_INVOICE_JOURNAL_EMPTY","No unbooked supplier invoices exist in the selected period");Map<String,Object>x=supplierInvoiceJournalDetails(p);x.put("committed",commit);x.put("selection",selectedContext(c,co,y));if(output!=null)addPdf(x,exportPdf(new SSSupplierInvoicejournalPrinter(new java.util.ArrayList<>(p.invoices()),p.journalNumber(),p.to()),output,overwrite));if(commit)x.put("voucherNumber",s.commitJournal(p).voucherNumber());root.output(x,commit?"Committed supplier invoice journal "+p.journalNumber():"Supplier invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name="journal") static class SupplierInvoiceJournal implements Callable<Integer>{@CliMetadata.ParentCommand SupplierInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;@Option(names="--output")java.nio.file.Path output;@Option(names="--overwrite")boolean overwrite;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());if(!r.isNormalized())r.database().init(false);SupplierInvoiceJournalPlan p=planSupplierInvoiceJournal(r,from,to);if(p.invoices().isEmpty())throw new CliException("SUPPLIER_INVOICE_JOURNAL_EMPTY","No unbooked supplier invoices exist in the selected period");Map<String,Object>x=supplierInvoiceJournalDetails(p);x.put("committed",commit);x.put("selection",selectedContext(c,co,y));if(output!=null)addPdf(x,exportPdf(new SSSupplierInvoicejournalPrinter(new java.util.ArrayList<>(p.invoices()),p.journalNumber(),p.to()),output,overwrite));if(commit){for(SSSupplierInvoice i:p.invoices()){if(i.isEntered())throw new CliException("SUPPLIER_INVOICE_JOURNAL_INVALID","Supplier invoice "+i.getNumber()+" is already entered");}for(SSSupplierInvoice i:p.invoices()){i.setEntered();r.markSupplierInvoiceEntered(i);}r.bumpCounter("supplierinvoicejournal");r.addVoucher(p.voucher());x.put("voucherNumber",p.voucher().getNumber());}root.output(x,commit?"Committed supplier invoice journal "+p.journalNumber():"Supplier invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);}}}
 
     @Command(mixinStandardHelpOptions = true, name = "supplier-credit-invoice", description = "Credit booked supplier invoices",
             subcommands = {SupplierCreditInvoiceList.class, SupplierCreditInvoiceShow.class,
@@ -2267,7 +2267,7 @@ public class BokfriCli implements Runnable {
         @Option(names="--commit") boolean commit;
         @Option(names="--output") java.nio.file.Path output;
         @Option(names="--overwrite") boolean overwrite;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);SupplierCreditInvoiceService service=new SupplierCreditInvoiceService(r.database());SupplierCreditInvoiceJournalPlan plan=service.planJournal(from,to);if(plan.invoices().isEmpty())throw new CliException("SUPPLIER_CREDIT_INVOICE_JOURNAL_EMPTY","No unbooked supplier credit invoices exist in the selected period");Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",plan.journalNumber());x.put("supplierCreditInvoiceNumbers",plan.invoices().stream().map(SSSupplierCreditInvoice::getNumber).toList());x.put("debitTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher())));x.put("creditTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher())));x.put("committed",commit);if(output!=null)addPdf(x,exportPdf(new SSSuppliercreditinvoicejournalPrinter(new java.util.ArrayList<>(plan.invoices()),plan.journalNumber(),plan.to()),output,overwrite));if(commit)x.put("voucherNumber",service.commitJournal(plan).voucherNumber());x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Supplier credit-invoice journal committed":"Supplier credit-invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);} }
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());if(!r.isNormalized())r.database().init(false);SupplierCreditInvoiceJournalPlan plan=planSupplierCreditInvoiceJournal(r,from,to);if(plan.invoices().isEmpty())throw new CliException("SUPPLIER_CREDIT_INVOICE_JOURNAL_EMPTY","No unbooked supplier credit invoices exist in the selected period");Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",plan.journalNumber());x.put("supplierCreditInvoiceNumbers",plan.invoices().stream().map(SSSupplierCreditInvoice::getNumber).toList());x.put("debitTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher())));x.put("creditTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher())));x.put("committed",commit);if(output!=null)addPdf(x,exportPdf(new SSSuppliercreditinvoicejournalPrinter(new java.util.ArrayList<>(plan.invoices()),plan.journalNumber(),plan.to()),output,overwrite));if(commit){for(SSSupplierCreditInvoice i:plan.invoices()){if(i.isEntered())throw new CliException("SUPPLIER_CREDIT_INVOICE_JOURNAL_INVALID","Supplier credit invoice "+i.getNumber()+" is already entered");}for(SSSupplierCreditInvoice i:plan.invoices()){i.setEntered();r.markSupplierCreditInvoiceEntered(i);}r.bumpCounter("suppliercreditinvoicejournal");r.addVoucher(plan.voucher());x.put("voucherNumber",plan.voucher().getNumber());}x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Supplier credit-invoice journal committed":"Supplier credit-invoice journal preview; no changes written");return 0;}catch(Exception e){throw databaseFailure(e);} }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "invoice", description = "Inspect and create customer invoices",
@@ -2771,7 +2771,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name="journal") static class CreditInvoiceJournal implements Callable<Integer> {
         @CliMetadata.ParentCommand CreditInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);CreditInvoiceService s=new CreditInvoiceService(r.database());CreditInvoiceJournalPlan p=s.planJournal(from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("from",from);x.put("to",to);x.put("creditInvoiceNumbers",p.invoices().stream().map(SSCreditInvoice::getNumber).toList());x.put("invoiceCount",p.invoices().size());x.put("rows",voucherRows(p.voucher()));x.put("debitTotal",money(voucherDebit(p.voucher())));x.put("creditTotal",money(voucherCredit(p.voucher())));x.put("committed",commit);if(commit){CreditInvoiceJournalResult done=s.commitJournal(p);x.put("voucherNumber",done.voucherNumber());}x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Credit invoice journal committed":"Credit invoice journal preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_JOURNAL_EMPTY",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
+        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());if(!r.isNormalized())r.database().init(false);CreditInvoiceJournalPlan p=planCreditInvoiceJournal(r,from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("from",from);x.put("to",to);x.put("creditInvoiceNumbers",p.invoices().stream().map(SSCreditInvoice::getNumber).toList());x.put("invoiceCount",p.invoices().size());x.put("rows",voucherRows(p.voucher()));x.put("debitTotal",money(voucherDebit(p.voucher())));x.put("creditTotal",money(voucherCredit(p.voucher())));x.put("committed",commit);if(commit){for(SSCreditInvoice i:p.invoices()){if(i.isEntered())throw new CliException("CREDIT_INVOICE_JOURNAL_INVALID","Credit invoice "+i.getNumber()+" is already entered");}for(SSCreditInvoice i:p.invoices()){i.setEntered();r.markCreditInvoiceEntered(i);}r.bumpCounter("creditinvoicejournal");r.addVoucher(p.voucher());x.put("voucherNumber",p.voucher().getNumber());}x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Credit invoice journal committed":"Credit invoice journal preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_JOURNAL_EMPTY",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
     }
 
     @Command(mixinStandardHelpOptions = true, name = "inpayment", description = "Inspect, create, and book customer inpayments",
@@ -2930,9 +2930,10 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                InpaymentService service = new InpaymentService(runtime.database());
-                InpaymentJournalPlan plan = service.planJournal(from, to);
+                if (!runtime.isNormalized()) {
+                    runtime.database().init(false);
+                }
+                InpaymentJournalPlan plan = planInpaymentJournal(runtime, from, to);
                 if (plan.inpayments().isEmpty()) {
                     throw new CliException("INPAYMENT_JOURNAL_EMPTY",
                             "No unbooked inpayments exist in the selected period");
@@ -2946,8 +2947,19 @@ public class BokfriCli implements Runnable {
                             output, overwrite));
                 }
                 if (commit) {
-                    InpaymentJournalResult committed = service.commitJournal(plan);
-                    result.put("voucherNumber", committed.voucherNumber());
+                    for (SSInpayment item : plan.inpayments()) {
+                        if (item.isEntered()) {
+                            throw new CliException("INPAYMENT_JOURNAL_INVALID", "Inpayment "
+                                    + item.getNumber() + " is already entered");
+                        }
+                    }
+                    for (SSInpayment item : plan.inpayments()) {
+                        item.setEntered();
+                        runtime.markInpaymentEntered(item);
+                    }
+                    runtime.bumpCounter("inpaymentjournal");
+                    runtime.addVoucher(plan.voucher());
+                    result.put("voucherNumber", plan.voucher().getNumber());
                 }
                 root.output(result, commit
                         ? "Committed inpayment journal " + plan.journalNumber() + " with voucher "
@@ -3111,9 +3123,10 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                OutpaymentService service = new OutpaymentService(runtime.database());
-                OutpaymentJournalPlan plan = service.planJournal(from, to);
+                if (!runtime.isNormalized()) {
+                    runtime.database().init(false);
+                }
+                OutpaymentJournalPlan plan = planOutpaymentJournal(runtime, from, to);
                 if (plan.outpayments().isEmpty()) {
                     throw new CliException("INPAYMENT_JOURNAL_EMPTY",
                             "No unbooked outpayments exist in the selected period");
@@ -3127,8 +3140,19 @@ public class BokfriCli implements Runnable {
                             output, overwrite));
                 }
                 if (commit) {
-                    OutpaymentJournalResult committed = service.commitJournal(plan);
-                    result.put("voucherNumber", committed.voucherNumber());
+                    for (SSOutpayment item : plan.outpayments()) {
+                        if (item.isEntered()) {
+                            throw new CliException("INPAYMENT_JOURNAL_INVALID", "Outpayment "
+                                    + item.getNumber() + " is already entered");
+                        }
+                    }
+                    for (SSOutpayment item : plan.outpayments()) {
+                        item.setEntered();
+                        runtime.markOutpaymentEntered(item);
+                    }
+                    runtime.bumpCounter("outpaymentjournal");
+                    runtime.addVoucher(plan.voucher());
+                    result.put("voucherNumber", plan.voucher().getNumber());
                 }
                 root.output(result, commit
                         ? "Committed outpayment journal " + plan.journalNumber() + " with voucher "
@@ -3569,14 +3593,17 @@ public class BokfriCli implements Runnable {
         item.setText(normalized(input.getText()));
         List<SSOutpaymentRow> rows = new java.util.ArrayList<>();
         for (OutpaymentInput.Row inputRow : input.getRows()) {
-            SSSupplierInvoice invoice = new SupplierInvoiceService(runtime.database()).find(inputRow.getInvoiceNumber())
+            SSSupplierInvoice invoice = runtime.findSupplierInvoice(inputRow.getInvoiceNumber())
                     .orElseThrow(() -> new CliException("OUTPAYMENT_INVOICE_NOT_FOUND",
                             "No invoice has number " + inputRow.getInvoiceNumber()));
-            SSOutpaymentRow row = new SSOutpaymentRow(invoice);
+            // See toInpayment: build the row field by field to avoid the static saldo map.
+            SSOutpaymentRow row = new SSOutpaymentRow();
+            row.setInvoiceNr(invoice.getNumber());
+            row.setInvoiceCurrency(invoice.getCurrency());
+            row.setInvoiceCurrencyRate(invoice.getCurrencyRate());
             row.setValue(inputRow.getAmount());
-            if (inputRow.getCurrencyRate() != null) {
-                row.setCurrencyRate(inputRow.getCurrencyRate());
-            }
+            row.setCurrencyRate(inputRow.getCurrencyRate() != null
+                    ? inputRow.getCurrencyRate() : invoice.getCurrencyRate());
             rows.add(row);
         }
         item.setRows(rows);
@@ -3754,14 +3781,19 @@ public class BokfriCli implements Runnable {
         item.setText(normalized(input.getText()));
         List<SSInpaymentRow> rows = new java.util.ArrayList<>();
         for (InpaymentInput.Row inputRow : input.getRows()) {
-            SSInvoice invoice = new InvoiceService(runtime.database()).find(inputRow.getInvoiceNumber())
+            SSInvoice invoice = runtime.findInvoice(inputRow.getInvoiceNumber())
                     .orElseThrow(() -> new CliException("OUTPAYMENT_INVOICE_NOT_FOUND",
                             "No invoice has number " + inputRow.getInvoiceNumber()));
-            SSInpaymentRow row = new SSInpaymentRow(invoice);
+            // Note: SSInpaymentRow(SSInvoice) reads the static saldo map; build the row
+            // field by field so the flow works without the legacy singleton. The amount is
+            // required input, so the constructor's saldo default never applies here.
+            SSInpaymentRow row = new SSInpaymentRow();
+            row.setInvoiceNr(invoice.getNumber());
+            row.setInvoiceCurrency(invoice.getCurrency());
+            row.setInvoiceCurrencyRate(invoice.getCurrencyRate());
             row.setValue(inputRow.getAmount());
-            if (inputRow.getCurrencyRate() != null) {
-                row.setCurrencyRate(inputRow.getCurrencyRate());
-            }
+            row.setCurrencyRate(inputRow.getCurrencyRate() != null
+                    ? inputRow.getCurrencyRate() : invoice.getCurrencyRate());
             rows.add(row);
         }
         item.setRows(rows);
@@ -4281,6 +4313,135 @@ public class BokfriCli implements Runnable {
             }
         }
         return new InvoiceJournalPlan(journalNumber, from, to, invoices,
+                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+    }
+
+    /** Plans an inpayment journal on the active storage, mirroring InpaymentService.planJournal. */
+    private static InpaymentJournalPlan planInpaymentJournal(BokfriRuntime runtime,
+            java.time.LocalDate from, java.time.LocalDate to) throws java.sql.SQLException {
+        if (from == null || to == null || to.isBefore(from)) {
+            throw new IllegalArgumentException("Journal period is invalid");
+        }
+        List<SSInpayment> inpayments = runtime.getInpayments().stream()
+                .filter(item -> !item.isEntered()
+                        && se.swedsoft.bookkeeping.calc.math.SSInpaymentMath.inPeriod(item, from, to))
+                .sorted(Comparator.comparing(SSInpayment::getNumber,
+                        Comparator.nullsLast(Integer::compareTo)))
+                .toList();
+        int journalNumber = runtime.counterValue("inpaymentjournal") + 1;
+        SSVoucher combined = new SSVoucher(0);
+        combined.setDescription("Inbetalningsjournal nr " + journalNumber);
+        combined.setLocalDate(to);
+        for (SSInpayment item : inpayments) {
+            for (SSVoucherRow row : runtime.generateInpaymentVoucher(item).getRows()) {
+                combined.addVoucherRow(new SSVoucherRow(row));
+            }
+        }
+        return new InpaymentJournalPlan(journalNumber, from, to, inpayments,
+                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+    }
+
+    /** Plans an outpayment journal on the active storage, mirroring OutpaymentService.planJournal. */
+    private static OutpaymentJournalPlan planOutpaymentJournal(BokfriRuntime runtime,
+            java.time.LocalDate from, java.time.LocalDate to) throws java.sql.SQLException {
+        if (from == null || to == null || to.isBefore(from)) {
+            throw new IllegalArgumentException("Journal period is invalid");
+        }
+        List<SSOutpayment> outpayments = runtime.getOutpayments().stream()
+                .filter(item -> !item.isEntered()
+                        && se.swedsoft.bookkeeping.calc.math.SSOutpaymentMath.inPeriod(item, from, to))
+                .sorted(Comparator.comparing(SSOutpayment::getNumber,
+                        Comparator.nullsLast(Integer::compareTo)))
+                .toList();
+        int journalNumber = runtime.counterValue("outpaymentjournal") + 1;
+        SSVoucher combined = new SSVoucher(0);
+        // Legacy description text kept for output parity.
+        combined.setDescription("Inbetalningsjournal nr " + journalNumber);
+        combined.setLocalDate(to);
+        for (SSOutpayment item : outpayments) {
+            for (SSVoucherRow row : runtime.generateOutpaymentVoucher(item).getRows()) {
+                combined.addVoucherRow(new SSVoucherRow(row));
+            }
+        }
+        return new OutpaymentJournalPlan(journalNumber, from, to, outpayments,
+                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+    }
+
+    /** Plans a credit-invoice journal, mirroring CreditInvoiceService.planJournal. */
+    private static CreditInvoiceJournalPlan planCreditInvoiceJournal(BokfriRuntime runtime,
+            java.time.LocalDate from, java.time.LocalDate to) throws java.sql.SQLException {
+        if (from == null || to == null || to.isBefore(from)) {
+            throw new IllegalArgumentException("Journal period is invalid");
+        }
+        List<SSCreditInvoice> invoices = runtime.getCreditInvoices().stream()
+                .filter(invoice -> !invoice.isEntered()
+                        && se.swedsoft.bookkeeping.calc.math.SSSaleMath.inPeriod(invoice, from, to))
+                .sorted(Comparator.comparing(SSCreditInvoice::getNumber,
+                        Comparator.nullsLast(Integer::compareTo)))
+                .toList();
+        int journalNumber = runtime.counterValue("creditinvoicejournal") + 1;
+        SSVoucher combined = new SSVoucher(0);
+        combined.setDescription("Kreditfakturajournal nr " + journalNumber);
+        combined.setLocalDate(to);
+        for (SSCreditInvoice invoice : invoices) {
+            for (SSVoucherRow row : runtime.generateInvoiceVoucher(invoice).getRows()) {
+                combined.addVoucherRow(new SSVoucherRow(row));
+            }
+        }
+        return new CreditInvoiceJournalPlan(journalNumber, from, to, invoices,
+                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+    }
+
+    /** Plans a supplier-invoice journal, mirroring SupplierInvoiceService.planJournal. */
+    private static SupplierInvoiceJournalPlan planSupplierInvoiceJournal(BokfriRuntime runtime,
+            java.time.LocalDate from, java.time.LocalDate to) throws java.sql.SQLException {
+        if (from == null || to == null || to.isBefore(from)) {
+            throw new IllegalArgumentException("Journal period is invalid");
+        }
+        List<SSSupplierInvoice> invoices = runtime.getSupplierInvoices().stream()
+                .filter(invoice -> !invoice.isEntered()
+                        && se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath.inPeriod(
+                                invoice, from, to))
+                .sorted(Comparator.comparing(SSSupplierInvoice::getNumber,
+                        Comparator.nullsLast(Integer::compareTo)))
+                .toList();
+        int journalNumber = runtime.counterValue("supplierinvoicejournal") + 1;
+        SSVoucher combined = new SSVoucher(0);
+        combined.setDescription("Leverantörsfakturajournal nr " + journalNumber);
+        combined.setLocalDate(to);
+        for (SSSupplierInvoice invoice : invoices) {
+            for (SSVoucherRow row : runtime.generateSupplierInvoiceVoucher(invoice).getRows()) {
+                combined.addVoucherRow(new SSVoucherRow(row));
+            }
+        }
+        return new SupplierInvoiceJournalPlan(journalNumber, from, to, invoices,
+                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+    }
+
+    /** Plans a supplier credit-invoice journal, mirroring the supplier credit service. */
+    private static SupplierCreditInvoiceJournalPlan planSupplierCreditInvoiceJournal(
+            BokfriRuntime runtime, java.time.LocalDate from, java.time.LocalDate to)
+            throws java.sql.SQLException {
+        if (from == null || to == null || to.isBefore(from)) {
+            throw new IllegalArgumentException("Journal period is invalid");
+        }
+        List<SSSupplierCreditInvoice> invoices = runtime.getSupplierCreditInvoices().stream()
+                .filter(invoice -> !invoice.isEntered()
+                        && se.swedsoft.bookkeeping.calc.math.SSSupplierCreditInvoiceMath.inPeriod(
+                                invoice, from, to))
+                .sorted(Comparator.comparing(SSSupplierCreditInvoice::getNumber,
+                        Comparator.nullsLast(Integer::compareTo)))
+                .toList();
+        int journalNumber = runtime.counterValue("suppliercreditinvoicejournal") + 1;
+        SSVoucher combined = new SSVoucher(0);
+        combined.setDescription("Leverantörskreditfakturajournal nr " + journalNumber);
+        combined.setLocalDate(to);
+        for (SSSupplierCreditInvoice invoice : invoices) {
+            for (SSVoucherRow row : runtime.generateSupplierInvoiceVoucher(invoice).getRows()) {
+                combined.addVoucherRow(new SSVoucherRow(row));
+            }
+        }
+        return new SupplierCreditInvoiceJournalPlan(journalNumber, from, to, invoices,
                 se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
     }
 
