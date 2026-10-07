@@ -196,6 +196,7 @@ public final class NormalizedSupplierInvoiceStore {
                     invoice.setEntered(result.getBoolean(column++));
                     invoice.setBGCEntered(result.getBoolean(column++));
                     invoice.setStockInfluencing(result.getBoolean(column));
+                    invoice.getDefaultAccounts();
                     byId.put(id, invoice);
                 }
             }

@@ -235,6 +235,50 @@ class NormalizedInvoiceStoreTest {
         }
     }
 
+    @Test
+    void markInvoiceEnteredFlipsFlagAndStoresVoucherSnapshot() throws Exception {
+        try (Connection connection = connection()) {
+            migrate(connection);
+            NormalizedAccountingWriter writer =
+                    new NormalizedAccountingWriter(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+            SSNewCompany company = new SSNewCompany();
+            company.setId(14);
+            writer.addCompany(connection, company);
+            connection.commit();
+            NormalizedInvoiceStore store = new NormalizedInvoiceStore(connection);
+
+            SSInvoice invoice = new SSInvoice();
+            invoice.setNumber(7001);
+            invoice.setLocalDate(LocalDate.of(2026, 6, 1));
+            invoice.setCustomerNr("K1");
+            invoice.setCustomerName("Kund AB");
+            store.addInvoice(14, invoice);
+            connection.commit();
+            assertThat(store.getInvoices(14).get(0).isEntered()).isFalse();
+            // The SSInvoice constructor always carries an empty voucher object; the store
+            // mirrors the staging converter and persists it as an empty snapshot header.
+            SSVoucher empty = store.getInvoices(14).get(0).getStoredVoucher();
+            assertThat(empty).isNotNull();
+            assertThat(empty.getRows()).isEmpty();
+
+            SSVoucher booked = new SSVoucher(88);
+            booked.setLocalDate(LocalDate.of(2026, 6, 1));
+            booked.setDescription("Fakturajournal nr 1");
+            SSVoucherRow claim = new SSVoucherRow();
+            claim.setAccountNr(1510);
+            claim.setDebet(new BigDecimal("125"));
+            booked.getRows().add(claim);
+            store.markInvoiceEntered(14, 7001, booked);
+            connection.commit();
+
+            SSInvoice restored = store.getInvoices(14).get(0);
+            assertThat(restored.isEntered()).isTrue();
+            assertThat(restored.getStoredVoucher()).isNotNull();
+            assertThat(restored.getStoredVoucher().getNumber()).isEqualTo(88);
+            assertThat(restored.getStoredVoucher().getRows()).hasSize(1);
+        }
+    }
+
     private static Connection connection() throws Exception {
         Class.forName("org.hsqldb.jdbcDriver");
         Connection connection = DriverManager.getConnection(

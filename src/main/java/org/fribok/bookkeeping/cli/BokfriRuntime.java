@@ -342,6 +342,46 @@ public final class BokfriRuntime implements AutoCloseable {
                 .setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
+    /** Builds an account-plan view for the selected year from the active storage. */
+    public se.swedsoft.bookkeeping.data.SSAccountPlan currentAccountPlan() throws SQLException {
+        if (isNormalized()) {
+            se.swedsoft.bookkeeping.data.SSAccountPlan plan =
+                    new se.swedsoft.bookkeeping.data.SSAccountPlan();
+            plan.setAccounts(getAccounts());
+            return plan;
+        }
+        return database().getCurrentAccountPlan();
+    }
+
+    /** Returns the current value of a company auto-increment counter (0 when absent). */
+    public int counterValue(String counter) throws SQLException {
+        if (isNormalized()) {
+            return registerStore.autoIncrementValue(requireCurrentCompany().getId(), counter);
+        }
+        return database().getCurrentCompany().getAutoIncrement().getNumber(counter);
+    }
+
+    /** Increments a company auto-increment counter, mirroring the legacy company update. */
+    public void bumpCounter(String counter) throws SQLException {
+        if (isNormalized()) {
+            registerStore.bumpAutoIncrement(requireCurrentCompany().getId(), counter);
+            return;
+        }
+        SSNewCompany company = database().getCurrentCompany();
+        company.getAutoIncrement().doAutoIncrement(counter);
+        database().updateCompany(company);
+    }
+
+    /** Marks an invoice as booked and stores its voucher snapshot in the active storage. */
+    public void markInvoiceEntered(SSInvoice invoice) throws SQLException {
+        if (isNormalized()) {
+            invoiceStore.markInvoiceEntered(requireCurrentCompany().getId(),
+                    invoice.getNumber(), invoice.getStoredVoucher());
+            return;
+        }
+        database().updateInvoice(invoice);
+    }
+
     /** Lists the credit invoices of the selected company from the active storage. */
     public List<SSCreditInvoice> getCreditInvoices() throws SQLException {
         return isNormalized()

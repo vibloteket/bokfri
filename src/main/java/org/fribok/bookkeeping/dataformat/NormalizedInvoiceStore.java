@@ -257,6 +257,7 @@ public final class NormalizedInvoiceStore {
                     sale.setInterestInvoiced(result.getBoolean(column++));
                     sale.setStockInfluencing(result.getBoolean(column++));
                     sale.setOrderNumbers(result.getString(column));
+                    sale.getDefaultAccounts();
                     byId.put(id, sale);
                 }
             }
@@ -274,6 +275,50 @@ public final class NormalizedInvoiceStore {
     }
 
     // ------------------------------------------------------------------ writes
+
+    // ------------------------------------------------------------------ writes
+
+    /**
+     * Marks an invoice as booked and replaces its voucher snapshot, mirroring the legacy
+     * {@code updateInvoice} after {@code setEntered()}.
+     */
+    public void markInvoiceEntered(int companyLegacyId, int number, SSVoucher voucher)
+            throws SQLException {
+        long id;
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE customer_invoice SET entered=true WHERE number=? "
+                        + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setInt(1, number);
+            statement.setInt(2, companyLegacyId);
+            if (statement.executeUpdate() != 1) {
+                throw new SQLException("No invoice " + number + " for company "
+                        + companyLegacyId);
+            }
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT id FROM customer_invoice WHERE number=? "
+                        + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setInt(1, number);
+            statement.setInt(2, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                result.next();
+                id = result.getLong(1);
+            }
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM customer_invoice_voucher_row WHERE invoice_id=?")) {
+            statement.setLong(1, id);
+            statement.executeUpdate();
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM customer_invoice_voucher WHERE invoice_id=?")) {
+            statement.setLong(1, id);
+            statement.executeUpdate();
+        }
+        if (voucher != null) {
+            insertVoucherSnapshot(Kind.INVOICE, id, voucher);
+        }
+    }
 
     public void addInvoice(int companyLegacyId, SSInvoice invoice) throws SQLException {
         addSale(Kind.INVOICE, companyLegacyId, invoice);
