@@ -2384,9 +2384,10 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                InvoiceService service = new InvoiceService(runtime.database());
-                InvoiceJournalPlan plan = service.planJournal(from, to);
+                if (!runtime.isNormalized()) {
+                    runtime.database().init(false);
+                }
+                InvoiceJournalPlan plan = planInvoiceJournal(runtime, company, from, to);
                 if (plan.invoices().isEmpty()) {
                     throw new CliException("INVOICE_JOURNAL_EMPTY",
                             "No unbooked invoices exist in the selected period");
@@ -2400,8 +2401,19 @@ public class BokfriCli implements Runnable {
                             output, overwrite));
                 }
                 if (commit) {
-                    InvoiceJournalResult committed = service.commitJournal(plan);
-                    result.put("voucherNumber", committed.voucherNumber());
+                    for (SSInvoice invoice : plan.invoices()) {
+                        if (invoice.isEntered()) {
+                            throw new CliException("INVOICE_JOURNAL_INVALID", "Invoice "
+                                    + invoice.getNumber() + " is already entered");
+                        }
+                    }
+                    for (SSInvoice invoice : plan.invoices()) {
+                        invoice.setEntered();
+                        runtime.markInvoiceEntered(invoice);
+                    }
+                    runtime.bumpCounter("invoicejournal");
+                    runtime.addVoucher(plan.voucher());
+                    result.put("voucherNumber", plan.voucher().getNumber());
                 }
                 root.output(result, commit
                         ? "Committed invoice journal " + plan.journalNumber() + " with voucher "
@@ -4237,6 +4249,39 @@ public class BokfriCli implements Runnable {
         result.put("debitTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(plan.voucher())));
         result.put("creditTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher())));
         return result;
+    }
+
+    /** Plans an invoice journal on the active storage, mirroring InvoiceService.planJournal. */
+    private static InvoiceJournalPlan planInvoiceJournal(BokfriRuntime runtime,
+            SSNewCompany company, java.time.LocalDate from, java.time.LocalDate to)
+            throws java.sql.SQLException {
+        if (from == null || to == null || to.isBefore(from)) {
+            throw new IllegalArgumentException("Journal period is invalid");
+        }
+        List<SSInvoice> invoices = runtime.getInvoices().stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(invoice -> invoice.getLocalDate() == null
+                        || (!invoice.getLocalDate().isBefore(from)
+                                && !invoice.getLocalDate().isAfter(to)))
+                .filter(invoice -> !invoice.isEntered())
+                .sorted(Comparator.comparing(SSInvoice::getNumber,
+                        Comparator.nullsLast(Integer::compareTo)))
+                .toList();
+        int journalNumber = runtime.counterValue("invoicejournal") + 1;
+        SSVoucher combined = new SSVoucher(0);
+        combined.setDescription("Fakturajournal nr " + journalNumber);
+        combined.setLocalDate(to);
+        for (SSInvoice invoice : invoices) {
+            SSVoucher current = runtime.isNormalized()
+                    ? invoice.generateVoucher(runtime.currentAccountPlan(),
+                            company.isRoundingOff(), runtime.getProjects(), runtime.getResultUnits())
+                    : invoice.generateVoucher();
+            for (SSVoucherRow row : current.getRows()) {
+                combined.addVoucherRow(new SSVoucherRow(row));
+            }
+        }
+        return new InvoiceJournalPlan(journalNumber, from, to, invoices,
+                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
     }
 
     private static Map<String, Object> invoiceJournalDetails(InvoiceJournalPlan plan) {

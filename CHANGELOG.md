@@ -122,6 +122,12 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   and `outpayment list/show/create/validate` to normalized storage. `SSSupplierInvoice.setSupplier`
   now copies the supplier's stored currency reference instead of resolving it through the
   global SSDB singleton.
+- Port invoice booking to normalized storage: `SSInvoice.generateVoucher` gained a
+  collaborator-supplied overload (account plan, rounding flag, projects, result units), the
+  normalized invoice store marks invoices entered and replaces their voucher snapshot, and the
+  register store carries company auto-increment counters with legacy read/bump semantics.
+  `invoice journal` preview and commit work on a normalized database. Normalized reads now
+  initialize empty default-account maps so booking never trips over null maps.
 
 ### Fixed
 

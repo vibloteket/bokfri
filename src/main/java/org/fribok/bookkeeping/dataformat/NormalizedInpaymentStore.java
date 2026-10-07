@@ -82,6 +82,7 @@ public final class NormalizedInpaymentStore {
                     inpayment.setLocalDate(result.getObject(3, LocalDate.class));
                     inpayment.setText(result.getString(4));
                     inpayment.setEntered(result.getBoolean(5));
+                    inpayment.getDefaultAccounts();
                     byId.put(result.getLong(1), inpayment);
                 }
             }

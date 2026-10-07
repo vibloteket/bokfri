@@ -576,6 +576,44 @@ public final class NormalizedRegisterStore {
         return units;
     }
 
+    // ------------------------------------------------------------------ counters
+
+    /** Returns the current value of a company auto-increment counter, 0 when absent. */
+    public int autoIncrementValue(int companyLegacyId, String counter) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT counter_value FROM company_auto_increment WHERE counter_name=? "
+                        + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setString(1, counter);
+            statement.setInt(2, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next() ? result.getInt(1) : 0;
+            }
+        }
+    }
+
+    /** Increments a company auto-increment counter, creating it at 1 when absent. */
+    public void bumpAutoIncrement(int companyLegacyId, String counter) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE company_auto_increment SET counter_value=counter_value+1 "
+                        + "WHERE counter_name=? "
+                        + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setString(1, counter);
+            statement.setInt(2, companyLegacyId);
+            if (statement.executeUpdate() == 1) {
+                return;
+            }
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "INSERT INTO company_auto_increment (company_id,counter_name,counter_value) "
+                        + "SELECT id,?,1 FROM company WHERE legacy_id=?")) {
+            statement.setString(1, counter);
+            statement.setInt(2, companyLegacyId);
+            if (statement.executeUpdate() != 1) {
+                throw new SQLException("No company with legacy id " + companyLegacyId);
+            }
+        }
+    }
+
     // ------------------------------------------------------------------ internals
 
     private void readProductChildren(int companyLegacyId, Map<Integer, SSProduct> byLegacyId)

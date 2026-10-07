@@ -460,10 +460,27 @@ public class SSInvoice extends SSSale {
      * @return
      */
     public SSVoucher generateVoucher() {
+        return generateVoucher(SSDB.getInstance().getCurrentAccountPlan(),
+                SSDB.getInstance().getCurrentCompany().isRoundingOff(),
+                SSDB.getInstance().getProjects(), SSDB.getInstance().getResultUnits());
+    }
+
+    /**
+     * Generates the booking voucher with the collaborators supplied explicitly, so the
+     * calculation works without the global database singleton (normalized storage).
+     *
+     * @param accountPlan the current account plan
+     * @param roundingOff the company's rounding flag
+     * @param projects the company's projects
+     * @param resultUnits the company's result units
+     * @return the generated voucher, also stored as the invoice's voucher snapshot
+     */
+    public SSVoucher generateVoucher(SSAccountPlan accountPlan, boolean roundingOff,
+            List<SSNewProject> projects, List<SSNewResultUnit> resultUnits) {
         String iDescription = SSBundle.getBundle().getString(
                 "invoiceframe.voucherdescription");
 
-        SSAccountPlan iAccountPlan = SSDB.getInstance().getCurrentAccountPlan();
+        SSAccountPlan iAccountPlan = accountPlan;
 
         iVoucher = new SSVoucher();
         iVoucher.setLocalDate(SSDateUtil.today());
@@ -471,11 +488,11 @@ public class SSInvoice extends SSSale {
         iVoucher.setDescription(String.format(iDescription, iNumber));
 
         // Get the total sum for the sales
-        BigDecimal iTotalSum = SSInvoiceMath.getTotalSum(this);
+        BigDecimal iTotalSum = SSInvoiceMath.getTotalSum(this, roundingOff);
         // Get the tax sums for the sales
         Map<SSTaxCode, BigDecimal> iTaxSum = SSInvoiceMath.getTaxSum(this);
         // Get the required rounding for the sales
-        BigDecimal iRoundingSum = SSInvoiceMath.getRounding(this);
+        BigDecimal iRoundingSum = SSInvoiceMath.getRounding(this, roundingOff);
 
         // Add the total sum to the voucher
         if (iType == SSInvoiceType.NORMAL) {
@@ -489,7 +506,7 @@ public class SSInvoice extends SSSale {
         }
 
         // Add the rounding
-        if (!SSDB.getInstance().getCurrentCompany().isRoundingOff()) {
+        if (!roundingOff) {
             iVoucher.addVoucherRow(
                     getDefaultAccount(iAccountPlan, SSDefaultAccount.Rounding).orElse(null),
                     iRoundingSum.negate());
@@ -514,9 +531,8 @@ public class SSInvoice extends SSSale {
 
             iVoucherRow.setCredit(iRow.getSum().orElse(null));
             iVoucherRow.setAccount(iRow.getAccount(iAccountPlan.getAccounts()));
-            iVoucherRow.setProject(iRow.getProject(SSDB.getInstance().getProjects()));
-            iVoucherRow.setResultUnit(
-                    iRow.getResultUnit(SSDB.getInstance().getResultUnits()));
+            iVoucherRow.setProject(iRow.getProject(projects));
+            iVoucherRow.setResultUnit(iRow.getResultUnit(resultUnits));
             if (iVoucherRow.getAccountNr() != null) {
                 iVoucher.addVoucherRow(iVoucherRow);
             }

@@ -305,6 +305,30 @@ class NormalizedRegisterStoreTest {
         }
     }
 
+    @Test
+    void autoIncrementCountersStartAtZeroAndBump() throws Exception {
+        try (Connection connection = connection()) {
+            migrate(connection);
+            NormalizedAccountingWriter writer =
+                    new NormalizedAccountingWriter(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+            SSNewCompany company = new SSNewCompany();
+            company.setId(15);
+            writer.addCompany(connection, company);
+            connection.commit();
+            NormalizedRegisterStore store = new NormalizedRegisterStore(connection);
+
+            assertThat(store.autoIncrementValue(15, "invoicejournal")).isZero();
+            store.bumpAutoIncrement(15, "invoicejournal");
+            connection.commit();
+            assertThat(store.autoIncrementValue(15, "invoicejournal")).isEqualTo(1);
+            store.bumpAutoIncrement(15, "invoicejournal");
+            connection.commit();
+            assertThat(store.autoIncrementValue(15, "invoicejournal")).isEqualTo(2);
+            // Other counters and other companies are unaffected.
+            assertThat(store.autoIncrementValue(15, "invoice")).isZero();
+        }
+    }
+
     private static Connection connection() throws Exception {
         Class.forName("org.hsqldb.jdbcDriver");
         Connection connection = DriverManager.getConnection(
