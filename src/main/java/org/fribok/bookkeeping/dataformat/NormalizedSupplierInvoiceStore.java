@@ -122,6 +122,56 @@ public final class NormalizedSupplierInvoiceStore {
         return sum;
     }
 
+    /** Marks a supplier invoice as booked and replaces its main voucher snapshot. */
+    public void markSupplierInvoiceEntered(int companyLegacyId, int number, SSVoucher voucher)
+            throws SQLException {
+        markEntered(Kind.INVOICE, companyLegacyId, number, voucher);
+    }
+
+    /** Marks a supplier credit invoice as booked and replaces its main voucher snapshot. */
+    public void markSupplierCreditInvoiceEntered(int companyLegacyId, int number,
+            SSVoucher voucher) throws SQLException {
+        markEntered(Kind.CREDIT, companyLegacyId, number, voucher);
+    }
+
+    private void markEntered(Kind kind, int companyLegacyId, int number, SSVoucher voucher)
+            throws SQLException {
+        long id;
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE " + kind.table + " SET entered=true WHERE number=? "
+                        + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setInt(1, number);
+            statement.setInt(2, companyLegacyId);
+            if (statement.executeUpdate() != 1) {
+                throw new SQLException("No " + kind.table + " " + number + " for company "
+                        + companyLegacyId);
+            }
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT id FROM " + kind.table + " WHERE number=? "
+                        + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setInt(1, number);
+            statement.setInt(2, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                result.next();
+                id = result.getLong(1);
+            }
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM " + kind.voucherRowTable() + " WHERE " + kind.idColumn() + "=?")) {
+            statement.setLong(1, id);
+            statement.executeUpdate();
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM " + kind.voucherTable() + " WHERE " + kind.idColumn() + "=?")) {
+            statement.setLong(1, id);
+            statement.executeUpdate();
+        }
+        if (voucher != null) {
+            insertVoucher(kind, id, "main", voucher);
+        }
+    }
+
     // ------------------------------------------------------------------ reads
 
     public List<SSSupplierInvoice> getSupplierInvoices(int companyLegacyId) throws SQLException {
