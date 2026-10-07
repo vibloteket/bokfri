@@ -539,6 +539,160 @@ class BokfriCliTest {
     }
 
     @Test
+    void registerLookupAndSpreadsheetCommandsWorkOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-register-lookup-data");
+        extractLegacyDatabase(data.resolve("db"));
+
+        // The v1.0.1 fixture is data format 1; migrate the engine before legacy access.
+        Result migrated = execute("--data-dir", data.toString(), "--format", "json",
+                "database", "migrate");
+        assertThat(migrated.exitCode()).as(migrated.stderr()).isZero();
+
+        // Create one register entry per domain in legacy mode, so the normalized database
+        // contains migrated customers, suppliers and products to look up and round-trip.
+        Result legacyCompanies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int legacyCompanyId = new ObjectMapper().readTree(legacyCompanies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result legacyYears = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(legacyCompanyId), "--format", "json", "year", "list");
+        int legacyYearId = new ObjectMapper().readTree(legacyYears.stdout())
+                .path("years").get(0).path("id").asInt();
+        String[] legacyContext = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(legacyCompanyId), "--year-id", Integer.toString(legacyYearId),
+                "--format", "json"};
+        Result legacyAccounts = execute(concat(legacyContext, "account", "list"));
+        int legacySalesAccount = new ObjectMapper().readTree(legacyAccounts.stdout())
+                .path("accounts").get(0).path("number").asInt();
+
+        Path legacyCustomerFile = temporaryDirectory.resolve("legacy-customer.json");
+        Files.writeString(legacyCustomerFile,
+                "{\"number\":\"K400\",\"name\":\"Registertest AB\"}");
+        assertThat(execute(concat(legacyContext, "customer", "create", "--file",
+                legacyCustomerFile.toString())).exitCode()).isZero();
+        Path legacySupplierFile = temporaryDirectory.resolve("legacy-supplier.json");
+        Files.writeString(legacySupplierFile,
+                "{\"number\":\"L400\",\"name\":\"Registerlev AB\"}");
+        assertThat(execute(concat(legacyContext, "supplier", "create", "--file",
+                legacySupplierFile.toString())).exitCode()).isZero();
+        Path legacyProductFile = temporaryDirectory.resolve("legacy-product.json");
+        Files.writeString(legacyProductFile, String.format(
+                "{\"number\":\"A400\",\"description\":\"Registerartikel\","
+                        + "\"sellingPrice\":25.00,\"vatRate\":25,\"salesAccount\":%d}",
+                legacySalesAccount));
+        assertThat(execute(concat(legacyContext, "product", "create", "--file",
+                legacyProductFile.toString())).exitCode()).isZero();
+
+        int customerCount = new ObjectMapper().readTree(
+                execute(concat(legacyContext, "customer", "list")).stdout()).path("count").asInt();
+        int supplierCount = new ObjectMapper().readTree(
+                execute(concat(legacyContext, "supplier", "list")).stdout()).path("count").asInt();
+        int productCount = new ObjectMapper().readTree(
+                execute(concat(legacyContext, "product", "list")).stdout()).path("count").asInt();
+
+        // Export the register spreadsheets from the legacy database before normalizing,
+        // so the import previews can be checked for duplicate detection across formats.
+        // (The spreadsheet writer skips rows without a register number, so the sheet row
+        // count can differ from the register size; the import preview reports both.)
+        Path legacyCustomers = temporaryDirectory.resolve("legacy-customers.xlsx");
+        Path legacySuppliers = temporaryDirectory.resolve("legacy-suppliers.xlsx");
+        Path legacyProducts = temporaryDirectory.resolve("legacy-products.xlsx");
+        assertThat(execute(concat(legacyContext, "customer", "export", "--output",
+                legacyCustomers.toString())).exitCode()).isZero();
+        assertThat(execute(concat(legacyContext, "supplier", "export", "--output",
+                legacySuppliers.toString())).exitCode()).isZero();
+        assertThat(execute(concat(legacyContext, "product", "export", "--output",
+                legacyProducts.toString())).exitCode()).isZero();
+
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        int yearId = new ObjectMapper().readTree(years.stdout())
+                .path("years").get(0).path("id").asInt();
+        String[] context = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+
+        // show reads a single migrated register entry in normalized mode.
+        Result customerShown = execute(concat(context, "customer", "show", "K400"));
+        assertThat(customerShown.exitCode()).as(customerShown.stderr()).isZero();
+        JsonNode customerDetails = new ObjectMapper().readTree(customerShown.stdout());
+        assertThat(customerDetails.path("number").asText()).isEqualTo("K400");
+        assertThat(customerDetails.path("name").asText()).isEqualTo("Registertest AB");
+        Result supplierShown = execute(concat(context, "supplier", "show", "L400"));
+        assertThat(supplierShown.exitCode()).as(supplierShown.stderr()).isZero();
+        JsonNode supplierDetails = new ObjectMapper().readTree(supplierShown.stdout());
+        assertThat(supplierDetails.path("number").asText()).isEqualTo("L400");
+        assertThat(supplierDetails.path("name").asText()).isEqualTo("Registerlev AB");
+        Result productShown = execute(concat(context, "product", "show", "A400"));
+        assertThat(productShown.exitCode()).as(productShown.stderr()).isZero();
+        JsonNode productDetails = new ObjectMapper().readTree(productShown.stdout());
+        assertThat(productDetails.path("number").asText()).isEqualTo("A400");
+        assertThat(productDetails.path("description").asText()).isEqualTo("Registerartikel");
+
+        // Spreadsheet export runs on normalized storage for customers and suppliers.
+        Path exportedCustomers = temporaryDirectory.resolve("normalized-customers.xlsx");
+        Result customerExport = execute(concat(context, "customer", "export", "--output",
+                exportedCustomers.toString()));
+        assertThat(customerExport.exitCode()).as(customerExport.stderr()).isZero();
+        assertThat(Files.readAllBytes(exportedCustomers))
+                .startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
+        assertThat(new ObjectMapper().readTree(customerExport.stdout()).path("count").asInt())
+                .isEqualTo(customerCount);
+        Path exportedSuppliers = temporaryDirectory.resolve("normalized-suppliers.xlsx");
+        Result supplierExport = execute(concat(context, "supplier", "export", "--output",
+                exportedSuppliers.toString()));
+        assertThat(supplierExport.exitCode()).as(supplierExport.stderr()).isZero();
+        assertThat(Files.readAllBytes(exportedSuppliers))
+                .startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
+        assertThat(new ObjectMapper().readTree(supplierExport.stdout()).path("count").asInt())
+                .isEqualTo(supplierCount);
+
+        // Importing the legacy spreadsheets previews every sheet row as a duplicate: the
+        // migration moved the legacy register into the normalized database unchanged.
+        Result customerImport = execute(concat(context, "customer", "import", "--file",
+                legacyCustomers.toString()));
+        assertThat(customerImport.exitCode()).as(customerImport.stderr()).isZero();
+        JsonNode customerImportJson = new ObjectMapper().readTree(customerImport.stdout());
+        assertThat(customerImportJson.path("applied").asBoolean()).isFalse();
+        assertThat(customerImportJson.path("newCount").asInt()).isZero();
+        assertThat(customerImportJson.path("duplicateCount").asInt())
+                .isEqualTo(customerImportJson.path("count").asInt());
+        Result supplierImport = execute(concat(context, "supplier", "import", "--file",
+                legacySuppliers.toString()));
+        assertThat(supplierImport.exitCode()).as(supplierImport.stderr()).isZero();
+        JsonNode supplierImportJson = new ObjectMapper().readTree(supplierImport.stdout());
+        assertThat(supplierImportJson.path("applied").asBoolean()).isFalse();
+        assertThat(supplierImportJson.path("newCount").asInt()).isZero();
+        assertThat(supplierImportJson.path("duplicateCount").asInt())
+                .isEqualTo(supplierImportJson.path("count").asInt());
+        Result productImport = execute(concat(context, "product", "import", "--file",
+                legacyProducts.toString()));
+        assertThat(productImport.exitCode()).as(productImport.stderr()).isZero();
+        JsonNode productImportJson = new ObjectMapper().readTree(productImport.stdout());
+        assertThat(productImportJson.path("applied").asBoolean()).isFalse();
+        assertThat(productImportJson.path("newCount").asInt()).isZero();
+        assertThat(productImportJson.path("duplicateCount").asInt())
+                .isEqualTo(productImportJson.path("count").asInt());
+
+        // Applying the normalized-mode export is a no-op: everything is already present.
+        Result applyCustomers = execute(concat(context, "customer", "import", "--file",
+                exportedCustomers.toString(), "--apply"));
+        assertThat(applyCustomers.exitCode()).as(applyCustomers.stderr()).isZero();
+        JsonNode appliedJson = new ObjectMapper().readTree(applyCustomers.stdout());
+        assertThat(appliedJson.path("applied").asBoolean()).isTrue();
+        assertThat(appliedJson.path("newCount").asInt()).isZero();
+        Result customersAfter = execute(concat(context, "customer", "list"));
+        assertThat(new ObjectMapper().readTree(customersAfter.stdout()).path("count").asInt())
+                .isEqualTo(customerCount);
+    }
+
+    @Test
     void invoiceCreateListAndShowWorkOnNormalizedStorage() throws Exception {
         Path data = temporaryDirectory.resolve("normalized-invoice-data");
         extractLegacyDatabase(data.resolve("db"));
