@@ -85,7 +85,37 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <version>3.2.0</version>
+        <dependencies>
+          <!-- JetBrains javac2 Ant task (IntelliJ IDEA 2021.2.x line). Resolved with its -->
+          <!-- POM and transitives from the intellij pluginRepository below, giving a -->
+          <!-- classpath that contains only the matching 212.x GUI-forms compiler. The -->
+          <!-- ideauidesigner-maven-plugin mixed its bundled com.intellij:javac2:7.0.3 with -->
+          <!-- these 212.x jars, and which copy of e.g. -->
+          <!-- com.intellij.uiDesigner.compiler.Utils loaded depended on plugin-realm order, -->
+          <!-- which broke CI when the runner image changed the merge order. -->
+          <dependency>
+            <groupId>com.jetbrains.intellij.java</groupId>
+            <artifactId>java-compiler-ant-tasks</artifactId>
+            <version>212.5457.59</version>
+          </dependency>
+        </dependencies>
         <executions>
+          <execution>
+            <id>instrument-idea-forms</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <taskdef name="javac2" classname="com.intellij.ant.Javac2"
+                         classpathref="maven.plugin.classpath"/>
+                <javac2 srcdir="${project.basedir}/src/main/java"
+                        destdir="${project.build.outputDirectory}"
+                        classpathref="maven.compile.classpath"/>
+              </target>
+            </configuration>
+          </execution>
           <execution>
             <id>stage-jpackage-input</id>
             <phase>package</phase>
@@ -217,37 +247,6 @@
         <version>2.2.1</version>
         <configuration>
           <jdkLevel>1.8</jdkLevel>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>ideauidesigner-maven-plugin</artifactId>
-        <version>1.0-beta-1</version>
-        <dependencies>
-          <!-- 2021-10-19 version 212.5457.59 -->
-          <!-- but started with 212.5284.40  == Intellij IDEA v2021.2.2 2021-09-14/ljo -->
-          <dependency>
-            <groupId>com.jetbrains.intellij.java</groupId>
-            <artifactId>java-compiler-ant-tasks</artifactId>
-            <version>212.5457.59</version>
-          </dependency>
-          <dependency>
-            <groupId>com.jetbrains.intellij.java</groupId>
-            <artifactId>java-gui-forms-rt</artifactId>
-            <version>212.5457.59</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <goals>
-              <goal>javac2</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <fork>true</fork>
-          <debug>true</debug>
-          <failOnError>true</failOnError>
         </configuration>
       </plugin>
       <!-- End: For IDEA-forms, but pluginRepositories added below  -->

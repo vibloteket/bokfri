@@ -650,6 +650,14 @@ public final class BokfriRuntime implements AutoCloseable {
         return database().getCustomer(number);
     }
 
+    /** Finds a supplier of the selected company by number in the active storage. */
+    public java.util.Optional<SSSupplier> findSupplier(String number) throws SQLException {
+        // SSDB has no by-number supplier lookup, so both modes filter the company list.
+        return getSuppliers().stream()
+                .filter(supplier -> java.util.Objects.equals(number, supplier.getNumber()))
+                .findFirst();
+    }
+
     /** Finds a product of the selected company by number in the active storage. */
     public java.util.Optional<SSProduct> findProduct(String number) throws SQLException {
         if (isNormalized()) {

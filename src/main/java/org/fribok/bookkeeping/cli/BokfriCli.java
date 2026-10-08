@@ -1650,7 +1650,11 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                List<SSCustomer> customers = new CustomerService(runtime.database()).list();
+                List<SSCustomer> customers = runtime.isNormalized()
+                        ? runtime.getCustomers().stream()
+                                .sorted(Comparator.comparing(SSCustomer::getNumber,
+                                        Comparator.nullsLast(String::compareTo))).toList()
+                        : new CustomerService(runtime.database()).list();
                 java.nio.file.Path exported = new CustomerSpreadsheetService()
                         .write(customers, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -1676,19 +1680,24 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                CustomerService service = new CustomerService(runtime.database());
+                List<SSCustomer> existing = runtime.getCustomers();
                 List<SSCustomer> customers = new CustomerSpreadsheetService().read(file);
-                java.util.Set<String> existingNumbers = service.list().stream()
+                java.util.Set<String> existingNumbers = existing.stream()
                         .map(SSCustomer::getNumber).collect(java.util.stream.Collectors.toSet());
                 List<SSCustomer> additions = customers.stream()
                         .filter(customer -> !existingNumbers.contains(customer.getNumber())).toList();
                 List<SSCustomer> invalid = additions.stream()
-                        .filter(customer -> !service.validate(customer).valid()).toList();
+                        .filter(customer -> !CustomerValidator.validate(customer, existing).valid())
+                        .toList();
                 if (apply && !invalid.isEmpty()) {
                     throw new CliException("CUSTOMER_IMPORT_INVALID",
                             invalid.size() + " imported customers failed validation");
                 }
-                if (apply) additions.forEach(service::create);
+                if (apply) {
+                    for (SSCustomer customer : additions) {
+                        runtime.addCustomer(customer);
+                    }
+                }
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("file", file.toAbsolutePath().normalize().toString());
                 result.put("count", customers.size()); result.put("newCount", additions.size());
@@ -1713,7 +1722,7 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                SSCustomer customer = new CustomerService(runtime.database()).find(number)
+                SSCustomer customer = runtime.findCustomer(number)
                         .orElseThrow(() -> new CliException("CUSTOMER_NOT_FOUND",
                                 "No customer has number " + number));
                 Map<String, Object> result = customerDetails(customer);
@@ -1864,21 +1873,30 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                ProductService service = new ProductService(runtime.database());
+                // Legacy loads shared lookup lists into the singleton; the normalized
+                // runtime serves the same lookups through the register store instead.
+                if (!runtime.isNormalized()) {
+                    runtime.database().init(false);
+                }
+                List<SSProduct> existing = runtime.getProducts();
                 List<SSProduct> products = new ProductSpreadsheetService().read(file, company,
-                        runtime.database().getUnits());
-                java.util.Set<String> existingNumbers = service.list().stream()
+                        runtime.getUnits());
+                java.util.Set<String> existingNumbers = existing.stream()
                         .map(SSProduct::getNumber).collect(java.util.stream.Collectors.toSet());
                 List<SSProduct> additions = products.stream()
                         .filter(product -> !existingNumbers.contains(product.getNumber())).toList();
                 List<SSProduct> invalid = additions.stream()
-                        .filter(product -> !service.validate(product).valid()).toList();
+                        .filter(product -> !ProductValidator.validate(product, existing).valid())
+                        .toList();
                 if (apply && !invalid.isEmpty()) {
                     throw new CliException("PRODUCT_IMPORT_INVALID",
                             invalid.size() + " imported products failed validation");
                 }
-                if (apply) additions.forEach(service::create);
+                if (apply) {
+                    for (SSProduct product : additions) {
+                        runtime.addProduct(product);
+                    }
+                }
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("file", file.toAbsolutePath().normalize().toString());
                 result.put("count", products.size()); result.put("newCount", additions.size());
@@ -1903,7 +1921,7 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                SSProduct product = new ProductService(runtime.database()).find(number)
+                SSProduct product = runtime.findProduct(number)
                         .orElseThrow(() -> new CliException("PRODUCT_NOT_FOUND",
                                 "No product has number " + number));
                 Map<String, Object> result = productDetails(product);
@@ -2025,7 +2043,11 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                List<SSSupplier> suppliers = new SupplierService(runtime.database()).list();
+                List<SSSupplier> suppliers = runtime.isNormalized()
+                        ? runtime.getSuppliers().stream()
+                                .sorted(Comparator.comparing(SSSupplier::getNumber,
+                                        Comparator.nullsLast(String::compareTo))).toList()
+                        : new SupplierService(runtime.database()).list();
                 java.nio.file.Path exported = new SupplierSpreadsheetService()
                         .write(suppliers, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -2052,24 +2074,27 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                SupplierService service = new SupplierService(runtime.database());
+                List<SSSupplier> existing = runtime.getSuppliers();
                 List<SSSupplier> suppliers = new SupplierSpreadsheetService().read(file);
-                java.util.Set<String> existingNumbers = service.list().stream()
+                java.util.Set<String> existingNumbers = existing.stream()
                         .map(SSSupplier::getNumber).collect(java.util.stream.Collectors.toSet());
                 List<SSSupplier> additions = suppliers.stream()
                         .filter(supplier -> !existingNumbers.contains(supplier.getNumber())).toList();
-                int nextOutpaymentNumber = service.nextOutpaymentNumber();
+                int nextOutpaymentNumber = runtime.nextOutpaymentNumber();
                 for (SSSupplier supplier : additions) {
                     supplier.setOutpaymentNumber(nextOutpaymentNumber++);
                 }
                 List<SSSupplier> invalid = additions.stream()
-                        .filter(supplier -> !service.validate(supplier).valid()).toList();
+                        .filter(supplier -> !SupplierValidator.validate(supplier, existing).valid())
+                        .toList();
                 if (apply && !invalid.isEmpty()) {
                     throw new CliException("SUPPLIER_IMPORT_INVALID",
                             invalid.size() + " imported suppliers failed validation");
                 }
                 if (apply) {
-                    additions.forEach(service::create);
+                    for (SSSupplier supplier : additions) {
+                        runtime.addSupplier(supplier);
+                    }
                 }
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("file", file.toAbsolutePath().normalize().toString());
@@ -2097,7 +2122,7 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                SSSupplier supplier = new SupplierService(runtime.database()).find(number)
+                SSSupplier supplier = runtime.findSupplier(number)
                         .orElseThrow(() -> new CliException("SUPPLIER_NOT_FOUND",
                                 "No supplier has number " + number));
                 Map<String, Object> result = supplierDetails(supplier);
