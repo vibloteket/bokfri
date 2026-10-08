@@ -106,6 +106,26 @@ public final class NormalizedAccountingReader {
         return accounts;
     }
 
+    /** Reads the opening balances of a year keyed by account number. */
+    public java.util.Map<Integer, java.math.BigDecimal> openingBalances(Connection connection,
+                                                                        int yearLegacyId)
+            throws SQLException {
+        java.util.Map<Integer, java.math.BigDecimal> balances = new java.util.LinkedHashMap<>();
+        try (var statement = connection.prepareStatement(
+                "SELECT a.number,o.amount FROM opening_balance o "
+                        + "JOIN account a ON a.id=o.account_id AND a.accounting_year_id=o.accounting_year_id "
+                        + "JOIN accounting_year y ON y.id=o.accounting_year_id "
+                        + "WHERE y.legacy_id=? ORDER BY a.number")) {
+            statement.setInt(1, yearLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    balances.put(result.getInt(1), result.getBigDecimal(2));
+                }
+            }
+        }
+        return balances;
+    }
+
     public List<SSVoucher> vouchers(Connection connection, int yearLegacyId) throws SQLException {
         List<SSVoucher> vouchers = new ArrayList<>();
         java.util.Map<Long, SSVoucher> byId = new java.util.LinkedHashMap<>();
