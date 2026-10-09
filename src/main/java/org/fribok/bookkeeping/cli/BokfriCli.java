@@ -3377,7 +3377,9 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                List<SSVoucher> vouchers = new VoucherService(runtime.database()).list();
+                List<SSVoucher> vouchers = runtime.isNormalized()
+                        ? runtime.getVouchers()
+                        : new VoucherService(runtime.database()).list();
                 java.nio.file.Path exported = new VoucherSpreadsheetService()
                         .write(vouchers, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -3405,21 +3407,35 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                VoucherService service = new VoucherService(runtime.database());
+                // Legacy loads shared lookup lists into the singleton so voucher-row
+                // accounts resolve lazily; normalized mode resolves them explicitly below.
+                if (!runtime.isNormalized()) {
+                    runtime.database().init(false);
+                }
                 List<SSVoucher> vouchers = new VoucherSpreadsheetService().read(file);
-                java.util.Set<Integer> existingNumbers = service.list().stream()
+                if (runtime.isNormalized()) {
+                    List<SSAccount> accounts = runtime.getAccounts();
+                    for (SSVoucher voucher : vouchers) {
+                        for (SSVoucherRow row : voucher.getRows()) {
+                            row.getAccount(accounts);
+                        }
+                    }
+                }
+                java.util.Set<Integer> existingNumbers = runtime.getVouchers().stream()
                         .map(SSVoucher::getNumber).collect(java.util.stream.Collectors.toSet());
                 List<SSVoucher> additions = vouchers.stream()
                         .filter(voucher -> !existingNumbers.contains(voucher.getNumber())).toList();
                 List<SSVoucher> invalid = additions.stream()
-                        .filter(voucher -> !service.validate(voucher).valid()).toList();
+                        .filter(voucher -> !VoucherValidator.validate(voucher, year).valid())
+                        .toList();
                 if (apply && !invalid.isEmpty()) {
                     throw new CliException("VOUCHER_IMPORT_INVALID",
                             invalid.size() + " imported vouchers failed validation");
                 }
                 if (apply) {
-                    additions.forEach(service::create);
+                    for (SSVoucher voucher : additions) {
+                        runtime.addVoucher(voucher);
+                    }
                 }
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("file", file.toAbsolutePath().normalize().toString());
@@ -3543,7 +3559,7 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                List<SSVoucherTemplate> templates = runtime.database().getVoucherTemplates();
+                List<SSVoucherTemplate> templates = runtime.getVoucherTemplates();
                 java.nio.file.Path exported = new VoucherTemplateSpreadsheetService()
                         .write(templates, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -3571,12 +3587,14 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 List<SSVoucherTemplate> templates = new VoucherTemplateSpreadsheetService().read(file);
-                java.util.Set<String> existingNames = runtime.database().getVoucherTemplates().stream()
+                java.util.Set<String> existingNames = runtime.getVoucherTemplates().stream()
                         .map(SSVoucherTemplate::getDescription).collect(java.util.stream.Collectors.toSet());
                 List<SSVoucherTemplate> additions = templates.stream()
                         .filter(template -> !existingNames.contains(template.getDescription())).toList();
                 if (apply) {
-                    additions.forEach(runtime.database()::addVoucherTemplate);
+                    for (SSVoucherTemplate template : additions) {
+                        runtime.addVoucherTemplate(template);
+                    }
                 }
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("file", file.toAbsolutePath().normalize().toString());

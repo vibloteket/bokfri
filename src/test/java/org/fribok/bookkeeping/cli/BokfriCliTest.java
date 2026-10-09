@@ -811,6 +811,114 @@ class BokfriCliTest {
     }
 
     @Test
+    void voucherSpreadsheetAndTemplateCommandsWorkOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-voucher-xlsx-data");
+        extractLegacyDatabase(data.resolve("db"));
+
+        // The v1.0.1 fixture is data format 1; migrate the engine before legacy access.
+        assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                "database", "migrate").exitCode()).isZero();
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode firstYear = new ObjectMapper().readTree(years.stdout()).path("years").get(0);
+        int yearId = firstYear.path("id").asInt();
+        String yearFrom = firstYear.path("from").asText();
+        String[] legacyContext = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+
+        // One voucher in legacy mode, exported before normalizing.
+        Result accounts = execute(concat(legacyContext, "account", "list"));
+        JsonNode accountList = new ObjectMapper().readTree(accounts.stdout()).path("accounts");
+        int firstAccount = accountList.get(0).path("number").asInt();
+        int secondAccount = accountList.get(1).path("number").asInt();
+        Path voucherFile = temporaryDirectory.resolve("legacy-voucher.json");
+        Files.writeString(voucherFile, String.format(
+                "{\"date\":\"%s\",\"description\":\"Legacy voucher\",\"rows\":["
+                        + "{\"account\":%d,\"debit\":100.00},"
+                        + "{\"account\":%d,\"credit\":100.00}]}",
+                yearFrom, firstAccount, secondAccount));
+        assertThat(execute(concat(legacyContext, "voucher", "create", "--file",
+                voucherFile.toString())).exitCode()).isZero();
+        int voucherCount = new ObjectMapper().readTree(
+                execute(concat(legacyContext, "voucher", "list")).stdout()).path("count").asInt();
+        Path legacyVouchers = temporaryDirectory.resolve("legacy-vouchers.xlsx");
+        assertThat(execute(concat(legacyContext, "voucher", "export", "--output",
+                legacyVouchers.toString())).exitCode()).isZero();
+
+        // One voucher template in legacy mode through a hand-built sheet.
+        Path templateFile = temporaryDirectory.resolve("legacy-templates.xlsx");
+        se.swedsoft.bookkeeping.data.SSVoucherTemplate template =
+                new se.swedsoft.bookkeeping.data.SSVoucherTemplate();
+        template.setDescription("CLI-mall normalized");
+        var templateRow = new se.swedsoft.bookkeeping.data.SSVoucherTemplate.SSVoucherTemplateRow();
+        templateRow.setAccountNr(firstAccount);
+        templateRow.setDebet(java.math.BigDecimal.ZERO);
+        template.getRows().add(templateRow);
+        new org.fribok.bookkeeping.service.spreadsheet.VoucherTemplateSpreadsheetService()
+                .write(java.util.List.of(template), templateFile, false);
+        Result templateImport = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "voucher-template", "import",
+                "--file", templateFile.toString(), "--apply");
+        assertThat(templateImport.exitCode()).as(templateImport.stderr()).isZero();
+
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        String[] context = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+
+        // Voucher export runs on normalized storage with the migrated vouchers.
+        Path exportedVouchers = temporaryDirectory.resolve("normalized-vouchers.xlsx");
+        Result voucherExport = execute(concat(context, "voucher", "export", "--output",
+                exportedVouchers.toString()));
+        assertThat(voucherExport.exitCode()).as(voucherExport.stderr()).isZero();
+        assertThat(Files.readAllBytes(exportedVouchers))
+                .startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
+        assertThat(new ObjectMapper().readTree(voucherExport.stdout()).path("count").asInt())
+                .isEqualTo(voucherCount);
+
+        // The legacy voucher sheet previews as all-duplicate against the migrated vouchers.
+        Result voucherImport = execute(concat(context, "voucher", "import", "--file",
+                legacyVouchers.toString()));
+        assertThat(voucherImport.exitCode()).as(voucherImport.stderr()).isZero();
+        JsonNode voucherImportJson = new ObjectMapper().readTree(voucherImport.stdout());
+        assertThat(voucherImportJson.path("applied").asBoolean()).isFalse();
+        assertThat(voucherImportJson.path("newCount").asInt()).isZero();
+        assertThat(voucherImportJson.path("duplicateCount").asInt()).isEqualTo(voucherCount);
+
+        // Applying the normalized export imports nothing new.
+        Result applyVouchers = execute(concat(context, "voucher", "import", "--file",
+                exportedVouchers.toString(), "--apply"));
+        assertThat(applyVouchers.exitCode()).as(applyVouchers.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(applyVouchers.stdout()).path("newCount").asInt())
+                .isZero();
+
+        // The migrated template exports and re-imports as a duplicate in normalized mode.
+        Path exportedTemplates = temporaryDirectory.resolve("normalized-templates.xlsx");
+        Result templateExport = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "voucher-template", "export",
+                "--output", exportedTemplates.toString());
+        assertThat(templateExport.exitCode()).as(templateExport.stderr()).isZero();
+        assertThat(Files.readAllBytes(exportedTemplates))
+                .startsWith((byte) 0x50, (byte) 0x4b, (byte) 0x03, (byte) 0x04);
+        assertThat(new ObjectMapper().readTree(templateExport.stdout()).path("count").asInt())
+                .isEqualTo(1);
+        Result templateReimport = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "voucher-template", "import",
+                "--file", exportedTemplates.toString(), "--apply");
+        assertThat(templateReimport.exitCode()).as(templateReimport.stderr()).isZero();
+        JsonNode templateReimportJson = new ObjectMapper().readTree(templateReimport.stdout());
+        assertThat(templateReimportJson.path("applied").asBoolean()).isTrue();
+        assertThat(templateReimportJson.path("newCount").asInt()).isZero();
+    }
+
+    @Test
     void invoiceCreateListAndShowWorkOnNormalizedStorage() throws Exception {
         Path data = temporaryDirectory.resolve("normalized-invoice-data");
         extractLegacyDatabase(data.resolve("db"));
