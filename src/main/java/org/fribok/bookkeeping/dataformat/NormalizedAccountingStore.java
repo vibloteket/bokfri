@@ -89,6 +89,8 @@ public final class NormalizedAccountingStore implements AutoCloseable {
             byNumber.put(entry.getKey().getNumber(), entry.getValue());
         }
         writer.replaceOpeningBalances(connection, year.getId(), byNumber);
+    }
+
     /** Lists the voucher templates of the selected company. */
     public List<se.swedsoft.bookkeeping.data.SSVoucherTemplate> getVoucherTemplates()
             throws SQLException {

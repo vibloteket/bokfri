@@ -270,6 +270,11 @@ public final class NormalizedAccountingWriter {
                 statement.setLong(1, yearId);
                 statement.setLong(2, accountId(connection, yearId, entry.getKey()));
                 statement.setBigDecimal(3, entry.getValue());
+                statement.executeUpdate();
+            }
+        }
+    }
+
     /**
      * Upserts a voucher template with its ordered rows, keyed by company and description
      * (the legacy template name), mirroring SSDB.addVoucherTemplate.

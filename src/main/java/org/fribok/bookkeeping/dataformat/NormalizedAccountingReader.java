@@ -124,6 +124,8 @@ public final class NormalizedAccountingReader {
             }
         }
         return balances;
+    }
+
     /** Reads the voucher templates of a company with their ordered rows. */
     public List<se.swedsoft.bookkeeping.data.SSVoucherTemplate> voucherTemplates(
             Connection connection, int companyLegacyId) throws SQLException {

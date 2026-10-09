@@ -695,8 +695,6 @@ class BokfriCliTest {
     @Test
     void openingBalanceCommandsWorkOnNormalizedStorage() throws Exception {
         Path data = temporaryDirectory.resolve("normalized-opening-balance-data");
-    void voucherSpreadsheetAndTemplateCommandsWorkOnNormalizedStorage() throws Exception {
-        Path data = temporaryDirectory.resolve("normalized-voucher-xlsx-data");
         extractLegacyDatabase(data.resolve("db"));
 
         // The v1.0.1 fixture is data format 1; migrate the engine before legacy access.
@@ -810,6 +808,30 @@ class BokfriCliTest {
         JsonNode afterJson = new ObjectMapper().readTree(after.stdout());
         assertThat(afterJson.path("debitTotal").asText()).isEqualTo("125.00");
         assertThat(afterJson.path("creditTotal").asText()).isEqualTo("125.00");
+    }
+
+    @Test
+    void voucherSpreadsheetAndTemplateCommandsWorkOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-voucher-xlsx-data");
+        extractLegacyDatabase(data.resolve("db"));
+
+        // The v1.0.1 fixture is data format 1; migrate the engine before legacy access.
+        assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                "database", "migrate").exitCode()).isZero();
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode firstYear = new ObjectMapper().readTree(years.stdout()).path("years").get(0);
+        int yearId = firstYear.path("id").asInt();
+        String yearFrom = firstYear.path("from").asText();
+        String[] legacyContext = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+
         // One voucher in legacy mode, exported before normalizing.
         Result accounts = execute(concat(legacyContext, "account", "list"));
         JsonNode accountList = new ObjectMapper().readTree(accounts.stdout()).path("accounts");

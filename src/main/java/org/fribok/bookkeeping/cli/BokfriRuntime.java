@@ -696,6 +696,8 @@ public final class BokfriRuntime implements AutoCloseable {
                         normalizedStore())
                 : new org.fribok.bookkeeping.service.openingbalance.OpeningBalanceService(
                         database());
+    }
+
     /** Lists the voucher templates of the selected company from the active storage. */
     public List<se.swedsoft.bookkeeping.data.SSVoucherTemplate> getVoucherTemplates()
             throws SQLException {
