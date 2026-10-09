@@ -60,9 +60,35 @@ public final class NormalizedAccountingStore implements AutoCloseable {
         return reader.accounts(connection, currentYear.getId());
     }
 
+    /** Lists the accounts of an explicit year, ignoring the current-year selection. */
+    public List<SSAccount> getAccounts(SSNewAccountingYear year) throws SQLException {
+        return reader.accounts(connection, year.getId());
+    }
+
     public List<SSVoucher> getVouchers() throws SQLException {
         requireYear();
         return reader.vouchers(connection, currentYear.getId());
+    }
+
+    /** Lists the vouchers of an explicit year, ignoring the current-year selection. */
+    public List<SSVoucher> getVouchers(SSNewAccountingYear year) throws SQLException {
+        return reader.vouchers(connection, year.getId());
+    }
+
+    /** Returns the opening balances of a year keyed by account number. */
+    public java.util.Map<Integer, java.math.BigDecimal> getOpeningBalances(
+            SSNewAccountingYear year) throws SQLException {
+        return reader.openingBalances(connection, year.getId());
+    }
+
+    /** Replaces the opening balances of a year with its in-balance values. */
+    public void replaceOpeningBalances(SSNewAccountingYear year) throws SQLException {
+        java.util.Map<Integer, java.math.BigDecimal> byNumber = new java.util.LinkedHashMap<>();
+        for (java.util.Map.Entry<SSAccount, java.math.BigDecimal> entry
+                : year.getInBalance().entrySet()) {
+            byNumber.put(entry.getKey().getNumber(), entry.getValue());
+        }
+        writer.replaceOpeningBalances(connection, year.getId(), byNumber);
     }
 
     public void addCompany(SSNewCompany company) throws SQLException {

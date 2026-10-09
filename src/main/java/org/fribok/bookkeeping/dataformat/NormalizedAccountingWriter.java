@@ -253,6 +253,28 @@ public final class NormalizedAccountingWriter {
         }
     }
 
+    /** Replaces the opening balances of the year with the given account-number keyed values. */
+    public void replaceOpeningBalances(Connection connection, int yearLegacyId,
+                                       java.util.Map<Integer, java.math.BigDecimal> balances)
+            throws SQLException {
+        long yearId = yearId(connection, yearLegacyId);
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM opening_balance WHERE accounting_year_id=?")) {
+            statement.setLong(1, yearId);
+            statement.executeUpdate();
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "INSERT INTO opening_balance (accounting_year_id,account_id,amount) "
+                        + "VALUES (?,?,?)")) {
+            for (var entry : balances.entrySet()) {
+                statement.setLong(1, yearId);
+                statement.setLong(2, accountId(connection, yearId, entry.getKey()));
+                statement.setBigDecimal(3, entry.getValue());
+                statement.executeUpdate();
+            }
+        }
+    }
+
     private long accountId(Connection connection, long yearId, int accountNumber) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT id FROM account WHERE accounting_year_id=? AND number=?")) {
