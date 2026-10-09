@@ -689,6 +689,28 @@ public final class BokfriRuntime implements AutoCloseable {
                 : database().getResultUnits();
     }
 
+    /** Lists the voucher templates of the selected company from the active storage. */
+    public List<se.swedsoft.bookkeeping.data.SSVoucherTemplate> getVoucherTemplates()
+            throws SQLException {
+        return isNormalized()
+                ? normalizedStore.getVoucherTemplates()
+                : database().getVoucherTemplates();
+    }
+
+    /**
+     * Adds or replaces a voucher template of the selected company, committing in normalized
+     * mode, mirroring the legacy internal-commit contract of {@code SSDB.addVoucherTemplate}.
+     */
+    public void addVoucherTemplate(se.swedsoft.bookkeeping.data.SSVoucherTemplate template)
+            throws SQLException {
+        if (isNormalized()) {
+            normalizedStore.addVoucherTemplate(template);
+            connection.commit();
+            return;
+        }
+        database().addVoucherTemplate(template);
+    }
+
     /** Lists the shared currency lookup from the active storage. */
     public List<SSCurrency> getCurrencies() throws SQLException {
         return isNormalized() ? registerStore.getCurrencies() : database().getCurrencies();

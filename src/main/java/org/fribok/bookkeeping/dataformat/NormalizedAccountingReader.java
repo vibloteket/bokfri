@@ -106,6 +106,59 @@ public final class NormalizedAccountingReader {
         return accounts;
     }
 
+    /** Reads the voucher templates of a company with their ordered rows. */
+    public List<se.swedsoft.bookkeeping.data.SSVoucherTemplate> voucherTemplates(
+            Connection connection, int companyLegacyId) throws SQLException {
+        List<se.swedsoft.bookkeeping.data.SSVoucherTemplate> templates = new ArrayList<>();
+        java.util.Map<String, se.swedsoft.bookkeeping.data.SSVoucherTemplate> byName =
+                new java.util.LinkedHashMap<>();
+        try (var statement = connection.prepareStatement(
+                "SELECT t.name,t.description,t.modified_at FROM voucher_template t "
+                        + "JOIN company c ON c.id=t.company_id "
+                        + "WHERE c.legacy_id=? ORDER BY t.name")) {
+            statement.setInt(1, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    se.swedsoft.bookkeeping.data.SSVoucherTemplate template =
+                            new se.swedsoft.bookkeeping.data.SSVoucherTemplate();
+                    template.setDescription(result.getString(2));
+                    java.time.OffsetDateTime modified =
+                            result.getObject(3, java.time.OffsetDateTime.class);
+                    if (modified != null) {
+                        template.setLocalDateTime(modified.atZoneSameInstant(
+                                LegacySwedishTimeResolver.LEGACY_ZONE).toLocalDateTime());
+                    }
+                    byName.put(result.getString(1), template);
+                    templates.add(template);
+                }
+            }
+        }
+        try (var statement = connection.prepareStatement(
+                "SELECT r.template_name,r.account_number,r.debit FROM voucher_template_row r "
+                        + "JOIN company c ON c.id=r.company_id "
+                        + "WHERE c.legacy_id=? "
+                        + "ORDER BY r.template_name,r.row_number")) {
+            statement.setInt(1, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    se.swedsoft.bookkeeping.data.SSVoucherTemplate template =
+                            byName.get(result.getString(1));
+                    se.swedsoft.bookkeeping.data.SSVoucherTemplate.SSVoucherTemplateRow row =
+                            new se.swedsoft.bookkeeping.data.SSVoucherTemplate.SSVoucherTemplateRow();
+                    row.setAccountNr(result.getObject(2, Integer.class));
+                    // The debit flag selects which side carries the (zero) placeholder.
+                    if (result.getBoolean(3)) {
+                        row.setDebet(java.math.BigDecimal.ZERO);
+                    } else {
+                        row.setCredit(java.math.BigDecimal.ZERO);
+                    }
+                    template.getRows().add(row);
+                }
+            }
+        }
+        return templates;
+    }
+
     public List<SSVoucher> vouchers(Connection connection, int yearLegacyId) throws SQLException {
         List<SSVoucher> vouchers = new ArrayList<>();
         java.util.Map<Long, SSVoucher> byId = new java.util.LinkedHashMap<>();

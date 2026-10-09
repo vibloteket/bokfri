@@ -253,6 +253,59 @@ public final class NormalizedAccountingWriter {
         }
     }
 
+    /**
+     * Upserts a voucher template with its ordered rows, keyed by company and description
+     * (the legacy template name), mirroring SSDB.addVoucherTemplate.
+     */
+    public void addVoucherTemplate(Connection connection, int companyLegacyId,
+                                   se.swedsoft.bookkeeping.data.SSVoucherTemplate template)
+            throws SQLException {
+        long companyId = companyId(connection, companyLegacyId);
+        String name = template.getDescription();
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM voucher_template_row WHERE company_id=? AND template_name=?")) {
+            statement.setLong(1, companyId);
+            statement.setString(2, name);
+            statement.executeUpdate();
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM voucher_template WHERE company_id=? AND name=?")) {
+            statement.setLong(1, companyId);
+            statement.setString(2, name);
+            statement.executeUpdate();
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "INSERT INTO voucher_template (company_id,name,description,modified_at) "
+                        + "VALUES (?,?,?,?)")) {
+            statement.setLong(1, companyId);
+            statement.setString(2, name);
+            statement.setString(3, template.getDescription());
+            java.time.LocalDateTime modified = template.getLocalDateTime();
+            statement.setObject(4, modified == null ? null
+                    : OffsetDateTime.ofInstant(LegacySwedishTimeResolver.resolve(modified).instant(),
+                            ZoneOffset.UTC));
+            statement.executeUpdate();
+        }
+        int rowNumber = 0;
+        for (se.swedsoft.bookkeeping.data.SSVoucherTemplate.SSVoucherTemplateRow row
+                : template.getRows()) {
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "INSERT INTO voucher_template_row (company_id,template_name,row_number,"
+                            + "account_number,debit) VALUES (?,?,?,?,?)")) {
+                statement.setLong(1, companyId);
+                statement.setString(2, name);
+                statement.setInt(3, rowNumber++);
+                if (row.getAccountNr() == null) {
+                    statement.setNull(4, java.sql.Types.INTEGER);
+                } else {
+                    statement.setInt(4, row.getAccountNr());
+                }
+                statement.setBoolean(5, row.getDebet() != null);
+                statement.executeUpdate();
+            }
+        }
+    }
+
     private long accountId(Connection connection, long yearId, int accountNumber) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT id FROM account WHERE accounting_year_id=? AND number=?")) {
