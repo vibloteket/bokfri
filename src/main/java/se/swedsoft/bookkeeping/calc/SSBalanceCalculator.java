@@ -204,8 +204,23 @@ public class SSBalanceCalculator {
      * @return The outbalance for the year
      */
     public static Map<SSAccount, BigDecimal> getOutBalance(SSNewAccountingYear pYearData) {
-        List<SSVoucher> iVouchers = pYearData.getVouchers();
+        return getOutBalance(pYearData, pYearData.getVouchers(), null);
+    }
 
+    /**
+     * Outbalance for a year computed from an explicit voucher list instead of the year's
+     * lazily loaded voucher graph. When {@code pAccounts} is given, voucher-row accounts are
+     * resolved against it instead of the global SSDB singleton; both are needed by runtimes
+     * that do not start the legacy object storage (normalized databases).
+     *
+     * @param pYearData the year whose in-balance and account schema drive the calculation
+     * @param pVouchers the year's vouchers
+     * @param pAccounts the year's accounts for row resolution, or null to resolve through SSDB
+     * @return The outbalance for the year
+     */
+    public static Map<SSAccount, BigDecimal> getOutBalance(SSNewAccountingYear pYearData,
+                                                           List<SSVoucher> pVouchers,
+                                                           List<SSAccount> pAccounts) {
         Map<SSAccount, BigDecimal> iOutBalance = new HashMap<>();
         Map<SSAccount, BigDecimal> iInBalance = pYearData.getInBalance();
 
@@ -219,11 +234,13 @@ public class SSBalanceCalculator {
         }
 
         // Loop through all vouchers
-        for (SSVoucher iVoucher: iVouchers) {
+        for (SSVoucher iVoucher: pVouchers) {
 
             // Loop through all the voucher rows
             for (SSVoucherRow iRow: iVoucher.getRows()) {
-                SSAccount iRowAccount = iRow.getAccount();
+                SSAccount iRowAccount = pAccounts == null
+                        ? iRow.getAccount()
+                        : iRow.getAccount(pAccounts);
 
                 // Skip the row is crossed or invalid
                 if (!iRow.isValid() || iRow.isCrossed()) {

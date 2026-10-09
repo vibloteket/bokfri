@@ -693,6 +693,8 @@ class BokfriCliTest {
     }
 
     @Test
+    void openingBalanceCommandsWorkOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-opening-balance-data");
     void voucherSpreadsheetAndTemplateCommandsWorkOnNormalizedStorage() throws Exception {
         Path data = temporaryDirectory.resolve("normalized-voucher-xlsx-data");
         extractLegacyDatabase(data.resolve("db"));
@@ -710,10 +712,104 @@ class BokfriCliTest {
         JsonNode firstYear = new ObjectMapper().readTree(years.stdout()).path("years").get(0);
         int yearId = firstYear.path("id").asInt();
         String yearFrom = firstYear.path("from").asText();
+        java.time.LocalDate secondFrom = java.time.LocalDate.parse(firstYear.path("to").asText())
+                .plusDays(1);
         String[] legacyContext = {"--data-dir", data.toString(), "--company-id",
                 Integer.toString(companyId), "--year-id", Integer.toString(yearId),
                 "--format", "json"};
 
+        // Two balance accounts (BAS 1xxx/2xxx) of the fixture plan.
+        Result accounts = execute(concat(legacyContext, "account", "list"));
+        java.util.List<Integer> balanceAccounts = new java.util.ArrayList<>();
+        for (JsonNode account : new ObjectMapper().readTree(accounts.stdout()).path("accounts")) {
+            int number = account.path("number").asInt();
+            if (number >= 1000 && number <= 2999 && balanceAccounts.size() < 2) {
+                balanceAccounts.add(number);
+            }
+        }
+        assertThat(balanceAccounts).hasSize(2);
+        int debitAccount = balanceAccounts.get(0);
+        int creditAccount = balanceAccounts.get(1);
+
+        // Legacy opening balance + one voucher on the balance accounts of the first year.
+        Path openingFile = temporaryDirectory.resolve("legacy-opening-balance.json");
+        Files.writeString(openingFile, String.format(
+                "{\"balances\":[{\"account\":%d,\"amount\":100.00},"
+                        + "{\"account\":%d,\"amount\":-100.00}]}", debitAccount, creditAccount));
+        Result legacySet = execute(concat(legacyContext, "opening-balance", "set", "--file",
+                openingFile.toString()));
+        assertThat(legacySet.exitCode()).as(legacySet.stderr()).isZero();
+        Path voucherFile = temporaryDirectory.resolve("legacy-voucher.json");
+        Files.writeString(voucherFile, String.format(
+                "{\"date\":\"%s\",\"description\":\"Legacy voucher\",\"rows\":["
+                        + "{\"account\":%d,\"debit\":25.00},"
+                        + "{\"account\":%d,\"credit\":25.00}]}",
+                yearFrom, debitAccount, creditAccount));
+        assertThat(execute(concat(legacyContext, "voucher", "create", "--file",
+                voucherFile.toString())).exitCode()).isZero();
+
+        // A second year in legacy mode; its opening balances are carried forward later.
+        Result plans = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "account-plan", "list");
+        String planName = new ObjectMapper().readTree(plans.stdout())
+                .path("accountPlans").get(0).path("name").asText();
+        Path yearFile = temporaryDirectory.resolve("legacy-year.json");
+        Files.writeString(yearFile, String.format(
+                "{\"from\":\"%s\",\"to\":\"%s\",\"accountPlanName\":\"%s\"}",
+                secondFrom, secondFrom.plusYears(1).minusDays(1), planName));
+        Result secondYear = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "create", "--file",
+                yearFile.toString());
+        assertThat(secondYear.exitCode()).as(secondYear.stderr()).isZero();
+        int secondYearId = new ObjectMapper().readTree(secondYear.stdout()).path("id").asInt();
+
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        String[] firstContext = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+        String[] secondContext = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(secondYearId),
+                "--format", "json"};
+
+        // show reads the migrated opening balances of the first year in normalized mode.
+        Result shown = execute(concat(firstContext, "opening-balance", "show"));
+        assertThat(shown.exitCode()).as(shown.stderr()).isZero();
+        JsonNode shownJson = new ObjectMapper().readTree(shown.stdout());
+        assertThat(shownJson.path("debitTotal").asText()).isEqualTo("100.00");
+        assertThat(shownJson.path("creditTotal").asText()).isEqualTo("100.00");
+
+        // validate/set reject an unbalanced proposal in normalized mode.
+        Path unbalanced = temporaryDirectory.resolve("unbalanced-opening-balance.json");
+        Files.writeString(unbalanced, String.format(
+                "{\"balances\":[{\"account\":%d,\"amount\":100.00}]}", debitAccount));
+        Result rejected = execute(concat(secondContext, "opening-balance", "set", "--file",
+                unbalanced.toString(), "--dry-run"));
+        assertThat(rejected.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(rejected.stderr()).at("/error/code").asText())
+                .isEqualTo("OPENING_BALANCE_INVALID");
+
+        // carry-forward preview writes nothing; commit stores rounded balance totals.
+        Result preview = execute(concat(secondContext, "opening-balance", "carry-forward",
+                "--from-year-id", Integer.toString(yearId)));
+        assertThat(preview.exitCode()).as(preview.stderr()).isZero();
+        JsonNode previewJson = new ObjectMapper().readTree(preview.stdout());
+        assertThat(previewJson.path("committed").asBoolean()).isFalse();
+        Result notYet = execute(concat(secondContext, "opening-balance", "show"));
+        assertThat(new ObjectMapper().readTree(notYet.stdout()).path("debitTotal").asText())
+                .isEqualTo("0.00");
+        Result carried = execute(concat(secondContext, "opening-balance", "carry-forward",
+                "--from-year-id", Integer.toString(yearId), "--commit"));
+        assertThat(carried.exitCode()).as(carried.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(carried.stdout()).path("committed").asBoolean())
+                .isTrue();
+
+        // The carried opening balances equal the first year's closing balances: 100 + 25.
+        Result after = execute(concat(secondContext, "opening-balance", "show"));
+        assertThat(after.exitCode()).as(after.stderr()).isZero();
+        JsonNode afterJson = new ObjectMapper().readTree(after.stdout());
+        assertThat(afterJson.path("debitTotal").asText()).isEqualTo("125.00");
+        assertThat(afterJson.path("creditTotal").asText()).isEqualTo("125.00");
         // One voucher in legacy mode, exported before normalizing.
         Result accounts = execute(concat(legacyContext, "account", "list"));
         JsonNode accountList = new ObjectMapper().readTree(accounts.stdout()).path("accounts");

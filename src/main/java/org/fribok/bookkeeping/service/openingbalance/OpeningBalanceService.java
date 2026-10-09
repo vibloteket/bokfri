@@ -8,6 +8,7 @@ import se.swedsoft.bookkeeping.data.system.SSDB;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.SQLException;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -17,17 +18,27 @@ import java.util.Map;
 /** Opening balance validation, replacement, and carry-forward. */
 public final class OpeningBalanceService {
     private final SSDB db;
+    private final org.fribok.bookkeeping.dataformat.NormalizedAccountingStore normalized;
 
     public OpeningBalanceService(SSDB database) {
         db = database;
+        normalized = null;
+    }
+
+    /** Creates a service backed by normalized storage instead of the legacy object graph. */
+    public OpeningBalanceService(
+            org.fribok.bookkeeping.dataformat.NormalizedAccountingStore store) {
+        db = null;
+        normalized = store;
     }
 
     public OpeningBalancePlan current(SSNewAccountingYear year) {
-        return plan(year, year.getInBalance(), null);
+        SSNewAccountingYear hydrated = hydrate(year);
+        return plan(hydrated, hydrated.getInBalance(), null);
     }
 
     public OpeningBalancePlan validate(SSNewAccountingYear year, Map<Integer, BigDecimal> input) {
-        Map<SSAccount, BigDecimal> values = accountValues(year, input);
+        Map<SSAccount, BigDecimal> values = accountValues(hydrate(year), input);
         OpeningBalancePlan result = plan(year, values, null);
         if (result.difference().setScale(2, RoundingMode.HALF_UP).signum() != 0) {
             throw new IllegalArgumentException("Opening balance is not balanced");
@@ -48,6 +59,7 @@ public final class OpeningBalanceService {
      */
     public OpeningBalancePlan carryForward(SSNewAccountingYear from, SSNewAccountingYear to,
                                            boolean commit) {
+        to = hydrate(to);
         Map<Integer, BigDecimal> source = carryForwardSource(from, to);
         Map<Integer, BigDecimal> rounded = new LinkedHashMap<>();
         source.forEach((account, value) -> rounded.put(account, money(value)));
@@ -76,9 +88,12 @@ public final class OpeningBalanceService {
 
     private Map<Integer, BigDecimal> carryForwardSource(SSNewAccountingYear from,
                                                         SSNewAccountingYear to) {
+        Map<SSAccount, BigDecimal> outBalance = normalized == null
+                ? SSBalanceCalculator.getOutBalance(from)
+                : SSBalanceCalculator.getOutBalance(hydrate(from), vouchersOf(from),
+                        from.getAccountPlan().getAccounts());
         Map<Integer, BigDecimal> input = new LinkedHashMap<>();
-        for (Map.Entry<SSAccount, BigDecimal> entry
-                : SSBalanceCalculator.getOutBalance(from).entrySet()) {
+        for (Map.Entry<SSAccount, BigDecimal> entry : outBalance.entrySet()) {
             SSAccount target = to.getAccountPlan().getAccount(entry.getKey().getNumber());
             if (target != null && SSAccountMath.isBalanceAccount(target, to)
                     && entry.getValue().signum() != 0) {
@@ -127,7 +142,52 @@ public final class OpeningBalanceService {
             values.put(year.getAccountPlan().getAccount(entry.account()), entry.amount());
         }
         year.setInBalance(values);
+        if (normalized != null) {
+            try {
+                normalized.replaceOpeningBalances(year);
+                normalized.commit();
+            } catch (SQLException e) {
+                throw new IllegalStateException("Failed to store opening balances", e);
+            }
+            return;
+        }
         db.updateAccountingYear(year);
+    }
+
+    /**
+     * Loads the year's accounts and stored opening balances onto the domain object in
+     * normalized mode, where years are read without their graph. Legacy years arrive
+     * fully populated and are returned unchanged.
+     */
+    private SSNewAccountingYear hydrate(SSNewAccountingYear year) {
+        if (normalized == null) {
+            return year;
+        }
+        try {
+            if (year.getAccountPlan().getAccounts().isEmpty()) {
+                year.getAccountPlan().setAccounts(normalized.getAccounts(year));
+            }
+            Map<SSAccount, BigDecimal> inBalance = new LinkedHashMap<>();
+            for (Map.Entry<Integer, BigDecimal> entry
+                    : normalized.getOpeningBalances(year).entrySet()) {
+                SSAccount account = year.getAccountPlan().getAccount(entry.getKey());
+                if (account != null) {
+                    inBalance.put(account, entry.getValue());
+                }
+            }
+            year.setInBalance(inBalance);
+            return year;
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to load accounting year " + year.getId(), e);
+        }
+    }
+
+    private List<se.swedsoft.bookkeeping.data.SSVoucher> vouchersOf(SSNewAccountingYear year) {
+        try {
+            return normalized.getVouchers(year);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to load vouchers for year " + year.getId(), e);
+        }
     }
 
     private OpeningBalancePlan plan(SSNewAccountingYear year,
