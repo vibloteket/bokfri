@@ -919,6 +919,104 @@ class BokfriCliTest {
     }
 
     @Test
+    void financialReportsWorkOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-reports-data");
+        extractLegacyDatabase(data.resolve("db"));
+
+        // The v1.0.1 fixture is data format 1; migrate the engine before legacy access.
+        assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                "database", "migrate").exitCode()).isZero();
+
+        Result companies = execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list");
+        int companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asInt();
+        Result years = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--format", "json", "year", "list");
+        JsonNode firstYear = new ObjectMapper().readTree(years.stdout()).path("years").get(0);
+        int yearId = firstYear.path("id").asInt();
+        String yearFrom = firstYear.path("from").asText();
+        String[] legacyContext = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+
+        // One balanced voucher in legacy mode so the reports have period activity.
+        Result accounts = execute(concat(legacyContext, "account", "list"));
+        JsonNode accountList = new ObjectMapper().readTree(accounts.stdout()).path("accounts");
+        int firstAccount = accountList.get(0).path("number").asInt();
+        int secondAccount = accountList.get(1).path("number").asInt();
+        Path voucherFile = temporaryDirectory.resolve("report-voucher.json");
+        Files.writeString(voucherFile, String.format(
+                "{\"date\":\"%s\",\"description\":\"Report voucher\",\"rows\":["
+                        + "{\"account\":%d,\"debit\":100.00},"
+                        + "{\"account\":%d,\"credit\":100.00}]}",
+                yearFrom, firstAccount, secondAccount));
+        assertThat(execute(concat(legacyContext, "voucher", "create", "--file",
+                voucherFile.toString())).exitCode()).isZero();
+
+        // Legacy report outputs as the reference.
+        JsonNode legacyTrialBalance = new ObjectMapper().readTree(
+                execute(concat(legacyContext, "trial-balance")).stdout());
+        JsonNode legacyBalanceSheet = new ObjectMapper().readTree(
+                execute(concat(legacyContext, "balance-sheet")).stdout());
+        JsonNode legacyIncomeStatement = new ObjectMapper().readTree(
+                execute(concat(legacyContext, "income-statement")).stdout());
+        JsonNode legacyLedger = new ObjectMapper().readTree(execute(concat(legacyContext,
+                "general-ledger", "--account", Integer.toString(firstAccount))).stdout());
+        JsonNode legacyBalance = new ObjectMapper().readTree(execute(concat(legacyContext,
+                "account", "balance", Integer.toString(firstAccount))).stdout());
+
+        execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+
+        String[] context = {"--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "--format", "json"};
+
+        Result trialBalance = execute(concat(context, "trial-balance"));
+        assertThat(trialBalance.exitCode()).as(trialBalance.stderr()).isZero();
+        JsonNode trialBalanceJson = new ObjectMapper().readTree(trialBalance.stdout());
+        assertThat(trialBalanceJson).isEqualTo(legacyTrialBalance);
+        assertThat(trialBalanceJson.path("debitTotal").decimalValue())
+                .isEqualByComparingTo(trialBalanceJson.path("creditTotal").decimalValue());
+
+        Result balanceSheet = execute(concat(context, "balance-sheet"));
+        assertThat(balanceSheet.exitCode()).as(balanceSheet.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(balanceSheet.stdout())).isEqualTo(legacyBalanceSheet);
+
+        Result incomeStatement = execute(concat(context, "income-statement"));
+        assertThat(incomeStatement.exitCode()).as(incomeStatement.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(incomeStatement.stdout()))
+                .isEqualTo(legacyIncomeStatement);
+
+        Result ledger = execute(concat(context, "general-ledger", "--account",
+                Integer.toString(firstAccount)));
+        assertThat(ledger.exitCode()).as(ledger.stderr()).isZero();
+        JsonNode ledgerJson = new ObjectMapper().readTree(ledger.stdout());
+        assertThat(ledgerJson).isEqualTo(legacyLedger);
+        assertThat(ledgerJson.path("rows").toString()).contains("Report voucher");
+
+        Result balance = execute(concat(context, "account", "balance",
+                Integer.toString(firstAccount)));
+        assertThat(balance.exitCode()).as(balance.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(balance.stdout())).isEqualTo(legacyBalance);
+
+        // Text output works on normalized storage too.
+        Result trialBalanceText = execute("--data-dir", data.toString(), "--company-id",
+                Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                "trial-balance");
+        assertThat(trialBalanceText.exitCode()).as(trialBalanceText.stderr()).isZero();
+        assertThat(trialBalanceText.stdout()).contains("TOTAL");
+
+        // PDF report export still requires legacy storage and fails clearly.
+        Result pdf = execute(concat(context, "general-ledger", "--account",
+                Integer.toString(firstAccount), "--output",
+                temporaryDirectory.resolve("ledger.pdf").toString(), "--overwrite"));
+        assertThat(pdf.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(pdf.stderr()).path("error").path("code").asText())
+                .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
+    }
+
+    @Test
     void invoiceCreateListAndShowWorkOnNormalizedStorage() throws Exception {
         Path data = temporaryDirectory.resolve("normalized-invoice-data");
         extractLegacyDatabase(data.resolve("db"));
