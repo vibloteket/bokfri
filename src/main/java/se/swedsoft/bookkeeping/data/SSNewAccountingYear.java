@@ -41,6 +41,10 @@ public class SSNewAccountingYear implements Serializable, SSTableSearchable {
 
     private SSBudget iBudget;
 
+    // Explicitly loaded vouchers; when set they replace the SSDB-backed lookup. Transient
+    // so the serialized legacy object graph is unchanged.
+    private transient List<SSVoucher> iVouchers;
+
     /**
      * Default constructor.
      */
@@ -186,7 +190,21 @@ public class SSNewAccountingYear implements Serializable, SSTableSearchable {
      * @return the vouchers
      */
     public List<SSVoucher> getVouchers() {
+        if (iVouchers != null) {
+            return iVouchers;
+        }
         return SSDB.getInstance().getVouchers(this);
+    }
+
+    /**
+     * Sets an explicit voucher list for the year, replacing the SSDB-backed lookup in
+     * {@link #getVouchers()}. Used by storage modes where the legacy object storage is
+     * not running; a null value restores the legacy lookup.
+     *
+     * @param pVouchers the vouchers, or null to restore the SSDB-backed lookup
+     */
+    public void setVouchers(List<SSVoucher> pVouchers) {
+        iVouchers = pVouchers;
     }
 
     /**

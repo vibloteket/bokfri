@@ -784,6 +784,40 @@ public final class BokfriRuntime implements AutoCloseable {
         return database.getCurrentYear();
     }
 
+    /**
+     * Loads the year's account plan, opening balances and vouchers onto the domain object
+     * in normalized mode, where years are read without their object graph. Voucher rows get
+     * their account objects bound from the year's accounts so {@code SSVoucherRow.getAccount()}
+     * never touches the legacy singleton. Legacy years arrive fully populated through SSDB and
+     * are returned unchanged.
+     */
+    public SSNewAccountingYear hydrateYear(SSNewAccountingYear year) throws SQLException {
+        if (!isNormalized()) {
+            return year;
+        }
+        if (year.getAccountPlan().getAccounts().isEmpty()) {
+            year.getAccountPlan().setAccounts(normalizedStore.getAccounts(year));
+        }
+        List<SSAccount> accounts = year.getAccountPlan().getAccounts();
+        java.util.Map<SSAccount, java.math.BigDecimal> inBalance = new java.util.LinkedHashMap<>();
+        for (java.util.Map.Entry<Integer, java.math.BigDecimal> entry
+                : normalizedStore.getOpeningBalances(year).entrySet()) {
+            SSAccount account = year.getAccountPlan().getAccount(entry.getKey());
+            if (account != null) {
+                inBalance.put(account, entry.getValue());
+            }
+        }
+        year.setInBalance(inBalance);
+        List<SSVoucher> vouchers = normalizedStore.getVouchers(year);
+        for (SSVoucher voucher : vouchers) {
+            for (se.swedsoft.bookkeeping.data.SSVoucherRow row : voucher.getRows()) {
+                row.getAccount(accounts);
+            }
+        }
+        year.setVouchers(vouchers);
+        return year;
+    }
+
     @Override
     public void close() {
         if (database != null) {
