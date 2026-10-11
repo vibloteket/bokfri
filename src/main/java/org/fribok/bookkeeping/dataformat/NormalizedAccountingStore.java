@@ -81,6 +81,11 @@ public final class NormalizedAccountingStore implements AutoCloseable {
         return reader.openingBalances(connection, year.getId());
     }
 
+    /** Reads monthly budgets for an explicit hydrated year, ignoring current selection. */
+    public se.swedsoft.bookkeeping.data.SSBudget getBudget(SSNewAccountingYear year) throws SQLException {
+        return reader.budget(connection, year);
+    }
+
     /** Replaces the opening balances of a year with its in-balance values. */
     public void replaceOpeningBalances(SSNewAccountingYear year) throws SQLException {
         java.util.Map<Integer, java.math.BigDecimal> byNumber = new java.util.LinkedHashMap<>();

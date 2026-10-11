@@ -97,7 +97,7 @@ public class SIEEntryVerifikation implements SIEEntry {
      */
     @Override
     public boolean exportEntry(SSSIEExporter iExporter, SIEWriter iWriter, SSNewAccountingYear iCurrentYearData) throws SSExportException {
-        List<SSVoucher> iVouchers = SSDB.getInstance().getVouchers();
+        List<SSVoucher> iVouchers = iExporter.getVouchers();
 
         SIEEntryTransaktion iEntry = new SIEEntryTransaktion();
 

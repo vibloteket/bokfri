@@ -14,6 +14,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Changed
 
+- SIE CLI export (types 1, 2, 3, and 4E) now supports normalized storage (data format 3),
+  using explicit company/year data, previous-year balances, monthly budgets, and dimension
+  registers. SIE-only rounding rows retain their approval requirement and never alter stored
+  vouchers. SIE import remains legacy-only.
 - VAT CLI reports and settlement preview/commit now support normalized storage (data format 3),
   preserving legacy VAT-box truncation, settlement rounding, and voucher numbering. VAT report
   and control PDF exports fail explicitly with `NORMALIZED_STORAGE_UNSUPPORTED` until their

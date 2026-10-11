@@ -15,6 +15,13 @@ public final class SieExportService {
     public SieExportResult export(Path output, SIEType type, String comment, boolean overwrite,
                                   boolean allowRoundingAdjustments)
             throws IOException, SSExportException {
+        return export(output, type, comment, overwrite, allowRoundingAdjustments, null);
+    }
+
+    /** Exports using explicit hydrated data when context is provided, otherwise legacy selection. */
+    public SieExportResult export(Path output, SIEType type, String comment,
+            boolean overwrite, boolean allowRoundingAdjustments, SSSIEExporter.ExportContext context)
+            throws IOException {
         Path target = output.toAbsolutePath().normalize();
         if (Files.exists(target) && !overwrite) {
             throw new FileAlreadyExistsException(target.toString());
@@ -25,6 +32,7 @@ public final class SieExportService {
         Path temporary = Files.createTempFile(target.getParent(), ".bokfri-sie-", ".se");
         try {
             SSSIEExporter exporter = new SSSIEExporter(type, comment);
+            if (context != null) exporter.setContext(context);
             exporter.setAllowRoundingAdjustments(allowRoundingAdjustments);
             exporter.exportSIE(temporary.toFile());
             if (overwrite) {

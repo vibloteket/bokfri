@@ -698,6 +698,25 @@ public final class BokfriRuntime implements AutoCloseable {
                         database());
     }
 
+    /** Builds the explicit, hydrated context used by normalized SIE exports. */
+    public se.swedsoft.bookkeeping.importexport.sie.SSSIEExporter.ExportContext sieExportContext(
+            SSNewCompany company, SSNewAccountingYear year) throws SQLException {
+        if (!isNormalized()) {
+            throw new IllegalStateException("Explicit SIE context is only needed for normalized storage");
+        }
+        hydrateYear(year);
+        year.setBudget(normalizedStore.getBudget(year));
+        SSNewAccountingYear previous = normalizedStore.getYears().stream()
+                .filter(candidate -> candidate.getLocalTo().plusDays(1).equals(year.getLocalFrom()))
+                .findFirst().orElse(null);
+        if (previous != null) {
+            hydrateYear(previous);
+            previous.setBudget(normalizedStore.getBudget(previous));
+        }
+        return new se.swedsoft.bookkeeping.importexport.sie.SSSIEExporter.ExportContext(
+                company, year, previous, getProjects(), getResultUnits());
+    }
+
     /** Creates a VAT service bound to the selected storage backend. */
     public org.fribok.bookkeeping.service.vat.VatService vatService(SSNewAccountingYear year)
             throws SQLException {

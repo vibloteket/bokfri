@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -917,6 +918,144 @@ class BokfriCliTest {
         JsonNode templateReimportJson = new ObjectMapper().readTree(templateReimport.stdout());
         assertThat(templateReimportJson.path("applied").asBoolean()).isTrue();
         assertThat(templateReimportJson.path("newCount").asInt()).isZero();
+    }
+
+    @Test
+    void emptyNormalizedSieExportUsesYearStartWithoutPreviousYear() throws Exception {
+        Path data = temporaryDirectory.resolve("empty-normalized-sie-data");
+        extractLegacyDatabase(data.resolve("db"));
+        assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                "database", "normalize").exitCode()).isZero();
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            var company = runtime.getCompanies().get(0);
+            runtime.selectCompany(company.getId());
+            var year = runtime.getYears(company).get(0);
+            runtime.selectYear(company, year.getId());
+            var context = runtime.sieExportContext(company, year);
+            assertThat(context.previousYear()).isNull();
+            assertThat(context.year().getVouchers()).isEmpty();
+            var exporter = new se.swedsoft.bookkeeping.importexport.sie.SSSIEExporter(
+                    se.swedsoft.bookkeeping.importexport.sie.util.SIEType.SIE_2);
+            exporter.setContext(context);
+            assertThat(exporter.getCoverageDate()).isEqualTo(year.getLocalFrom());
+            Path output = temporaryDirectory.resolve("empty-normalized.se");
+            exporter.exportSIE(output.toFile());
+            List<String> lines = se.swedsoft.bookkeeping.importexport.sie.util.SIEFile.readFile(output.toFile());
+            assertThat(lines).anyMatch(line -> line.startsWith("#OMFATTN"));
+            assertThat(lines).noneMatch(line -> line.startsWith("#RAR -1"));
+        }
+    }
+
+    @Test
+    void allSieExportTypesMatchLegacyOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-sie-data");
+        extractLegacyDatabase(data.resolve("db"));
+        assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                "database", "migrate").exitCode()).isZero();
+        int companyId;
+        int yearId;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            var company = runtime.getCompanies().get(0);
+            runtime.selectCompany(company.getId());
+            var year = runtime.getYears(company).get(0);
+            runtime.selectYear(company, year.getId());
+            companyId = company.getId();
+            yearId = year.getId();
+            var address = new se.swedsoft.bookkeeping.data.SSAddress();
+            address.setName("SIE Contact");
+            address.setAddress1("Export street 42");
+            address.setZipCode("12345");
+            address.setCity("Export City");
+            company.setAddress(address);
+            company.setPhone("123-456");
+            // Non-default rounding account proves the normalized company mapping is loaded.
+            company.getDefaultAccounts().put(
+                    se.swedsoft.bookkeeping.data.common.SSDefaultAccount.Rounding, 1930);
+            runtime.database().updateCompany(company);
+            var project = new se.swedsoft.bookkeeping.data.SSNewProject("SIE-P", "SIE project", "Export");
+            var unit = new se.swedsoft.bookkeeping.data.SSNewResultUnit("SIE-U", "SIE unit");
+            runtime.database().addProject(project);
+            runtime.database().addResultUnit(unit);
+            // Old serialized type objects may have an unnamed schema; use a valid named chart.
+            year.getAccountPlan().setType("BAS95");
+            var accounts = runtime.getAccounts();
+            var cash = accounts.stream().filter(a -> a.getNumber() == 1930).findFirst().orElseThrow();
+            var other = accounts.stream().filter(a -> a.getNumber() != 1930).findFirst().orElseThrow();
+            year.setInBalance(new java.util.HashMap<>(Map.of(cash, new java.math.BigDecimal("100.00"),
+                    other, new java.math.BigDecimal("-100.00"))));
+            var month = se.swedsoft.bookkeeping.data.SSMonth.splitYearIntoMonths(year).get(0);
+            year.getBudget().getBudget().get(month).put(other, new java.math.BigDecimal("123.45"));
+            runtime.database().updateAccountingYear(year);
+            var voucher = new se.swedsoft.bookkeeping.data.SSVoucher();
+            voucher.setLocalDate(year.getLocalFrom());
+            voucher.setDescription("SIE export rounding");
+            var debit = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+            debit.setAccount(cash);
+            debit.setDebet(new java.math.BigDecimal("10.005"));
+            debit.setProject(project);
+            debit.setResultUnit(unit);
+            voucher.addVoucherRow(debit);
+            for (int i = 0; i < 2; i++) {
+                var credit = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+                credit.setAccount(other);
+                credit.setCredit(new java.math.BigDecimal("5.0025"));
+                voucher.addVoucherRow(credit);
+            }
+            runtime.addVoucher(voucher);
+            // Add an adjacent prior year with its own opening balances and budget.
+            var previous = new se.swedsoft.bookkeeping.data.SSNewAccountingYear();
+            previous.setLocalTo(year.getLocalFrom().minusDays(1));
+            previous.setLocalFrom(year.getLocalFrom().minusYears(1));
+            previous.setAccountPlan(new se.swedsoft.bookkeeping.data.SSAccountPlan(year.getAccountPlan()));
+            previous.setInBalance(new java.util.HashMap<>(Map.of(cash, new java.math.BigDecimal("200.00"),
+                    other, new java.math.BigDecimal("-200.00"))));
+            var previousMonth = se.swedsoft.bookkeeping.data.SSMonth.splitYearIntoMonths(previous).get(0);
+            previous.getBudget().getBudget().get(previousMonth).put(other, new java.math.BigDecimal("456.78"));
+            runtime.database().addAccountingYear(previous);
+        }
+        String[] context = {"--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
+                "--year-id", Integer.toString(yearId), "--format", "json"};
+        Map<String, List<String>> expected = new java.util.LinkedHashMap<>();
+        for (String type : List.of("1", "2", "3", "4E")) {
+            Path output = temporaryDirectory.resolve("legacy-" + type + ".se");
+            Result exported = execute(concat(context, "sie", "export", "--type", type,
+                    "--output", output.toString(), "--allow-rounding-adjustments"));
+            assertThat(exported.exitCode()).as(exported.stderr()).isZero();
+            expected.put(type, se.swedsoft.bookkeeping.importexport.sie.util.SIEFile.readFile(output.toFile())
+                    .stream().sorted().toList());
+        }
+        assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                "database", "normalize").exitCode()).isZero();
+        JsonNode before = new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout());
+        for (String type : expected.keySet()) {
+            Path output = temporaryDirectory.resolve("normalized-" + type + ".se");
+            Result exported = execute(concat(context, "sie", "export", "--type", type,
+                    "--output", output.toString(), "--allow-rounding-adjustments"));
+            assertThat(exported.exitCode()).as(exported.stderr()).isZero();
+            List<String> lines = se.swedsoft.bookkeeping.importexport.sie.util.SIEFile.readFile(output.toFile());
+            // Map iteration order is unspecified; compare the complete multiset of exported lines.
+            assertThat(lines.stream().sorted().toList()).as("SIE type %s", type).isEqualTo(expected.get(type));
+            if (type.equals("4E")) {
+                assertThat(lines).anyMatch(line -> line.startsWith("#ADRESS") && line.contains("Export street"));
+                assertThat(lines).anyMatch(line -> line.startsWith("#RAR -1"));
+                assertThat(lines).anyMatch(line -> line.startsWith("#PBUDGET -1") && line.contains("456.78"));
+                assertThat(lines).anyMatch(line -> line.startsWith("#PBUDGET 0") && line.contains("123.45"));
+                assertThat(lines).anyMatch(line -> line.startsWith("#TRANS") && line.contains("SIE-P"));
+                assertThat(new ObjectMapper().readTree(exported.stdout()).path("roundingAdjustments").size())
+                        .isEqualTo(1);
+            }
+        }
+        Path rejected = temporaryDirectory.resolve("unapproved-sie.se");
+        Result unapproved = execute(concat(context, "sie", "export", "--output", rejected.toString()));
+        assertThat(unapproved.exitCode()).isEqualTo(1);
+        assertThat(rejected).doesNotExist();
+        assertThat(new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout()))
+                .isEqualTo(before);
+        Result existing = execute(concat(context, "sie", "export", "--output",
+                temporaryDirectory.resolve("normalized-4E.se").toString(), "--allow-rounding-adjustments"));
+        assertThat(existing.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(existing.stderr()).path("error").path("code").asText())
+                .isEqualTo("OUTPUT_EXISTS");
     }
 
     @Test

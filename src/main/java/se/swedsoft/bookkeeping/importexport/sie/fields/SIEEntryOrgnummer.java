@@ -45,7 +45,7 @@ public class SIEEntryOrgnummer implements SIEEntry {
      */
     @Override
     public boolean exportEntry(SSSIEExporter iExporter, SIEWriter iWriter, SSNewAccountingYear iCurrentYearData) throws SSExportException {
-        SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
+        SSNewCompany iCompany = iExporter.getCompany();
 
         iWriter.append(SIELabel.SIE_ORGNR);
         iWriter.append(iCompany.getCorporateID());

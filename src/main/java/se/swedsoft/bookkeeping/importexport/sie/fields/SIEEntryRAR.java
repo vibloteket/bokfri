@@ -66,7 +66,7 @@ public class SIEEntryRAR implements SIEEntry {
      */
     @Override
     public boolean exportEntry(SSSIEExporter iExporter, SIEWriter iWriter, SSNewAccountingYear iCurrentYearData) throws SSExportException {
-        SSNewAccountingYear iPreviousYearData = SSDB.getInstance().getPreviousYear().orElse(null);
+        SSNewAccountingYear iPreviousYearData = iExporter.getPreviousYear();
 
         if (iPreviousYearData != null) {
             iWriter.append(SIELabel.SIE_RAR);
