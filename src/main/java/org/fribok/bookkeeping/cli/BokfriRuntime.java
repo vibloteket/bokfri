@@ -698,6 +698,16 @@ public final class BokfriRuntime implements AutoCloseable {
                         database());
     }
 
+    /** Creates a VAT service bound to the selected storage backend. */
+    public org.fribok.bookkeeping.service.vat.VatService vatService(SSNewAccountingYear year)
+            throws SQLException {
+        if (isNormalized()) {
+            return new org.fribok.bookkeeping.service.vat.VatService(hydrateYear(year), this::addVoucher);
+        }
+        database().init(false);
+        return new org.fribok.bookkeeping.service.vat.VatService(database());
+    }
+
     /** Lists the voucher templates of the selected company from the active storage. */
     public List<se.swedsoft.bookkeeping.data.SSVoucherTemplate> getVoucherTemplates()
             throws SQLException {

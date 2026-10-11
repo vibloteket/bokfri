@@ -71,6 +71,17 @@ public class SSVATUtil {
 
     public static SSVoucher generateVATVoucher(String name, LocalDate iDateFrom, LocalDate iDateTo, SSAccount iAccountR1, SSAccount iAccountR2, SSAccount iAccountA) {
 
+        SSVoucher voucher = generateVATVoucher(name, iDateFrom, iDateTo, iAccountR1, iAccountR2,
+                iAccountA, SSDB.getInstance().getAccounts(), SSDB.getInstance().getVouchers());
+        voucher.doAutoIncrecement();
+        return voucher;
+    }
+
+    /** Generates a settlement using explicit inputs, without reading or numbering through SSDB. */
+    public static SSVoucher generateVATVoucher(String name, LocalDate iDateFrom, LocalDate iDateTo,
+            SSAccount iAccountR1, SSAccount iAccountR2, SSAccount iAccountA,
+            List<SSAccount> accounts, List<SSVoucher> vouchers) {
+
         DateTimeFormatter iFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
 
         String iDescription = String.format(
@@ -78,10 +89,10 @@ public class SSVATUtil {
                 iDateFrom.format(iFormat), iDateTo.format(iFormat));
 	// Lagt till momskoder för importmoms: UI1 UI2 UI3
         List<SSAccount> iAccounts = SSAccountMath.getAccountsByVATCode(
-                SSDB.getInstance().getAccounts(), "U1", "U2", "U3", "UVL", "UEU", "UTFU",
+                accounts, "U1", "U2", "U3", "UVL", "UEU", "UTFU",
                 "I", "IVL", "UI1", "UI2", "UI3");
         List<SSVoucher> iVouchers = SSVoucherMath.getVouchers(
-                SSDB.getInstance().getVouchers(), iDateFrom, iDateTo);
+                vouchers, iDateFrom, iDateTo);
 
         Map<SSAccount, BigDecimal> iCreditMinusDebetSum = SSVoucherMath.getCreditMinusDebetSum(
                 iVouchers);
@@ -90,7 +101,6 @@ public class SSVATUtil {
 
         SSVoucher    iVoucher = new SSVoucher();
 
-        iVoucher.doAutoIncrecement();
         iVoucher.setDescription(iDescription);
         iVoucher.setLocalDate(iDateTo);
 
@@ -143,7 +153,7 @@ public class SSVATUtil {
         /*
          SSNewAccountingYear iAccountingYear = SSDB.getInstance().getCurrentYear();
 
-         List<SSAccount> accounts = SSAccountMath.getAccountsByVATCode( SSDB.getInstance().getAccounts(), "U1", "U2", "U3", "UVL", "UEU", "UTFU", "I", "IVL");
+         List<SSAccount> accounts = SSAccountMath.getAccountsByVATCode( accounts, "U1", "U2", "U3", "UVL", "UEU", "UTFU", "I", "IVL");
 
          BigDecimal vatToPayOrRetrieve        = SSVATUtil.getVatToPayOrRetrieve       (debetMinusCreditSum);
          BigDecimal vatToPayOrRetrieveRounded = SSVATUtil.getVatToPayOrRetrieveRounded(debetMinusCreditSum);

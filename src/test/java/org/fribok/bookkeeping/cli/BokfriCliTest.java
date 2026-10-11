@@ -422,7 +422,8 @@ class BokfriCliTest {
         Result report = execute("--data-dir", data.toString(), "--company-id",
                 Integer.toString(companyId), "--year-id", Integer.toString(yearId),
                 "--format", "json", "vat", "report", "--from", yearInfo.path("from").asText(),
-                "--to", yearInfo.path("to").asText());
+                "--to", yearInfo.path("to").asText(), "--output",
+                temporaryDirectory.resolve("blocked-vat.pdf").toString());
 
         assertThat(report.exitCode()).isEqualTo(1);
         assertThat(new ObjectMapper().readTree(report.stderr()).at("/error/code").asText())
@@ -916,6 +917,94 @@ class BokfriCliTest {
         JsonNode templateReimportJson = new ObjectMapper().readTree(templateReimport.stdout());
         assertThat(templateReimportJson.path("applied").asBoolean()).isTrue();
         assertThat(templateReimportJson.path("newCount").asInt()).isZero();
+    }
+
+    @Test
+    void vatReportAndSettlementWorkOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-vat-data");
+        extractLegacyDatabase(data.resolve("db"));
+        assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                "database", "migrate").exitCode()).isZero();
+        Result companies = execute("--data-dir", data.toString(), "--format", "json", "company", "list");
+        String companyId = new ObjectMapper().readTree(companies.stdout())
+                .path("companies").get(0).path("id").asText();
+        Result years = execute("--data-dir", data.toString(), "--company-id", companyId,
+                "--format", "json", "year", "list");
+        JsonNode year = new ObjectMapper().readTree(years.stdout()).path("years").get(0);
+        String yearId = year.path("id").asText();
+        String from = year.path("from").asText();
+        String to = year.path("to").asText();
+        String[] context = {"--data-dir", data.toString(), "--company-id", companyId,
+                "--year-id", yearId, "--format", "json"};
+        int salesAccount;
+        int inputVatAccount;
+        int outputVatAccount;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            var company = runtime.selectCompany(Integer.parseInt(companyId));
+            runtime.selectYear(company, Integer.parseInt(yearId));
+            salesAccount = runtime.getAccounts().stream().filter(a -> "MP1".equals(a.getVATCode()))
+                    .findFirst().orElseThrow().getNumber();
+            inputVatAccount = runtime.getAccounts().stream().filter(a -> "I".equals(a.getVATCode()))
+                    .findFirst().orElseThrow().getNumber();
+            outputVatAccount = runtime.getAccounts().stream().filter(a -> "U1".equals(a.getVATCode()))
+                    .findFirst().orElseThrow().getNumber();
+        }
+        Path voucher = temporaryDirectory.resolve("vat-voucher.json");
+        Files.writeString(voucher, """
+                {"date":"%s","description":"VAT migration regression",
+                 "rows":[{"account":1930,"debit":125.75},{"account":%d,"credit":100.00},
+                         {"account":%d,"credit":25.75},
+                         {"account":%d,"debit":10.25},{"account":1930,"credit":10.25}]}
+                """.formatted(from, salesAccount, outputVatAccount, inputVatAccount));
+        Result created = execute(concat(context, "voucher", "create", "--file", voucher.toString()));
+        assertThat(created.exitCode()).as(created.stderr()).isZero();
+        Result legacyReport = execute(concat(context, "vat", "report"));
+        Result legacyPlan = execute(concat(context, "vat", "settle", "--from", from, "--to", to));
+        assertThat(legacyReport.exitCode()).as(legacyReport.stderr()).isZero();
+        assertThat(legacyPlan.exitCode()).as(legacyPlan.stderr()).isZero();
+        assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                "database", "normalize").exitCode()).isZero();
+        Result report = execute(concat(context, "vat", "report"));
+        assertThat(report.exitCode()).as(report.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(report.stdout()))
+                .isEqualTo(new ObjectMapper().readTree(legacyReport.stdout()));
+        JsonNode before = new ObjectMapper().readTree(execute(concat(context, "voucher", "list"))
+                .stdout()).path("vouchers");
+        int count = before.size();
+        int maxNumber = 0;
+        for (JsonNode row : before) maxNumber = Math.max(maxNumber, row.path("number").asInt());
+        Result preview = execute(concat(context, "vat", "settle", "--from", from, "--to", to));
+        assertThat(preview.exitCode()).as(preview.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(preview.stdout()))
+                .isEqualTo(new ObjectMapper().readTree(legacyPlan.stdout()));
+        assertThat(new ObjectMapper().readTree(execute(concat(context, "voucher", "list"))
+                .stdout()).path("vouchers").size()).isEqualTo(count);
+        Result committed = execute(concat(context, "vat", "settle",
+                "--from", from, "--to", to, "--commit"));
+        assertThat(committed.exitCode()).as(committed.stderr()).isZero();
+        JsonNode result = new ObjectMapper().readTree(committed.stdout());
+        assertThat(result.path("committed").asBoolean()).isTrue();
+        assertThat(result.path("voucherNumber").asInt()).isEqualTo(maxNumber + 1);
+        assertThat(result.path("debitTotal").decimalValue())
+                .isEqualByComparingTo(result.path("creditTotal").decimalValue());
+        assertThat(new ObjectMapper().readTree(execute(concat(context, "voucher", "list"))
+                .stdout()).path("vouchers").size()).isEqualTo(count + 1);
+        Result settled = execute(concat(context, "vat", "settle", "--from", from, "--to", to));
+        assertThat(settled.exitCode()).as(settled.stderr()).isZero();
+        assertThat(new ObjectMapper().readTree(settled.stdout()).path("voucherRows").size()).isZero();
+        Result emptyCommit = execute(concat(context, "vat", "settle",
+                "--from", from, "--to", to, "--commit"));
+        assertThat(emptyCommit.exitCode()).isEqualTo(1);
+        assertThat(new ObjectMapper().readTree(emptyCommit.stderr()).path("error").path("code").asText())
+                .isEqualTo("VAT_SETTLEMENT_INVALID");
+        for (String command : List.of("report", "control")) {
+            Path output = temporaryDirectory.resolve("vat-" + command + ".pdf");
+            Result pdf = execute(concat(context, "vat", command, "--output", output.toString()));
+            assertThat(pdf.exitCode()).isEqualTo(1);
+            assertThat(new ObjectMapper().readTree(pdf.stderr()).path("error").path("code").asText())
+                    .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
+            assertThat(output).doesNotExist();
+        }
     }
 
     @Test

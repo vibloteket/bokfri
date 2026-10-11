@@ -12,6 +12,13 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Changed
+
+- VAT CLI reports and settlement preview/commit now support normalized storage (data format 3),
+  preserving legacy VAT-box truncation, settlement rounding, and voucher numbering. VAT report
+  and control PDF exports fail explicitly with `NORMALIZED_STORAGE_UNSUPPORTED` until their
+  singleton-dependent printers are ported.
+
 ### Added
 
 - Add the migration foundation for ordered, SHA-256-verified SQL schema history and deterministic
