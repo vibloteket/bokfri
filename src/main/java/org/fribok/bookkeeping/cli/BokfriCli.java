@@ -3251,8 +3251,10 @@ public class BokfriCli implements Runnable {
                             "VAT report period must be within the selected accounting year "
                                     + year.getLocalFrom() + " - " + year.getLocalTo());
                 }
-                runtime.database().init(false);
-                var report = new VatService(runtime.database()).report(selectedFrom, selectedTo);
+                if (output != null) {
+                    requireLegacyStorageForPdf(runtime, "vat report");
+                }
+                var report = runtime.vatService(year).report(selectedFrom, selectedTo);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("from", selectedFrom);
                 result.put("to", selectedTo);
@@ -3285,7 +3287,39 @@ public class BokfriCli implements Runnable {
         @Option(names="--start-voucher",defaultValue="1") int startVoucher;
         @Option(names="--output",required=true) java.nio.file.Path output;
         @Option(names="--overwrite") boolean overwrite;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());java.time.LocalDate selectedFrom=from==null?y.getLocalFrom():from;java.time.LocalDate selectedTo=to==null?y.getLocalTo():to;if((from==null)!=(to==null))throw new CliException("VAT_CONTROL_PERIOD_INVALID","Provide both --from and --to, or omit both");r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSVATControl2015Printer(y,selectedFrom,selectedTo,startVoucher),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("from",selectedFrom);x.put("to",selectedTo);x.put("startVoucher",startVoucher);x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("selection",selectedContext(c,co,y));root.output(x,"Created VAT control PDF "+pdf);return 0;}catch(CliException e){throw e;}catch(Exception e){throw databaseFailure(e);}}}
+        public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                java.time.LocalDate selectedFrom = from == null ? year.getLocalFrom() : from;
+                java.time.LocalDate selectedTo = to == null ? year.getLocalTo() : to;
+                if ((from == null) != (to == null)) {
+                    throw new CliException("VAT_CONTROL_PERIOD_INVALID",
+                            "Provide both --from and --to, or omit both");
+                }
+                requireLegacyStorageForPdf(runtime, "vat control");
+                runtime.database().init(false);
+                java.nio.file.Path pdf = exportPdf(
+                        new SSVATControl2015Printer(year, selectedFrom, selectedTo, startVoucher),
+                        output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("from", selectedFrom);
+                result.put("to", selectedTo);
+                result.put("startVoucher", startVoucher);
+                result.put("output", pdf.toString());
+                result.put("bytes", Files.size(pdf));
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created VAT control PDF " + pdf);
+                return 0;
+            } catch (CliException exception) {
+                throw exception;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
 
     @Command(mixinStandardHelpOptions = true, name = "settle")
     static class VatSettle extends VatPeriodCommand {
@@ -3296,8 +3330,7 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime r = root.openRuntime(c.dataDir())) {
                 SSNewCompany co = r.selectCompany(c.companyId());
                 SSNewAccountingYear y = r.selectYear(co, c.yearId());
-                r.database().init(false);
-                VatService s = new VatService(r.database());
+                VatService s = r.vatService(y);
                 VatSettlementPlan p = s.plan(from, to);
                 Map<String, Object> x = vatSettlementDetails(p);
                 x.put("committed", commit);
