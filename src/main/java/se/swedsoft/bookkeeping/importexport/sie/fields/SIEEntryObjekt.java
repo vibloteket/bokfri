@@ -4,7 +4,6 @@ package se.swedsoft.bookkeeping.importexport.sie.fields;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewProject;
 import se.swedsoft.bookkeeping.data.SSNewResultUnit;
-import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.util.SSBundleString;
 import se.swedsoft.bookkeeping.gui.util.dialogs.SSErrorDialog;
@@ -66,6 +65,7 @@ public class SIEEntryObjekt implements SIEEntry {    private static final Logger
         String iNum = iReader.next();
 
         if (iNum == null) {
+            if (iImporter.isExplicit()) throw new SSImportException("Missing SIE object number");
             new SSErrorDialog(SSMainFrame.getInstance(), "sieimport.stringnumber");
             return true;
         }
@@ -76,7 +76,7 @@ public class SIEEntryObjekt implements SIEEntry {    private static final Logger
             iResultUnit.setNumber(iNum);
             iResultUnit.setName(iReader.nextString());
 
-            SSDB.getInstance().addResultUnit(iResultUnit);
+            iImporter.addResultUnit(iResultUnit);
         }
 
         // Projekt, #DIM 6
@@ -86,7 +86,7 @@ public class SIEEntryObjekt implements SIEEntry {    private static final Logger
             iProject.setNumber(iNum);
             iProject.setName(iReader.nextString());
 
-            SSDB.getInstance().addProject(iProject);
+            iImporter.addProject(iProject);
         }
 
         return true;

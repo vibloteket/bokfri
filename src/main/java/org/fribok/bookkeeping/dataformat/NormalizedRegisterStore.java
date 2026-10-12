@@ -530,6 +530,111 @@ public final class NormalizedRegisterStore {
     }
 
     /** Reads the projects of a company, ordered by number. */
+    /** Reconciles company dimensions, retaining keys used elsewhere and guarding other-year vouchers. */
+    public void replaceDimensions(int companyLegacyId, int selectedYearLegacyId,
+            List<SSNewProject> projects, List<SSNewResultUnit> units) throws SQLException {
+        long companyId;
+        long yearId;
+        try (var query = connection.prepareStatement(
+                "SELECT c.id,y.id FROM company c JOIN accounting_year y ON y.company_id=c.id "
+                        + "WHERE c.legacy_id=? AND y.legacy_id=?")) {
+            query.setInt(1, companyLegacyId);
+            query.setInt(2, selectedYearLegacyId);
+            try (ResultSet result = query.executeQuery()) {
+                if (!result.next()) throw new SQLException("Selected SIE company/year does not exist");
+                companyId = result.getLong(1);
+                yearId = result.getLong(2);
+            }
+        }
+        java.util.Set<String> projectNumbers = new java.util.HashSet<>();
+        for (SSNewProject project : projects) {
+            if (project.getNumber() == null || !projectNumbers.add(project.getNumber())) {
+                throw new SQLException("Duplicate or missing SIE project number");
+            }
+        }
+        java.util.Set<String> unitNumbers = new java.util.HashSet<>();
+        for (SSNewResultUnit unit : units) {
+            if (unit.getNumber() == null || !unitNumbers.add(unit.getNumber())) {
+                throw new SQLException("Duplicate or missing SIE result-unit number");
+            }
+        }
+        removeMissingDimensions("project", "project_number", companyId, yearId, projectNumbers);
+        removeMissingDimensions("result_unit", "result_unit_number", companyId, yearId, unitNumbers);
+        for (SSNewProject project : projects) {
+            try (var update = connection.prepareStatement(
+                    "UPDATE project SET name=?,description=?,concluded=?,concluded_on=? WHERE company_id=? AND number=?")) {
+                update.setString(1, project.getName());
+                update.setString(2, project.getDescription());
+                update.setBoolean(3, project.getConcluded());
+                update.setObject(4, project.getLocalConcludedDate());
+                update.setLong(5, companyId);
+                update.setString(6, project.getNumber());
+                if (update.executeUpdate() == 0) {
+                    try (var insert = connection.prepareStatement(
+                            "INSERT INTO project(company_id,number,name,description,concluded,concluded_on) VALUES(?,?,?,?,?,?)")) {
+                        insert.setLong(1, companyId);
+                        insert.setString(2, project.getNumber());
+                        insert.setString(3, project.getName());
+                        insert.setString(4, project.getDescription());
+                        insert.setBoolean(5, project.getConcluded());
+                        insert.setObject(6, project.getLocalConcludedDate());
+                        insert.executeUpdate();
+                    }
+                }
+            }
+        }
+        for (SSNewResultUnit unit : units) {
+            try (var update = connection.prepareStatement(
+                    "UPDATE result_unit SET name=? WHERE company_id=? AND number=?")) {
+                update.setString(1, unit.getName());
+                update.setLong(2, companyId);
+                update.setString(3, unit.getNumber());
+                if (update.executeUpdate() == 0) {
+                    try (var insert = connection.prepareStatement(
+                            "INSERT INTO result_unit(company_id,number,name) VALUES(?,?,?)")) {
+                        insert.setLong(1, companyId);
+                        insert.setString(2, unit.getNumber());
+                        insert.setString(3, unit.getName());
+                        insert.executeUpdate();
+                    }
+                }
+            }
+        }
+    }
+
+    private void removeMissingDimensions(String table, String rowColumn, long companyId, long selectedYearId,
+            java.util.Set<String> retained) throws SQLException {
+        List<String> removed = new ArrayList<>();
+        try (var query = connection.prepareStatement("SELECT number FROM " + table + " WHERE company_id=?")) {
+            query.setLong(1, companyId);
+            try (ResultSet result = query.executeQuery()) {
+                while (result.next()) if (!retained.contains(result.getString(1))) removed.add(result.getString(1));
+            }
+        }
+        for (String number : removed) {
+            try (var query = connection.prepareStatement(
+                    "SELECT COUNT(*) FROM voucher_row r JOIN accounting_year y ON y.id=r.accounting_year_id "
+                            + "WHERE y.company_id=? AND y.id<>? AND r." + rowColumn + "=?")) {
+                query.setLong(1, companyId);
+                query.setLong(2, selectedYearId);
+                query.setString(3, number);
+                try (ResultSet result = query.executeQuery()) {
+                    result.next();
+                    if (result.getInt(1) != 0) {
+                        throw new SQLException("SIE replacement cannot remove " + table + " " + number
+                                + " referenced by another accounting year");
+                    }
+                }
+            }
+            // Typed foreign keys protect orders/invoices referencing dimensions being removed.
+            try (var delete = connection.prepareStatement("DELETE FROM " + table + " WHERE company_id=? AND number=?")) {
+                delete.setLong(1, companyId);
+                delete.setString(2, number);
+                delete.executeUpdate();
+            }
+        }
+    }
+
     public List<SSNewProject> getProjects(int companyLegacyId) throws SQLException {
         List<SSNewProject> projects = new ArrayList<>();
         try (PreparedStatement statement = connection.prepareStatement(

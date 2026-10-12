@@ -104,6 +104,32 @@ public final class SieImportService {
         return plan;
     }
 
+    /** Writes a detached replacement graph in one storage transaction. */
+    @FunctionalInterface
+    public interface ReplacementWriter {
+        void write(SSSIEImporter.ReplacementData data) throws java.sql.SQLException;
+    }
+
+    /** Parses a full replacement before invoking the normalized atomic writer. */
+    public SieImportPlan importReplacement(Path input, boolean allowAlreadyImported,
+            SSSIEImporter.ImportContext context, ReplacementWriter writer) throws IOException, SSImportException {
+        java.util.Objects.requireNonNull(context, "context");
+        java.util.Objects.requireNonNull(writer, "writer");
+        SieImportPlan plan = inspect(input, false);
+        if (plan.previouslyImported() && !allowAlreadyImported) {
+            throw new IOException("Identical SIE content was already imported");
+        }
+        SSSIEImporter importer = new SSSIEImporter(plan.file().toFile(), false);
+        SSSIEImporter.ReplacementData replacement = importer.readReplacement(context);
+        try {
+            writer.write(replacement);
+        } catch (java.sql.SQLException exception) {
+            throw new IOException("Failed to replace SIE accounting data: " + exception.getMessage(), exception);
+        }
+        appendHistory(plan);
+        return plan;
+    }
+
     private boolean historyContains(String digest) throws IOException {
         Path history = dataDirectory.resolve(HISTORY_FILE);
         if (!Files.exists(history)) {

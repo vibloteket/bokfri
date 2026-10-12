@@ -6,6 +6,17 @@ import org.fribok.bookkeeping.service.spreadsheet.AccountPlanSpreadsheetService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.swedsoft.bookkeeping.data.SSAccountPlan;
+import org.fribok.bookkeeping.service.sie.SieImportService;
+import se.swedsoft.bookkeeping.data.SSAccount;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewProject;
+import se.swedsoft.bookkeeping.data.SSNewResultUnit;
+import se.swedsoft.bookkeeping.data.SSMonth;
+import se.swedsoft.bookkeeping.data.SSVoucherRow;
+import se.swedsoft.bookkeeping.data.SSVoucher;
+import se.swedsoft.bookkeeping.importexport.sie.util.SIEFile;
+import java.sql.DriverManager;
+import java.time.LocalDate;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
@@ -921,6 +932,303 @@ class BokfriCliTest {
     }
 
     @Test
+    void fullSieReplacementRollsBackOnReferencedDimensionsAndKeepsRetainedKeys() throws Exception {
+        Path data = temporaryDirectory.resolve("sie-replacement-rollback");
+        extractLegacyDatabase(data.resolve("db"));
+        assertThat(execute("--data-dir", data.toString(), "--format", "json", "database", "migrate").exitCode()).isZero();
+        int companyId;
+        int yearId;
+        int previousId;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            var company = runtime.getCompanies().get(0);
+            runtime.selectCompany(company.getId());
+            var year = runtime.getYears(company).get(0);
+            runtime.selectYear(company, year.getId());
+            companyId = company.getId();
+            yearId = year.getId();
+            year.getAccountPlan().setType("BAS95");
+            runtime.database().updateAccountingYear(year);
+            runtime.database().addProject(new SSNewProject("KEEP", "Original", "Referenced"));
+            var previous = new SSNewAccountingYear();
+            previous.setLocalFrom(year.getLocalFrom().minusYears(1));
+            previous.setLocalTo(year.getLocalFrom().minusDays(1));
+            previous.setAccountPlan(new SSAccountPlan(year.getAccountPlan()));
+            runtime.database().addAccountingYear(previous);
+            previousId = previous.getId();
+        }
+        assertThat(execute("--data-dir", data.toString(), "--format", "json", "database", "normalize").exitCode()).isZero();
+        String[] context = {"--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
+                "--year-id", Integer.toString(yearId), "--format", "json"};
+        Path input = temporaryDirectory.resolve("replacement-rollback.se");
+        String base = """
+                #SIETYP 4
+                #RAR 0 20260101 20261231
+                #KPTYP BAS95
+                #KONTO 1930 "Replacement cash"
+                #KONTO 2440 "Replacement payable"
+                #IB 0 1930 200.00
+                #IB 0 2440 -200.00
+                #VER A 50 20260110 "Replacement"
+                {
+                #TRANS 1930 {} 10.00
+                #TRANS 2440 {} -10.00
+                }
+                """;
+        for (int scenario = 0; scenario < 7; scenario++) {
+            if (scenario == 5) {
+                try (BokfriRuntime runtime = BokfriRuntime.open(data);
+                     var connection = DriverManager.getConnection(
+                             "jdbc:hsqldb:file:" + data.resolve("db/JFSDB"), "sa", "")) {
+                    try (var insert = connection.prepareStatement(
+                            "INSERT INTO tender(legacy_id,number,company_id,tax_free,eu_sale_commodity,"
+                                    + "eu_sale_third_party_commodity,printed) "
+                                    + "SELECT 99,99,id,FALSE,FALSE,FALSE,FALSE FROM company WHERE legacy_id=?")) {
+                        insert.setInt(1, companyId);
+                        insert.executeUpdate();
+                    }
+                    try (var insert = connection.createStatement()) {
+                        insert.executeUpdate("INSERT INTO tender_row(tender_id,company_id,row_number,project_number) "
+                                + "SELECT id,company_id,0,'KEEP' FROM tender WHERE legacy_id=99");
+                    }
+                }
+            } else if (scenario == 6) {
+                try (BokfriRuntime runtime = BokfriRuntime.open(data);
+                     var connection = DriverManager.getConnection(
+                             "jdbc:hsqldb:file:" + data.resolve("db/JFSDB"), "sa", "")) {
+                    try (var delete = connection.createStatement()) {
+                        delete.executeUpdate("DELETE FROM tender_row WHERE tender_id IN "
+                                + "(SELECT id FROM tender WHERE legacy_id=99)");
+                        delete.executeUpdate("DELETE FROM tender WHERE legacy_id=99");
+                    }
+                    var company = runtime.selectCompany(companyId);
+                    var previous = runtime.selectYear(company, previousId);
+                    var accounts = runtime.getAccounts();
+                    var project = runtime.getProjects().get(0);
+                    var voucher = new SSVoucher();
+                    voucher.setLocalDate(previous.getLocalFrom());
+                    voucher.setDescription("Protected previous-year voucher");
+                    var debit = new SSVoucherRow();
+                    debit.setAccount(accounts.stream().filter(account -> account.getNumber() == 1930)
+                            .findFirst().orElseThrow());
+                    debit.setProject(project);
+                    debit.setDebet(new BigDecimal("10.00"));
+                    var credit = new SSVoucherRow();
+                    credit.setAccount(accounts.stream()
+                            .filter(account -> account.getNumber() >= 3000 && account.getNumber() < 4000)
+                            .findFirst().orElseThrow());
+                    credit.setCredit(new BigDecimal("10.00"));
+                    voucher.addVoucherRow(debit);
+                    voucher.addVoucherRow(credit);
+                    runtime.addVoucher(voucher);
+                }
+            }
+            Path snapshot = temporaryDirectory.resolve("before-replacement.se");
+            Result before = execute(concat(context, "sie", "export", "--output", snapshot.toString(), "--overwrite"));
+            assertThat(before.exitCode()).as(before.stderr()).isZero();
+            List<String> linesBefore = SIEFile.readFile(snapshot.toFile())
+                    .stream().sorted().toList();
+            if (scenario == 6) {
+                assertThat(linesBefore).anyMatch(line -> line.startsWith("#RES -1 ") && line.contains("-10.00"));
+            }
+            String content = switch (scenario) {
+                case 0 -> base + "#IB 0 999999 1.00\n";
+                case 1 -> base + "#VER A 51 20260111 \"Unclosed\"\n{\n#TRANS 1930 {} 1.00\n";
+                case 2 -> base.replace("20260101 20261231", "20261231 20260101");
+                case 3 -> base + "#PBUDGET 0 202501 1930 {} -100.00\n";
+                case 4 -> base + "#SRU 999999 701\n";
+                default -> base;
+            };
+            SIEFile.writeFile(input.toFile(), content.lines().toList());
+            byte[] source = Files.readAllBytes(input);
+            Result failed = execute(concat(context, "sie", "import", "--file", input.toString(), "--commit"));
+            assertThat(failed.exitCode()).isEqualTo(1);
+            JsonNode error = new ObjectMapper().readTree(failed.stderr()).path("error");
+            assertThat(error.path("code").asText()).isEqualTo("SIE_IMPORT_FAILED");
+            if (scenario == 0) assertThat(error.path("message").asText()).contains("undefined account");
+            if (scenario == 5) assertThat(error.path("message").asText()).contains("foreign key");
+            if (scenario == 6) assertThat(error.path("message").asText()).contains("another accounting year");
+            assertThat(Files.readAllBytes(input)).containsExactly(source);
+            assertThat(data.resolve("sie-import.history")).doesNotExist();
+            Result after = execute(concat(context, "sie", "export", "--output", snapshot.toString(), "--overwrite"));
+            assertThat(after.exitCode()).as(after.stderr()).isZero();
+            assertThat(SIEFile.readFile(snapshot.toFile())
+                    .stream().sorted().toList()).isEqualTo(linesBefore);
+        }
+        // Keeping the referenced key updates its metadata without breaking prior-year references.
+        String retained = base.replace("#VER", "#OBJEKT 6 KEEP \"Updated retained project\"\n#VER");
+        SIEFile.writeFile(input.toFile(), retained.lines().toList());
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            var company = runtime.selectCompany(companyId);
+            var current = runtime.selectYear(company, yearId);
+            new SieImportService(data).importReplacement(input, false,
+                    runtime.sieImportContext(current), runtime::replaceSieYear);
+            assertThat(runtime.normalizedStore().getCurrentYear().getLocalFrom())
+                    .isEqualTo(LocalDate.of(2026, 1, 1));
+            runtime.selectYear(company, previousId);
+            var project = runtime.getProjects().get(0);
+            assertThat(project.getNumber()).isEqualTo("KEEP");
+            assertThat(project.getName()).isEqualTo("Updated retained project");
+            assertThat(runtime.getVouchers()).hasSize(1);
+            assertThat(runtime.getVouchers().get(0).getRows().get(0).getProject(runtime.getProjects()).getNumber())
+                    .isEqualTo("KEEP");
+        }
+    }
+
+    @Test
+    void fullSieReplacementWorksForAllTypesAndPreservesOtherYears() throws Exception {
+        for (String type : List.of("1", "2", "3", "4")) {
+            Path input = temporaryDirectory.resolve("replacement-" + type + ".se");
+            String content = """
+                    #FLAGGA 1
+                    #SIETYP %s
+                    #FNAMN "Ignored company rename"
+                    #RAR -1 20250101 20251231
+                    #RAR 0 20260101 20261231
+                    #KPTYP BAS95
+                    #KONTO 1930 "Cash replacement"
+                    #KONTO 2440 "Payable replacement"
+                    #KONTO 3010 "Sales replacement"
+                    #KONTO 3740 "Rounding"
+                    #SRU 3010 701
+                    #IB 0 1930 100.00
+                    #IB 0 2440 -100.00
+                    #DIM 1 "Result units"
+                    #DIM 6 "Projects"
+                    #OBJEKT 1 NEW-U "New unit"
+                    #OBJEKT 6 NEW-P "New project"
+                    """.formatted(type);
+            if (!type.equals("1")) content += "#PBUDGET 0 202601 3010 {} -1200.00\n";
+            if (type.equals("4")) content += """
+                    #VER A 42 20260115 "Replacement voucher"
+                    {
+                    #TRANS 1930 {1 NEW-U 6 NEW-P} 125.00
+                    #TRANS 3010 {} -125.00
+                    }
+                    """;
+            SIEFile.writeFile(input.toFile(), content.lines().toList());
+            byte[] source = Files.readAllBytes(input);
+            Path data = temporaryDirectory.resolve("replacement-" + type);
+            extractLegacyDatabase(data.resolve("db"));
+            assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                    "database", "migrate").exitCode()).isZero();
+            int companyId;
+            int yearId;
+            int previousId;
+            LocalDate previousFrom;
+            try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+                var company = runtime.getCompanies().get(0);
+                runtime.selectCompany(company.getId());
+                var year = runtime.getYears(company).get(0);
+                runtime.selectYear(company, year.getId());
+                companyId = company.getId();
+                yearId = year.getId();
+                runtime.database().addProject(new SSNewProject(
+                        "OLD-P", "Old project", "Remove me"));
+                runtime.database().addResultUnit(new SSNewResultUnit("OLD-U", "Old unit"));
+                var account = runtime.getAccounts().get(0);
+                var month = SSMonth.splitYearIntoMonths(year).get(0);
+                year.getBudget().getBudget().get(month).put(account, new BigDecimal("999.00"));
+                runtime.database().updateAccountingYear(year);
+                var voucher = new SSVoucher();
+                voucher.setLocalDate(year.getLocalFrom());
+                voucher.setDescription("Remove existing voucher");
+                var row = new SSVoucherRow();
+                row.setAccount(account);
+                row.setDebet(new BigDecimal("1.00"));
+                voucher.addVoucherRow(row);
+                runtime.addVoucher(voucher);
+                var previous = new SSNewAccountingYear();
+                previous.setLocalFrom(year.getLocalFrom().minusYears(1));
+                previous.setLocalTo(year.getLocalFrom().minusDays(1));
+                previous.setAccountPlan(new SSAccountPlan(year.getAccountPlan()));
+                var priorAccount = previous.getAccountPlan().getAccounts().get(0);
+                previous.getInBalance().put(priorAccount, new BigDecimal("50.00"));
+                var priorMonth = SSMonth.splitYearIntoMonths(previous).get(0);
+                previous.getBudget().getBudget().get(priorMonth).put(priorAccount, new BigDecimal("75.00"));
+                runtime.database().addAccountingYear(previous);
+                previousId = previous.getId();
+                previousFrom = previous.getLocalFrom();
+            }
+            assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                    "database", "normalize").exitCode()).isZero();
+            String[] context = {"--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
+                    "--year-id", Integer.toString(yearId), "--format", "json"};
+            String[] priorContext = context.clone();
+            priorContext[5] = Integer.toString(previousId);
+            Path priorOutput = temporaryDirectory.resolve("prior-" + type + ".se");
+            Result priorExport = execute(concat(priorContext, "sie", "export", "--output", priorOutput.toString()));
+            assertThat(priorExport.exitCode()).as(priorExport.stderr()).isZero();
+            // Object registers are company-scoped and intentionally change for every year.
+            List<String> priorLines = SIEFile.readFile(priorOutput.toFile())
+                    .stream().filter(line -> !line.startsWith("#OBJEKT")).sorted().toList();
+            JsonNode before = new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout());
+            Result preview = execute(concat(context, "sie", "import", "--file", input.toString()));
+            assertThat(preview.exitCode()).as(preview.stderr()).isZero();
+            assertThat(new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout())).isEqualTo(before);
+            assertThat(data.resolve("sie-import.history")).doesNotExist();
+            Result imported = execute(concat(context, "sie", "import", "--file", input.toString(), "--commit"));
+            assertThat(imported.exitCode()).as(imported.stderr()).isZero();
+            JsonNode result = new ObjectMapper().readTree(imported.stdout());
+            assertThat(result.path("accountCountAfter").asInt()).isEqualTo(4);
+            assertThat(result.path("voucherCountAfter").asInt()).isEqualTo(type.equals("4") ? 1 : 0);
+            assertThat(Files.readAllBytes(input)).containsExactly(source);
+            Path exported = temporaryDirectory.resolve("replacement-export-" + type + ".se");
+            Result export = execute(concat(context, "sie", "export", "--output", exported.toString()));
+            assertThat(export.exitCode()).as(export.stderr()).isZero();
+            List<String> lines = SIEFile.readFile(exported.toFile())
+                    .stream().sorted().toList();
+            assertThat(lines).anyMatch(line -> line.startsWith("#RAR 0 20260101 20261231"));
+            assertThat(lines).anyMatch(line -> line.startsWith("#IB 0 1930 100.00"));
+            assertThat(lines).anyMatch(line -> line.startsWith("#IB 0 2440 -100.00"));
+            assertThat(lines).noneMatch(line -> line.contains("OLD-P") || line.contains("OLD-U"));
+            assertThat(lines).noneMatch(line -> line.contains("Remove existing voucher") || line.contains("999.00"));
+            if (type.equals("4")) {
+                assertThat(lines).anyMatch(line -> line.startsWith("#VER A 42"));
+                assertThat(lines).anyMatch(line -> line.startsWith("#UB 0 1930 225.00"));
+                assertThat(lines).anyMatch(line -> line.startsWith("#RES 0 3010 -125.00"));
+            } else {
+                assertThat(lines).noneMatch(line -> line.startsWith("#VER"));
+                assertThat(lines).anyMatch(line -> line.startsWith("#UB 0 1930 100.00"));
+            }
+            if (!type.equals("1")) {
+                assertThat(lines).anyMatch(line -> line.startsWith("#PBUDGET 0 202601 3010 {} -1200.00"));
+            }
+            try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+                var company = runtime.selectCompany(companyId);
+                var year = runtime.selectYear(company, yearId);
+                assertThat(year.getLocalFrom()).isEqualTo(LocalDate.of(2026, 1, 1));
+                assertThat(year.getLocalTo()).isEqualTo(LocalDate.of(2026, 12, 31));
+                assertThat(company.getName()).isNotEqualTo("Ignored company rename");
+                assertThat(runtime.getAccounts()).extracting(SSAccount::getNumber)
+                        .containsExactly(1930, 2440, 3010, 3740);
+                assertThat(runtime.getProjects()).extracting(SSNewProject::getNumber)
+                        .containsExactly("NEW-P");
+                assertThat(runtime.getResultUnits()).extracting(SSNewResultUnit::getNumber)
+                        .containsExactly("NEW-U");
+                assertThat(runtime.getYears(company)).filteredOn(y -> y.getId() == previousId)
+                        .singleElement().extracting(SSNewAccountingYear::getLocalFrom)
+                        .isEqualTo(previousFrom);
+            }
+            priorExport = execute(concat(priorContext, "sie", "export", "--output", priorOutput.toString(), "--overwrite"));
+            assertThat(priorExport.exitCode()).as(priorExport.stderr()).isZero();
+            assertThat(SIEFile.readFile(priorOutput.toFile())
+                    .stream().filter(line -> !line.startsWith("#OBJEKT")).sorted().toList()).isEqualTo(priorLines);
+            assertThat(Files.readString(data.resolve("sie-import.history")))
+                    .contains("\t" + type + "\tfalse");
+            byte[] history = Files.readAllBytes(data.resolve("sie-import.history"));
+            Result duplicate = execute(concat(context, "sie", "import", "--file", input.toString(), "--commit"));
+            assertThat(duplicate.exitCode()).isEqualTo(1);
+            assertThat(new ObjectMapper().readTree(duplicate.stderr()).path("error").path("code").asText())
+                    .isEqualTo("SIE_ALREADY_IMPORTED");
+            assertThat(Files.readAllBytes(data.resolve("sie-import.history"))).containsExactly(history);
+            Result allowed = execute(concat(context, "sie", "import", "--file", input.toString(),
+                    "--commit", "--allow-already-imported"));
+            assertThat(allowed.exitCode()).as(allowed.stderr()).isZero();
+            assertThat(Files.readAllBytes(input)).containsExactly(source);
+        }
+    }
+
+    @Test
     void voucherOnlySieImportsMatchLegacyAndAreAtomicOnNormalizedStorage() throws Exception {
         Path input = temporaryDirectory.resolve("voucher-import.se");
         List<String> expectedExport = null;
@@ -989,7 +1297,7 @@ class BokfriCliTest {
                         #TRANS 1930 {} 30.00
                         #TRANS %d {} -30.00
                         }
-                        #VER A "" %s "Missing number"
+                        #VER B "" %s "Missing number"
                         {
                         #TRANS 1930 {} 40.00
                         #TRANS %d {} -40.00
@@ -1061,12 +1369,12 @@ class BokfriCliTest {
                         .isEqualTo(stored);
                 assertThat(Files.readAllBytes(data.resolve("sie-import.history"))).containsExactly(history);
             }
-            // Replacement import must fail before the legacy importer can clear anything.
+            // A replacement referring to undefined accounts must not clear existing data.
             Result replacement = execute(concat(context, "sie", "import", "--file", input.toString(),
                     "--commit", "--allow-already-imported"));
             assertThat(replacement.exitCode()).isEqualTo(1);
             assertThat(new ObjectMapper().readTree(replacement.stderr()).path("error").path("code").asText())
-                    .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
+                    .isEqualTo("SIE_IMPORT_FAILED");
             assertThat(new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout())).isEqualTo(stored);
             assertThat(Files.readAllBytes(data.resolve("sie-import.history"))).containsExactly(history);
             // Force a database failure after the first write to prove the whole transaction rolls back.

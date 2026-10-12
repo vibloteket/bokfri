@@ -59,6 +59,9 @@ public class SIEEntryPeriodBudget implements SIEEntry {
                     iAccountNumber);
 
             iMonth = iBudget.getMonth(iMonth).orElse(null);
+            if (iImporter.isExplicit() && (iMonth == null || iAccount == null)) {
+                throw new SSImportException("SIE budget references an undefined account or out-of-year month");
+            }
 
             if (iSaldo == null) {
                 iSaldo = new BigDecimal(0);

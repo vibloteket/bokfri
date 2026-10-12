@@ -17,11 +17,20 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Fixed the SIE import voucher-number existence check: an empty `Optional` no longer counts
   as an existing voucher. Unused source numbers (including mapped series numbers) are preserved;
   duplicate or missing numbers receive the next number on both storage backends.
+- Full-replacement SIE CLI import (types 1, 2, 3, and 4) now supports normalized storage
+  (data format 3). Complete detached parsing precedes atomic replacement of the selected year's
+  accounts, balances, monthly budgets, and vouchers, together with company dimension reconciliation.
+  Year/company identities and other-year accounting data are preserved. Referenced dimension
+  removals fail safely; retained keys are updated without breaking typed references. Source files
+  remain immutable and duplicate overrides remain explicit. Import history follows database commit;
+  it is not a cross-filesystem/database transaction.
+- Missing voucher numbers in non-A SIE series now receive the next number without null arithmetic.
+  Previous-year SIE results use the exporter's explicit context rather than the legacy singleton.
 - SIE CLI export (types 1, 2, 3, and 4E) now supports normalized storage (data format 3),
   using explicit company/year data, previous-year balances, monthly budgets, and dimension
   registers. SIE-only rounding rows retain their approval requirement and never alter stored
-  vouchers. Full replacement SIE import remains legacy-only; type 4 `--vouchers-only` imports
-  now support normalized storage with complete parsing before atomic batch persistence,
+  vouchers. Type 4 `--vouchers-only` imports support normalized storage with complete parsing
+  before atomic batch persistence,
   explicit dimension resolution, and existing import-history/source-immutability safeguards.
 - VAT CLI reports and settlement preview/commit now support normalized storage (data format 3),
   preserving legacy VAT-box truncation, settlement rounding, and voucher numbering. VAT report

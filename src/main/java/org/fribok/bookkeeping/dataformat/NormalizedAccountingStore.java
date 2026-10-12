@@ -131,6 +131,13 @@ public final class NormalizedAccountingStore implements AutoCloseable {
         writer.addAccountingYear(connection, currentCompany.getId(), year);
     }
 
+    /** Replaces a graph only when it matches the selected year. Caller controls the transaction. */
+    public void replaceAccountingYear(SSNewAccountingYear year) throws SQLException {
+        requireYear();
+        if (!currentYear.getId().equals(year.getId())) throw new SQLException("Replacement year is not selected");
+        writer.replaceAccountingYear(connection, year);
+    }
+
     public void addVoucher(SSVoucher voucher) throws SQLException {
         requireYear();
         writer.addVoucher(connection, currentYear.getId(), voucher);

@@ -2,7 +2,6 @@ package se.swedsoft.bookkeeping.importexport.sie.fields;
 
 
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
-import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.SSBundleString;
 import se.swedsoft.bookkeeping.importexport.sie.SSSIEExporter;
 import se.swedsoft.bookkeeping.importexport.sie.SSSIEImporter;
@@ -49,7 +48,7 @@ public class SIEEntryRAR implements SIEEntry {
         if (iYear == 0 && iCurrentYearData != null) {
             iCurrentYearData.setLocalFrom(iFrom);
             iCurrentYearData.setLocalTo(iTo);
-            SSDB.getInstance().updateAccountingYear(iCurrentYearData);
+            iImporter.updateYear(iCurrentYearData);
         }
 
         return true;
