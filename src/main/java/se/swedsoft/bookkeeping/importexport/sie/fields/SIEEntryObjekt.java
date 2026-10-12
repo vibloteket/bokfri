@@ -103,8 +103,8 @@ public class SIEEntryObjekt implements SIEEntry {    private static final Logger
      */
     @Override
     public boolean exportEntry(SSSIEExporter iExporter, SIEWriter iWriter, SSNewAccountingYear iCurrentYearData) throws SSExportException {
-        List<SSNewResultUnit> iResultUnits = SSDB.getInstance().getResultUnits();
-        List<SSNewProject   > iProjects = SSDB.getInstance().getProjects();
+        List<SSNewResultUnit> iResultUnits = iExporter.getResultUnits();
+        List<SSNewProject   > iProjects = iExporter.getProjects();
 
         // Resultatenhet, #DIM 1
         for (SSNewResultUnit iResultUnit: iResultUnits) {

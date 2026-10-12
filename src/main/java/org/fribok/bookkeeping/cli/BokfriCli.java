@@ -1539,7 +1539,8 @@ public class BokfriCli implements Runnable {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
                 var exported = new SieExportService().export(output, sieType, comment, overwrite,
-                        allowRoundingAdjustments);
+                        allowRoundingAdjustments, runtime.isNormalized()
+                                ? runtime.sieExportContext(company, year) : null);
                 java.nio.file.Path file = exported.path();
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("output", file.toString());

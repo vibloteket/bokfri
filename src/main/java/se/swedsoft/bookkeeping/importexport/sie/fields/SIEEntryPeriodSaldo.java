@@ -49,10 +49,10 @@ public class SIEEntryPeriodSaldo implements SIEEntry {
      */
     @Override
     public boolean exportEntry(SSSIEExporter iExporter, SIEWriter iWriter, SSNewAccountingYear iCurrentYearData) throws SSExportException {
-        SSNewAccountingYear iPreviousYearData = SSDB.getInstance().getPreviousYear().orElse(null);
+        SSNewAccountingYear iPreviousYearData = iExporter.getPreviousYear();
 
-        List<SSNewResultUnit> iResultUnits = SSDB.getInstance().getResultUnits();
-        List<SSNewProject   > iProjects = SSDB.getInstance().getProjects();
+        List<SSNewResultUnit> iResultUnits = iExporter.getResultUnits();
+        List<SSNewProject   > iProjects = iExporter.getProjects();
 
         Map<SSMonth, Map<SSAccount, BigDecimal>> iMonths;
 
@@ -84,7 +84,7 @@ public class SIEEntryPeriodSaldo implements SIEEntry {
                 // Resultatenhet, #DIM 1
                 for (SSNewResultUnit iResultUnit: iResultUnits) {
 
-                    iMonths = SSSaldoCalculator.getSaldo(iPreviousYearData, iResultUnit);
+                    iMonths = SSSaldoCalculator.getSaldo(iPreviousYearData, iResultUnit, iExporter.getResultUnits());
 
                     for (Map.Entry<SSMonth, Map<SSAccount, BigDecimal>> ssMonthMapEntry : iMonths.entrySet()) {
                         Map<SSAccount, BigDecimal> iAccounts = ssMonthMapEntry.getValue();
@@ -106,7 +106,7 @@ public class SIEEntryPeriodSaldo implements SIEEntry {
                 // Projekt, #DIM 6
                 for (SSNewProject iProject: iProjects) {
 
-                    iMonths = SSSaldoCalculator.getSaldo(iPreviousYearData, iProject);
+                    iMonths = SSSaldoCalculator.getSaldo(iPreviousYearData, iProject, iExporter.getProjects());
 
                     for (Map.Entry<SSMonth, Map<SSAccount, BigDecimal>> ssMonthMapEntry : iMonths.entrySet()) {
                         Map<SSAccount, BigDecimal> iAccounts = ssMonthMapEntry.getValue();
@@ -153,7 +153,7 @@ public class SIEEntryPeriodSaldo implements SIEEntry {
 
                 // Resultatenhet, #DIM 1
                 for (SSNewResultUnit iResultUnit: iResultUnits) {
-                    iMonths = SSSaldoCalculator.getSaldo(iCurrentYearData, iResultUnit);
+                    iMonths = SSSaldoCalculator.getSaldo(iCurrentYearData, iResultUnit, iExporter.getResultUnits());
 
                     for (Map.Entry<SSMonth, Map<SSAccount, BigDecimal>> ssMonthMapEntry : iMonths.entrySet()) {
                         Map<SSAccount, BigDecimal> iAccounts = ssMonthMapEntry.getValue();
@@ -174,7 +174,7 @@ public class SIEEntryPeriodSaldo implements SIEEntry {
                 }
                 // Projekt, #DIM 6
                 for (SSNewProject iProject: iProjects) {
-                    iMonths = SSSaldoCalculator.getSaldo(iCurrentYearData, iProject);
+                    iMonths = SSSaldoCalculator.getSaldo(iCurrentYearData, iProject, iExporter.getProjects());
 
                     for (Map.Entry<SSMonth, Map<SSAccount, BigDecimal>> ssMonthMapEntry : iMonths.entrySet()) {
                         Map<SSAccount, BigDecimal> iAccounts = ssMonthMapEntry.getValue();

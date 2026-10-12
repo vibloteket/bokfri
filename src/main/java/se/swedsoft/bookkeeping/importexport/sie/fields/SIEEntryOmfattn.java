@@ -46,7 +46,7 @@ public class SIEEntryOmfattn implements SIEEntry {
      */
     @Override
     public boolean exportEntry(SSSIEExporter iExporter, SIEWriter iWriter, SSNewAccountingYear iCurrentYearData) throws SSExportException {
-        LocalDate iPrevious = SSVoucherMath.getNextVoucherLocalDate();
+        LocalDate iPrevious = iExporter.getCoverageDate();
 
         if (iPrevious != null) {
             iWriter.append(SIELabel.SIE_OMFATTN);

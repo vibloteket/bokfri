@@ -44,7 +44,7 @@ public class SIEEntryFNamn implements SIEEntry {
      */
     @Override
     public boolean exportEntry(SSSIEExporter iExporter, SIEWriter iWriter, SSNewAccountingYear iCurrentYearData) throws SSExportException {
-        SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
+        SSNewCompany iCompany = iExporter.getCompany();
 
         String iCompanyName = iCompany.getName();
 

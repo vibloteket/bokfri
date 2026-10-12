@@ -47,7 +47,51 @@ public final class NormalizedAccountingReader {
                 companies.add(company);
             }
         }
+        for (SSNewCompany company : companies) {
+            readExportCompanyFields(connection, company);
+        }
         return companies;
+    }
+
+    /** Reads contact/default-account fields needed by headless SIE exports. */
+    private void readExportCompanyFields(Connection connection, SSNewCompany company) throws SQLException {
+        try (var statement = connection.prepareStatement("SELECT phone FROM company WHERE legacy_id=?")) {
+            statement.setInt(1, company.getId());
+            try (ResultSet result = statement.executeQuery()) {
+                if (result.next()) company.setPhone(result.getString(1));
+            }
+        }
+        try (var statement = connection.prepareStatement(
+                "SELECT a.name,a.address_line_1,a.postal_code,a.city FROM company_address a "
+                        + "JOIN company c ON c.id=a.company_id WHERE c.legacy_id=? AND a.address_type='postal'")) {
+            statement.setInt(1, company.getId());
+            try (ResultSet result = statement.executeQuery()) {
+                if (result.next()) {
+                    se.swedsoft.bookkeeping.data.SSAddress address = new se.swedsoft.bookkeeping.data.SSAddress();
+                    address.setName(result.getString(1));
+                    address.setAddress1(result.getString(2));
+                    address.setZipCode(result.getString(3));
+                    address.setCity(result.getString(4));
+                    company.setAddress(address);
+                }
+            }
+        }
+        java.util.Map<se.swedsoft.bookkeeping.data.common.SSDefaultAccount, Integer> defaults =
+                new java.util.HashMap<>();
+        try (var statement = connection.prepareStatement(
+                "SELECT a.account_type,a.account_number FROM company_default_account a "
+                        + "JOIN company c ON c.id=a.company_id WHERE c.legacy_id=?")) {
+            statement.setInt(1, company.getId());
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    int number = result.getInt(2);
+                    Integer value = result.wasNull() ? null : number;
+                    defaults.put(se.swedsoft.bookkeeping.data.common.SSDefaultAccount.valueOf(result.getString(1)),
+                            value);
+                }
+            }
+        }
+        company.setDefaultAccounts(defaults);
     }
 
     public List<SSNewAccountingYear> years(Connection connection, int companyLegacyId)
@@ -124,6 +168,32 @@ public final class NormalizedAccountingReader {
             }
         }
         return balances;
+    }
+
+    /** Loads typed monthly budget amounts and binds them to the hydrated year accounts. */
+    public se.swedsoft.bookkeeping.data.SSBudget budget(Connection connection, SSNewAccountingYear year)
+            throws SQLException {
+        var budget = new se.swedsoft.bookkeeping.data.SSBudget();
+        budget.setYear(year);
+        try (var statement = connection.prepareStatement(
+                "SELECT a.number,b.period_start,b.period_end,b.amount FROM budget_entry b "
+                        + "JOIN account a ON a.id=b.account_id AND a.accounting_year_id=b.accounting_year_id "
+                        + "JOIN accounting_year y ON y.id=b.accounting_year_id "
+                        + "WHERE y.legacy_id=? ORDER BY b.period_start,a.number")) {
+            statement.setInt(1, year.getId());
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    var month = new se.swedsoft.bookkeeping.data.SSMonth(
+                            result.getObject(2, java.time.LocalDate.class),
+                            result.getObject(3, java.time.LocalDate.class));
+                    SSAccount account = year.getAccountPlan().getAccount(result.getInt(1));
+                    if (account == null) throw new SQLException("Budget account is missing for year " + year.getId());
+                    budget.getBudget().computeIfAbsent(month, key -> new java.util.HashMap<>())
+                            .put(account, result.getBigDecimal(4));
+                }
+            }
+        }
+        return budget;
     }
 
     /** Reads the voucher templates of a company with their ordered rows. */

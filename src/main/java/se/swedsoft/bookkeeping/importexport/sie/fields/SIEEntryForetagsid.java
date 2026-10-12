@@ -45,7 +45,7 @@ public class SIEEntryForetagsid implements SIEEntry {
      */
     @Override
     public boolean exportEntry(SSSIEExporter iExporter, SIEWriter iWriter, SSNewAccountingYear iCurrentYearData) throws SSExportException {
-        SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
+        SSNewCompany iCompany = iExporter.getCompany();
 
         iWriter.append(SIELabel.SIE_FNR);
         iWriter.append(iCompany.getId());

@@ -63,11 +63,11 @@ public class SIEEntryTransaktion implements SIEEntry {
      * @param iVoucherRow
      * @return
      */
-    private List<Object> getObjects(SSVoucherRow iVoucherRow) {
+    private List<Object> getObjects(SSVoucherRow iVoucherRow, SSSIEExporter iExporter) {
         List<Object> iObjects = new LinkedList<>();
 
-        SSNewResultUnit iResultUnit = iVoucherRow.getResultUnit();
-        SSNewProject    iProject = iVoucherRow.getProject();
+        SSNewResultUnit iResultUnit = iVoucherRow.getResultUnit(iExporter.getResultUnits());
+        SSNewProject    iProject = iVoucherRow.getProject(iExporter.getProjects());
 
         // Resultatenhet, #DIM 1
         if (iResultUnit != null) {
@@ -183,7 +183,7 @@ public class SIEEntryTransaktion implements SIEEntry {
             BigDecimal amount = SSVoucherMath.getDebetMinusCredit(iVoucherRow);
             iWriter.append(SIELabel.SIE_TRANS);
             iWriter.append(iAccount.getNumber());
-            iWriter.append(getObjects(iVoucherRow));
+            iWriter.append(getObjects(iVoucherRow, iExporter));
             iWriter.append(amount);
             iWriter.newLine();
             iHasData = true;
@@ -191,8 +191,8 @@ public class SIEEntryTransaktion implements SIEEntry {
 
         BigDecimal adjustment = SIERounding.voucherAdjustment(iVoucher);
         if (adjustment.signum() != 0) {
-            SSAccount account = SSDB.getInstance().getCurrentCompany()
-                    .getDefaultAccount(SSDB.getInstance().getCurrentAccountPlan(),
+            SSAccount account = iExporter.getCompany()
+                    .getDefaultAccount(iExporter.getYear().getAccountPlan(),
                             se.swedsoft.bookkeeping.data.common.SSDefaultAccount.Rounding)
                     .orElseThrow(() -> new SSExportException(
                             "Voucher " + iVoucher.getNumber() + " needs a SIE rounding adjustment of "

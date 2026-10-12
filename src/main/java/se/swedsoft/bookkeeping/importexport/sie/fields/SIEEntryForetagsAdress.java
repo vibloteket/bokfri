@@ -46,7 +46,7 @@ public class SIEEntryForetagsAdress implements SIEEntry {
      */
     @Override
     public boolean exportEntry(SSSIEExporter iExporter, SIEWriter iWriter, SSNewAccountingYear iYear) throws SSExportException {
-        SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
+        SSNewCompany iCompany = iExporter.getCompany();
 
         SSAddress iAddress = iCompany.getAddress();
 
