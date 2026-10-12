@@ -1588,14 +1588,22 @@ public class BokfriCli implements Runnable {
                             "Identical SIE content was already imported (SHA-256 " + plan.sha256() + ")");
                 }
                 if (commit) {
-                    plan = service.importFile(file, vouchersOnly, allowAlreadyImported);
+                    if (runtime.isNormalized() && !vouchersOnly) {
+                        throw new CliException("NORMALIZED_STORAGE_UNSUPPORTED",
+                                "Full SIE replacement import is not yet supported on normalized storage; "
+                                        + "use --vouchers-only for type 4 vouchers");
+                    }
+                    plan = runtime.isNormalized()
+                            ? service.importFile(file, true, allowAlreadyImported,
+                                    runtime.sieImportContext(year), runtime::addSieVouchers)
+                            : service.importFile(file, vouchersOnly, allowAlreadyImported);
                 }
                 Map<String, Object> result = sieImportDetails(plan);
                 result.put("committed", commit);
                 result.put("selection", selectedContext(context, company, year));
                 if (commit) {
-                    result.put("voucherCountAfter", runtime.database().getVouchers().size());
-                    result.put("accountCountAfter", year.getAccountPlan().getAccounts().size());
+                    result.put("voucherCountAfter", runtime.getVouchers().size());
+                    result.put("accountCountAfter", runtime.getAccounts().size());
                 }
                 root.output(result, commit ? "SIE import completed" : "SIE import preview; no changes written");
                 return 0;

@@ -921,6 +921,181 @@ class BokfriCliTest {
     }
 
     @Test
+    void voucherOnlySieImportsMatchLegacyAndAreAtomicOnNormalizedStorage() throws Exception {
+        Path input = temporaryDirectory.resolve("voucher-import.se");
+        List<String> expectedExport = null;
+        byte[] sourceBytes = null;
+        for (boolean normalized : List.of(false, true)) {
+            Path data = temporaryDirectory.resolve(normalized ? "sie-import-normalized" : "sie-import-legacy");
+            extractLegacyDatabase(data.resolve("db"));
+            assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                    "database", "migrate").exitCode()).isZero();
+            int companyId;
+            int yearId;
+            int otherNumber;
+            String date;
+            try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+                var company = runtime.getCompanies().get(0);
+                runtime.selectCompany(company.getId());
+                var year = runtime.getYears(company).get(0);
+                runtime.selectYear(company, year.getId());
+                companyId = company.getId();
+                yearId = year.getId();
+                date = year.getLocalFrom().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+                year.getAccountPlan().setType("BAS95");
+                runtime.database().updateAccountingYear(year);
+                var project = new se.swedsoft.bookkeeping.data.SSNewProject("IMPORT-P", "Project", "Import");
+                var unit = new se.swedsoft.bookkeeping.data.SSNewResultUnit("IMPORT-U", "Unit");
+                runtime.database().addProject(project);
+                runtime.database().addResultUnit(unit);
+                var cash = runtime.getAccounts().stream().filter(account -> account.getNumber() == 1930)
+                        .findFirst().orElseThrow();
+                var other = runtime.getAccounts().stream().filter(account -> account.getNumber() != 1930)
+                        .findFirst().orElseThrow();
+                otherNumber = other.getNumber();
+                var seed = new se.swedsoft.bookkeeping.data.SSVoucher();
+                seed.setNumber(7);
+                seed.setLocalDate(year.getLocalFrom());
+                seed.setDescription("Existing voucher");
+                var debit = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+                debit.setAccount(cash);
+                debit.setDebet(new java.math.BigDecimal("1.00"));
+                var credit = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+                credit.setAccount(other);
+                credit.setCredit(new java.math.BigDecimal("1.00"));
+                seed.addVoucherRow(debit);
+                seed.addVoucherRow(credit);
+                runtime.database().addVoucher(seed, true);
+                assertThat(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.hasVoucher(7)).isTrue();
+                assertThat(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.hasVoucher(1010002)).isFalse();
+            }
+            if (sourceBytes == null) {
+                String content = """
+                        #FLAGGA 1
+                        #SIETYP 4
+                        #KONTO 999999 "Ignored by voucher-only import"
+                        #VER A 7 %s "Duplicate existing"
+                        {
+                        #TRANS 1930 {1 IMPORT-U 6 IMPORT-P} 10.25
+                        #TRANS %d {} -10.25
+                        }
+                        #VER A 7 %s "Duplicate within file"
+                        {
+                        #TRANS 1930 {} 20.00
+                        #TRANS %d {} -20.00
+                        }
+                        #VER B 2 %s "Mapped series"
+                        {
+                        #TRANS 1930 {} 30.00
+                        #TRANS %d {} -30.00
+                        }
+                        #VER A "" %s "Missing number"
+                        {
+                        #TRANS 1930 {} 40.00
+                        #TRANS %d {} -40.00
+                        }
+                        """.formatted(date, otherNumber, date, otherNumber, date, otherNumber, date, otherNumber);
+                se.swedsoft.bookkeeping.importexport.sie.util.SIEFile.writeFile(input.toFile(), content.lines().toList());
+                sourceBytes = Files.readAllBytes(input);
+            }
+            if (normalized) {
+                assertThat(execute("--data-dir", data.toString(), "--format", "json",
+                        "database", "normalize").exitCode()).isZero();
+            }
+            String[] context = {"--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
+                    "--year-id", Integer.toString(yearId), "--format", "json"};
+            JsonNode before = new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout());
+            Result preview = execute(concat(context, "sie", "import", "--file", input.toString(), "--vouchers-only"));
+            assertThat(preview.exitCode()).as(preview.stderr()).isZero();
+            assertThat(new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout())).isEqualTo(before);
+            assertThat(data.resolve("sie-import.history")).doesNotExist();
+            Result imported = execute(concat(context, "sie", "import", "--file", input.toString(),
+                    "--vouchers-only", "--commit"));
+            assertThat(imported.exitCode()).as(imported.stderr()).isZero();
+            // Legacy immediate counts use the asynchronous trigger cache; compare durable exports below.
+            if (normalized) {
+                assertThat(new ObjectMapper().readTree(imported.stdout()).path("voucherCountAfter").asInt()).isEqualTo(5);
+            }
+            assertThat(Files.readAllBytes(input)).containsExactly(sourceBytes);
+            Path output = temporaryDirectory.resolve(normalized ? "import-normalized.se" : "import-legacy.se");
+            Result exported = execute(concat(context, "sie", "export", "--output", output.toString()));
+            assertThat(exported.exitCode()).as(exported.stderr()).isZero();
+            List<String> lines = se.swedsoft.bookkeeping.importexport.sie.util.SIEFile.readFile(output.toFile())
+                    .stream().sorted().toList();
+            if (!normalized) {
+                expectedExport = lines;
+                continue;
+            }
+            assertThat(lines).isEqualTo(expectedExport);
+            try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+                var company = runtime.selectCompany(companyId);
+                runtime.selectYear(company, yearId);
+                assertThat(runtime.getVouchers()).extracting(se.swedsoft.bookkeeping.data.SSVoucher::getNumber)
+                        .containsExactly(7, 8, 9, 1010002, 1010003);
+                var row = runtime.getVouchers().stream().filter(v -> v.getNumber() == 8)
+                        .findFirst().orElseThrow().getRows().get(0);
+                assertThat(row.getProject(runtime.getProjects()).getNumber()).isEqualTo("IMPORT-P");
+                assertThat(row.getResultUnit(runtime.getResultUnits()).getNumber()).isEqualTo("IMPORT-U");
+            }
+            JsonNode stored = new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout());
+            byte[] history = Files.readAllBytes(data.resolve("sie-import.history"));
+            Result duplicate = execute(concat(context, "sie", "import", "--file", input.toString(),
+                    "--vouchers-only", "--commit"));
+            assertThat(duplicate.exitCode()).isEqualTo(1);
+            assertThat(new ObjectMapper().readTree(duplicate.stderr()).path("error").path("code").asText())
+                    .isEqualTo("SIE_ALREADY_IMPORTED");
+            for (String invalid : List.of(
+                    "#VER A 41 " + date + " \"First valid\"\n{\n#TRANS 1930 {} 1.00\n#TRANS "
+                            + otherNumber + " {} -1.00\n}\n#VER A 42 " + date
+                            + " \"Invalid later\"\n{\n#TRANS 999999 {} 1.00\n}\n",
+                    "#VER A 43 " + date + " \"Unclosed\"\n{\n#TRANS 1930 {} 1.00\n")) {
+                Path malformed = temporaryDirectory.resolve("invalid-vouchers.se");
+                se.swedsoft.bookkeeping.importexport.sie.util.SIEFile.writeFile(malformed.toFile(),
+                        ("#SIETYP 4\n" + invalid).lines().toList());
+                Result failed = execute(concat(context, "sie", "import", "--file", malformed.toString(),
+                        "--vouchers-only", "--commit"));
+                assertThat(failed.exitCode()).as(failed.stdout()).isEqualTo(1);
+                assertThat(new ObjectMapper().readTree(failed.stderr()).path("error").path("code").asText())
+                        .isEqualTo("SIE_IMPORT_FAILED");
+                assertThat(new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout()))
+                        .isEqualTo(stored);
+                assertThat(Files.readAllBytes(data.resolve("sie-import.history"))).containsExactly(history);
+            }
+            // Replacement import must fail before the legacy importer can clear anything.
+            Result replacement = execute(concat(context, "sie", "import", "--file", input.toString(),
+                    "--commit", "--allow-already-imported"));
+            assertThat(replacement.exitCode()).isEqualTo(1);
+            assertThat(new ObjectMapper().readTree(replacement.stderr()).path("error").path("code").asText())
+                    .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
+            assertThat(new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout())).isEqualTo(stored);
+            assertThat(Files.readAllBytes(data.resolve("sie-import.history"))).containsExactly(history);
+            // Force a database failure after the first write to prove the whole transaction rolls back.
+            try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+                var company = runtime.selectCompany(companyId);
+                var year = runtime.selectYear(company, yearId);
+                var cash = runtime.getAccounts().stream().filter(account -> account.getNumber() == 1930)
+                        .findFirst().orElseThrow();
+                var batchVoucher = new se.swedsoft.bookkeeping.data.SSVoucher();
+                batchVoucher.setNumber(1010004);
+                batchVoucher.setLocalDate(year.getLocalFrom());
+                var row = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+                row.setAccount(cash);
+                row.setDebet(new java.math.BigDecimal("1.00"));
+                batchVoucher.addVoucherRow(row);
+                org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> runtime.addSieVouchers(List.of(batchVoucher, batchVoucher)))
+                        .isInstanceOf(java.sql.SQLException.class);
+            }
+            assertThat(new ObjectMapper().readTree(execute(concat(context, "voucher", "list")).stdout())).isEqualTo(stored);
+            Result allowed = execute(concat(context, "sie", "import", "--file", input.toString(),
+                    "--vouchers-only", "--commit", "--allow-already-imported"));
+            assertThat(allowed.exitCode()).as(allowed.stderr()).isZero();
+            assertThat(new ObjectMapper().readTree(allowed.stdout()).path("voucherCountAfter").asInt()).isEqualTo(9);
+            assertThat(Files.readAllBytes(input)).containsExactly(sourceBytes);
+        }
+    }
+
+    @Test
     void emptyNormalizedSieExportUsesYearStartWithoutPreviousYear() throws Exception {
         Path data = temporaryDirectory.resolve("empty-normalized-sie-data");
         extractLegacyDatabase(data.resolve("db"));

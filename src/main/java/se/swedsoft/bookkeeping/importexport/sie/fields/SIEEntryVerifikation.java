@@ -1,10 +1,8 @@
 package se.swedsoft.bookkeeping.importexport.sie.fields;
 
 
-import se.swedsoft.bookkeeping.calc.math.SSVoucherMath;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSVoucher;
-import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.SSBundleString;
 import se.swedsoft.bookkeeping.importexport.sie.SSSIEExporter;
 import se.swedsoft.bookkeeping.importexport.sie.SSSIEImporter;
@@ -60,7 +58,7 @@ public class SIEEntryVerifikation implements SIEEntry {
         }
         boolean iHasNumber = false;
 
-        if (iNumber != null && !SSVoucherMath.hasVoucher(iNumber)) {
+        if (iNumber != null && !iImporter.hasVoucherNumber(iNumber)) {
             iVoucher.setNumber(iNumber);
             iHasNumber = true;
         }
@@ -82,7 +80,7 @@ public class SIEEntryVerifikation implements SIEEntry {
             ((SIEEntryTransaktion) iEntry).importEntry(iVoucher, iImporter, iReader,
                     iYearData);
         }
-        SSDB.getInstance().addVoucher(iVoucher, iHasNumber);
+        iImporter.addVoucher(iVoucher, iHasNumber);
         return true;
     }
 
