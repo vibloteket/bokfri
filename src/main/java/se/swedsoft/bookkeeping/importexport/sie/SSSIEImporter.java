@@ -1,6 +1,8 @@
 package se.swedsoft.bookkeeping.importexport.sie;
 
 
+import se.swedsoft.bookkeeping.data.SSAccountPlan;
+import se.swedsoft.bookkeeping.data.SSBudget;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewProject;
 import se.swedsoft.bookkeeping.data.SSNewResultUnit;
@@ -16,6 +18,8 @@ import se.swedsoft.bookkeeping.importexport.util.SSImportException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -60,6 +64,73 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
                 .filter(java.util.Objects::nonNull).forEach(voucherNumbers::add);
         doImportVouchers();
         return List.copyOf(importedVouchers);
+    }
+
+    /** Fully parsed replacement graph; no live storage/domain graph has been modified. */
+    public record ReplacementData(SSNewAccountingYear year, List<SSNewProject> projects,
+            List<SSNewResultUnit> resultUnits) {}
+
+    /**
+     * Parses full SIE contents without modifying the selected graph, storage, or source file.
+     *
+     * @param original selected year and company registers
+     * @return detached accounting graph and replacement dimensions
+     * @throws SSImportException if the source is empty, malformed, or references undefined accounting data
+     */
+    public ReplacementData readReplacement(ImportContext original) throws SSImportException {
+        if (iMarkAsRead) throw new IllegalStateException("Replacement parsing must not mark the source file");
+        SSNewAccountingYear year = new SSNewAccountingYear(original.year());
+        var plan = new SSAccountPlan(original.year().getAccountPlan());
+        plan.clear();
+        year.setAccountPlan(plan);
+        year.setInBalance(new HashMap<>());
+        year.setBudget(new SSBudget());
+        year.setVouchers(new ArrayList<>());
+        context = new ImportContext(year, new ArrayList<>(), new ArrayList<>());
+        importedVouchers.clear();
+        voucherNumbers.clear();
+        readFile(iFile);
+        if (iLines.isEmpty()) throw new SSImportException("SIE replacement input is empty");
+        validateVoucherBlocks();
+        for (List<String> lines : getParsedLines(iLines)) {
+            SIEReader reader = new SIEReader(lines);
+            SIEEntry entry = iFactory.get(reader.next());
+            if (entry != null) entry.importEntry(this, reader, year);
+        }
+        if (year.getLocalFrom() == null || year.getLocalTo() == null
+                || year.getLocalTo().isBefore(year.getLocalFrom())) {
+            throw new SSImportException("SIE accounting year dates are invalid");
+        }
+        if (year.getInBalance().containsKey(null)) {
+            throw new SSImportException("SIE opening balance references an undefined account");
+        }
+        for (var amounts : year.getBudget().getBudget().values()) {
+            if (amounts.containsKey(null)) throw new SSImportException("SIE budget references an undefined account");
+        }
+        year.setVouchers(new ArrayList<>(importedVouchers));
+        return new ReplacementData(year, List.copyOf(context.projects()), List.copyOf(context.resultUnits()));
+    }
+
+    /** Whether field handlers must avoid legacy persistence and GUI error dialogs. */
+    public boolean isExplicit() {
+        return context != null;
+    }
+
+    /** Persists date edits only for the legacy importer; explicit parsing stays detached. */
+    public void updateYear(SSNewAccountingYear year) {
+        if (context == null) SSDB.getInstance().updateAccountingYear(year);
+    }
+
+    /** Adds a parsed project to the replacement register, or persists it for legacy import. */
+    public void addProject(SSNewProject project) {
+        if (context == null) SSDB.getInstance().addProject(project);
+        else context.projects().add(project);
+    }
+
+    /** Adds a parsed result unit to the replacement register, or persists it for legacy import. */
+    public void addResultUnit(SSNewResultUnit unit) {
+        if (context == null) SSDB.getInstance().addResultUnit(unit);
+        else context.resultUnits().add(unit);
     }
 
     /** Checks both stored and earlier imported voucher numbers in explicit mode. */

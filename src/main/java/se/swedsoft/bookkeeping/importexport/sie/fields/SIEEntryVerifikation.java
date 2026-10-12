@@ -49,12 +49,12 @@ public class SIEEntryVerifikation implements SIEEntry {
         LocalDate  iDate = iReader.hasNextDate() ? iReader.nextDate() : SSDateUtil.today();
         String     iDescription = iReader.hasNextString() ? iReader.nextString() : null;
 
-        if (!iSerie.equals("A") && iSerie.length() > 0) {
-	    if (iSerie.charAt(0) - 'A' < 0) {
-		iNumber = iNumber + (10000 * iSerie.charAt(0)) + 2000000;
-	    } else {
-		iNumber = iNumber + (10000 * (iSerie.charAt(0) - 'A')) + 1000000;
-	    }
+        if (iNumber != null && !iSerie.equals("A") && !iSerie.isEmpty()) {
+            if (iSerie.charAt(0) - 'A' < 0) {
+                iNumber = iNumber + (10000 * iSerie.charAt(0)) + 2000000;
+            } else {
+                iNumber = iNumber + (10000 * (iSerie.charAt(0) - 'A')) + 1000000;
+            }
         }
         boolean iHasNumber = false;
 

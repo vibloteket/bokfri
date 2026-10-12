@@ -698,6 +698,26 @@ public final class BokfriRuntime implements AutoCloseable {
                         database());
     }
 
+    /** Atomically replaces the selected year and company dimensions from a detached SIE graph. */
+    public void replaceSieYear(
+            se.swedsoft.bookkeeping.importexport.sie.SSSIEImporter.ReplacementData replacement) throws SQLException {
+        if (!isNormalized()) throw new IllegalStateException("Explicit replacement requires normalized storage");
+        try {
+            normalizedStore.replaceAccountingYear(replacement.year());
+            registerStore.replaceDimensions(normalizedStore.getCurrentCompany().getId(), replacement.year().getId(),
+                    replacement.projects(), replacement.resultUnits());
+            connection.commit();
+            normalizedStore.setCurrentYear(replacement.year());
+        } catch (SQLException | RuntimeException exception) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackFailure) {
+                exception.addSuppressed(rollbackFailure);
+            }
+            throw exception;
+        }
+    }
+
     /** Builds singleton-free voucher-import inputs for the selected normalized year. */
     public se.swedsoft.bookkeeping.importexport.sie.SSSIEImporter.ImportContext sieImportContext(
             SSNewAccountingYear year) throws SQLException {

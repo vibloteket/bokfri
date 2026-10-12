@@ -7,11 +7,14 @@ import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
+import java.util.Map;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Objects;
@@ -160,6 +163,52 @@ public final class NormalizedAccountingWriter {
             statement.setBoolean(9, account.isResultUnitRequired());
             statement.executeUpdate();
         }
+    }
+
+    /** Replaces only the selected year's accounting graph, retaining its identity and company. */
+    public void replaceAccountingYear(Connection connection, SSNewAccountingYear year) throws SQLException {
+        long yearId = yearId(connection, year.getId());
+        for (String table : List.of("voucher_row", "voucher", "budget_entry", "opening_balance", "account")) {
+            try (var delete = connection.prepareStatement("DELETE FROM " + table + " WHERE accounting_year_id=?")) {
+                delete.setLong(1, yearId);
+                delete.executeUpdate();
+            }
+        }
+        try (var update = connection.prepareStatement(
+                "UPDATE accounting_year SET starts_on=?,ends_on=? WHERE id=?")) {
+            update.setObject(1, year.getLocalFrom());
+            update.setObject(2, year.getLocalTo());
+            update.setLong(3, yearId);
+            update.executeUpdate();
+        }
+        SSAccountPlan plan = year.getAccountPlan();
+        try (var update = connection.prepareStatement(
+                "UPDATE account_plan SET name=?,base_name=?,assessment_year=?,plan_type=? WHERE accounting_year_id=?")) {
+            update.setString(1, plan.getName());
+            update.setString(2, plan.getBaseName());
+            update.setString(3, plan.getAssessementYear());
+            update.setString(4, plan.getType() == null ? null : plan.getType().getName());
+            update.setLong(5, yearId);
+            if (update.executeUpdate() != 1) throw new SQLException("Selected year has no account plan");
+        }
+        for (SSAccount account : plan.getAccounts()) addAccount(connection, yearId, account);
+        Map<Integer, BigDecimal> balances = new java.util.LinkedHashMap<>();
+        year.getInBalance().forEach((account, amount) -> balances.put(account.getNumber(), amount));
+        replaceOpeningBalances(connection, year.getId(), balances);
+        try (var insert = connection.prepareStatement(
+                "INSERT INTO budget_entry(accounting_year_id,account_id,period_start,period_end,amount) VALUES(?,?,?,?,?)")) {
+            for (var month : year.getBudget().getBudget().entrySet()) {
+                for (var amount : month.getValue().entrySet()) {
+                    insert.setLong(1, yearId);
+                    insert.setLong(2, accountId(connection, yearId, amount.getKey().getNumber()));
+                    insert.setObject(3, month.getKey().getLocalFrom());
+                    insert.setObject(4, month.getKey().getLocalTo());
+                    insert.setBigDecimal(5, amount.getValue());
+                    insert.executeUpdate();
+                }
+            }
+        }
+        for (SSVoucher voucher : year.getVouchers()) addVoucher(connection, year.getId(), voucher);
     }
 
     /** Inserts a voucher with its ordered rows into the year; returns the generated key. */
