@@ -2,10 +2,8 @@ package se.swedsoft.bookkeeping.importexport.sie.fields;
 
 
 import se.swedsoft.bookkeeping.calc.math.SSProjectMath;
-import se.swedsoft.bookkeeping.calc.math.SSResultUnitMath;
 import se.swedsoft.bookkeeping.calc.math.SSVoucherMath;
 import se.swedsoft.bookkeeping.data.*;
-import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.SSBundleString;
 import se.swedsoft.bookkeeping.importexport.sie.SIERounding;
 import se.swedsoft.bookkeeping.importexport.sie.SSSIEExporter;
@@ -92,7 +90,6 @@ public class SIEEntryTransaktion implements SIEEntry {
      * @throws SSImportException
      */
     public boolean importEntry(SSVoucher iVoucher, SSSIEImporter iImporter, SIEReader iReader, SSNewAccountingYear iCurrentYearData) throws SSImportException {
-        // SSNewAccountingYear iCurrentYearData  = SSDB.getInstance().getCurrentYear();
 
         // #TRANS kontonr {objectlista} belopp [transdat] [transtext] [kvantitet]
         if (!iReader.hasFields(STRING, INT, ARRAY, FLOAT)) {
@@ -133,14 +130,15 @@ public class SIEEntryTransaktion implements SIEEntry {
 
             // Resultatenhet, #DIM 1
             if (iDimension == 1) {
-                iResultUnit = SSResultUnitMath.getResultUnit(iNum).orElse(null);
+                iResultUnit = iImporter.getResultUnits().stream()
+                        .filter(unit -> iNum.equals(unit.getNumber())).findFirst().orElse(null);
 
                 // if(iResultUnit == null)
                 // throw new RuntimeException("Resultunit not defined: " + iNum);
             }
             // Projekt, #DIM 6
             if (iDimension == 6) {
-                iProject = SSProjectMath.getProject(SSDB.getInstance().getProjects(), iNum).orElse(null);
+                iProject = SSProjectMath.getProject(iImporter.getProjects(), iNum).orElse(null);
 
                 // if(iProject == null)
                 // throw new RuntimeException("Project not defined: " + iNum);

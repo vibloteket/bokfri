@@ -14,10 +14,15 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Changed
 
+- Fixed the SIE import voucher-number existence check: an empty `Optional` no longer counts
+  as an existing voucher. Unused source numbers (including mapped series numbers) are preserved;
+  duplicate or missing numbers receive the next number on both storage backends.
 - SIE CLI export (types 1, 2, 3, and 4E) now supports normalized storage (data format 3),
   using explicit company/year data, previous-year balances, monthly budgets, and dimension
   registers. SIE-only rounding rows retain their approval requirement and never alter stored
-  vouchers. SIE import remains legacy-only.
+  vouchers. Full replacement SIE import remains legacy-only; type 4 `--vouchers-only` imports
+  now support normalized storage with complete parsing before atomic batch persistence,
+  explicit dimension resolution, and existing import-history/source-immutability safeguards.
 - VAT CLI reports and settlement preview/commit now support normalized storage (data format 3),
   preserving legacy VAT-box truncation, settlement rounding, and voucher numbering. VAT report
   and control PDF exports fail explicitly with `NORMALIZED_STORAGE_UNSUPPORTED` until their

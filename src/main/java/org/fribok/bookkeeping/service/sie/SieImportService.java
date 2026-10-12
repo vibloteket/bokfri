@@ -67,12 +67,35 @@ public final class SieImportService {
 
     public SieImportPlan importFile(Path input, boolean vouchersOnly, boolean allowAlreadyImported)
             throws IOException, SSImportException {
+        return importFile(input, vouchersOnly, allowAlreadyImported, null, null);
+    }
+
+    /** Writes a fully parsed normalized voucher batch in one storage transaction. */
+    @FunctionalInterface
+    public interface VoucherBatchWriter {
+        void write(List<se.swedsoft.bookkeeping.data.SSVoucher> vouchers) throws java.sql.SQLException;
+    }
+
+    /** Imports explicit voucher inputs when present; full replacement remains legacy-only. */
+    public SieImportPlan importFile(Path input, boolean vouchersOnly, boolean allowAlreadyImported,
+            SSSIEImporter.ImportContext context, VoucherBatchWriter writer) throws IOException, SSImportException {
+        if (context != null && !vouchersOnly) {
+            throw new IllegalArgumentException("Explicit SIE imports support vouchers only");
+        }
+        if (context != null) java.util.Objects.requireNonNull(writer, "writer");
         SieImportPlan plan = inspect(input, vouchersOnly);
         if (plan.previouslyImported() && !allowAlreadyImported) {
             throw new IOException("Identical SIE content was already imported");
         }
         SSSIEImporter importer = new SSSIEImporter(plan.file().toFile(), false);
-        if (vouchersOnly) {
+        if (context != null) {
+            List<se.swedsoft.bookkeeping.data.SSVoucher> vouchers = importer.readVouchers(context);
+            try {
+                writer.write(vouchers);
+            } catch (java.sql.SQLException exception) {
+                throw new IOException("Failed to persist SIE voucher batch", exception);
+            }
+        } else if (vouchersOnly) {
             importer.doImportVouchers();
         } else {
             importer.doImport();

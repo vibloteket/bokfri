@@ -698,6 +698,30 @@ public final class BokfriRuntime implements AutoCloseable {
                         database());
     }
 
+    /** Builds singleton-free voucher-import inputs for the selected normalized year. */
+    public se.swedsoft.bookkeeping.importexport.sie.SSSIEImporter.ImportContext sieImportContext(
+            SSNewAccountingYear year) throws SQLException {
+        if (!isNormalized()) throw new IllegalStateException("Explicit import requires normalized storage");
+        return new se.swedsoft.bookkeeping.importexport.sie.SSSIEImporter.ImportContext(
+                hydrateYear(year), getProjects(), getResultUnits());
+    }
+
+    /** Persists pre-numbered SIE vouchers atomically, rolling back the entire batch on failure. */
+    public void addSieVouchers(List<SSVoucher> vouchers) throws SQLException {
+        if (!isNormalized()) throw new IllegalStateException("Batch import requires normalized storage");
+        try {
+            for (SSVoucher voucher : vouchers) normalizedStore.addVoucher(voucher);
+            connection.commit();
+        } catch (SQLException | RuntimeException exception) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackFailure) {
+                exception.addSuppressed(rollbackFailure);
+            }
+            throw exception;
+        }
+    }
+
     /** Builds the explicit, hydrated context used by normalized SIE exports. */
     public se.swedsoft.bookkeeping.importexport.sie.SSSIEExporter.ExportContext sieExportContext(
             SSNewCompany company, SSNewAccountingYear year) throws SQLException {

@@ -288,7 +288,7 @@ public class SSVoucherMath {
     public static boolean hasVoucher(Integer iNumber) {
         SSVoucher iVoucher = new SSVoucher(iNumber);
 
-        return SSDB.getInstance().getVoucher(iVoucher) != null;
+        return SSDB.getInstance().getVoucher(iVoucher).isPresent();
     }
 
     /**

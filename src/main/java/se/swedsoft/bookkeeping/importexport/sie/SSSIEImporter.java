@@ -42,6 +42,56 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
 
     private boolean iMarkAsRead;
 
+    private ImportContext context;
+    private final List<SSVoucher> importedVouchers = new java.util.ArrayList<>();
+    private final java.util.Set<Integer> voucherNumbers = new java.util.HashSet<>();
+
+    /** Explicit selected-year and register inputs for read-only voucher parsing. */
+    public record ImportContext(SSNewAccountingYear year, List<SSNewProject> projects,
+            List<SSNewResultUnit> resultUnits) {}
+
+    /** Parses and numbers the complete voucher batch without touching storage or the source file. */
+    public List<SSVoucher> readVouchers(ImportContext context) throws SSImportException {
+        if (iMarkAsRead) throw new IllegalStateException("Explicit voucher parsing must not mark the source file");
+        this.context = java.util.Objects.requireNonNull(context);
+        importedVouchers.clear();
+        voucherNumbers.clear();
+        context.year().getVouchers().stream().map(SSVoucher::getNumber)
+                .filter(java.util.Objects::nonNull).forEach(voucherNumbers::add);
+        doImportVouchers();
+        return List.copyOf(importedVouchers);
+    }
+
+    /** Checks both stored and earlier imported voucher numbers in explicit mode. */
+    public boolean hasVoucherNumber(int number) {
+        return context == null ? se.swedsoft.bookkeeping.calc.math.SSVoucherMath.hasVoucher(number)
+                : voucherNumbers.contains(number);
+    }
+
+    /** Preserves available numbers; duplicates/missing numbers receive the next number. */
+    public void addVoucher(SSVoucher voucher, boolean hasNumber) {
+        if (context == null) {
+            SSDB.getInstance().addVoucher(voucher, hasNumber);
+            return;
+        }
+        if (!hasNumber) {
+            int max = voucherNumbers.stream().mapToInt(Integer::intValue).max().orElse(0);
+            voucher.setNumber(Math.addExact(max, 1));
+        }
+        voucherNumbers.add(voucher.getNumber());
+        importedVouchers.add(voucher);
+    }
+
+    /** Returns the selected project register without using SSDB in explicit mode. */
+    public List<SSNewProject> getProjects() {
+        return context == null ? SSDB.getInstance().getProjects() : context.projects();
+    }
+
+    /** Returns the selected result-unit register without using SSDB in explicit mode. */
+    public List<SSNewResultUnit> getResultUnits() {
+        return context == null ? SSDB.getInstance().getResultUnits() : context.resultUnits();
+    }
+
     /**
      * Creates an importer that treats the source file as immutable.
      *
@@ -71,6 +121,7 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
      * @throws SSImportException
      */
     public void doImport() throws SSImportException {
+        if (context != null) throw new IllegalStateException("Explicit context supports vouchers only");
         SSDB.getInstance().dropTriggers();
         try {
             doImportWithTriggersDisabled();
@@ -156,8 +207,9 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
             return;
         }
 
+        if (context != null) validateVoucherBlocks();
         List<List<String>> iParsedLines = getParsedLines(iLines);
-        SSNewAccountingYear iYear = SSDB.getInstance().getCurrentYear();
+        SSNewAccountingYear iYear = context == null ? SSDB.getInstance().getCurrentYear() : context.year();
 
         for (List<String> iEntryLines : iParsedLines) {
             SIEReader iReader = new SIEReader(iEntryLines);
@@ -174,6 +226,26 @@ public class SSSIEImporter {    private static final Logger LOG = LoggerFactory.
         if (iMarkAsRead) {
             setReaded(iFile);
         }
+    }
+
+    /** Rejects malformed blocks before a normalized batch can reach persistence. */
+    private void validateVoucherBlocks() throws SSImportException {
+        int depth = 0;
+        for (int i = 0; i < iLines.size(); i++) {
+            String line = iLines.get(i).trim();
+            if (line.equals("{") || line.equals("}")) iLines.set(i, line);
+            if (line.matches("#VER(?:\\s.*)?")) {
+                if (depth != 0 || i + 1 >= iLines.size() || !iLines.get(i + 1).trim().equals("{")) {
+                    throw new SSImportException("SIE voucher must have a complete transaction block");
+                }
+            }
+            if (line.equals("{")) {
+                if (++depth != 1) throw new SSImportException("Nested SIE blocks are not supported");
+            } else if (line.equals("}")) {
+                if (--depth != 0) throw new SSImportException("Unexpected SIE block end");
+            }
+        }
+        if (depth != 0) throw new SSImportException("Unclosed SIE transaction block");
     }
 
     /**
