@@ -130,7 +130,7 @@ jobs:
       shell: bash
       run: |
         # Sanitize version for jpackage: strip -SNAPSHOT, ensure 3 numeric components.
-        # Main-branch builds are packaged as a separate "Bokfri Dev" app so testers
+        # Non-release builds are packaged as a separate "Bokfri Dev" app so testers
         # can install or keep them side-by-side with official Bokfri releases.
         RAW=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
         BASE="${RAW%-SNAPSHOT}"
@@ -144,7 +144,7 @@ jobs:
         MAC_PACKAGE_IDENTIFIER="org.fribok.bookkeeping"
         VERSION="${MAJOR}.${MINOR}.${PATCH}"
 
-        if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+        if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
           APP_NAME="Bokfri Dev"
           APP_BASENAME="Bokfri-Dev"
           APP_SUBDIR="bokfri-dev"
@@ -155,7 +155,7 @@ jobs:
         CLI_NAME="Bokfri-cli"
         CLI_COMMAND="bokfri"
         WINDOWS_UPGRADE_UUID="5fc98b3d-45ca-4504-a9dd-04b37dee1ec7"
-        if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+        if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
           CLI_NAME="Bokfri-cli-dev"
           CLI_COMMAND="bokfri-dev"
           WINDOWS_UPGRADE_UUID="5254a08d-dd14-40a8-be38-683913534230"

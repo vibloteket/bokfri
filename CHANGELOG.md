@@ -12,6 +12,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Fixed
+- Keep keyboard focus in searchable dropdown fields when account and other suggestion lists open, including on macOS. Preserve mouse selection, scrolling, dropdown buttons and add/edit/delete menus; add cross-platform GUI regression tests and opt-in, metadata-only focus diagnostics with a legacy comparison mode.
+
 ### Changed
 
 - Fixed the SIE import voucher-number existence check: an empty `Optional` no longer counts
