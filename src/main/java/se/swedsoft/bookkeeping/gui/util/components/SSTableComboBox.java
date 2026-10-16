@@ -84,7 +84,20 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
         iTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         iPopup = new JPopupMenu();
-        iPopup.add(new JScrollPane(iTable));
+        if (!SSPopupFocusDiagnostics.isLegacyMode()) {
+            // Suggestions must not take keyboard focus from the editor (notably on macOS).
+            // Mouse events still reach the table; keyboard selection is handled by the field.
+            iPopup.setFocusable(false);
+            iTable.setFocusable(false);
+        }
+        SSPopupFocusDiagnostics.watch(iTextField, iPopup);
+        JScrollPane scrollPane = new JScrollPane(iTable);
+        if (!SSPopupFocusDiagnostics.isLegacyMode()) {
+            scrollPane.setFocusable(false);
+            scrollPane.getVerticalScrollBar().setFocusable(false);
+            scrollPane.getHorizontalScrollBar().setFocusable(false);
+        }
+        iPopup.add(scrollPane);
         iPopup.setPreferredSize(new Dimension(350, 200));
 
         // Listener for pressing the button
@@ -96,6 +109,9 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
                 }
 
                 iModel.setObjects(iObjects);
+                if (!SSPopupFocusDiagnostics.isLegacyMode()) {
+                    iTextField.requestFocusInWindow();
+                }
 
             });
 
@@ -137,7 +153,23 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
         // The action for transferring the focus to the search table.
         Action iFocusTable = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
-                iTable.requestFocus();
+                if (SSPopupFocusDiagnostics.isLegacyMode()) {
+                    iTable.requestFocus();
+                    return;
+                }
+                if (!iPopup.isVisible()) {
+                    startEdit();
+                }
+                int count = iTable.getRowCount();
+                if (count == 0) {
+                    return;
+                }
+                boolean up = "UP".equals(e.getActionCommand());
+                int selected = iTable.getSelectedRow();
+                int next = selected < 0 ? (up ? count - 1 : 0)
+                        : Math.max(0, Math.min(count - 1, selected + (up ? -1 : 1)));
+                iTable.setRowSelectionInterval(next, next);
+                iTable.scrollRectToVisible(iTable.getCellRect(next, 0, true));
             }
         };
 
@@ -151,6 +183,12 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
                     return;
                 }
 
+                if (!SSPopupFocusDiagnostics.isLegacyMode()
+                        && (e.isActionKey() || e.getKeyCode() == KeyEvent.VK_TAB
+                        || e.getKeyCode() == KeyEvent.VK_SHIFT || e.getKeyCode() == KeyEvent.VK_CONTROL
+                        || e.getKeyCode() == KeyEvent.VK_ALT || e.getKeyCode() == KeyEvent.VK_META)) {
+                    return;
+                }
                 // Dont process enter or escape keys
                 if (e.getKeyCode() == KeyEvent.VK_ENTER
                         || e.getKeyCode() == KeyEvent.VK_ESCAPE
@@ -215,6 +253,26 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
 
         iTextField.getActionMap().put("SELECT_NULL", iSelectNull);
         iTextField.getActionMap().put("FOCUS_DROP_DOWN_TABLE", iFocusTable);
+        if (!SSPopupFocusDiagnostics.isLegacyMode()) {
+            iTextField.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), "PREVIOUS_SUGGESTION");
+            iTextField.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), "NEXT_SUGGESTION");
+            iTextField.getActionMap().put("PREVIOUS_SUGGESTION", new AbstractAction() {
+                public void actionPerformed(ActionEvent e) {
+                    iFocusTable.actionPerformed(new ActionEvent(iTextField, ActionEvent.ACTION_PERFORMED, "UP"));
+                }
+            });
+            iTextField.getActionMap().put("NEXT_SUGGESTION", new AbstractAction() {
+                public void actionPerformed(ActionEvent e) {
+                    iFocusTable.actionPerformed(new ActionEvent(iTextField, ActionEvent.ACTION_PERFORMED, "DOWN"));
+                }
+            });
+            iTextField.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "HIDE_SUGGESTIONS");
+            iTextField.getActionMap().put("HIDE_SUGGESTIONS", new AbstractAction() {
+                public void actionPerformed(ActionEvent e) {
+                    stopEdit();
+                }
+            });
+        }
         iTextField.getActionMap().put("SELECT_ROW_AND_CLOSE_DROP_DOWN", iSelectAndClose);
         iTable.getActionMap().put("SELECT_ROW_AND_CLOSE_DROP_DOWN", iSelectAndClose);
     }
@@ -486,9 +544,13 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
      * Start the editing.
      */
     public void startEdit() {
-        iPopup.show(iTextField, 0, getHeight());
-
-        SwingUtilities.invokeLater(() -> iTextField.requestFocusInWindow());
+        SSPopupFocusDiagnostics.event("show-request", iTextField);
+        if (SSPopupFocusDiagnostics.isLegacyMode() || !iPopup.isVisible()) {
+            iPopup.show(iTextField, 0, getHeight());
+        }
+        if (SSPopupFocusDiagnostics.isLegacyMode()) {
+            SwingUtilities.invokeLater(() -> iTextField.requestFocusInWindow());
+        }
     }
 
     /**
@@ -752,6 +814,7 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
 
         @Override
         public boolean stopCellEditing() {
+            SSPopupFocusDiagnostics.event("cell-stop", iComboBox.iTextField);
             iComboBox.iPopup.setVisible(false);
             fireEditingStopped();
             return true;
@@ -759,6 +822,7 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
 
         @Override
         public void cancelCellEditing() {
+            SSPopupFocusDiagnostics.event("cell-cancel", iComboBox.iTextField);
             iComboBox.iPopup.setVisible(false);
             fireEditingCanceled();
         }

@@ -17,6 +17,14 @@ public final class Launcher {
             }
             return;
         }
+        if (args.length > 0 && java.util.Arrays.stream(args).allMatch(arg ->
+                arg.equals("--popup-focus-diagnostics") || arg.equals("--legacy-popup-focus"))) {
+            for (String arg : args) {
+                System.setProperty(arg.equals("--legacy-popup-focus")
+                        ? "bokfri.popup.legacy" : "bokfri.popup.diagnostics", "true");
+            }
+            args = new String[0];
+        }
         if (args.length == 0) {
             LogFile.configure();
             Bookkeeping.main(args);

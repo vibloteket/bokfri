@@ -193,7 +193,7 @@
             <phase>test</phase>
             <goals><goal>test</goal></goals>
             <configuration>
-              <argLine>@{argLine} -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8</argLine>
+              <argLine>@{argLine} -Djava.awt.headless=${awt.headless} -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8</argLine>
               <excludedGroups>integration</excludedGroups>
             </configuration>
           </execution>
@@ -204,7 +204,7 @@
             <phase>test</phase>
             <goals><goal>test</goal></goals>
             <configuration>
-              <argLine>@{argLine} -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8</argLine>
+              <argLine>@{argLine} -Djava.awt.headless=${awt.headless} -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8</argLine>
               <groups>integration</groups>
               <forkCount>1</forkCount>
               <reuseForks>false</reuseForks>
@@ -564,6 +564,7 @@
   </pluginRepositories>
 
   <properties>
+    <awt.headless>true</awt.headless>
     <argLine></argLine>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <timestamp>${maven.build.timestamp}</timestamp>

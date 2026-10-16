@@ -1,0 +1,72 @@
+name: Popup focus GUI regression
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/main/java/se/swedsoft/bookkeeping/gui/util/components/**'
+      - 'src/test/java/se/swedsoft/bookkeeping/gui/util/components/**'
+      - 'src/test/java/org/fribok/bookkeeping/GuiTestLookAndFeel.java'
+      - '.github/workflows/popup-focus.yml'
+      - 'pom.xml'
+
+permissions:
+  contents: read
+
+jobs:
+  gui:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install virtual display on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Observe legacy typing behavior (diagnostic, not a gate)
+        continue-on-error: true
+        shell: bash
+        env:
+          BOKFRI_POPUP_DIAGNOSTICS: '1'
+          BOKFRI_POPUP_LEGACY: '1'
+        run: |
+          set -o pipefail
+          PREFIX=()
+          if [[ "$RUNNER_OS" == "Linux" ]]; then PREFIX=(xvfb-run -a); fi
+          "${PREFIX[@]}" mvn -B test '-Dtest=SSTableComboBoxGuiTest#typingKeepsFocusAndFiltersWithoutFurtherClicks' \
+            -Dawt.headless=false -Dbokfri.guiTest.artifacts=target/gui-focus-artifacts 2>&1 | tee legacy-focus.log
+      - name: Test fixed dropdown with real mouse and keyboard
+        shell: bash
+        env:
+          BOKFRI_POPUP_DIAGNOSTICS: '1'
+        run: |
+          set -o pipefail
+          PREFIX=()
+          if [[ "$RUNNER_OS" == "Linux" ]]; then PREFIX=(xvfb-run -a); fi
+          "${PREFIX[@]}" mvn -B test -Dtest=SSTableComboBoxGuiTest \
+            -Dawt.headless=false -Dbokfri.guiTest.artifacts=target/gui-focus-artifacts 2>&1 | tee fixed-focus.log
+      - name: Collect metadata-only focus logs
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p target/gui-focus-artifacts/focus-logs
+          if [[ -d "$HOME/.bokfri/diagnostics" ]]; then
+            cp "$HOME"/.bokfri/diagnostics/popup-focus-*.log target/gui-focus-artifacts/focus-logs/
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: popup-focus-${{ matrix.os }}
+          path: |
+            target/gui-focus-artifacts/
+            target/surefire-reports/
+            legacy-focus.log
+            fixed-focus.log
