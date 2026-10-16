@@ -105,14 +105,15 @@ class SSTableComboBoxGuiTest {
     }
 
     @AfterEach
-    void cleanup() throws Exception {
+    void cleanup(org.junit.jupiter.api.TestInfo testInfo) throws Exception {
         if (frame != null) {
             if (System.getProperty("bokfri.guiTest.artifacts") != null) {
                 Path dir = Path.of(System.getProperty("bokfri.guiTest.artifacts"));
                 Files.createDirectories(dir);
                 javax.imageio.ImageIO.write(robot.createScreenCapture(new java.awt.Rectangle(
                         java.awt.Toolkit.getDefaultToolkit().getScreenSize())), "png",
-                        Files.createTempFile(dir, "dropdown-", ".png").toFile());
+                        dir.resolve((SSPopupFocusDiagnostics.isLegacyMode() ? "legacy-" : "fixed-")
+                                + testInfo.getTestMethod().orElseThrow().getName() + ".png").toFile());
             }
             onEdt(() -> {
                 MenuSelectionManager.defaultManager().clearSelectedPath();
@@ -170,7 +171,14 @@ class SSTableComboBoxGuiTest {
         robot.delay(600); // Separate the opening-button click from the table double-click.
         click(row);
         await(() -> combo.iTable.getSelectedRow() == 1);
-        click(row);
+        robot.delay(650); // Start a fresh, tightly timed double-click, independent of assertion latency.
+        robot.setAutoDelay(20);
+        for (int i = 0; i < 2; i++) {
+            robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+            robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+        }
+        robot.setAutoDelay(60);
+        robot.waitForIdle();
         await(() -> combo.getValue() == second && !combo.iPopup.isVisible());
     }
 
@@ -184,7 +192,14 @@ class SSTableComboBoxGuiTest {
             return p;
         });
         robot.mouseMove(point.x, point.y);
+        robot.delay(200);
         robot.mouseWheel(3);
+        robot.delay(500);
+        // macOS runners can have natural scrolling enabled; test movement in either direction.
+        if (onEdt(() -> ((javax.swing.JScrollPane) combo.iPopup.getComponent(0))
+                .getViewport().getViewPosition().y == 0)) {
+            robot.mouseWheel(-3);
+        }
         await(() -> ((javax.swing.JScrollPane) combo.iPopup.getComponent(0))
                 .getViewport().getViewPosition().y > 0 && combo.iTextField.isFocusOwner());
         key(KeyEvent.VK_1);
@@ -288,7 +303,9 @@ class SSTableComboBoxGuiTest {
             robot.delay(80);
         } while (System.nanoTime() < deadline);
         fail(onEdt(() -> "GUI condition timed out: text=" + combo.iTextField.getText()
-                + " popup=" + combo.iPopup.isVisible() + " focus="
+                + " popup=" + combo.iPopup.isVisible() + " selectedRow=" + combo.iTable.getSelectedRow()
+                + " viewport=" + ((javax.swing.JScrollPane) combo.iPopup.getComponent(0)).getViewport().getViewPosition()
+                + " rows=" + combo.iTable.getRowCount() + " focus="
                 + KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner()));
     }
 
