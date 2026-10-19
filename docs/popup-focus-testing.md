@@ -2,6 +2,15 @@
 
 Denna testversion ändrar den gemensamma sökbara listan som används för bland annat konton. Förslagen ska inte ta tangentbordsfokus från inmatningsfältet. Musval, scrollning och knappar ska fortfarande fungera. Konton väljs med Enter eller dubbelklick, som tidigare.
 
+## Ny testomgång efter återkopplingen 19 oktober
+
+- Markera en tom kontocell med **ett klick**, skriv hela kontonumret (t.ex. 1930) utan fler klick. Gör samma sak med en cell som har ett värde och med en cell vald via tangentbordet. Första siffran får inte markeras eller försvinna.
+- Prova även Debet/Kredit och ett heltalsfält: första siffran ska finnas kvar. Debet/Kredit är numeriska celler, inte fristående förslagslistor.
+- Med kontoförslagen öppna: första Escape ska bara stänga listan och lämna verifikationsdialogen öppen. Escape igen, utan lista, får använda dialogens vanliga stäng-/sparfråga.
+- På testdata: spara en verifikation och kontrollera direkt i listan och en nygenererad verifikationsrapport, **utan årbyte eller omstart**. Skapa också en kundfaktura och kontrollera listan direkt. Kontrollera att inget visas dubbelt.
+- Detta paket innehåller en ändring som uppdaterar dessa cachelistor efter lyckad lagring, utan att vänta på SQL-triggertråden. Det ändrar inte konteringsregler eller betalningsflöden. Sambandet med den exakta orsaken på användarens Mac behöver fortfarande bekräftas manuellt.
+- Fakturafönstrets storlek (#152), kontantmetoden (#153) och det äldre triggerundantaget (#151) är separata ärenden, inte lösta av denna testomgång.
+
 ## Säker testning
 
 - Använd Bokfri Dev, inte ersättning av den vanliga Bokfri-installationen.
@@ -55,7 +64,7 @@ Skicka `popup-focus-*.log` från båda körningarna och ange:
 - eventuella problem med musval, scrollning eller tangenter,
 - gärna en kort skärminspelning med bara testdata.
 
-Loggarna innehåller macOS-/Java-version, Look & Feel samt komponenttyper och tidpunkter för fokusbyten, popupöppning och avslutad cellredigering. De loggar inte tangentvärden, fältinnehåll, kontonummer, företagsnamn eller bokföringstext. Loggning är avstängd vid vanlig start.
+Loggarna innehåller även markör-/markeringspositioner (inte texten), macOS-/Java-version, Look & Feel samt komponenttyper och tidpunkter för fokusbyten, popupöppning och avslutad cellredigering. De loggar inte tangentvärden, fältinnehåll, kontonummer, företagsnamn eller bokföringstext. Loggning är avstängd vid vanlig start.
 
 ## Linux och Windows
 

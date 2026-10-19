@@ -66,9 +66,18 @@ public final class SSPopupFocusDiagnostics {
         initialize();
         if (output != null) {
             output.println(Instant.now() + " " + name + " component=" + describe(component)
-                    + " focus=" + describe(KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner()));
+                    + " focus=" + describe(KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner())
+                    + selection(component));
             output.flush();
         }
+    }
+
+    private static String selection(Component component) {
+        if (component instanceof javax.swing.text.JTextComponent field) {
+            return " caret=" + field.getCaretPosition() + " selection="
+                    + field.getSelectionStart() + ":" + field.getSelectionEnd();
+        }
+        return "";
     }
 
     private static boolean enabled() {

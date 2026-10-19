@@ -277,6 +277,7 @@ class SSTableComboBoxGuiTest {
     @SuppressWarnings("unchecked")
     void typingIntoSelectedAccountCellKeepsFirstCharacter() throws Exception {
         JTable table = accountTable();
+        onEdt(() -> { table.setValueAt(first, 0, 0); return null; });
         clickFirstCell(table);
         await(() -> table.isFocusOwner() && !table.isEditing());
         key(KeyEvent.VK_1);
@@ -322,6 +323,24 @@ class SSTableComboBoxGuiTest {
         await(() -> !table.isEditing());
         assertEquals(0, onEdt(() -> ((java.math.BigDecimal) table.getValueAt(0, 0))
                 .compareTo(new java.math.BigDecimal("1930"))));
+    }
+
+    @Test
+    void typingIntoSelectedIntegerCellReplacesOldValueWithoutLosingFirstCharacter() throws Exception {
+        JTable table = installTable(new se.swedsoft.bookkeeping.gui.util.table.editors.SSIntegerCellEditor());
+        onEdt(() -> { table.setValueAt(42, 0, 0); return null; });
+        clickFirstCell(table);
+        key(KeyEvent.VK_1);
+        javax.swing.JFormattedTextField field = onEdt(() ->
+                (javax.swing.JFormattedTextField) table.getEditorComponent());
+        onEdt(() -> { field.requestFocusInWindow(); return null; });
+        await(() -> field.isFocusOwner() && field.getSelectionStart() == field.getSelectionEnd());
+        key(KeyEvent.VK_9);
+        key(KeyEvent.VK_3);
+        key(KeyEvent.VK_0);
+        key(KeyEvent.VK_ENTER);
+        await(() -> !table.isEditing());
+        assertEquals(1930, onEdt(() -> table.getValueAt(0, 0)));
     }
 
     @Test

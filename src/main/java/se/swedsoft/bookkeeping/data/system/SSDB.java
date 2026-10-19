@@ -1286,6 +1286,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             iStatement.setObject(3, iCurrentYear.getId());
             iStatement.executeUpdate();
             iConnection.commit();
+            // Make read-after-save independent of the asynchronous HSQLDB trigger queue.
+            triggerAction("NEWVOUCHER", "TBL_VOUCHER", Integer.toString(iVoucher.getNumber()));
             iStatement.close();
         } catch (SQLException e) {
             LOG.error("Unexpected error", e);
@@ -1341,6 +1343,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             iStatement.setObject(3, iCurrentYear.getId());
             iStatement.executeUpdate();
             iConnection.commit();
+            // Make read-after-save independent of the asynchronous HSQLDB trigger queue.
+            triggerAction("EDITVOUCHER", "TBL_VOUCHER", Integer.toString(iVoucher.getNumber()));
             iStatement.close();
 
         } catch (SQLException e) {
@@ -1365,6 +1369,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             iStatement.setObject(2, iCurrentYear.getId());
             iStatement.executeUpdate();
             iConnection.commit();
+            // Make read-after-save independent of the asynchronous HSQLDB trigger queue.
+            triggerAction("DELETEVOUCHER", "TBL_VOUCHER", Integer.toString(iVoucher.getNumber()));
             iStatement.close();
 
         } catch (SQLException e) {
@@ -2620,6 +2626,14 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
 
     // //////////////////////////////////////////////////////////////////////////////////////
 
+    private static void refreshOnEventThread(Runnable refresh) {
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            refresh.run();
+        } else {
+            javax.swing.SwingUtilities.invokeLater(refresh);
+        }
+    }
+
     public synchronized void triggerAction(String iTriggerName, String iTableName, String iNumber) {
 
         /** Körs då en trigger triggas i databasen. De flesta triggers uppdaterar listan som
@@ -3043,8 +3057,12 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                         SSInvoiceMath.getSaldo(iInvoice));
                 if (SSCustomerMath.iInvoicesForCustomers.containsKey(
                         iInvoice.getCustomerNr())) {
-                    SSCustomerMath.iInvoicesForCustomers.get(iInvoice.getCustomerNr()).add(
-                            iInvoice);
+                    List<SSInvoice> customerInvoices =
+                            SSCustomerMath.iInvoicesForCustomers.get(iInvoice.getCustomerNr());
+                    // The queued trigger may repeat the synchronous post-commit notification.
+                    if (!customerInvoices.contains(iInvoice)) {
+                        customerInvoices.add(iInvoice);
+                    }
                 } else {
                     List<SSInvoice> iNumbers = new LinkedList<>();
 
@@ -3052,15 +3070,21 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                     SSCustomerMath.iInvoicesForCustomers.put(iInvoice.getCustomerNr(),
                             iNumbers);
                 }
-                if (SSOrderFrame.getInstance() != null) {
-                    SSOrderFrame.getInstance().updateFrame();
-                }
-                if (SSCustomerFrame.getInstance() != null) {
-                    SSCustomerFrame.getInstance().updateFrame();
-                }
-                if (SSInvoiceFrame.getInstance() != null) {
-                    SSInvoiceFrame.getInstance().updateFrame();
-                }
+                refreshOnEventThread(() -> {
+                    if (SSOrderFrame.getInstance() != null) {
+                        SSOrderFrame.getInstance().updateFrame();
+                    }
+                });
+                refreshOnEventThread(() -> {
+                    if (SSCustomerFrame.getInstance() != null) {
+                        SSCustomerFrame.getInstance().updateFrame();
+                    }
+                });
+                refreshOnEventThread(() -> {
+                    if (SSInvoiceFrame.getInstance() != null) {
+                        SSInvoiceFrame.getInstance().updateFrame();
+                    }
+                });
                 iInvoice = null;
             } else if (iTriggerName.equals("EDITINVOICE") && iInvoices != null) {
                 SSInvoice iInvoice = new SSInvoice();
@@ -3091,15 +3115,21 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                     }
                 }
                 iInvoice = null;
-                if (SSOrderFrame.getInstance() != null) {
-                    SSOrderFrame.getInstance().updateFrame();
-                }
-                if (SSCustomerFrame.getInstance() != null) {
-                    SSCustomerFrame.getInstance().updateFrame();
-                }
-                if (SSInvoiceFrame.getInstance() != null) {
-                    SSInvoiceFrame.getInstance().updateFrame();
-                }
+                refreshOnEventThread(() -> {
+                    if (SSOrderFrame.getInstance() != null) {
+                        SSOrderFrame.getInstance().updateFrame();
+                    }
+                });
+                refreshOnEventThread(() -> {
+                    if (SSCustomerFrame.getInstance() != null) {
+                        SSCustomerFrame.getInstance().updateFrame();
+                    }
+                });
+                refreshOnEventThread(() -> {
+                    if (SSInvoiceFrame.getInstance() != null) {
+                        SSInvoiceFrame.getInstance().updateFrame();
+                    }
+                });
             } else if (iTriggerName.equals("DELETEINVOICE") && iInvoices != null) {
                 SSInvoice iInvoice = new SSInvoice();
 
@@ -3107,12 +3137,16 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                 iInvoices.remove(iInvoice);
                 SSInvoiceMath.iSaldoMap.remove(iInvoice.getNumber());
                 iInvoice = null;
-                if (SSCustomerFrame.getInstance() != null) {
-                    SSCustomerFrame.getInstance().updateFrame();
-                }
-                if (SSInvoiceFrame.getInstance() != null) {
-                    SSInvoiceFrame.getInstance().updateFrame();
-                }
+                refreshOnEventThread(() -> {
+                    if (SSCustomerFrame.getInstance() != null) {
+                        SSCustomerFrame.getInstance().updateFrame();
+                    }
+                });
+                refreshOnEventThread(() -> {
+                    if (SSInvoiceFrame.getInstance() != null) {
+                        SSInvoiceFrame.getInstance().updateFrame();
+                    }
+                });
             } else if (iTriggerName.equals("NEWCREDITINVOICE") && iCreditInvoices != null) {
                 SSCreditInvoice iCreditInvoice = new SSCreditInvoice();
 
@@ -3735,9 +3769,11 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                 if (!iVouchers.contains(iVoucher)) {
                     iVouchers.add(iVoucher);
                 }
-                if (SSVoucherFrame.getInstance() != null) {
-                    SSVoucherFrame.getInstance().updateFrame();
-                }
+                refreshOnEventThread(() -> {
+                    if (SSVoucherFrame.getInstance() != null) {
+                        SSVoucherFrame.getInstance().updateFrame();
+                    }
+                });
                 iVoucher = null;
             } else if (iTriggerName.equals("EDITVOUCHER") && iVouchers != null) {
                 SSVoucher iVoucher = new SSVoucher(Integer.parseInt(iNumber));
@@ -3756,17 +3792,21 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
                 iVouchers.remove(iIndex);
                 iVouchers.add(iIndex, iVoucher);
                 iVoucher = null;
-                if (SSVoucherFrame.getInstance() != null) {
-                    SSVoucherFrame.getInstance().updateFrame();
-                }
+                refreshOnEventThread(() -> {
+                    if (SSVoucherFrame.getInstance() != null) {
+                        SSVoucherFrame.getInstance().updateFrame();
+                    }
+                });
             } else if (iTriggerName.equals("DELETEVOUCHER") && iVouchers != null) {
                 SSVoucher iVoucher = new SSVoucher(Integer.parseInt(iNumber));
 
                 iVouchers.remove(iVoucher);
                 iVoucher = null;
-                if (SSVoucherFrame.getInstance() != null) {
-                    SSVoucherFrame.getInstance().updateFrame();
-                }
+                refreshOnEventThread(() -> {
+                    if (SSVoucherFrame.getInstance() != null) {
+                        SSVoucherFrame.getInstance().updateFrame();
+                    }
+                });
             } else if (iTriggerName.equals("NEWOWNREPORT") && iOwnReports != null) {
                 SSOwnReport iOwnReport = new SSOwnReport();
 
@@ -5306,6 +5346,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             iStatement.setObject(3, iCurrentCompany.getId());
             iStatement.executeUpdate();
             iConnection.commit();
+            // Make read-after-save independent of the asynchronous HSQLDB trigger queue.
+            triggerAction("NEWINVOICE", "TBL_INVOICE", Integer.toString(iInvoice.getNumber()));
             iStatement.close();
 
         } catch (SQLException e) {
@@ -5332,6 +5374,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             iStatement.setObject(3, iCurrentCompany.getId());
             iStatement.executeUpdate();
             iConnection.commit();
+            // Make read-after-save independent of the asynchronous HSQLDB trigger queue.
+            triggerAction("EDITINVOICE", "TBL_INVOICE", Integer.toString(iInvoice.getNumber()));
             iStatement.close();
 
         } catch (SQLException e) {
@@ -5356,6 +5400,8 @@ public class SSDB {    private static final Logger LOG = LoggerFactory.getLogger
             iStatement.setObject(2, iCurrentCompany.getId());
             iStatement.executeUpdate();
             iConnection.commit();
+            // Make read-after-save independent of the asynchronous HSQLDB trigger queue.
+            triggerAction("DELETEINVOICE", "TBL_INVOICE", Integer.toString(iInvoice.getNumber()));
             iStatement.close();
 
         } catch (SQLException e) {
