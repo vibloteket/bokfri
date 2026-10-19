@@ -758,6 +758,7 @@ public class SSTableComboBox<T extends SSTableSearchable> extends JPanel {
             }
             SwingUtilities.invokeLater(() -> iComboBox.iTextField.requestFocusInWindow());
             iComboBox.iTextField.selectAll();
+            se.swedsoft.bookkeeping.gui.util.table.editors.SSCellEditorFocus.prepare(iComboBox.iTextField);
 
             return iComboBox;
         }

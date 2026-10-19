@@ -92,6 +92,7 @@ public class SSBigDecimalCellEditor extends AbstractCellEditor implements TableC
             iTextField.setValue(null);
             iTextField.selectAll();
         }
+        SSCellEditorFocus.prepare(iTextField);
         return iTextField;
     }
 
