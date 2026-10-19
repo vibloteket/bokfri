@@ -273,6 +273,106 @@ class SSTableComboBoxGuiTest {
         await(() -> !combo.iTextField.isFocusOwner());
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void typingIntoSelectedAccountCellKeepsFirstCharacter() throws Exception {
+        JTable table = accountTable();
+        clickFirstCell(table);
+        await(() -> table.isFocusOwner() && !table.isEditing());
+        key(KeyEvent.VK_1);
+        combo = onEdt(() -> (SSTableComboBox<Item>) table.getEditorComponent());
+        await(() -> combo.iTextField.isFocusOwner() && combo.iTextField.getText().equals("1")
+                && combo.iTextField.getSelectionStart() == combo.iTextField.getSelectionEnd());
+        key(KeyEvent.VK_9);
+        key(KeyEvent.VK_2);
+        key(KeyEvent.VK_0);
+        key(KeyEvent.VK_ENTER);
+        await(() -> !table.isEditing() && table.getValueAt(0, 0) == second);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void keyboardSelectedAccountCellKeepsFirstCharacter() throws Exception {
+        JTable table = accountTable();
+        onEdt(() -> { table.changeSelection(0, 0, false, false); table.requestFocusInWindow(); return null; });
+        await(table::isFocusOwner);
+        key(KeyEvent.VK_1);
+        combo = onEdt(() -> (SSTableComboBox<Item>) table.getEditorComponent());
+        key(KeyEvent.VK_9);
+        key(KeyEvent.VK_2);
+        key(KeyEvent.VK_0);
+        await(() -> combo.iTextField.getText().equals("1920"));
+        key(KeyEvent.VK_ENTER);
+        await(() -> !table.isEditing() && table.getValueAt(0, 0) == second);
+    }
+
+    @Test
+    void typingIntoSelectedDecimalCellKeepsFirstCharacter() throws Exception {
+        JTable table = installTable(new se.swedsoft.bookkeeping.gui.util.table.editors.SSBigDecimalCellEditor(2));
+        clickFirstCell(table);
+        key(KeyEvent.VK_1);
+        javax.swing.JFormattedTextField field = onEdt(() ->
+                (javax.swing.JFormattedTextField) table.getEditorComponent());
+        onEdt(() -> { field.requestFocusInWindow(); return null; });
+        await(() -> field.isFocusOwner() && field.getSelectionStart() == field.getSelectionEnd());
+        key(KeyEvent.VK_9);
+        key(KeyEvent.VK_3);
+        key(KeyEvent.VK_0);
+        key(KeyEvent.VK_ENTER);
+        await(() -> !table.isEditing());
+        assertEquals(0, onEdt(() -> ((java.math.BigDecimal) table.getValueAt(0, 0))
+                .compareTo(new java.math.BigDecimal("1930"))));
+    }
+
+    @Test
+    void escapeDismissesSuggestionsBeforeClosingRealDialog() throws Exception {
+        se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog dialog = onEdt(() -> {
+            var d = new se.swedsoft.bookkeeping.gui.util.dialogs.SSDialog(frame, "Real dialog dispatch", false);
+            frame.getContentPane().remove(combo);
+            d.add(combo);
+            d.setSize(600, 250);
+            d.setLocation(120, 120);
+            d.setVisible(true);
+            d.toFront();
+            return d;
+        });
+        click(combo.iTextField);
+        key(KeyEvent.VK_1);
+        await(() -> combo.iPopup.isVisible() && combo.iTextField.isFocusOwner());
+        key(KeyEvent.VK_ESCAPE);
+        await(() -> dialog.isShowing() && !combo.iPopup.isVisible() && combo.iTextField.isFocusOwner());
+        key(KeyEvent.VK_ESCAPE);
+        await(() -> !dialog.isShowing());
+    }
+
+    private JTable accountTable() throws Exception {
+        var editor = onEdt(() -> new SSTableComboBox.CellEditor<Item>(combo.getModel()));
+        onEdt(() -> { editor.setSearchColumns(0); return null; });
+        return installTable(editor);
+    }
+
+    private JTable installTable(javax.swing.table.TableCellEditor editor) throws Exception {
+        return onEdt(() -> {
+            JTable table = new JTable(new DefaultTableModel(new Object[][] {{null}}, new Object[] {"Account"}));
+            table.setCellSelectionEnabled(true);
+            table.setRowHeight(30);
+            table.getColumnModel().getColumn(0).setCellEditor(editor);
+            frame.getContentPane().remove(combo);
+            frame.getContentPane().add(table, BorderLayout.CENTER);
+            frame.validate();
+            return table;
+        });
+    }
+
+    private void clickFirstCell(JTable table) throws Exception {
+        click(onEdt(() -> {
+            Point p = table.getLocationOnScreen();
+            java.awt.Rectangle rect = table.getCellRect(0, 0, true);
+            p.translate(rect.x + rect.width / 2, rect.y + rect.height / 2);
+            return p;
+        }));
+    }
+
     private void key(int code) {
         robot.keyPress(code);
         robot.keyRelease(code);
