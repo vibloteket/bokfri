@@ -102,8 +102,7 @@ public class SSInvoiceDialog {
                 iSaveAction.actionPerformed(null);
             }
         });
-        iDialog.setSize(800, 600);
-        iDialog.setLocationRelativeTo(iMainFrame);
+        SSInvoiceDialogLayout.sizeAndPosition(iDialog, iMainFrame);
         iDialog.showDialog();
     }
 
@@ -168,8 +167,7 @@ public class SSInvoiceDialog {
                 iSaveAction.actionPerformed(null);
             }
         });
-        iDialog.setSize(800, 600);
-        iDialog.setLocationRelativeTo(iMainFrame);
+        SSInvoiceDialogLayout.sizeAndPosition(iDialog, iMainFrame);
         iDialog.setVisible();
     }
 
@@ -249,8 +247,7 @@ public class SSInvoiceDialog {
                 iSaveAction.actionPerformed(null);
             }
         });
-        iDialog.setSize(800, 600);
-        iDialog.setLocationRelativeTo(iMainFrame);
+        SSInvoiceDialogLayout.sizeAndPosition(iDialog, iMainFrame);
         iDialog.setVisible();
     }
 
@@ -336,8 +333,7 @@ public class SSInvoiceDialog {
             }
         });
 
-        iDialog.setSize(800, 600);
-        iDialog.setLocationRelativeTo(iMainFrame);
+        SSInvoiceDialogLayout.sizeAndPosition(iDialog, iMainFrame);
         iDialog.setVisible();
     }
 }
