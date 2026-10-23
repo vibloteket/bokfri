@@ -34,10 +34,14 @@ final class SSInvoiceDialogLayout {
         Dimension minimum = dialog.getMinimumSize();
         dialog.setMinimumSize(new Dimension(Math.min(minimum.width, usable.width),
                 Math.min(minimum.height, usable.height)));
-        dialog.setSize(Math.min(Math.max(800, preferred.width), usable.width),
-                Math.min(Math.max(600, preferred.height), usable.height));
-        dialog.setLocationRelativeTo(owner);
-        dialog.setBounds(clamp(dialog.getBounds(), usable));
+        int width = Math.min(Math.max(800, preferred.width), usable.width);
+        int height = Math.min(Math.max(600, preferred.height), usable.height);
+        Rectangle anchor = owner != null && owner.isShowing()
+                ? new Rectangle(owner.getLocationOnScreen(), owner.getSize()) : usable;
+        Rectangle desired = new Rectangle(anchor.x + (anchor.width - width) / 2,
+                anchor.y + (anchor.height - height) / 2, width, height);
+        // Send one final native reshape instead of intermediate off-screen size/location requests.
+        dialog.setBounds(clamp(desired, usable));
     }
 
     static Rectangle clamp(Rectangle desired, Rectangle usable) {

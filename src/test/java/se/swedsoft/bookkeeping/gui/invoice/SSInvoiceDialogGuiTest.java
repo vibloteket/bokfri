@@ -131,21 +131,37 @@ class SSInvoiceDialogGuiTest {
             SSInvoicePanel panel = new SSInvoicePanel(d);
             panel.setInvoice(sampleInvoice());
             d.add(panel.getPanel());
-            SSInvoiceDialogLayout.sizeAndPosition(d, null, new Rectangle(10, 30, 1000, 740));
+            SSInvoiceDialogLayout.sizeAndPosition(d, null);
             d.setVisible(true);
             return d;
         });
         JPanel root = onEdt(() -> (JPanel) dialog.getContentPane().getComponent(0));
-        for (Rectangle workArea : List.of(new Rectangle(10, 30, 1000, 740),
-                new Rectangle(20, 40, 640, 440))) {
+        // Keep simulated work areas inside the physical work area. Cocoa constrains
+        // windows/shadows near screen edges, so an invented 1000x740 area may be
+        // larger than a runner's real work area and cannot be asserted pixel-exactly.
+        Rectangle normalArea = onEdt(() -> {
+            var configuration = dialog.getGraphicsConfiguration();
+            Rectangle screen = configuration.getBounds();
+            var insets = java.awt.Toolkit.getDefaultToolkit().getScreenInsets(configuration);
+            Rectangle area = new Rectangle(screen.x + insets.left + 32, screen.y + insets.top + 32,
+                    screen.width - insets.left - insets.right - 64,
+                    screen.height - insets.top - insets.bottom - 64);
+            area.width = Math.min(1000, area.width);
+            area.height = Math.min(740, area.height);
+            return area;
+        });
+        Rectangle smallArea = new Rectangle(normalArea.x + 8, normalArea.y + 8,
+                Math.min(640, normalArea.width - 16), Math.min(440, normalArea.height - 16));
+        for (Rectangle workArea : List.of(normalArea, smallArea)) {
             onEdt(() -> {
                 SSInvoiceDialogLayout.sizeAndPosition(dialog, null, workArea);
                 dialog.validate();
-                assertTrue(workArea.contains(dialog.getBounds()), dialog.getBounds().toString());
                 assertTrue(dialog.getMinimumSize().width <= workArea.width);
                 assertTrue(dialog.getMinimumSize().height <= workArea.height);
                 return null;
             });
+            // Native configure/move events can arrive after the Swing layout task.
+            await(() -> workArea.contains(dialog.getBounds()));
             assertAllTabsAndButtonsFit(dialog, root);
             screenshot(dialog, "form-" + workArea.width + "x" + workArea.height);
         }
