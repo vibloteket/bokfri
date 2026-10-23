@@ -34,7 +34,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PREFIX=()
+          PREFIX=(env)
           if [[ "$RUNNER_OS" == "Linux" ]]; then PREFIX=(xvfb-run -a); fi
           run_case() {
             local label="$1" scale="$2"
