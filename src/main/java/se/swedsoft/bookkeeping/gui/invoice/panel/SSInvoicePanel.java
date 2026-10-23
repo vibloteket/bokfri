@@ -373,6 +373,21 @@ public class SSInvoicePanel {
         iInputVerifier.add(iCustomerName);
         iSavecustomerandproducts.setSelected(true);
         addKeyListeners();
+        installScrollableLayout();
+    }
+
+    private void installScrollableLayout() {
+        // Keep the generated form intact, but never let its minimum grid size push
+        // Save/Cancel below the window. Only the form scrolls on smaller displays.
+        JPanel form = iPanel;
+        form.remove(iButtonPanel);
+        JScrollPane scroll = new JScrollPane(new SSInvoiceContent(form));
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setMinimumSize(new Dimension(0, 4 * scroll.getFontMetrics(scroll.getFont()).getHeight()));
+        iPanel = new JPanel(new BorderLayout(0, 4));
+        iPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        iPanel.add(scroll, BorderLayout.CENTER);
+        iPanel.add(iButtonPanel, BorderLayout.SOUTH);
     }
 
     public void dispose() {
