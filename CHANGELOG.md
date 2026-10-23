@@ -12,6 +12,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Fixed
+- Preserve the first character when typing starts account or numeric cell editing on macOS; Escape dismisses suggestions before closing their dialog.
+- Refresh voucher and customer-invoice caches immediately after a successful save/edit/delete rather than depending on the background SQL trigger queue; keep duplicate invoice notifications idempotent and refresh the affected windows on the Swing event thread.
+- Keep keyboard focus in searchable dropdown fields when account and other suggestion lists open, including on macOS. Preserve mouse selection, scrolling, dropdown buttons and add/edit/delete menus; add cross-platform GUI regression tests and opt-in, metadata-only focus diagnostics with a legacy comparison mode.
+
 ### Changed
 
 - Fixed the SIE import voucher-number existence check: an empty `Optional` no longer counts

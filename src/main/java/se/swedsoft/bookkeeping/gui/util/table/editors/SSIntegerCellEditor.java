@@ -93,6 +93,7 @@ public class SSIntegerCellEditor extends AbstractCellEditor implements TableCell
             iTextField.setValue(null);
             iTextField.selectAll();
         }
+        SSCellEditorFocus.prepare(iTextField);
         return iTextField;
     }
 

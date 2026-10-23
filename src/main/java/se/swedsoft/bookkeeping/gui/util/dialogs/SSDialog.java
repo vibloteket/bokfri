@@ -91,6 +91,7 @@ public class SSDialog extends JDialog implements KeyEventDispatcher, ActionListe
 
     @Override
     public void dispose() {
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
         removeAll();
         getContentPane().removeAll();
         super.dispose();
@@ -254,24 +255,24 @@ public class SSDialog extends JDialog implements KeyEventDispatcher, ActionListe
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-            iModalResult = JOptionPane.CLOSED_OPTION;
-
-            if (KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow()
-                    != this) {
-                return false;
-            }
-
-            if (e.getID() == KeyEvent.KEY_PRESSED) {
-                processWindowEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
-            }
-
-            KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(
-                    this);
-
-            return true;
+        if (e.getKeyCode() != KeyEvent.VK_ESCAPE || e.getID() != KeyEvent.KEY_PRESSED
+                || KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow() != this) {
+            return false;
         }
-        return false;
+        // Dispatchers run before component bindings: Escape must dismiss suggestions first.
+        for (MenuElement element : MenuSelectionManager.defaultManager().getSelectedPath()) {
+            if (element instanceof JPopupMenu popup && popup.isVisible()
+                    && popup.getInvoker() != null
+                    && SwingUtilities.getWindowAncestor(popup.getInvoker()) == this) {
+                MenuSelectionManager.defaultManager().clearSelectedPath();
+                popup.setVisible(false);
+                return true;
+            }
+        }
+        iModalResult = JOptionPane.CLOSED_OPTION;
+        processWindowEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
+        return true;
     }
 
     @Override
