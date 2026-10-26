@@ -6,6 +6,7 @@ import se.swedsoft.bookkeeping.calc.data.SSAccountGroup;
 import se.swedsoft.bookkeeping.calc.data.SSAccountSchema;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
@@ -36,6 +37,8 @@ public class SSResultPrinter extends SSPrinter {
 
     boolean iShowPrevYear;
 
+    private SSResultCalculator.Context iContext;
+
     /**
      *
      * @param pFrom
@@ -56,6 +59,28 @@ public class SSResultPrinter extends SSPrinter {
      * @param pShowPrevYear
      */
     public SSResultPrinter(SSNewAccountingYear pYearData, LocalDate pFrom, LocalDate pTo, boolean pShowBudget, boolean pShowPrevYear) {
+        initialize(pYearData, pFrom, pTo, pShowBudget, pShowPrevYear);
+    }
+
+    /**
+     * Creates an income statement from explicit company-scoped accounting data.
+     * @param company company for the header
+     * @param year hydrated selected year, including its budget
+     * @param from inclusive start
+     * @param to inclusive end
+     * @param showBudget compare the period with its budget
+     * @param showPreviousYear compare the period with the same dates one year earlier
+     * @param context hydrated years and dimensions of the selected company
+     */
+    public SSResultPrinter(SSNewCompany company, SSNewAccountingYear year, LocalDate from, LocalDate to,
+            boolean showBudget, boolean showPreviousYear, SSResultCalculator.Context context) {
+        super(company, year);
+        iContext = Objects.requireNonNull(context, "context");
+        initialize(year, from, to, showBudget, showPreviousYear);
+    }
+
+    private void initialize(SSNewAccountingYear pYearData, LocalDate pFrom, LocalDate pTo,
+            boolean pShowBudget, boolean pShowPrevYear) {
         iYearData = pYearData;
         iDateFrom = pFrom;
         iDateTo = pTo;
@@ -135,7 +160,11 @@ public class SSResultPrinter extends SSPrinter {
         SSResultCalculator iCalculator = getCalculator();
 
         // Calculate all fields
-        iCalculator.calculate();
+        if (iContext == null) {
+            iCalculator.calculate();
+        } else {
+            iCalculator.calculate(iContext);
+        }
 
         // Get the columns, this differes depending on what we are printing
         getColumns(iCalculator);
