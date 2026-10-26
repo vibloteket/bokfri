@@ -122,6 +122,7 @@ import se.swedsoft.bookkeeping.print.report.SSCustomerRevenuePrinter;
 import se.swedsoft.bookkeeping.print.report.SSInpaymentListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSInvoiceListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSMainBookPrinter;
+import se.swedsoft.bookkeeping.print.report.SSBalancePrinter;
 import se.swedsoft.bookkeeping.print.report.SSOutpaymentListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSProductListPrinter;
 import se.swedsoft.bookkeeping.print.report.SSProductRevenuePrinter;
@@ -858,7 +859,7 @@ public class BokfriCli implements Runnable {
         @Option(names = "--from") java.time.LocalDate from;
         @Option(names = "--to") java.time.LocalDate to;
         public Integer call() {
-            return withReport(root, (service, context, year, runtime) -> {
+            return withReport(root, (service, context, company, year, runtime) -> {
                 ReportPeriod period = reportPeriod(year, from, to);
                 var report = service.trialBalance(period.from(), period.to());
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -1057,7 +1058,7 @@ public class BokfriCli implements Runnable {
         @Option(names = "--overwrite", description = "Replace an existing output file")
         boolean overwrite;
         public Integer call() {
-            return withReport(root, (service, context, year, runtime) -> {
+            return withReport(root, (service, context, company, year, runtime) -> {
                 java.time.LocalDate selectedDate = date == null ? year.getLocalTo() : date;
                 var report = service.balanceSheet(selectedDate);
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -1069,10 +1070,8 @@ public class BokfriCli implements Runnable {
                 result.put("difference", money(report.difference()));
                 result.put("selection", context);
                 if (output != null) {
-                    requireLegacyStorageForPdf(runtime, "balance-sheet");
-                    ReportService reports = new ReportService();
-                    addPdf(result, reports.exportPdf(reports.renderBalance(
-                            year, year.getLocalFrom(), selectedDate), output, overwrite));
+                    addPdf(result, exportPdf(new SSBalancePrinter(company, year,
+                            year.getLocalFrom(), selectedDate), output, overwrite));
                 }
                 return result;
             }, BokfriCli::balanceSheetText);
@@ -1089,7 +1088,7 @@ public class BokfriCli implements Runnable {
         @Option(names = "--overwrite", description = "Replace an existing output file")
         boolean overwrite;
         public Integer call() {
-            return withReport(root, (service, context, year, runtime) -> {
+            return withReport(root, (service, context, company, year, runtime) -> {
                 ReportPeriod period = reportPeriod(year, from, to);
                 var report = service.incomeStatement(period.from(), period.to());
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -1119,7 +1118,7 @@ public class BokfriCli implements Runnable {
         @Option(names = "--overwrite", description = "Replace an existing output file")
         boolean overwrite;
         public Integer call() {
-            return withReport(root, (service, context, year, runtime) -> {
+            return withReport(root, (service, context, company, year, runtime) -> {
                 ReportPeriod period = reportPeriod(year, from, to);
                 var report = service.accountLedger(account, period.from(), period.to());
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -1132,12 +1131,11 @@ public class BokfriCli implements Runnable {
                 result.put("closing", money(report.closing()));
                 result.put("selection", context);
                 if (output != null) {
-                    requireLegacyStorageForPdf(runtime, "general-ledger");
                     SSAccount selectedAccount = year.getAccounts().stream()
                             .filter(item -> item.getNumber() == account).findFirst()
                             .orElseThrow(() -> new CliException("ACCOUNT_NOT_FOUND",
                                     "No account has number " + account));
-                    addPdf(result, exportPdf(new SSMainBookPrinter(year, selectedAccount,
+                    addPdf(result, exportPdf(new SSMainBookPrinter(company, year, selectedAccount,
                             selectedAccount, period.from(), period.to(), null, null),
                             output, overwrite));
                 }
@@ -1153,7 +1151,7 @@ public class BokfriCli implements Runnable {
         @Option(names = "--date") java.time.LocalDate date;
         public Integer call() {
             BokfriCli root = command.parent;
-            return withReport(root, (service, context, year, runtime) -> {
+            return withReport(root, (service, context, company, year, runtime) -> {
                 java.time.LocalDate selectedDate = date == null ? year.getLocalTo() : date;
                 var report = service.accountBalance(account, selectedDate);
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -1182,7 +1180,7 @@ public class BokfriCli implements Runnable {
     @FunctionalInterface
     interface ReportOperation {
         Map<String, Object> run(FinancialReportService service, Map<String, Object> context,
-                SSNewAccountingYear year, BokfriRuntime runtime) throws Exception;
+                SSNewCompany company, SSNewAccountingYear year, BokfriRuntime runtime) throws Exception;
     }
 
     @FunctionalInterface
@@ -1198,7 +1196,7 @@ public class BokfriCli implements Runnable {
             SSNewAccountingYear year = runtime.hydrateYear(
                     runtime.selectYear(company, context.yearId()));
             Map<String, Object> result = operation.run(new FinancialReportService(year),
-                    selectedContext(context, company, year), year, runtime);
+                    selectedContext(context, company, year), company, year, runtime);
             root.output(result, textFormatter.format(result));
             return 0;
         } catch (IllegalArgumentException exception) {
@@ -1209,8 +1207,8 @@ public class BokfriCli implements Runnable {
     }
 
     /**
-     * PDF report export still runs through the legacy printers, which resolve the company and
-     * voucher state from the SSDB singleton; on normalized storage it fails fast instead.
+     * Unported PDF reports still resolve company or voucher state through the SSDB singleton;
+     * on normalized storage these reports fail fast instead.
      */
     private static void requireLegacyStorageForPdf(BokfriRuntime runtime, String command) {
         if (runtime.isNormalized()) {

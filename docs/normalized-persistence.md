@@ -260,6 +260,23 @@ A mismatch aborts activation and reports the first differing domain plus counts/
 
 Each implementation slice requires `mvn verify`, representative old databases, empty/minimal/multi-company/multi-year fixtures, interruption tests and packaged Linux/Windows/macOS startup checks.
 
+## Financial PDF runtime support
+
+The CLI `balance-sheet --output` and `general-ledger --account ... --output` paths
+support normalized data format 3. They hydrate the selected year's accounts,
+opening balances and vouchers, then pass the selected company and year explicitly
+to the existing report printers. The shared printer header obtains the company
+name and maximum voucher number from those arguments, not the SSDB singleton.
+Existing legacy constructors retain their previous behavior.
+
+The same Jasper templates and accounting calculators are used for both formats.
+Regression tests compare extracted legacy and normalized PDF text for a bounded
+period, verify overwrite protection, check empty-year rendering and unsorted
+voucher-number headers, and ensure normalized exports leave legacy selection empty.
+Income-statement and VAT PDFs, and other unported PDF commands, remain unsupported
+on normalized storage. This slice does not activate normalized storage in the GUI
+or retire legacy persistence; issue #75 remains open.
+
 ## Definition of done for issue #75
 
 Issue #75 is complete only when new databases contain no domain `OTHER` columns, supported legacy databases migrate through staging with verified rollback artifacts, every supported persisted domain is represented explicitly, normal GUI/CLI runtime does not deserialize legacy domain objects, and accounting behavior plus relationships match across migration fixtures on all supported platforms.

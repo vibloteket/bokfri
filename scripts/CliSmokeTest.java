@@ -52,9 +52,37 @@ public final class CliSmokeTest {
             runSieImportFlow(temporary);
             runBackupFlow(temporary);
             runErrorFlow(temporary);
+            runNormalizedFinancialPdfFlow(temporary);
             System.out.println("Bokfri CLI black-box smoke test passed: " + launcher.getFileName());
         } finally {
             deleteRecursively(temporary);
+        }
+    }
+
+    private static void runNormalizedFinancialPdfFlow(Path temporary) throws Exception {
+        String company = Files.readString(temporary.resolve("created-company.txt"));
+        String year = Files.readString(temporary.resolve("created-year.txt"));
+        cli("--format", "json", "database", "normalize").success();
+        Result status = cli("--format", "json", "database", "status");
+        status.success();
+        require(status.stdout.contains("\"format\":3"), "database was not normalized");
+        Result accounts = cli("--company-id", company, "--year-id", year,
+                "--format", "json", "account", "list");
+        accounts.success();
+        String account = Integer.toString(firstInt(accounts.stdout, "number"));
+        for (String report : List.of("balance-sheet", "general-ledger")) {
+            Path pdf = temporary.resolve("normalized-" + report + ".pdf");
+            List<String> args = new ArrayList<>(List.of("--company-id", company, "--year-id", year,
+                    "--format", "json", report, "--output", pdf.toString()));
+            if (report.equals("general-ledger")) {
+                args.addAll(List.of("--account", account));
+            }
+            Result exported = cli(args.toArray(String[]::new));
+            exported.success();
+            exported.jsonObject();
+            byte[] bytes = Files.readAllBytes(pdf);
+            require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
+                    report + " did not produce a PDF on normalized storage");
         }
     }
 

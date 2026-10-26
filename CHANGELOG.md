@@ -12,6 +12,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Added
+
+- Balance-sheet and general-ledger PDF exports now support normalized storage (data format 3). Report headers use the explicitly selected company and year's maximum voucher number, and report calculations use hydrated accounting data without starting or selecting the legacy SSDB singleton. Existing legacy constructors remain compatible; income-statement and VAT PDF exports remain explicitly unsupported on normalized storage.
+
 ### Fixed
 - Size all customer-invoice dialogs from their populated layout and available monitor work area instead of forcing 800×600. Keep Save/Cancel outside a scrollable form so they remain accessible on small displays and with larger fonts.
 - Preserve the first character when typing starts account or numeric cell editing on macOS; Escape dismisses suggestions before closing their dialog.

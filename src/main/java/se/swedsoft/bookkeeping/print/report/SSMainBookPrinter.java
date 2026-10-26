@@ -4,6 +4,7 @@ package se.swedsoft.bookkeeping.print.report;
 import se.swedsoft.bookkeeping.calc.SSMainBookCalculator;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSNewProject;
 import se.swedsoft.bookkeeping.data.SSNewResultUnit;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -61,6 +62,30 @@ public class SSMainBookPrinter extends SSPrinter {
      * @param iResultUnit
      */
     public SSMainBookPrinter(SSNewAccountingYear pYearData, SSAccount pAccountFrom, SSAccount pAccountTo, LocalDate pDateFrom, LocalDate pDateTo, SSNewProject iProject, SSNewResultUnit iResultUnit) {
+        initialize(pYearData, pAccountFrom, pAccountTo, pDateFrom, pDateTo, iProject, iResultUnit);
+    }
+
+    /**
+     * Creates a report from explicit company/year data, without the SSDB singleton.
+     * The year must contain explicit accounts, opening balances and vouchers.
+     * @param company company for the report header
+     * @param pYearData hydrated accounting year
+     * @param pAccountFrom first account
+     * @param pAccountTo last account
+     * @param pDateFrom inclusive start
+     * @param pDateTo inclusive end
+     * @param iProject optional project filter
+     * @param iResultUnit optional result-unit filter
+     */
+    public SSMainBookPrinter(SSNewCompany company, SSNewAccountingYear pYearData,
+            SSAccount pAccountFrom, SSAccount pAccountTo, LocalDate pDateFrom, LocalDate pDateTo,
+            SSNewProject iProject, SSNewResultUnit iResultUnit) {
+        super(company, pYearData);
+        initialize(pYearData, pAccountFrom, pAccountTo, pDateFrom, pDateTo, iProject, iResultUnit);
+    }
+
+    private void initialize(SSNewAccountingYear pYearData, SSAccount pAccountFrom, SSAccount pAccountTo,
+            LocalDate pDateFrom, LocalDate pDateTo, SSNewProject iProject, SSNewResultUnit iResultUnit) {
         iYearData = pYearData;
         iAccountFrom = pAccountFrom;
         iAccountTo = pAccountTo;
