@@ -983,7 +983,36 @@ public class BokfriCli implements Runnable {
         @Option(names="--to",required=true) java.time.LocalDate to;
         @Option(names="--output",required=true) java.nio.file.Path output;
         @Option(names="--overwrite") boolean overwrite;
-        public Integer call(){ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSCustomerRevenuePrinter(new java.util.ArrayList<>(r.database().getCustomers()),from,to),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("selection",selectedContext(c,co,y));root.output(x,"Created customer-revenue PDF "+pdf);return 0;}catch(Exception e){throw databaseFailure(e);}}}
+
+        public Integer call() {
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                if (!runtime.isNormalized()) runtime.database().init(false);
+                List<SSCustomer> customers = new java.util.ArrayList<>(runtime.getCustomers());
+                customers.sort(Comparator.comparing(SSCustomer::getNumber, Comparator.nullsLast(String::compareTo)));
+                SSCustomerRevenuePrinter printer;
+                if (runtime.isNormalized()) {
+                    printer = new SSCustomerRevenuePrinter(company, runtime.hydrateYear(year),
+                            customers, runtime.getInvoices(), runtime.getCreditInvoices(), from, to);
+                } else {
+                    printer = new SSCustomerRevenuePrinter(customers, from, to);
+                }
+                java.nio.file.Path pdf = exportPdf(printer, output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("from", from);
+                result.put("to", to);
+                result.put("output", pdf.toString());
+                result.put("bytes", Files.size(pdf));
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created customer-revenue PDF " + pdf);
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
 
     @Command(mixinStandardHelpOptions = true, name = "product-revenue",
             description = "Generate product revenue for a period")
@@ -1013,7 +1042,36 @@ public class BokfriCli implements Runnable {
         @Option(names="--to",required=true) java.time.LocalDate to;
         @Option(names="--output",required=true) java.nio.file.Path output;
         @Option(names="--overwrite") boolean overwrite;
-        public Integer call(){ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSSupplierRevenuePrinter(new java.util.ArrayList<>(r.database().getSuppliers()),from,to),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("from",from);x.put("to",to);x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("selection",selectedContext(c,co,y));root.output(x,"Created supplier-revenue PDF "+pdf);return 0;}catch(Exception e){throw databaseFailure(e);}}}
+
+        public Integer call() {
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                if (!runtime.isNormalized()) runtime.database().init(false);
+                List<SSSupplier> suppliers = new java.util.ArrayList<>(runtime.getSuppliers());
+                suppliers.sort(Comparator.comparing(SSSupplier::getNumber, Comparator.nullsLast(String::compareTo)));
+                SSSupplierRevenuePrinter printer;
+                if (runtime.isNormalized()) {
+                    printer = new SSSupplierRevenuePrinter(company, runtime.hydrateYear(year),
+                            suppliers, runtime.getSupplierInvoices(), runtime.getSupplierCreditInvoices(), from, to);
+                } else {
+                    printer = new SSSupplierRevenuePrinter(suppliers, from, to);
+                }
+                java.nio.file.Path pdf = exportPdf(printer, output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("from", from);
+                result.put("to", to);
+                result.put("output", pdf.toString());
+                result.put("bytes", Files.size(pdf));
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created supplier-revenue PDF " + pdf);
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
 
     @Command(mixinStandardHelpOptions = true, name = "sales-report",
             description = "Generate the sales report for a period")

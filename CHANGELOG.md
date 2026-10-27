@@ -14,6 +14,7 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Added
 
+- Customer- and supplier-revenue PDFs now support normalized storage (data format 3), using explicit company/year headers, invoice/credit snapshots and monthly subreport inputs. Existing currency, discount and credit calculations are preserved. Both CLI backends now order register rows consistently by business number; GUI constructors retain their existing behavior. The pre-existing partial-month visibility issue is tracked separately in #158.
 - VAT report and VAT control PDF exports now support normalized storage (data format 3), including the VAT report's nested subreport. Explicit company/year headers and account aggregation avoid the legacy singleton while preserving VAT boxes, rounding and control start-index/fallback semantics. Legacy GUI printers and service-based VAT settlement behavior are unchanged.
 - Income-statement PDF export now supports normalized storage (data format 3), using explicit company-scoped years, dimensions and the selected budget. Existing period/year, previous-year and budget report calculations are preserved without singleton-backed row resolution.
 - Balance-sheet and general-ledger PDF exports now support normalized storage (data format 3). Report headers use the explicitly selected company and year's maximum voucher number, and report calculations use hydrated accounting data without starting or selecting the legacy SSDB singleton. Existing legacy constructors remain compatible.
