@@ -264,8 +264,9 @@ Each implementation slice requires `mvn verify`, representative old databases, e
 
 The CLI `balance-sheet --output`, `income-statement --output`,
 `general-ledger --account ... --output`, `vat report --output`,
-`vat control --output`, `customer-revenue --from ... --to ... --output` and
-`supplier-revenue --from ... --to ... --output` paths
+`vat control --output`, `customer-revenue --from ... --to ... --output`,
+`supplier-revenue --from ... --to ... --output` and
+`product-revenue --from ... --to ... --output` paths
 support normalized data format 3. They hydrate the selected year's accounts,
 opening balances and vouchers, then pass the selected company and year explicitly
 to the existing report printers. The shared printer header obtains the company
@@ -304,7 +305,7 @@ settlement. Explicit rows whose singleton-backed helpers throw cover populated
 report/subreport rendering and aggregation. Empty-year/header coverage and the
 cross-platform assembled/packaged CLI smoke flow include both VAT PDFs.
 
-Customer- and supplier-revenue reports receive explicit register, invoice and
+Customer-, supplier- and product-revenue reports receive explicit register, invoice and
 credit-invoice lists from the selected company's runtime repositories. Both the
 outer printers and monthly subreports use explicit company/year headers. Invoice
 dates, not the selected accounting-year boundary, determine inclusion, matching
@@ -318,7 +319,12 @@ Revenue tests check exact monthly data-source totals, credits-only and inactive
 registers, empty reports, source immutability, boundary dates and currency rates.
 CLI PDF text matches legacy output for populated/partial/cross-year periods, with
 a second company using the same register numbers; overwrite and singleton isolation
-checks are included. The assembled/packaged smoke flow exports both reports.
+checks are included. The assembled/packaged smoke flow exports all three reports.
+Product revenue sums discounted sale rows by their stored product number, converts
+using each document's currency rate and subtracts matching credit rows; it does not
+resolve live product objects or use current register prices. Explicit tests reject
+implicit product lookups and cover monthly separation, leap day, year rollover,
+missing row amounts/product numbers and caller-supplied register order.
 
 The existing first-month visibility behavior is deliberately preserved in this
 persistence slice: a period beginning mid-month can hide that month and its total.
