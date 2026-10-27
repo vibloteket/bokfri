@@ -1680,12 +1680,15 @@ class BokfriCliTest {
                 "account", "balance", Integer.toString(firstAccount))).stdout());
 
         java.util.Map<String, String> legacyPdfText = new java.util.LinkedHashMap<>();
-        for (String report : java.util.List.of("balance-sheet", "general-ledger")) {
+        for (String report : java.util.List.of("balance-sheet", "general-ledger", "income-statement")) {
             Path pdf = temporaryDirectory.resolve("legacy-" + report + ".pdf");
             Result exported = report.equals("general-ledger")
                     ? execute(concat(legacyContext, report, "--account", Integer.toString(firstAccount),
                             "--from", yearFrom, "--to", yearFrom, "--output", pdf.toString()))
-                    : execute(concat(legacyContext, report, "--date", yearFrom, "--output", pdf.toString()));
+                    : report.equals("balance-sheet")
+                            ? execute(concat(legacyContext, report, "--date", yearFrom, "--output", pdf.toString()))
+                            : execute(concat(legacyContext, report, "--from", yearFrom, "--to", yearFrom,
+                                    "--output", pdf.toString()));
             assertThat(exported.exitCode()).as(exported.stderr()).isZero();
             legacyPdfText.put(report, pdfText(pdf));
         }
@@ -1735,7 +1738,10 @@ class BokfriCliTest {
             Result exported = report.equals("general-ledger")
                     ? execute(concat(context, report, "--account", Integer.toString(firstAccount),
                             "--from", yearFrom, "--to", yearFrom, "--output", pdf.toString()))
-                    : execute(concat(context, report, "--date", yearFrom, "--output", pdf.toString()));
+                    : report.equals("balance-sheet")
+                            ? execute(concat(context, report, "--date", yearFrom, "--output", pdf.toString()))
+                            : execute(concat(context, report, "--from", yearFrom, "--to", yearFrom,
+                                    "--output", pdf.toString()));
             assertThat(exported.exitCode()).as(exported.stderr()).isZero();
             assertThat(pdfText(pdf)).isEqualTo(legacyPdfText.get(report));
             byte[] original = Files.readAllBytes(pdf);
@@ -1751,12 +1757,6 @@ class BokfriCliTest {
             assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
             assertThat(SSDB.getInstance().getCurrentYear()).isNull();
         }
-        Path unsupported = temporaryDirectory.resolve("normalized-income.pdf");
-        Result pdf = execute(concat(context, "income-statement", "--output", unsupported.toString()));
-        assertThat(pdf.exitCode()).isEqualTo(1);
-        assertThat(new ObjectMapper().readTree(pdf.stderr()).path("error").path("code").asText())
-                .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
-        assertThat(Files.exists(unsupported)).isFalse();
     }
 
     @Test

@@ -70,7 +70,7 @@ public final class CliSmokeTest {
                 "--format", "json", "account", "list");
         accounts.success();
         String account = Integer.toString(firstInt(accounts.stdout, "number"));
-        for (String report : List.of("balance-sheet", "general-ledger")) {
+        for (String report : List.of("balance-sheet", "general-ledger", "income-statement")) {
             Path pdf = temporary.resolve("normalized-" + report + ".pdf");
             List<String> args = new ArrayList<>(List.of("--company-id", company, "--year-id", year,
                     "--format", "json", report, "--output", pdf.toString()));

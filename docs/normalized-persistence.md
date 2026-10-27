@@ -262,7 +262,8 @@ Each implementation slice requires `mvn verify`, representative old databases, e
 
 ## Financial PDF runtime support
 
-The CLI `balance-sheet --output` and `general-ledger --account ... --output` paths
+The CLI `balance-sheet --output`, `income-statement --output` and
+`general-ledger --account ... --output` paths
 support normalized data format 3. They hydrate the selected year's accounts,
 opening balances and vouchers, then pass the selected company and year explicitly
 to the existing report printers. The shared printer header obtains the company
@@ -273,9 +274,21 @@ The same Jasper templates and accounting calculators are used for both formats.
 Regression tests compare extracted legacy and normalized PDF text for a bounded
 period, verify overwrite protection, check empty-year rendering and unsorted
 voucher-number headers, and ensure normalized exports leave legacy selection empty.
-Income-statement and VAT PDFs, and other unported PDF commands, remain unsupported
-on normalized storage. This slice does not activate normalized storage in the GUI
-or retire legacy persistence; issue #75 remains open.
+Income statements additionally load all years and dimensions of the selected
+company and the selected year's budget through the normalized repositories. The
+explicit calculator context preserves the legacy same-calendar-period-minus-one-year
+comparison, including leap days and non-calendar fiscal years; it does not assume
+that a single adjacent accounting year contains the comparison period. Account
+numbers resolve against the selected account plan and validity is checked without
+the singleton-backed voucher-row accessors. Existing GUI/legacy constructors still
+use the original path. Tests compare legacy and normalized default, budget and
+previous-year PDFs with a second company present, and exercise crossed/invalid rows
+and empty/missing comparison periods. The CLI retains its existing report options;
+this does not add comparison flags.
+
+VAT PDFs and other unported PDF commands remain unsupported on normalized storage.
+This slice does not activate normalized storage in the GUI or retire legacy
+persistence; issue #75 remains open.
 
 ## Definition of done for issue #75
 

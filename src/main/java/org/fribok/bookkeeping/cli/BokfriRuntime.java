@@ -761,6 +761,26 @@ public final class BokfriRuntime implements AutoCloseable {
                 company, year, previous, getProjects(), getResultUnits());
     }
 
+    /**
+     * Hydrates company-scoped years and the selected budget for normalized income PDFs.
+     * All company years are retained to preserve legacy calendar-date comparison semantics,
+     * including fiscal years that do not align with January and December.
+     * @param year selected accounting year
+     * @return explicit result-calculation inputs
+     * @throws SQLException if reading fails
+     */
+    public se.swedsoft.bookkeeping.calc.SSResultCalculator.Context resultReportContext(
+            SSNewAccountingYear year) throws SQLException {
+        if (!isNormalized()) throw new IllegalStateException("Explicit result context requires normalized storage");
+        hydrateYear(year);
+        year.setBudget(normalizedStore.getBudget(year));
+        List<SSNewAccountingYear> years = new java.util.ArrayList<>();
+        for (SSNewAccountingYear candidate : normalizedStore.getYears()) {
+            years.add(candidate.getId().equals(year.getId()) ? year : hydrateYear(candidate));
+        }
+        return new se.swedsoft.bookkeeping.calc.SSResultCalculator.Context(years, getProjects(), getResultUnits());
+    }
+
     /** Creates a VAT service bound to the selected storage backend. */
     public org.fribok.bookkeeping.service.vat.VatService vatService(SSNewAccountingYear year)
             throws SQLException {
