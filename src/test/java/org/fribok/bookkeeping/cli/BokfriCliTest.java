@@ -14,11 +14,13 @@ import se.swedsoft.bookkeeping.data.SSNewResultUnit;
 import se.swedsoft.bookkeeping.data.SSMonth;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 import se.swedsoft.bookkeeping.data.SSVoucher;
+import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.importexport.sie.util.SIEFile;
 import java.sql.DriverManager;
 import java.time.LocalDate;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -1677,6 +1679,16 @@ class BokfriCliTest {
         JsonNode legacyBalance = new ObjectMapper().readTree(execute(concat(legacyContext,
                 "account", "balance", Integer.toString(firstAccount))).stdout());
 
+        java.util.Map<String, String> legacyPdfText = new java.util.LinkedHashMap<>();
+        for (String report : java.util.List.of("balance-sheet", "general-ledger")) {
+            Path pdf = temporaryDirectory.resolve("legacy-" + report + ".pdf");
+            Result exported = report.equals("general-ledger")
+                    ? execute(concat(legacyContext, report, "--account", Integer.toString(firstAccount),
+                            "--from", yearFrom, "--to", yearFrom, "--output", pdf.toString()))
+                    : execute(concat(legacyContext, report, "--date", yearFrom, "--output", pdf.toString()));
+            assertThat(exported.exitCode()).as(exported.stderr()).isZero();
+            legacyPdfText.put(report, pdfText(pdf));
+        }
         execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
 
         String[] context = {"--data-dir", data.toString(), "--company-id",
@@ -1718,13 +1730,33 @@ class BokfriCliTest {
         assertThat(trialBalanceText.exitCode()).as(trialBalanceText.stderr()).isZero();
         assertThat(trialBalanceText.stdout()).contains("TOTAL");
 
-        // PDF report export still requires legacy storage and fails clearly.
-        Result pdf = execute(concat(context, "general-ledger", "--account",
-                Integer.toString(firstAccount), "--output",
-                temporaryDirectory.resolve("ledger.pdf").toString(), "--overwrite"));
+        for (String report : legacyPdfText.keySet()) {
+            Path pdf = temporaryDirectory.resolve("normalized-" + report + ".pdf");
+            Result exported = report.equals("general-ledger")
+                    ? execute(concat(context, report, "--account", Integer.toString(firstAccount),
+                            "--from", yearFrom, "--to", yearFrom, "--output", pdf.toString()))
+                    : execute(concat(context, report, "--date", yearFrom, "--output", pdf.toString()));
+            assertThat(exported.exitCode()).as(exported.stderr()).isZero();
+            assertThat(pdfText(pdf)).isEqualTo(legacyPdfText.get(report));
+            byte[] original = Files.readAllBytes(pdf);
+            assertThat(original).startsWith("%PDF-".getBytes(StandardCharsets.US_ASCII));
+            String[] arguments = report.equals("general-ledger")
+                    ? concat(context, report, "--account", Integer.toString(firstAccount),
+                            "--output", pdf.toString())
+                    : concat(context, report, "--output", pdf.toString());
+            assertThat(execute(arguments).exitCode()).isEqualTo(1);
+            assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+            Result overwritten = execute(concat(arguments, "--overwrite"));
+            assertThat(overwritten.exitCode()).as(overwritten.stderr()).isZero();
+            assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+            assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+        }
+        Path unsupported = temporaryDirectory.resolve("normalized-income.pdf");
+        Result pdf = execute(concat(context, "income-statement", "--output", unsupported.toString()));
         assertThat(pdf.exitCode()).isEqualTo(1);
         assertThat(new ObjectMapper().readTree(pdf.stderr()).path("error").path("code").asText())
                 .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
+        assertThat(Files.exists(unsupported)).isFalse();
     }
 
     @Test
@@ -2462,6 +2494,12 @@ class BokfriCliTest {
 
         assertThat(status.stdout()).contains("CLI log: "
                 + data.resolve("logs/bokfri-cli.log").toAbsolutePath().normalize());
+    }
+
+    private static String pdfText(Path pdf) throws IOException {
+        try (var document = org.apache.pdfbox.Loader.loadPDF(pdf.toFile())) {
+            return new org.apache.pdfbox.text.PDFTextStripper().getText(document);
+        }
     }
 
     private Result execute(String... arguments) {

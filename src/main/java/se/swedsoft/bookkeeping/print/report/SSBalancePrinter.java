@@ -6,6 +6,7 @@ import se.swedsoft.bookkeeping.calc.data.SSAccountGroup;
 import se.swedsoft.bookkeeping.calc.data.SSAccountSchema;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
@@ -46,6 +47,24 @@ public class SSBalancePrinter extends SSPrinter {
      * @param pTo
      */
     public SSBalancePrinter(SSNewAccountingYear pYearData, LocalDate pFrom, LocalDate pTo) {
+        initialize(pYearData, pFrom, pTo);
+    }
+
+    /**
+     * Creates a report from explicit company/year data, without the SSDB singleton.
+     * The year must contain explicit accounts, opening balances and vouchers.
+     * @param company company for the report header
+     * @param pYearData hydrated accounting year
+     * @param pFrom inclusive start
+     * @param pTo inclusive end
+     */
+    public SSBalancePrinter(SSNewCompany company, SSNewAccountingYear pYearData,
+            LocalDate pFrom, LocalDate pTo) {
+        super(company, pYearData);
+        initialize(pYearData, pFrom, pTo);
+    }
+
+    private void initialize(SSNewAccountingYear pYearData, LocalDate pFrom, LocalDate pTo) {
         iYearData = pYearData;
         iDateFrom = pFrom;
         iDateTo = pTo;

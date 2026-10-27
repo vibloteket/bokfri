@@ -5,6 +5,8 @@ import net.sf.jasperreports.engine.JRParameter;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperReport;
 import se.swedsoft.bookkeeping.calc.math.SSVoucherMath;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.SSMainFrame;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
@@ -48,12 +50,25 @@ public abstract class SSPrinter {
      *
      */
     public SSPrinter() {
-        iReport = new SSReport();
+        this(SSDB.getInstance().getCurrentCompany().getName(), SSVoucherMath.getMaxNumber());
+    }
 
-        iReport.addParameter("company", SSDB.getInstance().getCurrentCompany().getName());
+    /**
+     * Initializes headers without SSDB access. The year must have explicit vouchers.
+     * @param company selected company
+     * @param year hydrated accounting year
+     */
+    protected SSPrinter(SSNewCompany company, SSNewAccountingYear year) {
+        this(company.getName(), year.getVouchers().stream()
+                .mapToInt(voucher -> voucher.getNumber()).max().orElse(0));
+    }
+
+    private SSPrinter(String companyName, int lastVoucherNumber) {
+        iReport = new SSReport();
+        iReport.addParameter("company", companyName);
         addParameter("reportdate", reportDate());
 
-        iReport.addParameter("lastvoucher", SSVoucherMath.getMaxNumber());
+        iReport.addParameter("lastvoucher", lastVoucherNumber);
 
     }
 
