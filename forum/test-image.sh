@@ -11,7 +11,8 @@ cleanup() {
     docker volume rm "$volume" >/dev/null 2>&1 || true
     rm -rf "$work"
 }
-trap cleanup EXIT HUP INT TERM
+trap 'status=$?; if [ "$status" -ne 0 ]; then docker logs "$name" 2>/dev/null || true; fi; cleanup' EXIT
+trap 'exit 1' HUP INT TERM
 docker volume create "$volume" >/dev/null
 # Public installation must fail closed, not expose the web installer.
 if docker run --rm -v "$volume:/data" "$image" >"$work/uninstalled.log" 2>&1; then
@@ -35,12 +36,15 @@ fetch() {
     curl --fail --silent --show-error \
         --header 'Host: forum.bokfri.viblo.se' --header 'X-Forwarded-Proto: https' "$@"
 }
-i=0
-until fetch "$url/" >"$work/home.html"; do
-    i=$((i + 1))
-    if [ "$i" -ge 30 ]; then docker logs "$name"; exit 1; fi
-    sleep 2
-done
+wait_for_http() {
+    i=0
+    until fetch "$url/" >"$work/home.html"; do
+        i=$((i + 1))
+        if [ "$i" -ge 30 ]; then docker logs "$name"; exit 1; fi
+        sleep 2
+    done
+}
+wait_for_http
 grep -q 'Bokfri forum' "$work/home.html"
 grep -q 'lang="sv"' "$work/home.html"
 asset=$(grep -oE 'https://forum\.bokfri\.viblo\.se/assets/[^" ]+\.css[^" ]*' "$work/home.html" | head -1)
@@ -61,8 +65,10 @@ if ($d->query("SELECT value FROM settings WHERE key = '\''default_locale'\''")->
 $d->exec("INSERT INTO settings (key,value) VALUES ('\''smoke_persistence'\'','\''ok'\'')");
 '
 docker restart "$name" >/dev/null
-sleep 3
-fetch "$url/" > /dev/null
+# Docker may allocate a different ephemeral host port on restart.
+port=$(docker port "$name" 80/tcp | sed 's/.*://')
+url="http://127.0.0.1:$port"
+wait_for_http
 docker exec "$name" php -r '
 $d = new PDO("sqlite:/data/forum.sqlite");
 if ($d->query("SELECT value FROM settings WHERE key = '\''smoke_persistence'\''")->fetchColumn() !== "ok") exit(1);
@@ -78,8 +84,7 @@ docker volume create "$volume" >/dev/null
 docker run --rm -v "$volume:/data" -v "$work:/backup" --entrypoint tar "$image" \
     -C /data -xzf /backup/forum.tar.gz
 docker run -d --name "$name" -p "127.0.0.1:$port:80" -v "$volume:/data" "$image" >/dev/null
-sleep 3
-fetch "$url/" > /dev/null
+wait_for_http
 docker exec "$name" php -r '
 $d = new PDO("sqlite:/data/forum.sqlite");
 if ($d->query("PRAGMA integrity_check")->fetchColumn() !== "ok") exit(1);
