@@ -263,8 +263,9 @@ Each implementation slice requires `mvn verify`, representative old databases, e
 ## Financial PDF runtime support
 
 The CLI `balance-sheet --output`, `income-statement --output`,
-`general-ledger --account ... --output`, `vat report --output` and
-`vat control --output` paths
+`general-ledger --account ... --output`, `vat report --output`,
+`vat control --output`, `customer-revenue --from ... --to ... --output` and
+`supplier-revenue --from ... --to ... --output` paths
 support normalized data format 3. They hydrate the selected year's accounts,
 opening balances and vouchers, then pass the selected company and year explicitly
 to the existing report printers. The shared printer header obtains the company
@@ -302,6 +303,26 @@ and out-of-range start indices, verify overwrite protection and render after
 settlement. Explicit rows whose singleton-backed helpers throw cover populated
 report/subreport rendering and aggregation. Empty-year/header coverage and the
 cross-platform assembled/packaged CLI smoke flow include both VAT PDFs.
+
+Customer- and supplier-revenue reports receive explicit register, invoice and
+credit-invoice lists from the selected company's runtime repositories. Both the
+outer printers and monthly subreports use explicit company/year headers. Invoice
+dates, not the selected accounting-year boundary, determine inclusion, matching
+the legacy behavior for cross-year periods. Existing net/discount calculations,
+nullable currency-rate fallback, credit subtraction, full-month bucket keys and
+Jasper amount formatting are unchanged. The CLI sorts a copy of register entries
+by business number (nulls last) on both backends to avoid storage-dependent row
+ordering; direct GUI/legacy printer constructors retain their original behavior.
+
+Revenue tests check exact monthly data-source totals, credits-only and inactive
+registers, empty reports, source immutability, boundary dates and currency rates.
+CLI PDF text matches legacy output for populated/partial/cross-year periods, with
+a second company using the same register numbers; overwrite and singleton isolation
+checks are included. The assembled/packaged smoke flow exports both reports.
+
+The existing first-month visibility behavior is deliberately preserved in this
+persistence slice: a period beginning mid-month can hide that month and its total.
+Issue #158 tracks correcting the shared month/report behavior for both backends.
 
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
