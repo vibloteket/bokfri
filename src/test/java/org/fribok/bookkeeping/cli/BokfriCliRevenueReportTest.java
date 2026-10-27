@@ -11,6 +11,7 @@ import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
@@ -53,7 +54,7 @@ class BokfriCliRevenueReportTest {
         String[] context = {"--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
                 "--year-id", Integer.toString(yearId), "--format", "json"};
         Map<String, String> expected = new LinkedHashMap<>();
-        for (String report : List.of("customer-revenue", "supplier-revenue")) {
+        for (String report : List.of("customer-revenue", "supplier-revenue", "product-revenue")) {
             for (String[] period : periods()) {
                 Path pdf = temporaryDirectory.resolve("legacy-" + report + "-" + period[0] + ".pdf");
                 Result result = execute(arguments(context, report, period, pdf));
@@ -61,13 +62,13 @@ class BokfriCliRevenueReportTest {
                 String text = text(pdf);
                 assertThat(text).contains("Revenue selected company", "Selected").doesNotContain("Other");
                 if (period[0].equals("2024-02-01")) {
-                    assertThat(text).containsPattern(report.equals("customer-revenue") ? "342[.,]45" : "380[.,]50");
+                    assertThat(text).containsPattern(report.equals("supplier-revenue") ? "380[.,]50" : "342[.,]45");
                 }
                 expected.put(report + period[0], text);
             }
         }
         new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
-        for (String report : List.of("customer-revenue", "supplier-revenue")) {
+        for (String report : List.of("customer-revenue", "supplier-revenue", "product-revenue")) {
             for (String[] period : periods()) {
                 Path pdf = temporaryDirectory.resolve("normalized-" + report + "-" + period[0] + ".pdf");
                 String[] args = arguments(context, report, period, pdf);
@@ -126,6 +127,14 @@ class BokfriCliRevenueReportTest {
     }
 
     private static void addDocuments(BokfriRuntime runtime, String name, String price) throws Exception {
+        SSProduct product = new SSProduct();
+        product.setNumber("P1");
+        product.setDescription(name + " product");
+        runtime.database().addProduct(product);
+        SSProduct inactiveProduct = new SSProduct();
+        inactiveProduct.setNumber("P2");
+        inactiveProduct.setDescription(name + " inactive product");
+        runtime.database().addProduct(inactiveProduct);
         SSCustomer customer = new SSCustomer();
         customer.setNumber("C1");
         customer.setName(name + " customer");
@@ -163,6 +172,7 @@ class BokfriCliRevenueReportTest {
         invoice.setLocalDate(LocalDate.parse(date));
         invoice.setCurrencyRate(new BigDecimal("2"));
         SSSaleRow row = new SSSaleRow();
+        row.setProductNr("P1");
         row.setUnitprice(new BigDecimal(price));
         row.setQuantity(1);
         row.setDiscount(new BigDecimal("10"));

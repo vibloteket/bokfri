@@ -6,6 +6,8 @@ import se.swedsoft.bookkeeping.calc.math.SSInvoiceMath;
 import se.swedsoft.bookkeeping.data.SSCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSMonth;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -16,7 +18,9 @@ import se.swedsoft.bookkeeping.print.util.SSDefaultJasperDataSource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -31,6 +35,10 @@ public class SSProductRevenuePrinter extends SSPrinter {
 
     private List<SSProduct> iProducts;
 
+    private SSNewCompany iCompany;
+
+    private SSNewAccountingYear iYear;
+
     private LocalDate iDateFrom;
 
     private LocalDate iDateTo;
@@ -44,10 +52,34 @@ public class SSProductRevenuePrinter extends SSPrinter {
      * @param pTo
      */
     public SSProductRevenuePrinter(List<SSProduct> pProducts, LocalDate pFrom, LocalDate pTo) {
-        iProducts = pProducts;
-        iDateFrom = pFrom;
-        iDateTo = pTo;
-        calculate();
+        initialize(pProducts, SSDB.getInstance().getInvoices(), SSDB.getInstance().getCreditInvoices(), pFrom, pTo);
+    }
+
+    /**
+     * Creates a product revenue report from explicit company/year and document snapshots.
+     *
+     * @param company company used for report headers
+     * @param year accounting year with hydrated vouchers for report headers
+     * @param products ordered register entries, including products without activity
+     * @param invoices company invoices, filtered by the inclusive date bounds
+     * @param credits company credit invoices, subtracted from revenue
+     * @param from inclusive first date
+     * @param to inclusive last date
+     */
+    public SSProductRevenuePrinter(SSNewCompany company, SSNewAccountingYear year, List<SSProduct> products,
+            List<SSInvoice> invoices, List<SSCreditInvoice> credits, LocalDate from, LocalDate to) {
+        super(company, year);
+        iCompany = company;
+        iYear = year;
+        initialize(List.copyOf(products), invoices, credits, from, to);
+    }
+
+    private void initialize(List<SSProduct> products, List<SSInvoice> invoices, List<SSCreditInvoice> credits,
+            LocalDate from, LocalDate to) {
+        iProducts = products;
+        iDateFrom = from;
+        iDateTo = to;
+        calculate(invoices, credits);
         setPageHeader("header_period.jrxml");
         setColumnHeader("productrevenue.jrxml");
         setDetail("productrevenue.jrxml");
@@ -71,7 +103,8 @@ public class SSProductRevenuePrinter extends SSPrinter {
         addParameter("dateFrom", iDateFrom);
         addParameter("dateTo", iDateTo);
 
-        iPrinter = new SSMonthlyDistributionPrinter(iDateFrom, iDateTo);
+        iPrinter = iCompany == null ? new SSMonthlyDistributionPrinter(iDateFrom, iDateTo)
+                : new SSMonthlyDistributionPrinter(iCompany, iYear, iDateFrom, iDateTo);
         iPrinter.generateReport();
 
         addParameter("Report", iPrinter.getReport());
@@ -120,9 +153,8 @@ public class SSProductRevenuePrinter extends SSPrinter {
         return iModel;
     }
 
-    private void calculate() {
+    private void calculate(List<SSInvoice> iInvoices, List<SSCreditInvoice> iCreditInvoices) {
         iProductRevenue = new HashMap<>();
-        List<SSInvoice> iInvoices = SSDB.getInstance().getInvoices();
         LocalDate localFrom = iDateFrom;
         LocalDate localTo = iDateTo;
 
@@ -157,8 +189,6 @@ public class SSProductRevenuePrinter extends SSPrinter {
                 }
             }
         }
-
-        List<SSCreditInvoice> iCreditInvoices = SSDB.getInstance().getCreditInvoices();
 
         for (SSCreditInvoice iCreditInvoice : iCreditInvoices) {
             LocalDate creditLocalDate = iCreditInvoice.getLocalDate();
@@ -213,6 +243,16 @@ public class SSProductRevenuePrinter extends SSPrinter {
          * @param pTo
          */
         public SSMonthlyDistributionPrinter(LocalDate pFrom, LocalDate pTo) {
+            initialize(pFrom, pTo);
+        }
+
+        private SSMonthlyDistributionPrinter(SSNewCompany company, SSNewAccountingYear year,
+                LocalDate from, LocalDate to) {
+            super(company, year);
+            initialize(from, to);
+        }
+
+        private void initialize(LocalDate pFrom, LocalDate pTo) {
             iFrom = pFrom;
             iTo = pTo;
             iLocalFrom = pFrom;
