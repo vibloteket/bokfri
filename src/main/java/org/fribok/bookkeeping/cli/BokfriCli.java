@@ -1208,18 +1208,6 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    /**
-     * Unported PDF reports still resolve company or voucher state through the SSDB singleton;
-     * on normalized storage these reports fail fast instead.
-     */
-    private static void requireLegacyStorageForPdf(BokfriRuntime runtime, String command) {
-        if (runtime.isNormalized()) {
-            throw new CliException("NORMALIZED_STORAGE_UNSUPPORTED",
-                    command + " PDF export does not yet support normalized storage (data format "
-                            + runtime.dataFormat() + ")");
-        }
-    }
-
     private static String trialBalanceText(Map<String, Object> result) {
         List<Map<String, Object>> rows = new java.util.ArrayList<>(reportMaps(result));
         Map<String, Object> total = new LinkedHashMap<>();
@@ -3260,9 +3248,6 @@ public class BokfriCli implements Runnable {
                             "VAT report period must be within the selected accounting year "
                                     + year.getLocalFrom() + " - " + year.getLocalTo());
                 }
-                if (output != null) {
-                    requireLegacyStorageForPdf(runtime, "vat report");
-                }
                 var report = runtime.vatService(year).report(selectedFrom, selectedTo);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("from", selectedFrom);
@@ -3271,8 +3256,11 @@ public class BokfriCli implements Runnable {
                 result.put("vatToPayOrRefund", money(report.vatToPayOrRefund()));
                 result.put("selection", selectedContext(context, company, year));
                 if (output != null) {
-                    addPdf(result, exportPdf(new SSVATReport2015Printer(
-                            year, selectedFrom, selectedTo, 1), output, overwrite));
+                    SSVATReport2015Printer printer = runtime.isNormalized()
+                            ? new SSVATReport2015Printer(company, runtime.hydrateYear(year),
+                                    selectedFrom, selectedTo, 1)
+                            : new SSVATReport2015Printer(year, selectedFrom, selectedTo, 1);
+                    addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 root.output(result, "VAT report " + selectedFrom + " - " + selectedTo
                         + "\nVAT to pay/refund: " + report.vatToPayOrRefund());
@@ -3308,11 +3296,15 @@ public class BokfriCli implements Runnable {
                     throw new CliException("VAT_CONTROL_PERIOD_INVALID",
                             "Provide both --from and --to, or omit both");
                 }
-                requireLegacyStorageForPdf(runtime, "vat control");
-                runtime.database().init(false);
-                java.nio.file.Path pdf = exportPdf(
-                        new SSVATControl2015Printer(year, selectedFrom, selectedTo, startVoucher),
-                        output, overwrite);
+                SSVATControl2015Printer printer;
+                if (runtime.isNormalized()) {
+                    printer = new SSVATControl2015Printer(company, runtime.hydrateYear(year),
+                            selectedFrom, selectedTo, startVoucher);
+                } else {
+                    runtime.database().init(false);
+                    printer = new SSVATControl2015Printer(year, selectedFrom, selectedTo, startVoucher);
+                }
+                java.nio.file.Path pdf = exportPdf(printer, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("from", selectedFrom);
                 result.put("to", selectedTo);

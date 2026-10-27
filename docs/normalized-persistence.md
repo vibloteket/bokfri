@@ -262,8 +262,9 @@ Each implementation slice requires `mvn verify`, representative old databases, e
 
 ## Financial PDF runtime support
 
-The CLI `balance-sheet --output`, `income-statement --output` and
-`general-ledger --account ... --output` paths
+The CLI `balance-sheet --output`, `income-statement --output`,
+`general-ledger --account ... --output`, `vat report --output` and
+`vat control --output` paths
 support normalized data format 3. They hydrate the selected year's accounts,
 opening balances and vouchers, then pass the selected company and year explicitly
 to the existing report printers. The shared printer header obtains the company
@@ -286,9 +287,25 @@ previous-year PDFs with a second company present, and exercise crossed/invalid r
 and empty/missing comparison periods. The CLI retains its existing report options;
 this does not add comparison flags.
 
-VAT PDFs and other unported PDF commands remain unsupported on normalized storage.
-This slice does not activate normalized storage in the GUI or retire legacy
-persistence; issue #75 remains open.
+VAT PDFs reuse the existing 2015 templates and VAT box/group formulas. Both outer
+printers and the VAT report's nested row printer receive explicit company/year
+headers. Explicit voucher totals resolve account numbers against the selected
+account plan and skip invalid/crossed rows without singleton-backed row helpers.
+Legacy truncation/rounding remains unchanged. VAT control `--start-voucher` retains
+its existing one-based index into date-filtered vouchers, **not a voucher number**;
+an out-of-range index falls back to the complete period, as in the GUI printer.
+Explicit VAT control printers render PDFs only: their legacy `getVoucher` method
+fails fast; normalized settlements continue through `VatService`.
+
+Tests compare legacy and normalized VAT PDF text before settlement, exercise valid
+and out-of-range start indices, verify overwrite protection and render after
+settlement. Explicit rows whose singleton-backed helpers throw cover populated
+report/subreport rendering and aggregation. Empty-year/header coverage and the
+cross-platform assembled/packaged CLI smoke flow include both VAT PDFs.
+
+Other unported PDF commands remain unsupported on normalized storage. This slice
+does not activate normalized storage in the GUI or retire legacy persistence;
+issue #75 remains open.
 
 ## Definition of done for issue #75
 

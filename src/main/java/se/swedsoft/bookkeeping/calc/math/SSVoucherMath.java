@@ -185,6 +185,41 @@ public class SSVoucherMath {
     }
 
     /**
+     * Aggregates explicit voucher rows without singleton-backed account or validity lookups.
+     * @param vouchers source vouchers in any order
+     * @param accounts selected year's account plan
+     * @return credit minus debit, keyed by the selected account objects
+     */
+    public static Map<SSAccount, BigDecimal> getCreditMinusDebetSum(
+            List<SSVoucher> vouchers, List<SSAccount> accounts) {
+        Map<Integer, SSAccount> byNumber = new HashMap<>();
+        for (SSAccount account : accounts) byNumber.put(account.getNumber(), account);
+        Map<SSAccount, BigDecimal> sums = new HashMap<>();
+        for (SSVoucher voucher : vouchers) {
+            for (SSVoucherRow row : voucher.getRows()) {
+                SSAccount account = byNumber.get(row.getAccountNr());
+                if (account != null && !row.isCrossed() && (row.getDebet() != null || row.getCredit() != null)) {
+                    sums.merge(account, getCreditMinusDebet(row), BigDecimal::add);
+                }
+            }
+        }
+        return sums;
+    }
+
+    /**
+     * Aggregates the opposite sign of explicit credit-minus-debit totals.
+     * @param vouchers source vouchers
+     * @param accounts selected year's account plan
+     * @return debit minus credit with identical validity rules
+     */
+    public static Map<SSAccount, BigDecimal> getDebetMinusCreditSum(
+            List<SSVoucher> vouchers, List<SSAccount> accounts) {
+        Map<SSAccount, BigDecimal> sums = getCreditMinusDebetSum(vouchers, accounts);
+        sums.replaceAll((account, sum) -> sum.negate());
+        return sums;
+    }
+
+    /**
      *
      * @param pAccountingYear
      * @param pVouchers
