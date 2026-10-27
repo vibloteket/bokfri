@@ -435,9 +435,9 @@ class BokfriCliTest {
                 .stdout()).path("years").get(0);
         Result report = execute("--data-dir", data.toString(), "--company-id",
                 Integer.toString(companyId), "--year-id", Integer.toString(yearId),
-                "--format", "json", "vat", "report", "--from", yearInfo.path("from").asText(),
+                "--format", "json", "sales-report", "--from", yearInfo.path("from").asText(),
                 "--to", yearInfo.path("to").asText(), "--output",
-                temporaryDirectory.resolve("blocked-vat.pdf").toString());
+                temporaryDirectory.resolve("blocked-sales.pdf").toString());
 
         assertThat(report.exitCode()).isEqualTo(1);
         assertThat(new ObjectMapper().readTree(report.stderr()).at("/error/code").asText())
