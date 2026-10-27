@@ -1,12 +1,6 @@
+# The complete application is fetched during the build, never copied from the host.
 **/vendor
 **/config.php
 **/*.sqlite*
 **/.git
 **/.DS_Store
-app/public/assets/*
-!app/public/assets/avatars/
-!app/public/assets/avatars/.gitignore
-app/storage/**
-!app/storage/
-!app/storage/**/
-!app/storage/**/.gitignore

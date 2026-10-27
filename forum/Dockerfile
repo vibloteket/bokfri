@@ -6,16 +6,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && a2enmod rewrite headers expires remoteip \
     && rm -rf /var/lib/apt/lists/*
 
-FROM runtime AS dependencies
+FROM runtime AS application
+ARG FLARUM_VERSION=2.0.2
+ARG FLARUM_ARCHIVE_SHA256=5de9af0920f09706eff008cce41a96568c78a9bb4b12c7f75b66d86debdb5fef
+ARG SWEDISH_VERSION=2.0.4
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2.10.3 /usr/bin/composer /usr/local/bin/composer
 WORKDIR /opt/flarum
-COPY app/composer.json app/composer.lock ./
-RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts --optimize-autoloader
+# Official PHP 8.4 installation bundle, WITH public/, including its locked dependencies.
+RUN curl --fail --show-error --location --retry 3 \
+        "https://github.com/flarum/installation-packages/raw/main/packages/v2.x/v${FLARUM_VERSION}/flarum-v${FLARUM_VERSION}-php8.4.tar.gz" \
+        --output /tmp/flarum.tar.gz \
+    && echo "${FLARUM_ARCHIVE_SHA256}  /tmp/flarum.tar.gz" | sha256sum --check --strict - \
+    && tar -xzf /tmp/flarum.tar.gz --no-same-owner -C /opt/flarum \
+    && rm /tmp/flarum.tar.gz \
+    && test -f public/index.php && test -f vendor/autoload.php && test -f composer.lock \
+    && composer require "flarum-lang/swedish:${SWEDISH_VERSION}" --no-update --no-interaction --no-scripts \
+    && composer update flarum-lang/swedish --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
 FROM runtime
 WORKDIR /opt/flarum
-COPY app/ ./
-COPY --from=dependencies /opt/flarum/vendor ./vendor
+COPY --from=application /opt/flarum ./
 COPY apache.conf /etc/apache2/sites-available/000-default.conf
 COPY php.ini /usr/local/etc/php/conf.d/forum.ini
 COPY entrypoint.sh /usr/local/bin/forum-entrypoint

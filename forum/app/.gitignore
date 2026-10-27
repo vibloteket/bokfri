@@ -1,9 +1,0 @@
-/vendor/
-/config.php
-/public/assets/*
-!/public/assets/avatars/
-/public/assets/avatars/*
-!/public/assets/avatars/.gitignore
-/storage/*
-!/storage/**/
-!/storage/**/.gitignore

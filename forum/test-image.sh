@@ -57,6 +57,9 @@ for path in /config.php /forum.sqlite /storage/logs/flarum.log /vendor/autoload.
     test "$code" = 404 || { echo "Unexpected status $code for $path" >&2; exit 1; }
 done
 docker exec "$name" php -r '
+require "/opt/flarum/vendor/autoload.php";
+if (Composer\InstalledVersions::getPrettyVersion("flarum/core") !== "v2.0.2") exit(4);
+if (Composer\InstalledVersions::getPrettyVersion("flarum-lang/swedish") !== "2.0.4") exit(5);
 $c = require "/data/config.php";
 if ($c["database"]["driver"] !== "sqlite" || $c["debug"]) exit(1);
 $d = new PDO("sqlite:/data/forum.sqlite");
@@ -90,4 +93,4 @@ $d = new PDO("sqlite:/data/forum.sqlite");
 if ($d->query("PRAGMA integrity_check")->fetchColumn() !== "ok") exit(1);
 if ($d->query("SELECT value FROM settings WHERE key = '\''smoke_persistence'\''")->fetchColumn() !== "ok") exit(2);
 '
-echo 'PASS: closed installer, SQLite install, Swedish homepage, CSS, private paths, restart, offline backup/restore'
+echo 'PASS: official archive versions, closed installer, SQLite install, Swedish homepage, CSS, private paths, restart, offline backup/restore'

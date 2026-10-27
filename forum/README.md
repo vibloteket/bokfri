@@ -2,9 +2,15 @@
 
 Independent Flarum 2 service; does not change the Java application or GitHub Pages website.
 Flarum core **2.0.2**, SQLite, PHP **8.4**, Swedish language pack **2.0.4**.
-Composer dependencies are committed in `app/composer.lock`; rebuilds use `composer install`, not update.
+The build downloads the **official PHP 8.4 installation archive with `public/`**, verifies its pinned
+SHA-256, and extracts the complete application and installed dependencies. No upstream application files,
+lockfiles or directory-placeholder `.gitignore` files are copied into this repository.
+The upstream MIT license remains in the image with the application.
 The PHP base image follows the supported 8.4/Bookworm patch stream; rebuild periodically for security fixes.
-The upstream application skeleton is Flarum 2.0.0; its MIT license is retained in `app/LICENSE`.
+
+The archive supplies Flarum's dependency lockfile. A build-time, Swedish-only Composer update adds the exact
+pinned language-pack version while leaving the archive's existing package versions locked. Composer and
+its download tools are not copied into the final image. Nothing is downloaded or updated at container startup.
 
 ## Requirements
 
@@ -114,11 +120,25 @@ or nonempty data directory; a rollback after migrations needs the matching pre-u
 
 ## Updates
 
-Do not install Composer extensions inside a running container: they disappear on rebuild. Update
-`app/composer.json` and `app/composer.lock` together, check Flarum 2 compatibility, then test a rebuilt image.
-Do not run `composer update` during production startup.
+Do not install Composer extensions inside a running container: they disappear on rebuild.
+To upgrade, change the pinned `FLARUM_VERSION`, `FLARUM_ARCHIVE_SHA256`, and, when needed,
+`SWEDISH_VERSION` defaults in `Dockerfile`. Download the matching **PHP 8.4 / with public directory**
+archive from [Flarum's official installation documentation](https://docs.flarum.org/install/#installing-by-unpacking-an-archive)
+and calculate its checksum, for example:
 
-1. Take an offline backup and retain the current image/source revision for rollback.
+```sh
+curl -fL --output /tmp/flarum.tar.gz 'URL-of-the-selected-official-archive'
+sha256sum /tmp/flarum.tar.gz
+```
+
+The checksum pins the bytes reviewed from that source; it is not an independently signed upstream checksum.
+Do not replace it merely to bypass an unexpected checksum failure. Review upstream release notes and language-pack
+compatibility. Changing the archive refreshes the upstream entry points, routing configuration **and** dependencies
+together. A different PHP major/minor also requires changing the base image and archive filename together.
+Never download `latest` or run Composer during production startup. Add future extensions explicitly in the image build
+and review any required dependency changes; do not use an unrestricted full dependency update.
+
+1. Run the image smoke test below against the new build. Take an offline backup and retain the current image/source revision for rollback.
 2. Stop the service and build the updated image (`docker compose build --pull flarum`).
 3. Run explicit maintenance while Apache is stopped:
 
@@ -139,8 +159,9 @@ docker build -t bokfri-forum:test forum
 sh forum/test-image.sh bokfri-forum:test
 ```
 
-Run these from the repository root. The smoke test creates disposable, uniquely named Docker resources;
-it never uses the production data path. It checks the closed installer, real SQLite installation, Swedish homepage,
+Run these from the repository root. When upgrading, also update the expected core/language-pack versions in
+`test-image.sh`. The smoke test creates disposable, uniquely named Docker resources;
+it never uses the production data path. It checks the installed versions, closed installer, real SQLite installation, Swedish homepage,
 generated stylesheet, inaccessible private files, restart persistence, SQLite integrity, and offline backup/restore.
 The `Forum container` GitHub Actions workflow runs these checks for forum changes. SMTP delivery and real Caddy/DNS
 integration still require testing on the server. No server deployment is performed by CI.
