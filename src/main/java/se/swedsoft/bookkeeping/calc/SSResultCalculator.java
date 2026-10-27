@@ -17,6 +17,17 @@ import java.util.*;
  */
 public class SSResultCalculator {
 
+    /** Explicit company-scoped inputs for singleton-free result calculations. */
+    public record Context(List<SSNewAccountingYear> years, List<SSNewProject> projects,
+            List<SSNewResultUnit> resultUnits) {
+        /** Copies the lists; every year must have explicitly loaded vouchers. */
+        public Context {
+            years = List.copyOf(years);
+            projects = List.copyOf(projects);
+            resultUnits = List.copyOf(resultUnits);
+        }
+    }
+
     public static class SSResultBudgetRow {
 
         private Integer    iGroup;
@@ -93,8 +104,23 @@ public class SSResultCalculator {
      */
     public void calculate() throws SSCalculatorException {
 
-        // Get all years
-        List<SSNewAccountingYear> iAllYearData = SSDB.getInstance().getYears();
+        calculate(null);
+    }
+
+    /**
+     * Calculates with explicit hydrated years and dimensions, without singleton lookups.
+     * Account numbers resolve against the selected year's account plan, as in legacy reports.
+     * @param context company-scoped inputs, or null for the legacy singleton path
+     * @throws SSCalculatorException if calculation fails
+     */
+    public void calculate(Context context) throws SSCalculatorException {
+        List<SSNewAccountingYear> iAllYearData = context == null
+                ? SSDB.getInstance().getYears() : context.years();
+
+        Map<Integer, SSAccount> accounts = new HashMap<>();
+        if (context != null) {
+            for (SSAccount account : iYearData.getAccounts()) accounts.put(account.getNumber(), account);
+        }
 
         // All vouchers
         List<SSVoucher> iVouchers = new LinkedList<>();
@@ -118,12 +144,17 @@ public class SSResultCalculator {
 
             // Loop through all the voucher rows
             for (SSVoucherRow iRow: iVoucher.getRows()) {
-                SSAccount    iRowAccount = iRow.getAccount();
-                SSNewProject    iRowProject = iRow.getProject();
-                SSNewResultUnit iRowResultUnit = iRow.getResultUnit();
+                SSAccount iRowAccount = context == null ? iRow.getAccount()
+                        : accounts.get(iRow.getAccountNr());
+                SSNewProject iRowProject = context == null ? iRow.getProject()
+                        : iRow.getProject(context.projects());
+                SSNewResultUnit iRowResultUnit = context == null ? iRow.getResultUnit()
+                        : iRow.getResultUnit(context.resultUnits());
 
-                // Skip the row is crossed or invalid
-                if (!iRow.isValid() || iRow.isCrossed()) {
+                // Mirror row validity without its singleton-backed account resolver.
+                boolean valid = context == null ? iRow.isValid()
+                        : iRowAccount != null && (iRow.getDebet() != null || iRow.getCredit() != null);
+                if (!valid || iRow.isCrossed()) {
                     continue;
                 }
 

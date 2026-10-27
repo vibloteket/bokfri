@@ -1098,9 +1098,11 @@ public class BokfriCli implements Runnable {
                 result.put("result", money(report.result()));
                 result.put("selection", context);
                 if (output != null) {
-                    requireLegacyStorageForPdf(runtime, "income-statement");
-                    addPdf(result, exportPdf(new SSResultPrinter(year, period.from(), period.to(),
-                            false, false), output, overwrite));
+                    SSResultPrinter printer = runtime.isNormalized()
+                            ? new SSResultPrinter(company, year, period.from(), period.to(), false, false,
+                                    runtime.resultReportContext(year))
+                            : new SSResultPrinter(year, period.from(), period.to(), false, false);
+                    addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 return result;
             }, BokfriCli::incomeStatementText);
