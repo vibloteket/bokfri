@@ -435,9 +435,9 @@ class BokfriCliTest {
                 .stdout()).path("years").get(0);
         Result report = execute("--data-dir", data.toString(), "--company-id",
                 Integer.toString(companyId), "--year-id", Integer.toString(yearId),
-                "--format", "json", "vat", "report", "--from", yearInfo.path("from").asText(),
+                "--format", "json", "sales-report", "--from", yearInfo.path("from").asText(),
                 "--to", yearInfo.path("to").asText(), "--output",
-                temporaryDirectory.resolve("blocked-vat.pdf").toString());
+                temporaryDirectory.resolve("blocked-sales.pdf").toString());
 
         assertThat(report.exitCode()).isEqualTo(1);
         assertThat(new ObjectMapper().readTree(report.stderr()).at("/error/code").asText())
@@ -1582,16 +1582,46 @@ class BokfriCliTest {
                 """.formatted(from, salesAccount, outputVatAccount, inputVatAccount));
         Result created = execute(concat(context, "voucher", "create", "--file", voucher.toString()));
         assertThat(created.exitCode()).as(created.stderr()).isZero();
+        Result second = execute(concat(context, "voucher", "create", "--file", voucher.toString()));
+        assertThat(second.exitCode()).as(second.stderr()).isZero();
         Result legacyReport = execute(concat(context, "vat", "report"));
         Result legacyPlan = execute(concat(context, "vat", "settle", "--from", from, "--to", to));
         assertThat(legacyReport.exitCode()).as(legacyReport.stderr()).isZero();
         assertThat(legacyPlan.exitCode()).as(legacyPlan.stderr()).isZero();
+        java.util.Map<String, String> legacyPdfs = new java.util.LinkedHashMap<>();
+        for (String command : List.of("report", "control")) {
+            for (int start : command.equals("report") ? List.of(1) : List.of(1, 2, 0, 999)) {
+                String key = command + "-" + start;
+                Path pdf = temporaryDirectory.resolve("legacy-vat-" + key + ".pdf");
+                String[] arguments = vatPdfArguments(context, command, start, pdf);
+                Result exported = execute(arguments);
+                assertThat(exported.exitCode()).as(exported.stderr()).isZero();
+                legacyPdfs.put(key, pdfText(pdf));
+            }
+        }
         assertThat(execute("--data-dir", data.toString(), "--format", "json",
                 "database", "normalize").exitCode()).isZero();
         Result report = execute(concat(context, "vat", "report"));
         assertThat(report.exitCode()).as(report.stderr()).isZero();
         assertThat(new ObjectMapper().readTree(report.stdout()))
                 .isEqualTo(new ObjectMapper().readTree(legacyReport.stdout()));
+        for (String command : List.of("report", "control")) {
+            for (int start : command.equals("report") ? List.of(1) : List.of(1, 2, 0, 999)) {
+                String key = command + "-" + start;
+                Path pdf = temporaryDirectory.resolve("normalized-vat-" + key + ".pdf");
+                String[] arguments = vatPdfArguments(context, command, start, pdf);
+                Result exported = execute(arguments);
+                assertThat(exported.exitCode()).as(exported.stderr()).isZero();
+                assertThat(pdfText(pdf)).isEqualTo(legacyPdfs.get(key));
+                byte[] original = Files.readAllBytes(pdf);
+                assertThat(execute(arguments).exitCode()).isEqualTo(1);
+                assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                Result overwritten = execute(concat(arguments, "--overwrite"));
+                assertThat(overwritten.exitCode()).as(overwritten.stderr()).isZero();
+                assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+            }
+        }
         JsonNode before = new ObjectMapper().readTree(execute(concat(context, "voucher", "list"))
                 .stdout()).path("vouchers");
         int count = before.size();
@@ -1624,10 +1654,8 @@ class BokfriCliTest {
         for (String command : List.of("report", "control")) {
             Path output = temporaryDirectory.resolve("vat-" + command + ".pdf");
             Result pdf = execute(concat(context, "vat", command, "--output", output.toString()));
-            assertThat(pdf.exitCode()).isEqualTo(1);
-            assertThat(new ObjectMapper().readTree(pdf.stderr()).path("error").path("code").asText())
-                    .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
-            assertThat(output).doesNotExist();
+            assertThat(pdf.exitCode()).as(pdf.stderr()).isZero();
+            assertThat(Files.size(output)).isPositive();
         }
     }
 
@@ -1680,12 +1708,15 @@ class BokfriCliTest {
                 "account", "balance", Integer.toString(firstAccount))).stdout());
 
         java.util.Map<String, String> legacyPdfText = new java.util.LinkedHashMap<>();
-        for (String report : java.util.List.of("balance-sheet", "general-ledger")) {
+        for (String report : java.util.List.of("balance-sheet", "general-ledger", "income-statement")) {
             Path pdf = temporaryDirectory.resolve("legacy-" + report + ".pdf");
             Result exported = report.equals("general-ledger")
                     ? execute(concat(legacyContext, report, "--account", Integer.toString(firstAccount),
                             "--from", yearFrom, "--to", yearFrom, "--output", pdf.toString()))
-                    : execute(concat(legacyContext, report, "--date", yearFrom, "--output", pdf.toString()));
+                    : report.equals("balance-sheet")
+                            ? execute(concat(legacyContext, report, "--date", yearFrom, "--output", pdf.toString()))
+                            : execute(concat(legacyContext, report, "--from", yearFrom, "--to", yearFrom,
+                                    "--output", pdf.toString()));
             assertThat(exported.exitCode()).as(exported.stderr()).isZero();
             legacyPdfText.put(report, pdfText(pdf));
         }
@@ -1735,7 +1766,10 @@ class BokfriCliTest {
             Result exported = report.equals("general-ledger")
                     ? execute(concat(context, report, "--account", Integer.toString(firstAccount),
                             "--from", yearFrom, "--to", yearFrom, "--output", pdf.toString()))
-                    : execute(concat(context, report, "--date", yearFrom, "--output", pdf.toString()));
+                    : report.equals("balance-sheet")
+                            ? execute(concat(context, report, "--date", yearFrom, "--output", pdf.toString()))
+                            : execute(concat(context, report, "--from", yearFrom, "--to", yearFrom,
+                                    "--output", pdf.toString()));
             assertThat(exported.exitCode()).as(exported.stderr()).isZero();
             assertThat(pdfText(pdf)).isEqualTo(legacyPdfText.get(report));
             byte[] original = Files.readAllBytes(pdf);
@@ -1751,12 +1785,6 @@ class BokfriCliTest {
             assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
             assertThat(SSDB.getInstance().getCurrentYear()).isNull();
         }
-        Path unsupported = temporaryDirectory.resolve("normalized-income.pdf");
-        Result pdf = execute(concat(context, "income-statement", "--output", unsupported.toString()));
-        assertThat(pdf.exitCode()).isEqualTo(1);
-        assertThat(new ObjectMapper().readTree(pdf.stderr()).path("error").path("code").asText())
-                .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
-        assertThat(Files.exists(unsupported)).isFalse();
     }
 
     @Test
@@ -2494,6 +2522,11 @@ class BokfriCliTest {
 
         assertThat(status.stdout()).contains("CLI log: "
                 + data.resolve("logs/bokfri-cli.log").toAbsolutePath().normalize());
+    }
+
+    private static String[] vatPdfArguments(String[] context, String command, int start, Path pdf) {
+        String[] arguments = concat(context, "vat", command, "--output", pdf.toString());
+        return command.equals("control") ? concat(arguments, "--start-voucher", Integer.toString(start)) : arguments;
     }
 
     private static String pdfText(Path pdf) throws IOException {

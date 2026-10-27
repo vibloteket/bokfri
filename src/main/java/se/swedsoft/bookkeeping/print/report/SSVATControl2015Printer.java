@@ -6,6 +6,7 @@ import se.swedsoft.bookkeeping.calc.math.SSVoucherMath;
 import se.swedsoft.bookkeeping.calc.util.SSVATUtil;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -32,6 +33,8 @@ public class SSVATControl2015Printer extends SSPrinter {    private static final
 
     private SSNewAccountingYear iAccountingYear;
 
+    private SSNewCompany iCompany;
+
     private LocalDate iDateFrom;
 
     private LocalDate iDateTo;
@@ -53,6 +56,26 @@ public class SSVATControl2015Printer extends SSPrinter {    private static final
      * @param iDateTo
      */
     public SSVATControl2015Printer(SSNewAccountingYear iAccountingYear, LocalDate iDateFrom, LocalDate iDateTo, int iStartVoucher) {
+        initialize(iAccountingYear, iDateFrom, iDateTo, iStartVoucher);
+    }
+
+    /**
+     * Creates a singleton-free VAT PDF printer from explicit company/year data.
+     * @param company selected company
+     * @param year hydrated year with explicit accounts and vouchers
+     * @param from inclusive start
+     * @param to inclusive end
+     * @param startVoucher one-based index into period vouchers (legacy semantics)
+     */
+    public SSVATControl2015Printer(SSNewCompany company, SSNewAccountingYear year,
+            LocalDate from, LocalDate to, int startVoucher) {
+        super(company, year);
+        iCompany = Objects.requireNonNull(company, "company");
+        initialize(year, from, to, startVoucher);
+    }
+
+    private void initialize(SSNewAccountingYear iAccountingYear, LocalDate iDateFrom,
+            LocalDate iDateTo, int iStartVoucher) {
         this.iAccountingYear = iAccountingYear;
         this.iDateFrom = iDateFrom;
         this.iDateTo = iDateTo;
@@ -91,8 +114,10 @@ public class SSVATControl2015Printer extends SSPrinter {    private static final
 	} else {
 	    LOG.error("Använder hela periodens verifikat då börja-med-verifikat ligger utanför giltigt intervall.");
 	}
-        iCreditMinusDebetSum = SSVoucherMath.getCreditMinusDebetSum(iVouchers2);
-        iDebetMinusCreditSum = SSVoucherMath.getDebetMinusCreditSum(iVouchers2);
+        iCreditMinusDebetSum = iCompany == null ? SSVoucherMath.getCreditMinusDebetSum(iVouchers2)
+                : SSVoucherMath.getCreditMinusDebetSum(iVouchers2, iAccounts);
+        iDebetMinusCreditSum = iCompany == null ? SSVoucherMath.getDebetMinusCreditSum(iVouchers2)
+                : SSVoucherMath.getDebetMinusCreditSum(iVouchers2, iAccounts);
 
         iAccountsByVatCode = new HashMap<>();
 
@@ -115,9 +140,13 @@ public class SSVATControl2015Printer extends SSPrinter {    private static final
      * @param iAccountR1
      * @param iAccountR2
      * @param iAccountA
-     * @return
+     * @return legacy settlement voucher
+     * @throws IllegalStateException for an explicit PDF-only printer; use VatService instead
      */
     public SSVoucher getVoucher(SSAccount iAccountR1, SSAccount iAccountR2, SSAccount iAccountA) {
+        if (iCompany != null) {
+            throw new IllegalStateException("Explicit VAT printers only render PDFs; use VatService for settlement");
+        }
         DateTimeFormatter iFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
 
         String iDescription = String.format(

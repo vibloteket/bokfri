@@ -70,7 +70,7 @@ public final class CliSmokeTest {
                 "--format", "json", "account", "list");
         accounts.success();
         String account = Integer.toString(firstInt(accounts.stdout, "number"));
-        for (String report : List.of("balance-sheet", "general-ledger")) {
+        for (String report : List.of("balance-sheet", "general-ledger", "income-statement")) {
             Path pdf = temporary.resolve("normalized-" + report + ".pdf");
             List<String> args = new ArrayList<>(List.of("--company-id", company, "--year-id", year,
                     "--format", "json", report, "--output", pdf.toString()));
@@ -83,6 +83,16 @@ public final class CliSmokeTest {
             byte[] bytes = Files.readAllBytes(pdf);
             require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
                     report + " did not produce a PDF on normalized storage");
+        }
+        for (String report : List.of("report", "control")) {
+            Path pdf = temporary.resolve("normalized-vat-" + report + ".pdf");
+            Result exported = cli("--company-id", company, "--year-id", year,
+                    "--format", "json", "vat", report, "--output", pdf.toString());
+            exported.success();
+            exported.jsonObject();
+            byte[] bytes = Files.readAllBytes(pdf);
+            require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
+                    "VAT " + report + " did not produce a normalized PDF");
         }
     }
 

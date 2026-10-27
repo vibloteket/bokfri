@@ -1,6 +1,7 @@
 package se.swedsoft.bookkeeping.print;
 
 import org.junit.jupiter.api.Test;
+import se.swedsoft.bookkeeping.calc.SSResultCalculator;
 import org.junit.jupiter.api.io.TempDir;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSAccountPlan;
@@ -9,6 +10,9 @@ import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.print.report.SSBalancePrinter;
 import se.swedsoft.bookkeeping.print.report.SSMainBookPrinter;
+import se.swedsoft.bookkeeping.print.report.SSResultPrinter;
+import se.swedsoft.bookkeeping.print.report.SSVATReport2015Printer;
+import se.swedsoft.bookkeeping.print.report.SSVATControl2015Printer;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,6 +34,10 @@ class ExplicitFinancialPrinterTest {
 
         for (SSPrinter printer : List.of(
                 new SSBalancePrinter(company, year, year.getLocalFrom(), year.getLocalTo()),
+                new SSVATReport2015Printer(company, year, year.getLocalFrom(), year.getLocalTo(), 1),
+                new SSVATControl2015Printer(company, year, year.getLocalFrom(), year.getLocalTo(), 1),
+                new SSResultPrinter(company, year, year.getLocalFrom(), year.getLocalTo(), false, false,
+                        new SSResultCalculator.Context(List.of(year), List.of(), List.of())),
                 new SSMainBookPrinter(company, year, account, account,
                         year.getLocalFrom(), year.getLocalTo(), null, null))) {
             assertThat(printer.getParameters()).containsEntry("company", "Explicit company ÅÄÖ")
@@ -47,6 +55,10 @@ class ExplicitFinancialPrinterTest {
         int index = 0;
         for (SSPrinter printer : List.of(
                 new SSBalancePrinter(company, year, year.getLocalFrom(), year.getLocalTo()),
+                new SSVATReport2015Printer(company, year, year.getLocalFrom(), year.getLocalTo(), 1),
+                new SSVATControl2015Printer(company, year, year.getLocalFrom(), year.getLocalTo(), 1),
+                new SSResultPrinter(company, year, year.getLocalFrom(), year.getLocalTo(), false, false,
+                        new SSResultCalculator.Context(List.of(year), List.of(), List.of())),
                 new SSMainBookPrinter(company, year, account, account,
                         year.getLocalFrom(), year.getLocalTo(), null, null))) {
             assertThat(printer.getParameters()).containsEntry("lastvoucher", 0);
