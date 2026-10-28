@@ -1,0 +1,31 @@
+name: Forum container
+
+on:
+  pull_request:
+    paths:
+      - 'forum/**'
+      - '.github/workflows/forum.yml'
+  push:
+    branches: [main, infrastructure/flarum-sqlite]
+    paths:
+      - 'forum/**'
+      - '.github/workflows/forum.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sqlite-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shell scripts and Compose example
+        run: |
+          sh -n forum/entrypoint.sh forum/test-image.sh
+          docker compose -f forum/compose.example.yml config --quiet
+      - name: Build image
+        run: docker build --tag bokfri-forum:test forum
+      - name: Test install, HTTP, persistence and backup/restore
+        run: sh forum/test-image.sh bokfri-forum:test
