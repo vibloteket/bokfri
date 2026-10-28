@@ -1,7 +1,7 @@
 FROM php:8.4-apache-bookworm AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libfreetype6-dev libjpeg62-turbo-dev libpng-dev libonig-dev libsqlite3-dev libzip-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+        libfreetype6-dev libjpeg62-turbo-dev libpng-dev libwebp-dev libonig-dev libsqlite3-dev libzip-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" gd mbstring pdo_sqlite zip opcache \
     && a2enmod rewrite headers expires remoteip \
     && rm -rf /var/lib/apt/lists/*

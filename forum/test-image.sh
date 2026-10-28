@@ -51,6 +51,34 @@ asset=$(grep -oE 'https://forum\.bokfri\.viblo\.se/assets/[^" ]+\.css[^" ]*' "$w
 test -n "$asset"
 fetch "$url${asset#https://forum.bokfri.viblo.se}" >"$work/asset.css"
 test -s "$work/asset.css"
+# Exercise the real admin logo-upload route: Flarum encodes PNG logos as WebP.
+docker exec "$name" php -r '
+if (!gd_info()["WebP Support"]) exit(1);
+$i = imagecreatetruecolor(256, 96);
+imagefill($i, 0, 0, imagecolorallocate($i, 22, 53, 59));
+imagepng($i, "/tmp/test-logo.png");
+'
+docker cp "$name:/tmp/test-logo.png" "$work/logo.png"
+fetch --header 'Content-Type: application/json' \
+    --data '{"identification":"testadmin","password":"test-password-for-ci-only","lifetime":3600}' \
+    "$url/api/token" >"$work/token.json"
+token=$(docker exec -i "$name" php -r '
+$j = json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR);
+if (empty($j["token"])) exit(1);
+echo $j["token"];
+' <"$work/token.json")
+fetch --header "Authorization: Token $token" \
+    --form "logo=@$work/logo.png;type=image/png" "$url/api/logo" >"$work/upload.json"
+logo=$(docker exec "$name" php -r '
+$d = new PDO("sqlite:/data/forum.sqlite");
+$logo = $d->query("SELECT value FROM settings WHERE key = '\''logo_path'\''")->fetchColumn();
+if (!$logo || pathinfo($logo, PATHINFO_EXTENSION) !== "webp") exit(1);
+$info = getimagesize("/data/assets/" . $logo);
+if ($info === false || $info[1] !== 60 || $info["mime"] !== "image/webp") exit(2);
+echo $logo;
+')
+fetch "$url/assets/$logo" >"$work/logo.webp"
+test -s "$work/logo.webp"
 # Database/configuration must never be reachable through Apache.
 for path in /config.php /forum.sqlite /storage/logs/flarum.log /vendor/autoload.php /install-forum.php; do
     code=$(curl -s -o "$work/private" -w '%{http_code}' "$url$path")
@@ -93,4 +121,4 @@ $d = new PDO("sqlite:/data/forum.sqlite");
 if ($d->query("PRAGMA integrity_check")->fetchColumn() !== "ok") exit(1);
 if ($d->query("SELECT value FROM settings WHERE key = '\''smoke_persistence'\''")->fetchColumn() !== "ok") exit(2);
 '
-echo 'PASS: official archive versions, closed installer, SQLite install, Swedish homepage, CSS, private paths, restart, offline backup/restore'
+echo 'PASS: official archive versions, closed installer, SQLite install, Swedish homepage, CSS, admin logo upload/WebP, private paths, restart, offline backup/restore'
