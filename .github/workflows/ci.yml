@@ -2,19 +2,47 @@ name: Java CI
 
 on:
   pull_request:
-    paths-ignore:
-      - 'website/**'
+    paths:
+      - 'src/**'
+      - 'pom.xml'
+      - '.mvn/**'
+      - 'mvnw'
+      - 'mvnw.cmd'
+      - 'scripts/**'
+      - 'packaging/**'
+      - 'design/**'
+      - 'data/**'
+      - 'db/**'
+      - 'database.config'
+      - 'checkstyle.xml'
+      - '.github/workflows/ci.yml'
   push:
     branches:
       - main
     tags:
       - 'v*'
-    paths-ignore:
-      - 'website/**'
+    paths:
+      - 'src/**'
+      - 'pom.xml'
+      - '.mvn/**'
+      - 'mvnw'
+      - 'mvnw.cmd'
+      - 'scripts/**'
+      - 'packaging/**'
+      - 'design/**'
+      - 'data/**'
+      - 'db/**'
+      - 'database.config'
+      - 'checkstyle.xml'
+      - '.github/workflows/ci.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build_and_test:

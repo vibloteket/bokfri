@@ -1,0 +1,6 @@
+# The complete application is fetched during the build, never copied from the host.
+**/vendor
+**/config.php
+**/*.sqlite*
+**/.git
+**/.DS_Store

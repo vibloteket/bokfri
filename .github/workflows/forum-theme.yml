@@ -1,0 +1,31 @@
+name: Forum theme
+
+on:
+  pull_request:
+    paths:
+      - 'forum/**'
+      - '.github/workflows/forum-theme.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'forum/**'
+      - '.github/workflows/forum-theme.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  theme:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test header and analytics privacy/navigation behavior
+        run: node --test forum/theme/*.test.mjs
+      - name: Parse and validate custom CSS
+        run: npx --yes --package=lightningcss-cli@1.33.0 lightningcss forum/theme/custom.css --minify --output-file "$RUNNER_TEMP/bokfri-forum-theme.css"

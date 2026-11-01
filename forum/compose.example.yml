@@ -1,0 +1,15 @@
+# Merge this service into the SAME Compose project as Caddy.
+# Replace the build context with the absolute path to your Bokfri checkout.
+services:
+  flarum:
+    image: bokfri-forum:local
+    build:
+      context: /path/to/bokfri/forum
+    restart: unless-stopped
+    environment:
+      FLARUM_BASE_URL: https://forum.bokfri.viblo.se
+    volumes:
+      - /mnt/external/appdata/flarum:/data
+    # Deliberately no ports: Caddy connects to flarum:80 on the default network.
+    logging:
+      driver: local

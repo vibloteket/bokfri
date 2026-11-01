@@ -12,6 +12,14 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Infrastructure
+
+- Add an independent Swedish Flarum 2 forum container using the checksum-pinned official installation archive, SQLite, and documented deployment/backup workflows.
+- Enable GD WebP encoding required by Flarum logo uploads and cover the authenticated upload route in container tests.
+- Version the forum's custom CSS, website header and GoatCounter footer with manual application/rollback instructions; no automatic settings changes.
+- Keep the discussion-list pane hidden when closed and correctly align it with the centered forum frame and both headers when open or pinned after scrolling.
+- Route CI by application/container/theme inputs, remove duplicate forum feature-branch builds, add lightweight theme tests, and cancel superseded PR runs while preserving release/manual execution.
+
 ### Added
 
 - Product-revenue PDFs now support normalized storage (data format 3), with explicit company/year and invoice/credit inputs for both outer and monthly printers. Discounted row amounts, document currency rates, credits and date filtering are preserved without live product lookups. CLI register ordering is consistent across storage formats; legacy GUI constructors are unchanged. The existing partial-month display behavior remains tracked in #158.
