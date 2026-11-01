@@ -16,6 +16,7 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 - Add an independent Swedish Flarum 2 forum container using the checksum-pinned official installation archive, SQLite, and documented deployment/backup workflows.
 - Enable GD WebP encoding required by Flarum logo uploads and cover the authenticated upload route in container tests.
+- Version the forum's custom CSS, website header and GoatCounter footer with manual application/rollback instructions; no automatic settings changes.
 
 ### Added
 

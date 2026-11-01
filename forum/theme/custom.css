@@ -1,0 +1,252 @@
+/* Bokfri forum — website frame + theme for Flarum 2.
+   Paste into Administration > Appearance > Custom CSS / LESS.
+   Standard light-mode branding only: Flarum's dark/high-contrast modes and status colors are preserved.
+   Replace the entire previous custom stylesheet. Header/footer HTML supplied separately.
+   The header logo is loaded from bokfri.viblo.se. No JavaScript required. */
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+[data-theme="light"] {
+  --primary-color: #16353b;
+  --secondary-color: #d5ddd2;
+  --body-bg: #f4e9d8;
+  --body-bg-shaded: #e8d9c4;
+  --body-bg-light: #fffaf2;
+  --body-bg-faded: rgba(244, 233, 216, 0.96);
+  --text-color: #16353b;
+  --heading-color: #16353b;
+  --muted-color: #655f51;
+  --muted-more-color: #726653;
+  --muted-more-bg: #e8d9c4;
+  --muted-more-bg-hover: #ddcbb0;
+  --muted-more-bg-active: #d4bea0;
+  --muted-more-bg-disabled: #e8d9c4;
+  /* Darker terracotta for readable text; original brand accent below. */
+  --link-color: #98492e;
+  --header-bg: #f4e9d8;
+  --header-color: #16353b;
+  --header-control-bg: #e8d9c4;
+  --header-control-color: #16353b;
+  --hero-bg: #d5ddd2;
+  --hero-color: #16353b;
+  --control-bg: #e8d9c4;
+  --control-color: #5a3a2e;
+  --control-bg-light: #fffaf2;
+  --control-bg-shaded: #ddcbb0;
+  --control-bg-faded: rgba(232, 217, 196, 0.55);
+  --button-bg: #e8d9c4;
+  --button-color: #5a3a2e;
+  --button-bg-hover: #ddcbb0;
+  --button-bg-active: #d4bea0;
+  --button-bg-disabled: #e8d9c4;
+  --button-primary-bg: #16353b;
+  --button-primary-color: #fffaf2;
+  --button-primary-bg-hover: #234b52;
+  --button-primary-bg-active: #10292e;
+  --button-primary-bg-disabled: #16353b;
+  --button-inverted-bg: #fffaf2;
+  --button-inverted-color: #16353b;
+  --button-inverted-bg-hover: #f4e9d8;
+  --button-inverted-bg-active: #e8d9c4;
+  --button-inverted-bg-disabled: #fffaf2;
+  --discussion-title-color: #655f51;
+  --discussion-list-item-bg-hover: #e8d9c4;
+  --discussion-list-item-bg-active: #ddcbb0;
+  --shadow-color: rgba(22, 53, 59, 0.18);
+  --border-radius: 6px;
+}
+
+[data-theme="light"] .App-header {
+  border-bottom: 1px solid #d5ddd2;
+  box-shadow: 0 1px 5px rgba(22, 53, 59, 0.06);
+}
+
+[data-theme="light"] .Header-title a {
+  color: #16353b;
+  font-weight: 700;
+}
+
+[data-theme="light"] .WelcomeHero {
+  border-bottom: 3px solid #c86845;
+}
+
+[data-theme="light"] .WelcomeHero h1 {
+  font-weight: 700;
+}
+
+[data-theme="light"] .FormControl:focus {
+  border-color: #16353b;
+}
+
+[data-theme="light"] .Button:focus-visible,
+[data-theme="light"] a:focus-visible {
+  outline: 2px solid #16353b;
+  outline-offset: 3px;
+}
+
+/* Website framing. Replace old header HTML/CSS; do not layer the return strip on top. */
+:root {
+  --bokfri-site-header-height: 69px;
+}
+html {
+  background: #d5ddd2;
+}
+html[data-theme^="dark"] {
+  background: #10292e;
+}
+body {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-top: var(--bokfri-site-header-height);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+body > #app {
+  width: 100%;
+  /* Flarum writes an inline min-height; the outer flex frame replaces that filler. */
+  min-height: 0 !important;
+  flex: 1 0 auto;
+}
+.bokfri-site-header {
+  box-sizing: border-box;
+  height: var(--bokfri-site-header-height);
+  flex-shrink: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  max-width: 1200px;
+  margin-inline: auto;
+  z-index: calc(var(--zindex-header, 1000) + 2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 32px;
+  background: #f4e9d8;
+  border-bottom: 1px solid #d5ddd2;
+  color: #16353b;
+}
+.bokfri-header-logo {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+.bokfri-header-logo img {
+  display: block;
+  height: 44px;
+  width: auto;
+}
+.bokfri-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.bokfri-header-nav a {
+  color: #5a3a2e;
+  font-size: 20.8px;
+  line-height: 1.6;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.bokfri-header-nav a:hover {
+  color: #98492e;
+}
+.bokfri-site-header a:focus-visible {
+  outline: 2px solid #16353b;
+  outline-offset: 4px;
+}
+/* Flarum's toolbar remains native and sits below the website header. */
+.App.affix .App-header,
+.App-navigation {
+  top: var(--bokfri-site-header-height);
+  left: 0;
+  right: 0;
+  max-width: 1200px;
+  margin-inline: auto;
+}
+.App .container {
+  max-width: 100%;
+}
+/* The outer flex frame handles short pages; avoid an extra viewport of empty space. */
+.App-content {
+  min-height: 0;
+}
+.bokfri-site-footer {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 24px 32px;
+  background: #16353b;
+  color: #c4b49e;
+  text-align: center;
+  font-size: 14.4px;
+  line-height: 1.6;
+}
+.bokfri-site-footer p {
+  margin: 0;
+}
+.bokfri-site-footer a {
+  color: #f4b99e;
+  text-decoration: none;
+}
+.bokfri-site-footer a:hover {
+  text-decoration: underline;
+}
+.bokfri-site-footer a:focus-visible {
+  outline: 2px solid #f4e9d8;
+  outline-offset: 4px;
+}
+@media (max-width: 767.98px) {
+  :root {
+    --bokfri-site-header-height: 49px;
+  }
+  .bokfri-site-header {
+    padding: 8px 16px;
+    gap: 12px;
+  }
+  .bokfri-header-logo img {
+    height: 32px;
+  }
+  .bokfri-header-nav {
+    gap: 16px;
+  }
+  .bokfri-header-nav a {
+    font-size: 16px;
+  }
+  .App.affix .App-primaryControl,
+  .App.affix .App-titleControl,
+  .App.affix .App-backControl {
+    top: var(--bokfri-site-header-height) !important;
+  }
+  /* Do not shift the full-screen composer's own controls. */
+  .App.affix .Composer .App-primaryControl,
+  .App.affix .Composer .App-titleControl,
+  .App.affix .Composer .App-backControl {
+    top: 0 !important;
+  }
+  .App-drawer {
+    top: var(--bokfri-site-header-height);
+    max-height: calc(100dvh - var(--bokfri-site-header-height));
+  }
+}
+@media (max-width: 359px) {
+  .bokfri-site-header {
+    padding-inline: 12px;
+    gap: 8px;
+  }
+  .bokfri-header-nav {
+    gap: 10px;
+  }
+  .bokfri-header-nav a {
+    font-size: 15px;
+  }
+}

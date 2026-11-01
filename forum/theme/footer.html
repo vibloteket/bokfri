@@ -1,0 +1,92 @@
+<!-- Replace the ENTIRE Custom Footer with this. Keep the current header and CSS.
+     GoatCounter site: bokfri.goatcounter.com. Forum paths are prefixed /forum/.
+     Discussion views are grouped by numeric ID, without titles or post numbers.
+     Only public discussion/tag/index routes are tracked. No query strings/hashes.
+     GoatCounter's normal visitor exclusions remain in effect. -->
+<footer class="bokfri-site-footer">
+  <p>© Bokfri — <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPLv3</a></p>
+</footer>
+<script>
+(function () {
+  'use strict';
+  if (window.__bokfriForumAnalytics) return;
+  window.__bokfriForumAnalytics = true;
+
+  window.goatcounter = window.goatcounter || {};
+  window.goatcounter.no_onload = true;
+  window.goatcounter.no_events = true;
+
+  var ready = false;
+  var lastPath = null;
+  var timer;
+
+  function publicPath() {
+    var path = window.location.pathname.replace(/\/+$/, '') || '/';
+    // Explicit allowlist: never send account, admin, reset or confirmation paths.
+    if (['/', '/all', '/tags', '/following'].indexOf(path) !== -1) {
+      return '/forum' + path;
+    }
+    var discussion = path.match(/^\/d\/([1-9][0-9]*)(?:-[^/]+)?(?:\/(?:[0-9]+|last))?$/);
+    if (discussion) return '/forum/d/' + discussion[1];
+    if (/^\/t\/[^/]+$/.test(path)) return '/forum' + path;
+    return null;
+  }
+
+  function countView() {
+    if (!ready || document.visibilityState !== 'visible') return;
+    var path = publicPath();
+    if (!path) {
+      lastPath = null;
+      return;
+    }
+    if (path === lastPath) return;
+    window.goatcounter.count({
+      path: path,
+      title: 'Bokfri forum'
+    });
+    lastPath = path;
+  }
+
+  function scheduleView() {
+    clearTimeout(timer);
+    timer = setTimeout(countView, 250);
+  }
+
+  // Flarum/Mithril uses the History API; popstate also covers back/forward.
+  ['pushState', 'replaceState'].forEach(function (method) {
+    var original = window.history[method];
+    window.history[method] = function () {
+      var result = original.apply(this, arguments);
+      scheduleView();
+      return result;
+    };
+  });
+  window.addEventListener('popstate', scheduleView);
+  document.addEventListener('visibilitychange', scheduleView);
+
+  var script = document.createElement('script');
+  script.async = true;
+  script.src = 'https://gc.zgo.at/count.js';
+  script.setAttribute('data-goatcounter', 'https://bokfri.goatcounter.com/count');
+  script.onload = function () {
+    var counter = window.goatcounter;
+    if (typeof counter.count !== 'function' || typeof counter.get_data !== 'function') return;
+    // GoatCounter includes location.search separately as `q`, even with an explicit
+    // path. Strip it at the payload boundary; also remove referring paths/tokens.
+    var getData = counter.get_data;
+    counter.get_data = function (vars) {
+      var data = getData.call(this, vars);
+      data.q = '';
+      try {
+        data.r = data.r ? new URL(data.r).origin : '';
+      } catch (_) {
+        data.r = '';
+      }
+      return data;
+    };
+    ready = true;
+    scheduleView();
+  };
+  document.head.appendChild(script);
+})();
+</script>

@@ -152,6 +152,13 @@ and review any required dependency changes; do not use an unrestricted full depe
 4. Verify homepage, login, posting, uploads and email. If migration fails, leave Apache stopped and investigate.
    For rollback restore both the old image **and** its database/assets backup.
 
+## Versioned appearance settings
+
+[`theme/`](theme/README.md) contains the custom CSS, website header and footer (including GoatCounter),
+with the exact admin-field mapping and verification/rollback instructions. Treat these files as the source
+of truth for future theme edits. Application is still manual: nothing writes Flarum settings at build/startup,
+and these files are not included in the runtime image. SMTP credentials and other private state stay outside Git.
+
 ## Tests
 
 ```sh
