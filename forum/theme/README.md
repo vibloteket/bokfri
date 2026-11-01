@@ -64,8 +64,8 @@ node --test forum/theme/*.test.mjs
 
 Tests exercise the footer in an isolated browser model: no network calls, credentials or production analytics hits.
 They cover History API/SPA navigation, grouping/deduplication, private-route exclusions and payload sanitization.
-The `Forum theme` workflow also parses the CSS with a pinned Lightning CSS CLI. Theme-only changes do not trigger
-Java or container builds; see [workflow routing](../../.github/WORKFLOWS.md). These checks do not replace the
+The `Forum theme` workflow also parses the CSS with a pinned Lightning CSS CLI. Any `forum/**` change runs
+both forum checks (theme and container), but not Java; see [workflow routing](../../.github/WORKFLOWS.md). These checks do not replace the
 browser/layout checks below.
 
 ## Verify after applying

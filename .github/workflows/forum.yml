@@ -3,26 +3,12 @@ name: Forum container
 on:
   pull_request:
     paths:
-      - 'forum/Dockerfile'
-      - 'forum/.dockerignore'
-      - 'forum/apache.conf'
-      - 'forum/php.ini'
-      - 'forum/entrypoint.sh'
-      - 'forum/install-forum.php'
-      - 'forum/compose.example.yml'
-      - 'forum/test-image.sh'
+      - 'forum/**'
       - '.github/workflows/forum.yml'
   push:
     branches: [main]
     paths:
-      - 'forum/Dockerfile'
-      - 'forum/.dockerignore'
-      - 'forum/apache.conf'
-      - 'forum/php.ini'
-      - 'forum/entrypoint.sh'
-      - 'forum/install-forum.php'
-      - 'forum/compose.example.yml'
-      - 'forum/test-image.sh'
+      - 'forum/**'
       - '.github/workflows/forum.yml'
   workflow_dispatch:
 

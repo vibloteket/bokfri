@@ -1,17 +1,17 @@
 # Workflow routing
 
-Heavy checks use positive file lists rather than treating every non-website change as a Java change.
-Keep these lists updated when adding a new build input.
+Component filters keep forum/website changes separate from Java. Both forum workflows intentionally use
+`forum/**`, including theme and documentation: fewer special cases, and new forum files are covered automatically.
+Java/GUI input lists still need updating when introducing a new application build input.
 
 | Change | Checks |
 | --- | --- |
 | `src/**`, Maven/wrapper, build/test scripts, packaging, design, data/db inputs, Checkstyle | Java CI on Linux/Windows/macOS |
 | Invoice sources/tests, shared GUI utilities/top-level GUI classes, look-and-feel bootstrap/helpers, GUI resources | Invoice GUI regression |
 | Popup/component sources/tests, shared GUI utilities/top-level GUI classes, look-and-feel bootstrap/helpers, GUI resources | Popup GUI regression |
-| Forum Dockerfile, Docker ignore rules, Apache/PHP configuration, entrypoint, installer, Compose example or container test | Forum container |
-| Forum theme CSS/HTML/JS/test files | Forum theme: Node tests and pinned Lightning CSS parser |
+| `forum/**`, including `forum/theme/**` and forum documentation | Forum container + Forum theme (Node tests and pinned Lightning CSS parser) |
 | `website/**` on `main` | Deploy Pages |
-| Only README/changelog/docs, including `forum/theme/README.md` | No heavy build |
+| Only README/changelog/docs outside `forum/` | No heavy build |
 | A workflow's own YAML | That workflow |
 
 Java CI keeps `workflow_dispatch` and release tags `v*`. GitHub does not apply push path filters to tag pushes,
@@ -26,9 +26,9 @@ runs are not canceled by this policy. Pages retains its existing deployment conc
 
 ## Pull-request scope and limits
 
-PR path filters compare the **whole PR** against its base, not just the latest commit. A PR containing Docker
-and theme changes therefore legitimately runs both checks when updated. A subsequent theme-only PR avoids
-Java and container builds. Mixed application/forum changes run both areas. GitHub path filtering has a 300-file
+PR path filters compare the **whole PR** against its base, not just the latest commit. Forum-only PRs run
+both forum checks, even for just theme/docs changes, but do not compile Java. This small amount of extra work
+is intentional to keep routing easy to maintain. Mixed application/forum changes run both areas. GitHub path filtering has a 300-file
 evaluation limit; very large mixed PRs should be split or the affected workflows explicitly run manually.
 
 ## Required checks

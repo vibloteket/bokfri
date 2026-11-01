@@ -3,18 +3,12 @@ name: Forum theme
 on:
   pull_request:
     paths:
-      - 'forum/theme/**/*.css'
-      - 'forum/theme/**/*.html'
-      - 'forum/theme/**/*.js'
-      - 'forum/theme/**/*.mjs'
+      - 'forum/**'
       - '.github/workflows/forum-theme.yml'
   push:
     branches: [main]
     paths:
-      - 'forum/theme/**/*.css'
-      - 'forum/theme/**/*.html'
-      - 'forum/theme/**/*.js'
-      - 'forum/theme/**/*.mjs'
+      - 'forum/**'
       - '.github/workflows/forum-theme.yml'
   workflow_dispatch:
 
