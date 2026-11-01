@@ -250,3 +250,23 @@ body > #app {
     font-size: 15px;
   }
 }
+
+/* Flarum's closed discussion list normally slides outside the viewport.
+   A centered frame exposes it in the outer gutter unless it is also hidden. */
+@media (min-width: 768px) {
+  .App.hasPane:not(.paneShowing):not(.panePinned) .DiscussionListPane {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .App .DiscussionListPane {
+    max-height: calc(100dvh - var(--bokfri-site-header-height) - var(--header-height));
+  }
+  /* Once affixed, fixed positioning is viewport-relative, not frame-relative. */
+  .App.affix .DiscussionListPane {
+    top: calc(var(--bokfri-site-header-height) + var(--header-height));
+  }
+  .App.affix.paneShowing .DiscussionListPane,
+  .App.affix.panePinned .DiscussionListPane {
+    left: max(0px, calc((100% - 1200px) / 2));
+  }
+}

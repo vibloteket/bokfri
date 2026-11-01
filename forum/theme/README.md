@@ -63,7 +63,10 @@ The optional external script is loaded asynchronously; a blocked counter must no
   one count per logical route, no extra visit for scrolling to a different post in one discussion.
 - Test back/forward and excluded account pages. Blocking GoatCounter should not break navigation.
 
-Earlier browser checks covered desktop/tablet/320–390px, login/drawer, scrolling, and the real GoatCounter
-script with requests intercepted (no test hits sent to production). Authenticated discussion/composer behavior
-still needs checking on the deployed forum. Do not use private account/token URLs as analytics test values
+Browser checks covered desktop/tablet/320–390px, login/drawer, scrolling, and the real GoatCounter
+script with requests intercepted (no test hits sent to production). Discussion-list pane regression checks
+navigate from the index into a real discussion (direct navigation does not create the pane): closed, hover,
+pin/unpin and scroll at 768/1024/1280/1366/1440/1920px, plus mobile drawer/login. The theme explicitly hides
+the closed pane so it cannot leak into the centered frame's outer gutter; affixed panels are aligned to the
+frame below both headers. Authenticated composer behavior still needs checking on the deployed forum. Do not use private account/token URLs as analytics test values
 against the real endpoint; intercept the requests when testing sanitization.
