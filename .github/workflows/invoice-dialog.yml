@@ -5,12 +5,28 @@ on:
   pull_request:
     paths:
       - 'src/main/java/se/swedsoft/bookkeeping/gui/invoice/**'
+      - 'src/main/java/se/swedsoft/bookkeeping/gui/util/**'
+      - 'src/main/java/se/swedsoft/bookkeeping/gui/*.java'
+      - 'src/main/java/org/fribok/bookkeeping/Bookkeeping.java'
+      - 'src/main/resources/org/**'
+      - 'src/main/resources/graphics/**'
+      - 'src/main/resources/book.properties'
+      - 'src/main/resources/MainMenu.xml'
       - 'src/test/java/se/swedsoft/bookkeeping/gui/invoice/**'
+      - 'src/test/java/org/fribok/bookkeeping/GuiTestLookAndFeel.java'
+      - 'src/test/java/org/fribok/bookkeeping/SSDBTestFixture.java'
+      - '.mvn/**'
+      - 'mvnw'
+      - 'mvnw.cmd'
       - '.github/workflows/invoice-dialog.yml'
       - 'pom.xml'
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   gui:

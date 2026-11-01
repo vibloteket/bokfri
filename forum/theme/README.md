@@ -54,6 +54,20 @@ the footer sanitizes its `get_data` result to clear that field and reduce referr
 Keep this sanitization when upgrading the integration. Standard GoatCounter visitor exclusions still apply.
 The optional external script is loaded asynchronously; a blocked counter must not prevent forum use.
 
+## Automated checks
+
+From the repository root:
+
+```sh
+node --test forum/theme/*.test.mjs
+```
+
+Tests exercise the footer in an isolated browser model: no network calls, credentials or production analytics hits.
+They cover History API/SPA navigation, grouping/deduplication, private-route exclusions and payload sanitization.
+The `Forum theme` workflow also parses the CSS with a pinned Lightning CSS CLI. Theme-only changes do not trigger
+Java or container builds; see [workflow routing](../../.github/WORKFLOWS.md). These checks do not replace the
+browser/layout checks below.
+
 ## Verify after applying
 
 - Desktop: centered 1200px frame and visible footer; narrow viewports: no horizontal overflow/clipped links.
