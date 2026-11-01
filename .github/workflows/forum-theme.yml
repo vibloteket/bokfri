@@ -34,4 +34,4 @@ jobs:
       - name: Test header and analytics privacy/navigation behavior
         run: node --test forum/theme/*.test.mjs
       - name: Parse and validate custom CSS
-        run: npx --yes --package=lightningcss-cli@1.33.0 lightningcss forum/theme/custom.css --minify --output "$RUNNER_TEMP/bokfri-forum-theme.css"
+        run: npx --yes --package=lightningcss-cli@1.33.0 lightningcss forum/theme/custom.css --minify --output-file "$RUNNER_TEMP/bokfri-forum-theme.css"
