@@ -266,7 +266,8 @@ The CLI `balance-sheet --output`, `income-statement --output`,
 `general-ledger --account ... --output`, `vat report --output`,
 `vat control --output`, `customer-revenue --from ... --to ... --output`,
 `supplier-revenue --from ... --to ... --output` and
-`product-revenue --from ... --to ... --output` paths
+`product-revenue --from ... --to ... --output` and
+`sales-report --from ... --to ... --output` paths
 support normalized data format 3. They hydrate the selected year's accounts,
 opening balances and vouchers, then pass the selected company and year explicitly
 to the existing report printers. The shared printer header obtains the company
@@ -329,6 +330,17 @@ missing row amounts/product numbers and caller-supplied register order.
 The existing first-month visibility behavior is deliberately preserved in this
 persistence slice: a period beginning mid-month can hide that month and its total.
 Issue #158 tracks correcting the shared month/report behavior for both backends.
+
+Sales reports receive explicit products, invoices, credits and supplier invoices.
+They preserve inclusive sale-date filtering, latest purchase cost through the end
+date (including freight and currency conversion), stock-price fallback and historical
+parcel-cost behavior. Credit row totals are historically subtracted without currency
+conversion; this slice deliberately preserves that behavior. All four sort modes are
+retained, including the historically named `AverageSellingPrice` mode that actually
+sorts unit contribution. Input product and purchase lists are copied before sorting.
+Tests compare legacy/normalized PDF text across periods and company boundaries;
+the assembled/packaged smoke flow also exports the sales report.
+`sale-values` still requires legacy tender/order access and remains a follow-up.
 
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
