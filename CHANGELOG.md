@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable CLI `sales-report` PDFs for normalized format 3 databases using explicit company/year, products, invoices, credits and supplier invoices. Preserve historical purchase-cost, parcel, credit-currency and sorting behavior without singleton lookups or in-place register sorting; keep legacy GUI paths unchanged (#75).
+
 - Add an independent Swedish Flarum 2 forum container using the checksum-pinned official installation archive, SQLite, and documented deployment/backup workflows.
 - Enable GD WebP encoding required by Flarum logo uploads and cover the authenticated upload route in container tests.
 - Version the forum's custom CSS, website header and GoatCounter footer with manual application/rollback instructions; no automatic settings changes.

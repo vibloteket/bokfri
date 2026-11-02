@@ -1117,9 +1117,16 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                java.nio.file.Path pdf = exportPdf(new SSSaleReportPrinter(from, to,
-                        sorting, !descending), output, overwrite);
+                SSSaleReportPrinter printer;
+                if (runtime.isNormalized()) {
+                    printer = new SSSaleReportPrinter(company, runtime.hydrateYear(year),
+                            runtime.getProducts(), runtime.getInvoices(), runtime.getCreditInvoices(),
+                            runtime.getSupplierInvoices(), from, to, sorting, !descending);
+                } else {
+                    runtime.database().init(false);
+                    printer = new SSSaleReportPrinter(from, to, sorting, !descending);
+                }
+                java.nio.file.Path pdf = exportPdf(printer, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("from", from);
                 result.put("to", to);

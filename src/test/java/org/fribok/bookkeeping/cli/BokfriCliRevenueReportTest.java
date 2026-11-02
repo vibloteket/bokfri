@@ -54,21 +54,21 @@ class BokfriCliRevenueReportTest {
         String[] context = {"--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
                 "--year-id", Integer.toString(yearId), "--format", "json"};
         Map<String, String> expected = new LinkedHashMap<>();
-        for (String report : List.of("customer-revenue", "supplier-revenue", "product-revenue")) {
+        for (String report : List.of("customer-revenue", "supplier-revenue", "product-revenue", "sales-report")) {
             for (String[] period : periods()) {
                 Path pdf = temporaryDirectory.resolve("legacy-" + report + "-" + period[0] + ".pdf");
                 Result result = execute(arguments(context, report, period, pdf));
                 assertThat(result.code()).as(result.error()).isZero();
                 String text = text(pdf);
                 assertThat(text).contains("Revenue selected company", "Selected").doesNotContain("Other");
-                if (period[0].equals("2024-02-01")) {
+                if (period[0].equals("2024-02-01") && !report.equals("sales-report")) {
                     assertThat(text).containsPattern(report.equals("supplier-revenue") ? "380[.,]50" : "342[.,]45");
                 }
                 expected.put(report + period[0], text);
             }
         }
         new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
-        for (String report : List.of("customer-revenue", "supplier-revenue", "product-revenue")) {
+        for (String report : List.of("customer-revenue", "supplier-revenue", "product-revenue", "sales-report")) {
             for (String[] period : periods()) {
                 Path pdf = temporaryDirectory.resolve("normalized-" + report + "-" + period[0] + ".pdf");
                 String[] args = arguments(context, report, period, pdf);
@@ -102,6 +102,7 @@ class BokfriCliRevenueReportTest {
     private static String[] arguments(String[] context, String report, String[] period, Path pdf) {
         List<String> args = new ArrayList<>(List.of(context));
         args.addAll(List.of(report, "--from", period[0], "--to", period[1], "--output", pdf.toString()));
+        if (report.equals("sales-report")) args.addAll(List.of("--sort", "AverageSellingPrice", "--descending"));
         return args.toArray(String[]::new);
     }
 
@@ -130,6 +131,8 @@ class BokfriCliRevenueReportTest {
         SSProduct product = new SSProduct();
         product.setNumber("P1");
         product.setDescription(name + " product");
+        product.setSellingPrice(new BigDecimal("120"));
+        product.setStockPrice(new BigDecimal("25"));
         runtime.database().addProduct(product);
         SSProduct inactiveProduct = new SSProduct();
         inactiveProduct.setNumber("P2");
@@ -184,6 +187,8 @@ class BokfriCliRevenueReportTest {
         invoice.setLocalDate(LocalDate.parse(date));
         invoice.setCurrencyRate(new BigDecimal("2"));
         SSSupplierInvoiceRow row = new SSSupplierInvoiceRow();
+        row.setProductNr("P1");
+        row.setUnitFreight(new BigDecimal("3"));
         row.setUnitprice(new BigDecimal(price));
         row.setQuantity(1);
         invoice.getRows().add(row);

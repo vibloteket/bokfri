@@ -45,6 +45,42 @@ public class SSSaleReportPrinter extends SSPrinter {
     private boolean     iAscending;
 
     private List<SSProduct> iProducts;
+    private List<SSInvoice> invoices;
+    private List<SSCreditInvoice> credits;
+    private List<SSSupplierInvoice> supplierInvoices;
+    private Map<String, SSProduct> productsByNumber;
+
+    /**
+     * Creates a report from explicit company-scoped inputs without accessing SSDB.
+     * Input list ordering is preserved; calculations retain legacy report semantics.
+     */
+    public SSSaleReportPrinter(SSNewCompany company, SSNewAccountingYear year,
+            List<SSProduct> products, List<SSInvoice> invoices,
+            List<SSCreditInvoice> credits, List<SSSupplierInvoice> supplierInvoices,
+            LocalDate from, LocalDate to, SortingMode sortingMode, boolean ascending) {
+        super(company, year);
+        iFrom = from;
+        iTo = to;
+        iSortingMode = sortingMode;
+        iAscending = ascending;
+        iProducts = new ArrayList<>(products);
+        this.invoices = new ArrayList<>(invoices);
+        this.credits = new ArrayList<>(credits);
+        this.supplierInvoices = new ArrayList<>(supplierInvoices);
+        productsByNumber = new HashMap<>();
+        for (SSProduct product : products) {
+            productsByNumber.putIfAbsent(product.getNumber(), product);
+        }
+        setPageHeader("header_period.jrxml");
+        setColumnHeader("salereport.jrxml");
+        setDetail("salereport.jrxml");
+    }
+
+    private SSProduct findProduct(String number) {
+        return productsByNumber == null
+                ? SSDB.getInstance().getProduct(number).orElse(null)
+                : productsByNumber.get(number);
+    }
 
     // The number of days in the period
     private Integer iDays;
@@ -295,7 +331,7 @@ public class SSSaleReportPrinter extends SSPrinter {
         iInprices = new HashMap<>();
 
         List<SSSupplierInvoice> iSupplierInvoices = new LinkedList<>(
-                SSDB.getInstance().getSupplierInvoices());
+                supplierInvoices == null ? SSDB.getInstance().getSupplierInvoices() : supplierInvoices);
 
         Collections.sort(iSupplierInvoices,
                 Comparator.comparing(SSSupplierInvoice::getLocalDate,
@@ -305,10 +341,7 @@ public class SSSaleReportPrinter extends SSPrinter {
             if (SSSupplierInvoiceMath.inPeriod(iSupplierInvoice, iTo)) {
                 for (SSSupplierInvoiceRow iRow : iSupplierInvoice.getRows()) {
                     if (iRow.getProductNr() != null) {
-                        SSProduct iProduct = new SSProduct();
-
-                        iProduct.setNumber(iRow.getProductNr());
-                        iProduct = SSDB.getInstance().getProduct(iProduct).orElse(null);
+                        SSProduct iProduct = findProduct(iRow.getProductNr());
 
                         if (iProduct == null || iProduct.isParcel()) {
                             continue;
@@ -331,14 +364,13 @@ public class SSSaleReportPrinter extends SSPrinter {
             }
         }
 
-        List<SSInvoice> iInvoices = SSDB.getInstance().getInvoices();
+        List<SSInvoice> iInvoices = invoices == null ? SSDB.getInstance().getInvoices() : invoices;
 
         for (SSInvoice iInvoice : iInvoices) {
             if (SSInvoiceMath.inPeriod(iInvoice, iFrom, iTo)) {
                 for (SSSaleRow iRow : iInvoice.getRows()) {
                     if (iRow.getProductNr() != null) {
-                        SSProduct iProduct = SSDB.getInstance().getProduct(
-                                iRow.getProductNr()).orElse(null);
+                        SSProduct iProduct = findProduct(iRow.getProductNr());
 
                         if (iProduct == null || iRow.getQuantity() == null) {
                             continue;
@@ -367,14 +399,13 @@ public class SSSaleReportPrinter extends SSPrinter {
             }
         }
 
-        List<SSCreditInvoice> iCreditInvoices = SSDB.getInstance().getCreditInvoices();
+        List<SSCreditInvoice> iCreditInvoices = credits == null ? SSDB.getInstance().getCreditInvoices() : credits;
 
         for (SSCreditInvoice iCreditInvoice : iCreditInvoices) {
             if (SSInvoiceMath.inPeriod(iCreditInvoice, iFrom, iTo)) {
                 for (SSSaleRow iRow : iCreditInvoice.getRows()) {
                     if (iRow.getProductNr() != null) {
-                        SSProduct iProduct = SSDB.getInstance().getProduct(
-                                iRow.getProductNr()).orElse(null);
+                        SSProduct iProduct = findProduct(iRow.getProductNr());
 
                         if (iProduct == null || iRow.getQuantity() == null) {
                             continue;
@@ -408,8 +439,7 @@ public class SSSaleReportPrinter extends SSPrinter {
                 BigDecimal iInpriceSum = new BigDecimal(0);
 
                 for (SSProductRow iRow : iProduct.getParcelRows()) {
-                    SSProduct iRowProduct = SSDB.getInstance().getProduct(
-                            iRow.getProductNr()).orElse(null);
+                    SSProduct iRowProduct = findProduct(iRow.getProductNr());
 
                     // Undvik inf loop
                     if (iRowProduct == null || iProduct.equals(iRowProduct)) {
