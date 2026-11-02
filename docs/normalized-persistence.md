@@ -267,7 +267,8 @@ The CLI `balance-sheet --output`, `income-statement --output`,
 `vat control --output`, `customer-revenue --from ... --to ... --output`,
 `supplier-revenue --from ... --to ... --output` and
 `product-revenue --from ... --to ... --output` and
-`sales-report --from ... --to ... --output` paths
+`sales-report --from ... --to ... --output` and
+`sale-values --from ... --to ... --output` paths
 support normalized data format 3. They hydrate the selected year's accounts,
 opening balances and vouchers, then pass the selected company and year explicitly
 to the existing report printers. The shared printer header obtains the company
@@ -340,7 +341,23 @@ retained, including the historically named `AverageSellingPrice` mode that actua
 sorts unit contribution. Input product and purchase lists are copied before sorting.
 Tests compare legacy/normalized PDF text across periods and company boundaries;
 the assembled/packaged smoke flow also exports the sales report.
-`sale-values` still requires legacy tender/order access and remains a follow-up.
+`sale-values` uses a narrow read-only `NormalizedSaleValuesStore` projection of
+tender, order, invoice and credit-invoice dates, effective currency rates and discounted
+row amounts scoped to the selected company. It does not return partially hydrated
+editable documents. Row sums reuse `SSSaleRow.getSum()` without product lookups;
+monthly accumulation retains legacy double arithmetic and subtracts credit totals
+only after accumulating invoices and credits separately. The printer receives an
+immutable `SaleValuesData` projection and explicit company/year header context.
+Both backends use the same templates, including the summary band.
+
+This report historically includes the **whole calendar month**, even if the requested
+period starts or ends mid-month. Its existing month splitter excludes an end month
+when the end date is that month's first day; both behaviors are deliberately retained.
+There is no invoice-style null-rate fallback added here: stored/effective rates are
+used as before. Normalized migration already snapshots tender/order effective rates.
+Tests cover full/partial/cross-year PDF parity, selected-company isolation, discounted
+amounts, rates, credits, empty data, null dates/missing amounts, first-day end boundaries,
+immutable inputs, overwrite protection and packaged CLI smoke.
 
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;

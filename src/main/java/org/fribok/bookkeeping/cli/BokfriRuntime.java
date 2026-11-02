@@ -7,6 +7,8 @@ import org.fribok.bookkeeping.dataformat.NormalizedInpaymentStore;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore;
 import org.fribok.bookkeeping.dataformat.NormalizedOutpaymentStore;
 import org.fribok.bookkeeping.dataformat.NormalizedRegisterStore;
+import org.fribok.bookkeeping.dataformat.NormalizedSaleValuesStore;
+import org.fribok.bookkeeping.service.SaleValuesData;
 import org.fribok.bookkeeping.dataformat.NormalizedSupplierInvoiceStore;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSCustomer;
@@ -528,6 +530,13 @@ public final class BokfriRuntime implements AutoCloseable {
                     "Normalized storage is not active for this database (data format " + dataFormat + ")");
         }
         return outpaymentStore;
+    }
+
+    /** Reads report-only sale projections from the selected normalized company. */
+    public SaleValuesData normalizedSaleValues() throws SQLException {
+        if (!isNormalized()) throw new IllegalStateException("Normalized storage is required");
+        return new NormalizedSaleValuesStore(connection)
+                .read(requireCurrentCompany().getId());
     }
 
     /** Lists the supplier invoices of the selected company from the active storage. */
