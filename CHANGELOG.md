@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable CLI `sale-values` PDFs on normalized format 3 storage through a read-only company-scoped sale-row projection. Preserve legacy full-month buckets, discounted amounts, currency conversion, credit subtraction and summary totals without singleton lookups or partially hydrated editable documents (#75).
+
 - Enable CLI `sales-report` PDFs for normalized format 3 databases using explicit company/year, products, invoices, credits and supplier invoices. Preserve historical purchase-cost, parcel, credit-currency and sorting behavior without singleton lookups or in-place register sorting; keep legacy GUI paths unchanged (#75).
 
 - Add an independent Swedish Flarum 2 forum container using the checksum-pinned official installation archive, SQLite, and documented deployment/backup workflows.

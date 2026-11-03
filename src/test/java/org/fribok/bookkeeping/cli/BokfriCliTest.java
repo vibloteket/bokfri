@@ -417,8 +417,8 @@ class BokfriCliTest {
     }
 
     @Test
-    void unportedCommandsFailClearlyOnNormalizedStorage() throws Exception {
-        Path data = temporaryDirectory.resolve("normalized-cli-blocked");
+    void saleValuesPdfWorksOnNormalizedStorage() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-sale-values");
         extractLegacyDatabase(data.resolve("db"));
         execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
         Result companies = execute("--data-dir", data.toString(), "--format", "json",
@@ -437,11 +437,11 @@ class BokfriCliTest {
                 Integer.toString(companyId), "--year-id", Integer.toString(yearId),
                 "--format", "json", "sale-values", "--from", yearInfo.path("from").asText(),
                 "--to", yearInfo.path("to").asText(), "--output",
-                temporaryDirectory.resolve("blocked-sale-values.pdf").toString());
+                temporaryDirectory.resolve("sale-values.pdf").toString());
 
-        assertThat(report.exitCode()).isEqualTo(1);
-        assertThat(new ObjectMapper().readTree(report.stderr()).at("/error/code").asText())
-                .isEqualTo("NORMALIZED_STORAGE_UNSUPPORTED");
+        assertThat(report.exitCode()).as(report.stderr()).isZero();
+        assertThat(Files.readAllBytes(temporaryDirectory.resolve("sale-values.pdf")))
+                .startsWith("%PDF-".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
     }
 
     @Test

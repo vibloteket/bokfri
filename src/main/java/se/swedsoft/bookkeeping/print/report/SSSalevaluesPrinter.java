@@ -1,6 +1,8 @@
 package se.swedsoft.bookkeeping.print.report;
 
 
+import org.fribok.bookkeeping.service.SaleValuesData;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSMonth;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSProduct;
@@ -23,6 +25,21 @@ public class SSSalevaluesPrinter extends SSPrinter {
     private LocalDate iTo;
 
     private List<SSMonth> iMonths;
+    private SaleValuesData explicitValues;
+
+    /** Creates a report from explicit company/year and immutable sale-row projections. */
+    public SSSalevaluesPrinter(SSNewCompany company, SSNewAccountingYear year,
+            SaleValuesData values, LocalDate from, LocalDate to) {
+        super(company, year);
+        explicitValues = java.util.Objects.requireNonNull(values);
+        iFrom = from;
+        iTo = to;
+        iMonths = SSMonth.splitYearIntoMonths(from, to);
+        setPageHeader("header_period.jrxml");
+        setColumnHeader("salevalues.jrxml");
+        setDetail("salevalues.jrxml");
+        setSummary("salevalues.jrxml");
+    }
 
     /**
      *
@@ -71,7 +88,8 @@ public class SSSalevaluesPrinter extends SSPrinter {
                 Object value = null;
 
                 SSMonth iMonth = getObject(rowIndex);
-                SSNewCompany iCurrentCompany = SSDB.getInstance().getCurrentCompany();
+                SSNewCompany iCurrentCompany = explicitValues == null
+                        ? SSDB.getInstance().getCurrentCompany() : null;
 
                 switch (columnIndex) {
                 case 0:
@@ -79,15 +97,19 @@ public class SSSalevaluesPrinter extends SSPrinter {
                     break;
 
                 case 1:
-                    value = iCurrentCompany.getTenderValueForMonth(iMonth);
+                    value = explicitValues == null ? iCurrentCompany.getTenderValueForMonth(iMonth)
+                            : SaleValuesData.total(explicitValues.tenders(), iMonth);
                     break;
 
                 case 2:
-                    value = iCurrentCompany.getOrderValueForMonth(iMonth);
+                    value = explicitValues == null ? iCurrentCompany.getOrderValueForMonth(iMonth)
+                            : SaleValuesData.total(explicitValues.orders(), iMonth);
                     break;
 
                 case 3:
-                    value = iCurrentCompany.getInvoiceValueForMonth(iMonth);
+                    value = explicitValues == null ? iCurrentCompany.getInvoiceValueForMonth(iMonth)
+                            : SaleValuesData.total(explicitValues.invoices(), iMonth)
+                                    - SaleValuesData.total(explicitValues.credits(), iMonth);
                     break;
                 }
 

@@ -2,6 +2,8 @@ package org.fribok.bookkeeping.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.fribok.bookkeeping.dataformat.NormalizedMigrationService;
+import org.fribok.bookkeeping.service.SaleValuesData;
+import se.swedsoft.bookkeeping.data.SSMonth;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.swedsoft.bookkeeping.data.SSAccount;
@@ -12,6 +14,8 @@ import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSProduct;
+import se.swedsoft.bookkeeping.data.SSOrder;
+import se.swedsoft.bookkeeping.data.SSTender;
 import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
@@ -54,21 +58,36 @@ class BokfriCliRevenueReportTest {
         String[] context = {"--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
                 "--year-id", Integer.toString(yearId), "--format", "json"};
         Map<String, String> expected = new LinkedHashMap<>();
-        for (String report : List.of("customer-revenue", "supplier-revenue", "product-revenue", "sales-report")) {
+        for (String report : List.of("customer-revenue", "supplier-revenue", "product-revenue", "sales-report", "sale-values")) {
             for (String[] period : periods()) {
                 Path pdf = temporaryDirectory.resolve("legacy-" + report + "-" + period[0] + ".pdf");
                 Result result = execute(arguments(context, report, period, pdf));
                 assertThat(result.code()).as(result.error()).isZero();
                 String text = text(pdf);
-                assertThat(text).contains("Revenue selected company", "Selected").doesNotContain("Other");
-                if (period[0].equals("2024-02-01") && !report.equals("sales-report")) {
+                assertThat(text).contains("Revenue selected company").doesNotContain("Other");
+                if (!report.equals("sale-values")) assertThat(text).contains("Selected");
+                if (period[0].equals("2024-02-01") && !report.equals("sales-report") && !report.equals("sale-values")) {
                     assertThat(text).containsPattern(report.equals("supplier-revenue") ? "380[.,]50" : "342[.,]45");
                 }
                 expected.put(report + period[0], text);
             }
         }
         new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
-        for (String report : List.of("customer-revenue", "supplier-revenue", "product-revenue", "sales-report")) {
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            runtime.selectCompany(companyId);
+            SaleValuesData values = runtime.normalizedSaleValues();
+            assertThat(values.tenders()).hasSize(4);
+            assertThat(values.orders()).hasSize(4);
+            SSMonth february = new SSMonth(LocalDate.of(2024, 2, 1));
+            assertThat(SaleValuesData.total(values.tenders(), february))
+                    .isCloseTo(541.35, org.assertj.core.data.Offset.offset(0.000001));
+            assertThat(SaleValuesData.total(values.orders(), february))
+                    .isCloseTo(812.025, org.assertj.core.data.Offset.offset(0.000001));
+            assertThat(SaleValuesData.total(values.invoices(), february)
+                    - SaleValuesData.total(values.credits(), february))
+                    .isCloseTo(522.9, org.assertj.core.data.Offset.offset(0.000001));
+        }
+        for (String report : List.of("customer-revenue", "supplier-revenue", "product-revenue", "sales-report", "sale-values")) {
             for (String[] period : periods()) {
                 Path pdf = temporaryDirectory.resolve("normalized-" + report + "-" + period[0] + ".pdf");
                 String[] args = arguments(context, report, period, pdf);
@@ -158,6 +177,14 @@ class BokfriCliRevenueReportTest {
             SSInvoice invoice = new SSInvoice();
             configure(invoice, customer.getNumber(), date, price);
             runtime.database().addInvoice(invoice);
+            SSTender tender = new SSTender();
+            tender.setLocalDate(LocalDate.parse(date));
+            tender.setCurrencyRate(new BigDecimal("2"));
+            tender.getRows().addAll(invoice.getRows());
+            runtime.database().addTender(tender);
+            SSOrder order = new SSOrder(invoice);
+            order.setCurrencyRate(new BigDecimal("3"));
+            runtime.database().addOrder(order);
             SSSupplierInvoice purchase = new SSSupplierInvoice();
             configure(purchase, supplier.getNumber(), date, price);
             runtime.database().addSupplierInvoice(purchase);
