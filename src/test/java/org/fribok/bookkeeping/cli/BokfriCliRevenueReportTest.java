@@ -13,6 +13,8 @@ import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSInpayment;
 import se.swedsoft.bookkeeping.data.SSInpaymentRow;
+import se.swedsoft.bookkeeping.data.SSOutpayment;
+import se.swedsoft.bookkeeping.data.SSOutpaymentRow;
 import se.swedsoft.bookkeeping.data.common.SSInvoiceType;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
@@ -116,7 +118,7 @@ class BokfriCliRevenueReportTest {
     }
 
     @Test
-    void normalizedCustomerBalancesMatchLegacyAcrossCutoffsAndKeepCompanyIsolation() throws Exception {
+    void normalizedBalancesMatchLegacyAcrossCutoffsAndKeepCompanyIsolation() throws Exception {
         Path data = temporaryDirectory.resolve("customer-balances");
         int companyId;
         int yearId;
@@ -135,7 +137,7 @@ class BokfriCliRevenueReportTest {
         Map<String, String> expected = new LinkedHashMap<>();
         for (boolean normalized : List.of(false, true)) {
             if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
-            for (String report : List.of("accounts-receivable", "customer-claims")) {
+            for (String report : List.of("accounts-receivable", "customer-claims", "accounts-payable", "supplier-debts")) {
                 for (String date : cutoffs) {
                     Path pdf = temporaryDirectory.resolve(report + normalized + date + ".pdf");
                     List<String> args = new ArrayList<>(List.of("--data-dir", data.toString(),
@@ -168,6 +170,8 @@ class BokfriCliRevenueReportTest {
     }
 
     private static void addBalanceDocuments(BokfriRuntime runtime) throws Exception {
+        // Legacy insert methods do not invalidate every cached register list.
+        runtime.database().clearLists();
         SSInvoice invoice = runtime.getInvoices().get(1);
         SSCreditInvoice credit = new SSCreditInvoice();
         configure(credit, "C1", "2024-02-20", "10.25");
@@ -181,6 +185,22 @@ class BokfriCliRevenueReportTest {
             row.setValue(new BigDecimal("25.005"));
             payment.getRows().add(row);
             runtime.database().addInpayment(payment);
+        }
+        SSSupplierInvoice purchase = runtime.getSupplierInvoices().get(1);
+        SSSupplierCreditInvoice supplierCredit = new SSSupplierCreditInvoice();
+        configure(supplierCredit, "S1", "2024-02-20", "10.25");
+        supplierCredit.setTaxSum(new BigDecimal("2.50"));
+        supplierCredit.setRoundingSum(new BigDecimal("0.25"));
+        supplierCredit.setCrediting(purchase);
+        runtime.database().addSupplierCreditInvoice(supplierCredit);
+        for (String date : List.of("2024-02-10", "2024-02-20", "2024-02-21")) {
+            SSOutpayment payment = new SSOutpayment();
+            payment.setLocalDate(LocalDate.parse(date));
+            SSOutpaymentRow row = new SSOutpaymentRow();
+            row.setInvoiceNr(purchase.getNumber());
+            row.setValue(new BigDecimal("25.005"));
+            payment.getRows().add(row);
+            runtime.database().addOutpayment(payment);
         }
         SSInvoice cash = new SSInvoice();
         configure(cash, "C1", "2024-02-10", "999");

@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable normalized format 3 CLI `accounts-payable` and `supplier-debts` PDFs with explicit company/year, supplier, invoice, credit and outpayment inputs. Preserve stored tax/rounding amounts, inclusive cutoff rules and report-specific balance precision; payable subreports no longer require singleton headers or supplier caches (#75).
+
 - Enable normalized format 3 CLI `accounts-receivable` and `customer-claims` PDFs using explicit company/year, customer, invoice, credit and payment inputs. Preserve cutoff inclusion, cash exclusion, tax/company rounding and report-specific balance precision; nested receivable rows no longer depend on singleton headers or global customer caches (#75).
 
 - Enable CLI `sale-values` PDFs on normalized format 3 storage through a read-only company-scoped sale-row projection. Preserve legacy full-month buckets, discounted amounts, currency conversion, credit subtraction and summary totals without singleton lookups or partially hydrated editable documents (#75).

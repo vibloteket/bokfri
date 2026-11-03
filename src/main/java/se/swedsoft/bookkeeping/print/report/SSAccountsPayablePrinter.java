@@ -3,6 +3,10 @@ package se.swedsoft.bookkeeping.print.report;
 
 import se.swedsoft.bookkeeping.calc.math.*;
 import se.swedsoft.bookkeeping.data.SSSupplier;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
+import se.swedsoft.bookkeeping.data.SSOutpayment;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -25,6 +29,36 @@ import java.util.*;
 public class SSAccountsPayablePrinter extends SSPrinter {
 
     private SSInvoicePrinter iPrinter;
+    private SSNewCompany explicitCompany;
+    private SSNewAccountingYear explicitYear;
+    private boolean explicitInputs;
+
+    /** Creates a report from explicit company/year, supplier register and dated invoice/payment inputs. */
+    public SSAccountsPayablePrinter(SSNewCompany company, SSNewAccountingYear year,
+            List<SSSupplier> suppliers, List<SSSupplierInvoice> invoices,
+            List<SSSupplierCreditInvoice> credits, List<SSOutpayment> payments, LocalDate date) {
+        super(company, year);
+        explicitCompany = company;
+        explicitYear = year;
+        explicitInputs = true;
+        iSuppliers = new ArrayList<>(suppliers);
+        iDate = date;
+        SSSupplierBalanceMath balances = new SSSupplierBalanceMath(payments, credits, date);
+        iOutpaymentSum = balances.paymentSums();
+        iSupplierCreditInvoiceSum = balances.creditSums();
+        iSupplierInvoicesMap = new HashMap<>();
+        for (SSSupplier supplier : suppliers) {
+            iSupplierInvoicesMap.put(supplier.getNumber(), new ArrayList<>());
+        }
+        for (SSSupplierInvoice invoice : invoices) {
+            if (SSSupplierBalanceMath.included(invoice, date)) {
+                iSupplierInvoicesMap.computeIfAbsent(invoice.getSupplierNr(), key -> new ArrayList<>())
+                        .add(invoice);
+            }
+        }
+        configureReport();
+    }
+
 
     private SSDefaultJasperDataSource iDataSource;
 
@@ -74,6 +108,10 @@ public class SSAccountsPayablePrinter extends SSPrinter {
             }
             iSupplierInvoicesMap.put(iSupplierNumber, iInvoicesForCustomer);
         }
+        configureReport();
+    }
+
+    private void configureReport() {
         addParameter("periodTitle", iBundle.getString("accountspayablereport.periodtitle"));
         addParameter("periodText", iDate);
 
@@ -99,7 +137,8 @@ public class SSAccountsPayablePrinter extends SSPrinter {
     @Override
     protected SSDefaultTableModel getModel() {
 
-        iPrinter = new SSInvoicePrinter();
+        iPrinter = explicitInputs ? new SSInvoicePrinter(explicitCompany, explicitYear)
+                : new SSInvoicePrinter();
         iPrinter.generateReport();
 
         addParameter("Report", iPrinter.getReport());
@@ -188,6 +227,15 @@ public class SSAccountsPayablePrinter extends SSPrinter {
          *
          */
         public SSInvoicePrinter() {
+            configureRows();
+        }
+
+        private SSInvoicePrinter(SSNewCompany company, SSNewAccountingYear year) {
+            super(company, year);
+            configureRows();
+        }
+
+        private void configureRows() {
             setMargins(0, 0, 0, 0);
 
             setDetail("accountspayable.row.jrxml");
