@@ -269,7 +269,8 @@ The CLI `balance-sheet --output`, `income-statement --output`,
 `product-revenue --from ... --to ... --output` and
 `sales-report --from ... --to ... --output` and
 `sale-values --from ... --to ... --output`,
-`accounts-receivable --date ... --output` and `customer-claims --date ... --output` paths
+`accounts-receivable --date ... --output`, `customer-claims --date ... --output`,
+`accounts-payable --date ... --output` and `supplier-debts --date ... --output` paths
 support normalized data format 3. They hydrate the selected year's accounts,
 opening balances and vouchers, then pass the selected company and year explicitly
 to the existing report printers. The shared printer header obtains the company
@@ -374,7 +375,22 @@ Both outer and nested receivable printers receive explicit headers. Input regist
 lists are copied before sorting; legacy GUI constructors are retained. Tests cover
 populated/empty reports, cash/date rules, tax/rounding, credits/payments, four cutoff
 PDF comparisons across storage formats, two-company isolation, overwrite protection
-and assembled/packaged CLI smoke. Supplier-side balance PDFs remain a follow-up.
+and assembled/packaged CLI smoke.
+
+Supplier outstanding-balance PDFs (`accounts-payable` and `supplier-debts`) likewise
+receive explicit company/year, invoices, linked supplier credits and outpayments;
+payables also receive a copied supplier register. `SSSupplierBalanceMath` aggregates
+payments and linked credits through the inclusive cutoff without singleton caches.
+Undated/future invoices and adjustments are excluded. Supplier totals use their
+**stored tax and rounding amounts**, not the company's customer-sale rounding flag.
+Credits/payments are subtracted in invoice currency before local conversion, without
+extra conversion using adjustment currency rates. Debts round the remaining balance
+to two decimals before conversion; payables retain unrounded remainders. Zero/negative
+balances and inactive suppliers remain visible. Payable invoice subreports also receive
+explicit headers. Legacy constructors/templates are unchanged. Tests cover stored
+amounts, cutoff boundaries, multiple adjustments, overpayments, null rates, inactive
+suppliers, nested rows, empty/populated PDFs, four-cutoff legacy/normalized text parity,
+two-company isolation, overwrite protection and assembled/packaged CLI smoke.
 
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;

@@ -2,7 +2,12 @@ package se.swedsoft.bookkeeping.print.report;
 
 
 import se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath;
+import se.swedsoft.bookkeeping.calc.math.SSSupplierBalanceMath;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
+import se.swedsoft.bookkeeping.data.SSOutpayment;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
@@ -22,6 +27,22 @@ public class SSSupplierdebtPrinter extends SSPrinter {
 
     private Map<SSSupplierInvoice, BigDecimal> iSaldos;
 
+    /** Creates an isolated dated debt report from explicit company/year and invoice/payment inputs. */
+    public SSSupplierdebtPrinter(SSNewCompany company, SSNewAccountingYear year,
+            List<SSSupplierInvoice> invoices, List<SSSupplierCreditInvoice> credits,
+            List<SSOutpayment> payments, LocalDate date) {
+        super(company, year);
+        SSSupplierBalanceMath balances = new SSSupplierBalanceMath(payments, credits, date);
+        iSaldos = new HashMap<>();
+        for (SSSupplierInvoice invoice : invoices) {
+            if (SSSupplierBalanceMath.included(invoice, date)) {
+                iSaldos.put(invoice, balances.saldo(invoice).setScale(2, java.math.RoundingMode.HALF_UP));
+            }
+        }
+        configureReport(date);
+    }
+
+
     /**
      *
      * @param iDate
@@ -38,6 +59,10 @@ public class SSSupplierdebtPrinter extends SSPrinter {
     public SSSupplierdebtPrinter(LocalDate iDate, List<SSSupplierInvoice> iInvoices) {
         iSaldos = SSSupplierInvoiceMath.getSaldo(iInvoices, iDate);
 
+        configureReport(iDate);
+    }
+
+    private void configureReport(LocalDate iDate) {
         setPageHeader("header_period.jrxml");
         setColumnHeader("supplierdebt.jrxml");
         setDetail("supplierdebt.jrxml");

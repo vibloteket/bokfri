@@ -953,8 +953,15 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                java.nio.file.Path pdf = exportPdf(new SSAccountsPayablePrinter(date), output, overwrite);
+                SSAccountsPayablePrinter printer;
+                if (runtime.isNormalized()) {
+                    printer = new SSAccountsPayablePrinter(company, runtime.hydrateYear(year),
+                            runtime.getSuppliers(), runtime.getSupplierInvoices(), runtime.getSupplierCreditInvoices(), runtime.getOutpayments(), date);
+                } else {
+                    runtime.database().init(false);
+                    printer = new SSAccountsPayablePrinter(date);
+                }
+                java.nio.file.Path pdf = exportPdf(printer, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("date", date); result.put("output", pdf.toString());
                 result.put("bytes", Files.size(pdf));
@@ -977,8 +984,15 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                java.nio.file.Path pdf = exportPdf(new SSSupplierdebtPrinter(date), output, overwrite);
+                SSSupplierdebtPrinter printer;
+                if (runtime.isNormalized()) {
+                    printer = new SSSupplierdebtPrinter(company, runtime.hydrateYear(year),
+                            runtime.getSupplierInvoices(), runtime.getSupplierCreditInvoices(), runtime.getOutpayments(), date);
+                } else {
+                    runtime.database().init(false);
+                    printer = new SSSupplierdebtPrinter(date);
+                }
+                java.nio.file.Path pdf = exportPdf(printer, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("date", date); result.put("output", pdf.toString());
                 result.put("bytes", Files.size(pdf));

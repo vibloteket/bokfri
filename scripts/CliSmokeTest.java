@@ -95,7 +95,7 @@ public final class CliSmokeTest {
                     "VAT " + report + " did not produce a normalized PDF");
         }
         String yearJson = Files.readString(temporary.resolve("year-2026.json"));
-        for (String report : List.of("accounts-receivable", "customer-claims")) {
+        for (String report : List.of("accounts-receivable", "customer-claims", "accounts-payable", "supplier-debts")) {
             Path pdf = temporary.resolve("normalized-" + report + ".pdf");
             Result exported = cli("--company-id", company, "--year-id", year, "--format", "json", report,
                     "--date", firstString(yearJson, "to"), "--output", pdf.toString());
