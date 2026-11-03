@@ -1787,8 +1787,10 @@ public class BokfriCli implements Runnable {
                 result.put("count", customers.size());
                 result.put("customers", customers);
                 if (output != null) {
-                    addPdf(result, exportPdf(new SSCustomerListPrinter(
-                            new java.util.ArrayList<>(listedCustomers)), output, overwrite));
+                    SSCustomerListPrinter printer = runtime.isNormalized()
+                            ? new SSCustomerListPrinter(company, listedCustomers)
+                            : new SSCustomerListPrinter(new java.util.ArrayList<>(listedCustomers));
+                    addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 root.output(result, table(customers, "No customers found",
                         left("Number", "number"), left("Name", "name"), left("Email", "email")));
@@ -2181,8 +2183,10 @@ public class BokfriCli implements Runnable {
                 result.put("count", suppliers.size());
                 result.put("suppliers", suppliers);
                 if (output != null) {
-                    addPdf(result, exportPdf(new SSSupplierListPrinter(
-                            new java.util.ArrayList<>(listedSuppliers)), output, overwrite));
+                    SSSupplierListPrinter printer = runtime.isNormalized()
+                            ? new SSSupplierListPrinter(company, listedSuppliers)
+                            : new SSSupplierListPrinter(new java.util.ArrayList<>(listedSuppliers));
+                    addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 root.output(result,
                         table(suppliers, "No suppliers found", left("Number", "number"),

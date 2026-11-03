@@ -169,6 +169,68 @@ class BokfriCliRevenueReportTest {
         }
     }
 
+    @Test
+    void partyRegisterPdfsMatchLegacyWithoutYearAndKeepCompanyIsolation() throws Exception {
+        Path data = temporaryDirectory.resolve("party-registers");
+        int selected;
+        int empty;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            selected = addCompany(runtime, "Selected register company").getId();
+            addPartyRegisters(runtime, "Selected");
+            addCompany(runtime, "Other register company");
+            addPartyRegisters(runtime, "Other");
+            empty = addCompany(runtime, "Empty register company").getId();
+        }
+        Map<String, String> expected = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            for (int company : List.of(selected, empty)) {
+                for (String register : List.of("customer", "supplier")) {
+                    Path pdf = temporaryDirectory.resolve(register + company + normalized + ".pdf");
+                    List<String> args = new ArrayList<>(List.of("--data-dir", data.toString(),
+                            "--company-id", Integer.toString(company), "--format", "json",
+                            register, "list", "--output", pdf.toString()));
+                    Result result = execute(args.toArray(String[]::new));
+                    assertThat(result.code()).as(result.error()).isZero();
+                    String text = text(pdf);
+                    assertThat(text).contains(company == selected ? "Selected register company"
+                            : "Empty register company").doesNotContain("Other");
+                    if (company == selected) assertThat(text).contains("Selected party");
+                    if (normalized) {
+                        assertThat(text).isEqualTo(expected.get(register + company));
+                        var json = new ObjectMapper().readTree(result.output());
+                        assertThat(json.path("count").asInt()).isEqualTo(company == selected ? 1 : 0);
+                        byte[] original = Files.readAllBytes(pdf);
+                        assertThat(execute(args.toArray(String[]::new)).code()).isEqualTo(1);
+                        assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                        args.add("--overwrite");
+                        Result overwritten = execute(args.toArray(String[]::new));
+                        assertThat(overwritten.code()).as(overwritten.error()).isZero();
+                        assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                        assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                    } else {
+                        expected.put(register + company, text);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void addPartyRegisters(BokfriRuntime runtime, String name) throws Exception {
+        SSCustomer customer = new SSCustomer();
+        customer.setNumber("P1");
+        customer.setName(name + " party");
+        customer.setYourContactPerson(name + " contact");
+        customer.setPhone1("012345");
+        runtime.database().addCustomer(customer);
+        SSSupplier supplier = new SSSupplier();
+        supplier.setNumber("P1");
+        supplier.setName(name + " party");
+        supplier.setYourContact(name + " contact");
+        supplier.setPhone1("012345");
+        runtime.database().addSupplier(supplier);
+    }
+
     private static void addBalanceDocuments(BokfriRuntime runtime) throws Exception {
         // Legacy insert methods do not invalidate every cached register list.
         runtime.database().clearLists();
