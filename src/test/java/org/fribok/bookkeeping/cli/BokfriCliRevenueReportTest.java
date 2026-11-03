@@ -11,6 +11,9 @@ import se.swedsoft.bookkeeping.data.SSAccountPlan;
 import se.swedsoft.bookkeeping.data.SSCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInvoice;
+import se.swedsoft.bookkeeping.data.SSInpayment;
+import se.swedsoft.bookkeeping.data.SSInpaymentRow;
+import se.swedsoft.bookkeeping.data.common.SSInvoiceType;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSProduct;
@@ -110,6 +113,79 @@ class BokfriCliRevenueReportTest {
                 assertThat(SSDB.getInstance().getCurrentYear()).isNull();
             }
         }
+    }
+
+    @Test
+    void normalizedCustomerBalancesMatchLegacyAcrossCutoffsAndKeepCompanyIsolation() throws Exception {
+        Path data = temporaryDirectory.resolve("customer-balances");
+        int companyId;
+        int yearId;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            SSNewCompany company = addCompany(runtime, "Selected balance company");
+            companyId = company.getId();
+            yearId = addYear(runtime).getId();
+            addDocuments(runtime, "Selected", "100.25");
+            addBalanceDocuments(runtime);
+            addCompany(runtime, "Other company must not leak");
+            addYear(runtime);
+            addDocuments(runtime, "Other", "9999.99");
+            addBalanceDocuments(runtime);
+        }
+        List<String> cutoffs = List.of("2023-01-01", "2024-02-10", "2024-02-20", "2024-02-29");
+        Map<String, String> expected = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            for (String report : List.of("accounts-receivable", "customer-claims")) {
+                for (String date : cutoffs) {
+                    Path pdf = temporaryDirectory.resolve(report + normalized + date + ".pdf");
+                    List<String> args = new ArrayList<>(List.of("--data-dir", data.toString(),
+                            "--company-id", Integer.toString(companyId), "--year-id", Integer.toString(yearId),
+                            "--format", "json", report, "--date", date, "--output", pdf.toString()));
+                    Result result = execute(args.toArray(String[]::new));
+                    assertThat(result.code()).as(result.error()).isZero();
+                    String text = text(pdf);
+                    assertThat(text).contains("Selected balance company").doesNotContain("Other");
+                    if (normalized) {
+                        assertThat(text).isEqualTo(expected.get(report + date));
+                        var json = new ObjectMapper().readTree(result.output());
+                        assertThat(json.path("date").asText()).isEqualTo(date);
+                        assertThat(json.path("selection").path("companyName").asText())
+                                .isEqualTo("Selected balance company");
+                        byte[] original = Files.readAllBytes(pdf);
+                        assertThat(execute(args.toArray(String[]::new)).code()).isEqualTo(1);
+                        assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                        args.add("--overwrite");
+                        Result overwritten = execute(args.toArray(String[]::new));
+                        assertThat(overwritten.code()).as(overwritten.error()).isZero();
+                        assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                        assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                    } else {
+                        expected.put(report + date, text);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void addBalanceDocuments(BokfriRuntime runtime) throws Exception {
+        SSInvoice invoice = runtime.getInvoices().get(1);
+        SSCreditInvoice credit = new SSCreditInvoice();
+        configure(credit, "C1", "2024-02-20", "10.25");
+        credit.setCrediting(invoice);
+        runtime.database().addCreditInvoice(credit);
+        for (String date : List.of("2024-02-10", "2024-02-20", "2024-02-21")) {
+            SSInpayment payment = new SSInpayment();
+            payment.setLocalDate(LocalDate.parse(date));
+            SSInpaymentRow row = new SSInpaymentRow();
+            row.setInvoiceNr(invoice.getNumber());
+            row.setValue(new BigDecimal("25.005"));
+            payment.getRows().add(row);
+            runtime.database().addInpayment(payment);
+        }
+        SSInvoice cash = new SSInvoice();
+        configure(cash, "C1", "2024-02-10", "999");
+        cash.setType(SSInvoiceType.CASH);
+        runtime.database().addInvoice(cash);
     }
 
     private static List<String[]> periods() {

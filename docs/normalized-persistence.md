@@ -268,7 +268,8 @@ The CLI `balance-sheet --output`, `income-statement --output`,
 `supplier-revenue --from ... --to ... --output` and
 `product-revenue --from ... --to ... --output` and
 `sales-report --from ... --to ... --output` and
-`sale-values --from ... --to ... --output` paths
+`sale-values --from ... --to ... --output`,
+`accounts-receivable --date ... --output` and `customer-claims --date ... --output` paths
 support normalized data format 3. They hydrate the selected year's accounts,
 opening balances and vouchers, then pass the selected company and year explicitly
 to the existing report printers. The shared printer header obtains the company
@@ -358,6 +359,22 @@ used as before. Normalized migration already snapshots tender/order effective ra
 Tests cover full/partial/cross-year PDF parity, selected-company isolation, discounted
 amounts, rates, credits, empty data, null dates/missing amounts, first-day end boundaries,
 immutable inputs, overwrite protection and packaged CLI smoke.
+
+Customer outstanding-balance PDFs (`accounts-receivable` and `customer-claims`)
+receive explicit company/year, invoices, linked credits and inpayments; receivables
+also receive the customer register. `SSCustomerBalanceMath` builds company-scoped
+cutoff sums without global customer/payment caches. Cash invoices, future invoices
+and undated documents are excluded; dated credits and payments on the cutoff are
+included. Credits/payments are subtracted in invoice currency before local conversion,
+matching legacy behavior (no extra conversion using the credit's currency rate).
+Tax and total rounding use the selected company's explicit rounding flag. Claims
+round the remaining balance to two decimals before conversion; receivables retain
+the unrounded remainder. Zero/negative balances and inactive customers remain visible.
+Both outer and nested receivable printers receive explicit headers. Input register
+lists are copied before sorting; legacy GUI constructors are retained. Tests cover
+populated/empty reports, cash/date rules, tax/rounding, credits/payments, four cutoff
+PDF comparisons across storage formats, two-company isolation, overwrite protection
+and assembled/packaged CLI smoke. Supplier-side balance PDFs remain a follow-up.
 
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
