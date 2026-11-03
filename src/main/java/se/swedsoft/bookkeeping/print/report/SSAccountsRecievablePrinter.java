@@ -3,6 +3,10 @@ package se.swedsoft.bookkeeping.print.report;
 
 import se.swedsoft.bookkeeping.calc.math.*;
 import se.swedsoft.bookkeeping.data.SSCustomer;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSCreditInvoice;
+import se.swedsoft.bookkeeping.data.SSInpayment;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.common.SSInvoiceType;
@@ -26,6 +30,39 @@ import java.util.*;
 public class SSAccountsRecievablePrinter extends SSPrinter {
 
     private SSInvoicePrinter iPrinter;
+    private SSCustomerBalanceMath explicitBalances;
+    private SSNewCompany explicitCompany;
+    private SSNewAccountingYear explicitYear;
+
+    /** Creates an isolated report with explicit company/year, register and dated sale/payment inputs. */
+    public SSAccountsRecievablePrinter(SSNewCompany company, SSNewAccountingYear year,
+            List<SSCustomer> customers, List<SSInvoice> invoices, List<SSCreditInvoice> credits,
+            List<SSInpayment> payments, LocalDate date) {
+        super(company, year);
+        explicitCompany = company;
+        explicitYear = year;
+        explicitBalances = new SSCustomerBalanceMath(company.isRoundingOff(), payments, credits, date);
+        iCustomers = new ArrayList<>(customers);
+        iDate = date;
+        iInpaymentSum = explicitBalances.paymentSums();
+        iCreditInvoiceSum = explicitBalances.creditSums();
+        iCustomerInvoicesMap = new HashMap<>();
+        for (SSCustomer customer : customers) {
+            iCustomerInvoicesMap.put(customer.getNumber(), new ArrayList<>());
+        }
+        for (SSInvoice invoice : invoices) {
+            if (SSCustomerBalanceMath.included(invoice, date)) {
+                iCustomerInvoicesMap.computeIfAbsent(invoice.getCustomerNr(), key -> new ArrayList<>())
+                        .add(invoice);
+            }
+        }
+        configureReport();
+    }
+
+    private BigDecimal total(SSInvoice invoice) {
+        return explicitBalances == null ? SSInvoiceMath.getTotalSum(invoice) : explicitBalances.total(invoice);
+    }
+
 
     private SSDefaultJasperDataSource iDataSource;
 
@@ -76,6 +113,10 @@ public class SSAccountsRecievablePrinter extends SSPrinter {
             iCustomerInvoicesMap.put(iCustomerNumber, iInvoicesForCustomer);
         }
 
+        configureReport();
+    }
+
+    private void configureReport() {
         addParameter("periodTitle",
                 iBundle.getString("accountsrecievablereport.periodtitle"));
         addParameter("periodText", iDate);
@@ -102,7 +143,8 @@ public class SSAccountsRecievablePrinter extends SSPrinter {
     @Override
     protected SSDefaultTableModel getModel() {
 
-        iPrinter = new SSInvoicePrinter();
+        iPrinter = explicitBalances == null ? new SSInvoicePrinter()
+                : new SSInvoicePrinter(explicitCompany, explicitYear);
         iPrinter.generateReport();
 
         addParameter("Report", iPrinter.getReport());
@@ -138,7 +180,7 @@ public class SSAccountsRecievablePrinter extends SSPrinter {
                     BigDecimal iSum = new BigDecimal(0);
 
                     for (SSInvoice iInvoice : iInvoices) {
-                        BigDecimal iSaldo = SSInvoiceMath.getTotalSum(iInvoice); // SSInvoiceMath.getSaldo(iInvoice, iDate);
+                        BigDecimal iSaldo = total(iInvoice); // SSInvoiceMath.getSaldo(iInvoice, iDate);
 
                         if (iInpaymentSum.containsKey(iInvoice.getNumber())) {
                             iSaldo = iSaldo.subtract(
@@ -187,6 +229,15 @@ public class SSAccountsRecievablePrinter extends SSPrinter {
          *
          */
         public SSInvoicePrinter() {
+            configureRows();
+        }
+
+        private SSInvoicePrinter(SSNewCompany company, SSNewAccountingYear year) {
+            super(company, year);
+            configureRows();
+        }
+
+        private void configureRows() {
             setMargins(0, 0, 0, 0);
 
             setDetail("accountsrecievable.row.jrxml");
@@ -224,7 +275,7 @@ public class SSAccountsRecievablePrinter extends SSPrinter {
                         break;
 
                     case 3:
-                        value = SSInvoiceMath.getTotalSum(iInvoice);
+                        value = total(iInvoice);
                         break;
 
                     case 4:
@@ -244,7 +295,7 @@ public class SSAccountsRecievablePrinter extends SSPrinter {
                         break;
 
                     case 7:
-                        BigDecimal iSaldo = SSInvoiceMath.getTotalSum(iInvoice); // SSInvoiceMath.getSaldo(iInvoice, iDate);
+                        BigDecimal iSaldo = total(iInvoice); // SSInvoiceMath.getSaldo(iInvoice, iDate);
 
                         if (iInpaymentSum.containsKey(iInvoice.getNumber())) {
                             iSaldo = iSaldo.subtract(

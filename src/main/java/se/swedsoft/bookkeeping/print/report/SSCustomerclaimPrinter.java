@@ -2,7 +2,12 @@ package se.swedsoft.bookkeeping.print.report;
 
 
 import se.swedsoft.bookkeeping.calc.math.SSInvoiceMath;
+import se.swedsoft.bookkeeping.calc.math.SSCustomerBalanceMath;
 import se.swedsoft.bookkeeping.data.SSInvoice;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSCreditInvoice;
+import se.swedsoft.bookkeeping.data.SSInpayment;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
@@ -21,6 +26,23 @@ import java.util.*;
 public class SSCustomerclaimPrinter extends SSPrinter {
 
     private Map<SSInvoice, BigDecimal> iSaldos;
+    private SSCustomerBalanceMath explicitBalances;
+
+    /** Creates an isolated dated claims report with explicit company rounding and sale/payment inputs. */
+    public SSCustomerclaimPrinter(SSNewCompany company, SSNewAccountingYear year,
+            List<SSInvoice> invoices, List<SSCreditInvoice> credits, List<SSInpayment> payments,
+            LocalDate date) {
+        super(company, year);
+        explicitBalances = new SSCustomerBalanceMath(company.isRoundingOff(), payments, credits, date);
+        iSaldos = new HashMap<>();
+        for (SSInvoice invoice : invoices) {
+            if (SSCustomerBalanceMath.included(invoice, date)) {
+                iSaldos.put(invoice, explicitBalances.saldo(invoice).setScale(2, java.math.RoundingMode.HALF_UP));
+            }
+        }
+        configureReport(date);
+    }
+
 
     /**
      *
@@ -38,6 +60,10 @@ public class SSCustomerclaimPrinter extends SSPrinter {
     public SSCustomerclaimPrinter(LocalDate iDate, List<SSInvoice> iInvoices) {
         iSaldos = SSInvoiceMath.getSaldo(iInvoices, iDate);
 
+        configureReport(iDate);
+    }
+
+    private void configureReport(LocalDate iDate) {
         setPageHeader("header_period.jrxml");
         setColumnHeader("customerclaim.jrxml");
         setDetail("customerclaim.jrxml");
@@ -108,7 +134,8 @@ public class SSCustomerclaimPrinter extends SSPrinter {
                     break;
 
                 case 5:
-                    value = SSInvoiceMath.getTotalSum(iInvoice);
+                    value = explicitBalances == null ? SSInvoiceMath.getTotalSum(iInvoice)
+                            : explicitBalances.total(iInvoice);
                     break;
 
                 case 6:
