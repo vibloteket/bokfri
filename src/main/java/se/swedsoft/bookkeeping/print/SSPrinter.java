@@ -63,6 +63,11 @@ public abstract class SSPrinter {
                 .mapToInt(voucher -> voucher.getNumber()).max().orElse(0));
     }
 
+    /** Initializes a company-wide report without an accounting-year/voucher context. */
+    protected SSPrinter(SSNewCompany company) {
+        this(company.getName(), 0);
+    }
+
     private SSPrinter(String companyName, int lastVoucherNumber) {
         iReport = new SSReport();
         iReport.addParameter("company", companyName);

@@ -3,11 +3,13 @@ package se.swedsoft.bookkeeping.print.report;
 
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSSupplier;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -20,6 +22,14 @@ import java.util.List;
 public class SSSupplierListPrinter extends SSPrinter {
 
     private List<SSSupplier> iSuppliers;
+
+    /** Creates an isolated company-wide register report without an accounting-year context. */
+    public SSSupplierListPrinter(SSNewCompany company, List<SSSupplier> entries) {
+        super(company);
+        iSuppliers = new ArrayList<>(entries);
+        configureReport();
+    }
+
 
     /**
      *
@@ -36,6 +46,10 @@ public class SSSupplierListPrinter extends SSPrinter {
         // Get all orders
         this.iSuppliers = iSuppliers;
 
+        configureReport();
+    }
+
+    private void configureReport() {
         setPageHeader("header.jrxml");
         setColumnHeader("supplierlist.jrxml");
         setDetail("supplierlist.jrxml");

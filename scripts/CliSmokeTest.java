@@ -94,6 +94,16 @@ public final class CliSmokeTest {
             require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
                     "VAT " + report + " did not produce a normalized PDF");
         }
+        for (String register : List.of("customer", "supplier")) {
+            Path pdf = temporary.resolve("normalized-" + register + "-list.pdf");
+            Result exported = cli("--company-id", company, "--format", "json", register, "list",
+                    "--output", pdf.toString());
+            exported.success();
+            exported.jsonObject();
+            byte[] bytes = Files.readAllBytes(pdf);
+            require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
+                    register + " list did not produce a normalized PDF");
+        }
         String yearJson = Files.readString(temporary.resolve("year-2026.json"));
         for (String report : List.of("accounts-receivable", "customer-claims", "accounts-payable", "supplier-debts")) {
             Path pdf = temporary.resolve("normalized-" + report + ".pdf");

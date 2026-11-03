@@ -392,6 +392,18 @@ amounts, cutoff boundaries, multiple adjustments, overpayments, null rates, inac
 suppliers, nested rows, empty/populated PDFs, four-cutoff legacy/normalized text parity,
 two-company isolation, overwrite protection and assembled/packaged CLI smoke.
 
+Company-wide party register PDFs (`customer list --output` and `supplier list --output`)
+use explicit company headers and copies of the supplied register lists in normalized
+mode. These commands do not select an accounting year; the header's last-voucher
+number is therefore zero, matching the company-only legacy CLI path. Companies with
+no accounting years are supported without manufacturing a year object or querying
+legacy vouchers. Existing fields, business-number sorting and templates are unchanged;
+GUI/legacy constructors retain their previous behavior. Tests compare populated and
+empty legacy/normalized PDF text with duplicate numbers in another company, verify
+field mappings, input-list preservation, overwrite protection and cleared singleton
+selection, and exercise both exports in assembled/packaged CLI smoke. Product register
+PDF/XLSX exports still need explicit stock inputs and remain a separate follow-up.
+
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
 issue #75 remains open.
