@@ -3,6 +3,7 @@ package se.swedsoft.bookkeeping.print.report;
 
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSProduct;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSProductRow;
 import se.swedsoft.bookkeeping.data.SSStock;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -11,6 +12,9 @@ import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 import se.swedsoft.bookkeeping.print.util.SSDefaultJasperDataSource;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -29,6 +33,20 @@ public class SSProductListPrinter extends SSPrinter {
     private List<SSProduct> iProducts;
 
     private SSStock iStock;
+    private SSNewCompany explicitCompany;
+    private Map<String, SSProduct> explicitProducts;
+
+    /** Creates a company-wide report with explicit register and all-time stock inputs. */
+    public SSProductListPrinter(SSNewCompany company, List<SSProduct> products, SSStock stock) {
+        super(company);
+        explicitCompany = company;
+        iProducts = new ArrayList<>(products);
+        iStock = stock;
+        explicitProducts = new HashMap<>();
+        for (SSProduct product : products) explicitProducts.putIfAbsent(product.getNumber(), product);
+        configureReport();
+    }
+
 
     /**
      *
@@ -47,6 +65,10 @@ public class SSProductListPrinter extends SSPrinter {
 
         iStock = new SSStock(true);
 
+        configureReport();
+    }
+
+    private void configureReport() {
         setPageHeader("header_period.jrxml");
         setColumnHeader("productlist.jrxml");
         setDetail("productlist.jrxml");
@@ -68,7 +90,7 @@ public class SSProductListPrinter extends SSPrinter {
     @Override
     protected SSDefaultTableModel getModel() {
 
-        iPrinter = new SSParcelPrinter();
+        iPrinter = explicitProducts == null ? new SSParcelPrinter() : new SSParcelPrinter(explicitCompany);
         iPrinter.generateReport();
 
         addParameter("Report", iPrinter.getReport());
@@ -167,6 +189,15 @@ public class SSProductListPrinter extends SSPrinter {
          *
          */
         public SSParcelPrinter() {
+            configureRows();
+        }
+
+        private SSParcelPrinter(SSNewCompany company) {
+            super(company);
+            configureRows();
+        }
+
+        private void configureRows() {
             setMargins(0, 0, 0, 0);
 
             setDetail("productlist.parcel.jrxml");
@@ -184,8 +215,9 @@ public class SSProductListPrinter extends SSPrinter {
 
                     SSProductRow iProductRow = getObject(rowIndex);
 
-                    SSProduct iProduct = iProductRow.getProduct(
-                            SSDB.getInstance().getProducts());
+                    SSProduct iProduct = explicitProducts == null
+                            ? iProductRow.getProduct(SSDB.getInstance().getProducts())
+                            : explicitProducts.get(iProductRow.getProductNr());
 
                     switch (columnIndex) {
                     case 0:
@@ -193,7 +225,8 @@ public class SSProductListPrinter extends SSPrinter {
                         break;
 
                     case 1:
-                        value = iProductRow.getDescription();
+                        value = explicitProducts != null && iProductRow.getDescription() == null && iProduct != null
+                                ? iProduct.getDescription() : iProductRow.getDescription();
                         break;
 
                     case 2:

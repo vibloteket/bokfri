@@ -401,8 +401,31 @@ legacy vouchers. Existing fields, business-number sorting and templates are unch
 GUI/legacy constructors retain their previous behavior. Tests compare populated and
 empty legacy/normalized PDF text with duplicate numbers in another company, verify
 field mappings, input-list preservation, overwrite protection and cleared singleton
-selection, and exercise both exports in assembled/packaged CLI smoke. Product register
-PDF/XLSX exports still need explicit stock inputs and remain a separate follow-up.
+selection, and exercise both exports in assembled/packaged CLI smoke.
+
+Product-register PDF (`product list --output`) and XLSX (`product export`) use a
+read-only `NormalizedStockStore` projection for all-time stock. It reads only the
+selected company's row quantities and flags, not partial editable documents. Quantity
+is minus stock-influencing customer invoices, plus customer credits, plus supplier
+invoices, minus supplier credits, plus inventory changes and indeliveries, minus
+outdeliveries. Reservations come from customer orders without an invoice reference;
+ordered counts come from stock-influencing purchase orders without an invoice reference.
+As in `SSStock.update()`, no date/year filter is applied and inventory **change** is used,
+not the stock snapshot value. Non-stock products retain zero counts. Sale/purchase
+rows expand parcels one level; inventory/delivery changes remain direct product-number
+adjustments. Customer invoice/credit rows require a registered stock product or parcel.
+Decimal sale quantities retain exact integer conversion (fractional values fail, never
+truncate). Existing integer arithmetic and nullable-quantity skipping are preserved.
+
+`SSStock` accepts explicit count maps as a detached snapshot. Product PDF headers,
+parcel product/unit lookups and description fallback use the explicit register without
+mutating row caches or input list order. The company-wide PDF does not require a year;
+XLSX retains its existing required year selection, but stock still spans all years.
+Legacy GUI constructors and templates remain unchanged. Tests compare all nine stock
+sources, reservation/ordered/available counts, parcel-expanded PDF text and all XLSX
+cell values across migration, with duplicate product numbers in another company,
+linked/non-influencing exclusions, fractional failure parity, empty/populated rendering,
+overwrite protection and singleton isolation. Assembled/packaged smoke includes both exports.
 
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
