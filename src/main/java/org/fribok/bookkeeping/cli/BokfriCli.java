@@ -3017,8 +3017,15 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                java.nio.file.Path pdf = exportPdf(new SSInpaymentListPrinter(), output, overwrite);
+                SSInpaymentListPrinter printer;
+                if (runtime.isNormalized()) {
+                    printer = new SSInpaymentListPrinter(company, runtime.hydrateYear(year),
+                            runtime.getInpayments());
+                } else {
+                    runtime.database().init(false);
+                    printer = new SSInpaymentListPrinter();
+                }
+                java.nio.file.Path pdf = exportPdf(printer, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("output", pdf.toString());
                 result.put("bytes", Files.size(pdf));
@@ -3217,8 +3224,15 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                java.nio.file.Path pdf = exportPdf(new SSOutpaymentListPrinter(), output, overwrite);
+                SSOutpaymentListPrinter printer;
+                if (runtime.isNormalized()) {
+                    printer = new SSOutpaymentListPrinter(company, runtime.hydrateYear(year),
+                            runtime.getOutpayments());
+                } else {
+                    runtime.database().init(false);
+                    printer = new SSOutpaymentListPrinter();
+                }
+                java.nio.file.Path pdf = exportPdf(printer, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("output", pdf.toString()); result.put("bytes", Files.size(pdf));
                 result.put("selection", selectedContext(context, company, year));

@@ -231,6 +231,60 @@ class BokfriCliRevenueReportTest {
         runtime.database().addSupplier(supplier);
     }
 
+    @Test
+    void paymentListPdfsMatchLegacyForPopulatedAndEmptyCompanies() throws Exception {
+        Path data = temporaryDirectory.resolve("payment-lists");
+        List<int[]> contexts = new ArrayList<>();
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            int selected = addCompany(runtime, "Selected payment company").getId();
+            contexts.add(new int[] {selected, addYear(runtime).getId()});
+            addDocuments(runtime, "Selected", "100.25");
+            addBalanceDocuments(runtime);
+            addCompany(runtime, "Other payment company");
+            addYear(runtime);
+            addDocuments(runtime, "Other", "9999.99");
+            addBalanceDocuments(runtime);
+            SSInpayment in = new SSInpayment();
+            in.setText("Other-only payment");
+            runtime.database().addInpayment(in);
+            SSOutpayment out = new SSOutpayment();
+            out.setText("Other-only payment");
+            runtime.database().addOutpayment(out);
+            int empty = addCompany(runtime, "Empty payment company").getId();
+            contexts.add(new int[] {empty, addYear(runtime).getId()});
+        }
+        Map<String, String> expected = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            for (int[] context : contexts) {
+                for (String kind : List.of("inpayment", "outpayment")) {
+                    Path pdf = temporaryDirectory.resolve(kind + context[0] + normalized + ".pdf");
+                    List<String> args = new ArrayList<>(List.of("--data-dir", data.toString(), "--company-id",
+                            Integer.toString(context[0]), "--year-id", Integer.toString(context[1]),
+                            "--format", "json", kind, "pdf-list", "--output", pdf.toString()));
+                    Result result = execute(args.toArray(String[]::new));
+                    assertThat(result.code()).as(result.error()).isZero();
+                    String text = text(pdf);
+                    assertThat(text).contains(context == contexts.get(0) ? "Selected payment company"
+                            : "Empty payment company").doesNotContain("Other");
+                    if (normalized) {
+                        assertThat(text).isEqualTo(expected.get(kind + context[0]));
+                        byte[] original = Files.readAllBytes(pdf);
+                        assertThat(execute(args.toArray(String[]::new)).code()).isEqualTo(1);
+                        assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                        args.add("--overwrite");
+                        Result overwritten = execute(args.toArray(String[]::new));
+                        assertThat(overwritten.code()).as(overwritten.error()).isZero();
+                        assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                        assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                    } else {
+                        expected.put(kind + context[0], text);
+                    }
+                }
+            }
+        }
+    }
+
     private static void addBalanceDocuments(BokfriRuntime runtime) throws Exception {
         // Legacy insert methods do not invalidate every cached register list.
         runtime.database().clearLists();

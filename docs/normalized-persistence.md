@@ -427,6 +427,19 @@ cell values across migration, with duplicate product numbers in another company,
 linked/non-influencing exclusions, fractional failure parity, empty/populated rendering,
 overwrite protection and singleton isolation. Assembled/packaged smoke includes both exports.
 
+Payment-list PDFs (`inpayment pdf-list` and `outpayment pdf-list`) receive the selected
+company, hydrated year and company-wide payment snapshots explicitly. The year supplies
+voucher-header context only; these lists retain their existing all-date behavior.
+Outer and nested row printers both use explicit headers. Invoice numbers, invoice
+currency/rate snapshots, payment values and payment rates come directly from stored
+rows without resolving live invoices. Existing total helpers and nullable local-value
+behavior are unchanged: a missing payment rate falls back to the row value in the
+outer total, while the nested local-value cell remains empty. Input payment lists are
+copied before number sorting; templates and legacy GUI constructors remain unchanged.
+Tests cover empty/populated PDFs, sorting/immutability, snapshot fields, negative and
+missing amounts/rates, unsorted voucher headers, exact legacy/normalized PDF text,
+company isolation, overwrite protection and assembled/packaged CLI smoke.
+
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
 issue #75 remains open.
