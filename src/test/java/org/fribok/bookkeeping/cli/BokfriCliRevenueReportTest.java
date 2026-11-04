@@ -346,6 +346,90 @@ class BokfriCliRevenueReportTest {
         }
     }
 
+    @Test
+    void invoiceJournalPdfsMatchLegacyAndCommitOnlyAfterSuccessfulExport() throws Exception {
+        Path data = temporaryDirectory.resolve("invoice-journals");
+        int selected;
+        int yearId;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            selected = addCompany(runtime, "Selected journal company").getId();
+            yearId = addYear(runtime).getId();
+            addInvoiceJournalDocuments(runtime, "Selected");
+            addCompany(runtime, "Other journal company");
+            addYear(runtime);
+            addInvoiceJournalDocuments(runtime, "Other");
+        }
+        List<String> context = List.of("--data-dir", data.toString(), "--company-id", Integer.toString(selected),
+                "--year-id", Integer.toString(yearId), "--format", "json");
+        Map<String, String> expected = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            for (String kind : List.of("invoice", "credit-invoice")) {
+                Path pdf = temporaryDirectory.resolve(kind + "-journal-" + normalized + ".pdf");
+                List<String> args = new ArrayList<>(context);
+                args.addAll(List.of(kind, "journal", "--from", "2024-02-01", "--to", "2024-02-29",
+                        "--output", pdf.toString()));
+                Result preview = execute(args.toArray(String[]::new));
+                assertThat(preview.code()).as(preview.error()).isZero();
+                assertThat(new ObjectMapper().readTree(preview.output()).path("committed").asBoolean()).isFalse();
+                String text = text(pdf);
+                assertThat(text).contains("Selected journal company", "Selected invoice").doesNotContain("Other");
+                if (normalized) {
+                    assertThat(text).isEqualTo(expected.get(kind));
+                    byte[] original = Files.readAllBytes(pdf);
+                    args.add("--commit");
+                    assertThat(execute(args.toArray(String[]::new)).code()).isEqualTo(1);
+                    assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                    try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+                        runtime.selectCompany(selected);
+                        List<? extends SSInvoice> invoices = kind.equals("invoice")
+                                ? runtime.getInvoices() : runtime.getCreditInvoices();
+                        assertThat(invoices).allSatisfy(invoice -> assertThat(invoice.isEntered()).isFalse());
+                    }
+                    args.remove("--commit");
+                    args.add("--overwrite");
+                    Result overwritten = execute(args.toArray(String[]::new));
+                    assertThat(overwritten.code()).as(overwritten.error()).isZero();
+                    assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                    assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                } else expected.put(kind, text);
+            }
+        }
+        for (String kind : List.of("invoice", "credit-invoice")) {
+            List<String> args = new ArrayList<>(context);
+            args.addAll(List.of(kind, "journal", "--from", "2024-02-01", "--to", "2024-02-29", "--commit",
+                    "--output", temporaryDirectory.resolve(kind + "-committed.pdf").toString()));
+            Result committed = execute(args.toArray(String[]::new));
+            assertThat(committed.code()).as(committed.error()).isZero();
+            var json = new ObjectMapper().readTree(committed.output());
+            assertThat(json.path("committed").asBoolean()).isTrue();
+            assertThat(json.path("voucherNumber").asInt()).isPositive();
+            assertThat(execute(args.toArray(String[]::new)).code()).isEqualTo(1);
+        }
+    }
+
+    private static void addInvoiceJournalDocuments(BokfriRuntime runtime, String name) {
+        SSInvoice original = new SSInvoice();
+        for (SSInvoice invoice : List.of(original, new SSCreditInvoice())) {
+            invoice.setLocalDate(LocalDate.of(2024, 2, 10));
+            invoice.setCustomerNr("C1");
+            invoice.setCustomerName(name + " invoice");
+            invoice.setTaxFree(true);
+            invoice.setCurrencyRate(BigDecimal.ONE);
+            invoice.setDefaultAccounts(new java.util.HashMap<>(Map.of(
+                    se.swedsoft.bookkeeping.data.common.SSDefaultAccount.CustomerClaim, 1930)));
+            SSSaleRow row = new SSSaleRow();
+            row.setQuantity(1);
+            row.setUnitprice(new BigDecimal("100"));
+            row.setAccountNr(3010);
+            invoice.getRows().add(row);
+            if (invoice instanceof SSCreditInvoice credit) {
+                credit.setCrediting(original);
+                runtime.database().addCreditInvoice(credit);
+            } else runtime.database().addInvoice(invoice);
+        }
+    }
+
     private static void addJournalPayments(BokfriRuntime runtime, String name) {
         SSInpayment in = new SSInpayment();
         in.setLocalDate(LocalDate.of(2024, 2, 10));

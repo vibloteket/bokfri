@@ -455,7 +455,29 @@ preview and failed-export behavior, then commit and verify repeat booking is rej
 Explicit row tests make implicit account/project/result-unit helpers throw and cover
 missing references, dimensions, totals, caller ordering and empty/populated rendering.
 Assembled/packaged smoke creates normalized payments and exports both preview and
-commit journals. Invoice/credit/supplier journal PDFs remain separate follow-ups.
+commit journals. Supplier journal PDFs remain separate follow-ups.
+
+Customer invoice journals (`invoice journal --output`) and credit-invoice journals
+(`credit-invoice journal --output`) also support normalized storage. The credit command
+now exposes optional `--output`/`--overwrite` on both backends; its existing no-output
+preview/commit metadata, error behavior and booking flow remain unchanged. Both report
+printers receive company/hydrated year, planned invoice snapshots and explicit company
+dimensions, and reuse `SSJournalRowContext` for account/project/result-unit resolution.
+Outer and nested headers avoid legacy selection; input lists are copied before sorting.
+Sale totals use the explicit company's rounding flag, while existing stored tax-rate,
+discount, tax rounding and invoice currency conversion calculations are retained.
+
+PDF generation precedes booking, so failed export must leave documents unentered.
+Tests compare exact legacy/normalized invoice and credit-journal PDF text, company
+isolation, preview/overwrite behavior and successful commit exports. Explicit printer
+tests cover both company rounding settings, tax/discount totals, nullable dates/rates,
+missing row amounts, known/unknown voucher references, dimensions, list immutability,
+empty/populated rendering and header voucher maxima. Assembled/packaged smoke creates
+fresh normalized invoices and credits, then exports both preview and commit journals.
+The normalized credit-creation path uses an explicit-company unbooked-credit constructor:
+it copies the original sale, resets entered/printed state and defers voucher generation
+until the journal, after any credit-amount scaling. This avoids the legacy constructor's
+eager singleton-backed booking calculation. Legacy construction is unchanged.
 
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;

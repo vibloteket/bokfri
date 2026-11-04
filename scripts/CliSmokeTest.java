@@ -145,6 +145,39 @@ public final class CliSmokeTest {
                     report + " did not produce a normalized PDF");
         }
         runNormalizedPaymentJournalPdfFlow(temporary, company, year);
+        runNormalizedInvoiceJournalPdfFlow(temporary, company, year);
+    }
+
+    private static void runNormalizedInvoiceJournalPdfFlow(Path temporary, String company, String year)
+            throws Exception {
+        Result created = cli("--company-id", company, "--year-id", year, "--format", "json",
+                "invoice", "create", "--file", temporary.resolve("invoice.json").toString());
+        created.success();
+        int invoiceNumber = firstInt(created.stdout, "number");
+        String date = firstString(created.stdout, "date");
+        for (String kind : List.of("invoice", "credit-invoice")) {
+            if (kind.equals("credit-invoice")) {
+                Path input = temporary.resolve("normalized-credit-journal.json");
+                Files.writeString(input, """
+                        {"invoiceNumber":%d,"date":"%s","amount":10}
+                        """.formatted(invoiceNumber, date), StandardCharsets.UTF_8);
+                cli("--company-id", company, "--year-id", year, "--format", "json", kind,
+                        "create", "--file", input.toString()).success();
+            }
+            for (boolean commit : List.of(false, true)) {
+                Path pdf = temporary.resolve("normalized-" + kind + "-journal-" + commit + ".pdf");
+                List<String> args = new ArrayList<>(List.of("--company-id", company, "--year-id", year,
+                        "--format", "json", kind, "journal", "--from", date, "--to", date,
+                        "--output", pdf.toString()));
+                if (commit) args.add("--commit");
+                Result exported = cli(args.toArray(String[]::new));
+                exported.success();
+                require(exported.stdout.contains("\"committed\":" + commit), "invoice journal commit mismatch");
+                byte[] bytes = Files.readAllBytes(pdf);
+                require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
+                        kind + " journal did not produce a normalized PDF");
+            }
+        }
     }
 
     private static void runNormalizedPaymentJournalPdfFlow(Path temporary, String company, String year)

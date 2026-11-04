@@ -143,6 +143,7 @@ import se.swedsoft.bookkeeping.print.report.journals.SSOutpaymentjournalPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSSupplierInvoicejournalPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSSuppliercreditinvoicejournalPrinter;
 import se.swedsoft.bookkeeping.print.report.journals.SSInvoicejournalPrinter;
+import se.swedsoft.bookkeeping.print.report.journals.SSCreditinvoicejournalPrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSCreditinvoicePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSDeliverynotePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSOCRInvoicePrinter;
@@ -2592,9 +2593,12 @@ public class BokfriCli implements Runnable {
                 result.put("committed", commit);
                 result.put("selection", selectedContext(context, company, year));
                 if (output != null) {
-                    addPdf(result, exportPdf(new SSInvoicejournalPrinter(
-                            new java.util.ArrayList<>(plan.invoices()), plan.journalNumber(), plan.to()),
-                            output, overwrite));
+                    SSInvoicejournalPrinter printer = runtime.isNormalized()
+                            ? new SSInvoicejournalPrinter(company, runtime.hydrateYear(year), plan.invoices(),
+                                    plan.journalNumber(), plan.to(), runtime.getProjects(), runtime.getResultUnits())
+                            : new SSInvoicejournalPrinter(new java.util.ArrayList<>(plan.invoices()),
+                                    plan.journalNumber(), plan.to());
+                    addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 if (commit) {
                     for (SSInvoice invoice : plan.invoices()) {
@@ -2925,7 +2929,8 @@ public class BokfriCli implements Runnable {
                     throw new CliException("CREDIT_INVOICE_INVALID",
                             "Credit amount must be positive and not exceed invoice balance");
                 }
-                SSCreditInvoice credit = new SSCreditInvoice(original);
+                SSCreditInvoice credit = r.isNormalized()
+                        ? new SSCreditInvoice(original, co) : new SSCreditInvoice(original);
                 credit.setNumber(r.nextCreditInvoiceNumber());
                 credit.setLocalDate(input.getDate() == null
                         ? java.time.LocalDate.now() : input.getDate());
@@ -2965,9 +2970,62 @@ public class BokfriCli implements Runnable {
     @Command(mixinStandardHelpOptions = true, name="validate") static class CreditInvoiceValidate extends CreditInvoiceOperation {boolean persist(){return false;}}
     @Command(mixinStandardHelpOptions = true, name="create") static class CreditInvoiceCreate extends CreditInvoiceOperation {@Option(names="--dry-run")boolean dryRun;boolean persist(){return !dryRun;}}
 
-    @Command(mixinStandardHelpOptions = true, name="journal") static class CreditInvoiceJournal implements Callable<Integer> {
-        @CliMetadata.ParentCommand CreditInvoiceCommand command;@Option(names="--from",required=true)java.time.LocalDate from;@Option(names="--to",required=true)java.time.LocalDate to;@Option(names="--commit")boolean commit;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());if(!r.isNormalized())r.database().init(false);CreditInvoiceJournalPlan p=planCreditInvoiceJournal(r,from,to);Map<String,Object>x=new LinkedHashMap<>();x.put("journalNumber",p.journalNumber());x.put("from",from);x.put("to",to);x.put("creditInvoiceNumbers",p.invoices().stream().map(SSCreditInvoice::getNumber).toList());x.put("invoiceCount",p.invoices().size());x.put("rows",voucherRows(p.voucher()));x.put("debitTotal",money(voucherDebit(p.voucher())));x.put("creditTotal",money(voucherCredit(p.voucher())));x.put("committed",commit);if(commit){for(SSCreditInvoice i:p.invoices()){if(i.isEntered())throw new CliException("CREDIT_INVOICE_JOURNAL_INVALID","Credit invoice "+i.getNumber()+" is already entered");}for(SSCreditInvoice i:p.invoices()){i.setEntered();r.markCreditInvoiceEntered(i);}r.bumpCounter("creditinvoicejournal");r.addVoucher(p.voucher());x.put("voucherNumber",p.voucher().getNumber());}x.put("selection",selectedContext(c,co,y));root.output(x,commit?"Credit invoice journal committed":"Credit invoice journal preview; no changes written");return 0;}catch(IllegalArgumentException e){throw new CliException("CREDIT_INVOICE_JOURNAL_EMPTY",e.getMessage(),e);}catch(Exception e){throw databaseFailure(e);}}
+    @Command(mixinStandardHelpOptions = true, name = "journal", description = "Preview or commit a credit-invoice journal")
+    static class CreditInvoiceJournal implements Callable<Integer> {
+        @CliMetadata.ParentCommand CreditInvoiceCommand command;
+        @Option(names = "--from", required = true) java.time.LocalDate from;
+        @Option(names = "--to", required = true) java.time.LocalDate to;
+        @Option(names = "--commit") boolean commit;
+        @Option(names = "--output", description = "Write the credit-invoice journal as PDF") java.nio.file.Path output;
+        @Option(names = "--overwrite") boolean overwrite;
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                if (!runtime.isNormalized()) runtime.database().init(false);
+                CreditInvoiceJournalPlan plan = planCreditInvoiceJournal(runtime, from, to);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("journalNumber", plan.journalNumber());
+                result.put("from", from);
+                result.put("to", to);
+                result.put("creditInvoiceNumbers", plan.invoices().stream().map(SSCreditInvoice::getNumber).toList());
+                result.put("invoiceCount", plan.invoices().size());
+                result.put("rows", voucherRows(plan.voucher()));
+                result.put("debitTotal", money(voucherDebit(plan.voucher())));
+                result.put("creditTotal", money(voucherCredit(plan.voucher())));
+                result.put("committed", commit);
+                if (output != null) {
+                    SSCreditinvoicejournalPrinter printer = runtime.isNormalized()
+                            ? new SSCreditinvoicejournalPrinter(company, runtime.hydrateYear(year), plan.invoices(),
+                                    plan.journalNumber(), plan.to(), runtime.getProjects(), runtime.getResultUnits())
+                            : new SSCreditinvoicejournalPrinter(new java.util.ArrayList<>(plan.invoices()),
+                                    plan.journalNumber(), plan.to());
+                    addPdf(result, exportPdf(printer, output, overwrite));
+                }
+                if (commit) {
+                    for (SSCreditInvoice invoice : plan.invoices()) {
+                        if (invoice.isEntered()) throw new CliException("CREDIT_INVOICE_JOURNAL_INVALID",
+                                "Credit invoice " + invoice.getNumber() + " is already entered");
+                    }
+                    for (SSCreditInvoice invoice : plan.invoices()) {
+                        invoice.setEntered();
+                        runtime.markCreditInvoiceEntered(invoice);
+                    }
+                    runtime.bumpCounter("creditinvoicejournal");
+                    runtime.addVoucher(plan.voucher());
+                    result.put("voucherNumber", plan.voucher().getNumber());
+                }
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, commit ? "Credit invoice journal committed"
+                        : "Credit invoice journal preview; no changes written");
+                return 0;
+            } catch (IllegalArgumentException exception) {
+                throw new CliException("CREDIT_INVOICE_JOURNAL_EMPTY", exception.getMessage(), exception);
+            } catch (Exception exception) { throw databaseFailure(exception); }
+        }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "inpayment", description = "Inspect, create, and book customer inpayments",
