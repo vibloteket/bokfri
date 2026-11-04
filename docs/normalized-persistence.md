@@ -455,7 +455,7 @@ preview and failed-export behavior, then commit and verify repeat booking is rej
 Explicit row tests make implicit account/project/result-unit helpers throw and cover
 missing references, dimensions, totals, caller ordering and empty/populated rendering.
 Assembled/packaged smoke creates normalized payments and exports both preview and
-commit journals. Supplier journal PDFs remain separate follow-ups.
+commit journals. Supplier journals are covered below.
 
 Customer invoice journals (`invoice journal --output`) and credit-invoice journals
 (`credit-invoice journal --output`) also support normalized storage. The credit command
@@ -478,6 +478,21 @@ The normalized credit-creation path uses an explicit-company unbooked-credit con
 it copies the original sale, resets entered/printed state and defers voucher generation
 until the journal, after any credit-amount scaling. This avoids the legacy constructor's
 eager singleton-backed booking calculation. Legacy construction is unchanged.
+
+Supplier invoice/credit journals (`supplier-invoice journal --output` and
+`supplier-credit-invoice journal --output`) also use explicit company/hydrated-year,
+planned invoice snapshots and dimension lists. Both outer and nested voucher printers
+reuse `SSJournalRowContext` and avoid singleton-backed voucher-row lookup helpers.
+Input lists are copied before sorting; unknown account/dimension references remain
+blank. Totals retain supplier-specific stored tax and rounding amounts, rather than
+customer-sale company rounding. Nullable tax/rounding retain the existing zero fallback;
+invoice-currency conversion and existing titles/templates/metadata are unchanged.
+PDF export still precedes booking writes. Tests cover exact before/after-migration PDF
+text, duplicate document numbers across companies, previews, overwrite failures leaving
+documents unentered and successful commit exports. Explicit printer tests check stored
+amounts, null dates/rates/amounts, voucher references/dimensions, caller list preservation,
+header maxima and empty/populated PDFs. Assembled/packaged smoke creates fresh normalized
+supplier invoices/partial credits and exports both preview and commit journals.
 
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
