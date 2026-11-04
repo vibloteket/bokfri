@@ -440,6 +440,23 @@ Tests cover empty/populated PDFs, sorting/immutability, snapshot fields, negativ
 missing amounts/rates, unsorted voucher headers, exact legacy/normalized PDF text,
 company isolation, overwrite protection and assembled/packaged CLI smoke.
 
+Payment journal PDFs (`inpayment journal --output` and `outpayment journal --output`)
+receive explicit company/hydrated-year context, planned payments and company project/
+result-unit lookups. `SSJournalRowContext` resolves voucher-row account numbers against
+the selected account plan and dimension numbers against supplied company registers,
+without invoking singleton-backed or cache-mutating row getters. Unknown references
+remain blank, as with unresolved legacy lookups. Both outer and nested voucher printers
+use explicit headers; payment input lists are copied before sorting. Debit/credit rows,
+local payment totals, journal dates/numbers, templates and legacy GUI constructors are
+unchanged. Existing preview/commit ordering is retained: PDF export happens before any
+booking writes; failed export/overwrite protection must not mark payments entered.
+Tests compare exact legacy/normalized PDF text and company isolation, check read-only
+preview and failed-export behavior, then commit and verify repeat booking is rejected.
+Explicit row tests make implicit account/project/result-unit helpers throw and cover
+missing references, dimensions, totals, caller ordering and empty/populated rendering.
+Assembled/packaged smoke creates normalized payments and exports both preview and
+commit journals. Invoice/credit/supplier journal PDFs remain separate follow-ups.
+
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
 issue #75 remains open.
