@@ -3,6 +3,7 @@ package se.swedsoft.bookkeeping.print.report;
 
 import se.swedsoft.bookkeeping.calc.math.SSInvoiceMath;
 import se.swedsoft.bookkeeping.data.SSAccount;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -14,6 +15,7 @@ import se.swedsoft.bookkeeping.print.util.SSDefaultJasperDataSource;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -30,6 +32,21 @@ public class SSInvoiceListPrinter extends SSPrinter {
     private SSDefaultJasperDataSource iDataSource;
 
     private List<SSInvoice> iInvoices;
+    private SSNewCompany explicitCompany;
+
+    /** Creates a company-wide invoice register from explicit company context and stored snapshots. */
+    public SSInvoiceListPrinter(SSNewCompany company, List<SSInvoice> invoices) {
+        super(company);
+        explicitCompany = company;
+        iInvoices = new ArrayList<>(invoices);
+        configureReport();
+    }
+
+    private BigDecimal total(SSInvoice invoice) {
+        return explicitCompany == null ? SSInvoiceMath.getTotalSum(invoice)
+                : SSInvoiceMath.getTotalSum(invoice, explicitCompany.isRoundingOff());
+    }
+
 
     /**
      *
@@ -46,6 +63,10 @@ public class SSInvoiceListPrinter extends SSPrinter {
         // Get all orders
         this.iInvoices = iInvoices;
 
+        configureReport();
+    }
+
+    private void configureReport() {
         setPageHeader("header_period.jrxml");
         setColumnHeader("invoicelist.jrxml");
         setDetail("invoicelist.jrxml");
@@ -68,7 +89,8 @@ public class SSInvoiceListPrinter extends SSPrinter {
     @Override
     protected SSDefaultTableModel getModel() {
 
-        iPrinter = new SSInvoiceRowPrinter();
+        iPrinter = explicitCompany == null ? new SSInvoiceRowPrinter()
+                : new SSInvoiceRowPrinter(explicitCompany);
         iPrinter.generateReport();
 
         addParameter("Report", iPrinter.getReport());
@@ -124,7 +146,7 @@ public class SSInvoiceListPrinter extends SSPrinter {
                     break;
 
                 case 6:
-                    value = SSInvoiceMath.getTotalSum(iInvoice);
+                    value = total(iInvoice);
                     break;
 
                 case 7:
@@ -135,7 +157,7 @@ public class SSInvoiceListPrinter extends SSPrinter {
                     BigDecimal iSum = new BigDecimal(0);
 
                     iSum = iSum.add(
-                            SSInvoiceMath.getTotalSum(iInvoice).multiply(
+                            total(iInvoice).multiply(
                                     iInvoice.getCurrencyRate()));
                     value = iSum;
                     break;
@@ -180,6 +202,15 @@ public class SSInvoiceListPrinter extends SSPrinter {
          *
          */
         public SSInvoiceRowPrinter() {
+            configureRows();
+        }
+
+        private SSInvoiceRowPrinter(SSNewCompany company) {
+            super(company);
+            configureRows();
+        }
+
+        private void configureRows() {
             setMargins(0, 0, 0, 0);
 
             setDetail("invoicelist.row.jrxml");

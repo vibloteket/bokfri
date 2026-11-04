@@ -494,6 +494,22 @@ amounts, null dates/rates/amounts, voucher references/dimensions, caller list pr
 header maxima and empty/populated PDFs. Assembled/packaged smoke creates fresh normalized
 supplier invoices/partial credits and exports both preview and commit journals.
 
+Customer invoice/credit register PDFs (`invoice list --output` and
+`credit-invoice list --output`) use explicit company-wide headers (last voucher zero),
+company rounding and stored sale-row snapshots for both outer and nested printers.
+They do not require an accounting year. Lists are copied before sorting. Existing
+stored descriptions, product numbers, quantities, units, prices, discounts, row sums,
+tax, totals, direct currency-rate multiplication and templates are retained. No new
+missing-rate fallback is introduced: aggregate columns retain the legacy failure on
+null currency rates. Invoice `--from`/`--to` remains inclusive and still includes
+undated invoices; the credit register retains its existing unfiltered behavior.
+Tests compare exact legacy/normalized PDF text for populated/empty/no-year companies,
+filtered and outside-date lists (including undated records), duplicate document numbers
+in another company, overwrite protection and singleton isolation. Printer tests cover
+snapshot fields, discount/tax totals, both company rounding settings, input preservation
+and empty/populated rendering. Assembled/packaged smoke includes both register exports.
+Supplier invoice/credit register PDFs remain a separate follow-up.
+
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
 issue #75 remains open.

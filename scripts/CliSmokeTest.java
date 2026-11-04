@@ -94,7 +94,7 @@ public final class CliSmokeTest {
             require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
                     "VAT " + report + " did not produce a normalized PDF");
         }
-        for (String register : List.of("customer", "supplier", "product")) {
+        for (String register : List.of("customer", "supplier", "product", "invoice", "credit-invoice")) {
             Path pdf = temporary.resolve("normalized-" + register + "-list.pdf");
             Result exported = cli("--company-id", company, "--format", "json", register, "list",
                     "--output", pdf.toString());

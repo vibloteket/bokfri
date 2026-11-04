@@ -544,6 +544,85 @@ class BokfriCliRevenueReportTest {
         runtime.database().addOutpayment(out);
     }
 
+    @Test
+    void customerInvoiceListPdfsMatchLegacyForFiltersEmptyAndNoYearCompanies() throws Exception {
+        Path data = temporaryDirectory.resolve("customer-invoice-lists");
+        int selected;
+        int empty;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            selected = addCompany(runtime, "Selected invoice register").getId();
+            addCustomerInvoiceListDocuments(runtime, "Selected");
+            addCompany(runtime, "Other invoice register");
+            addCustomerInvoiceListDocuments(runtime, "Other");
+            empty = addCompany(runtime, "Empty invoice register").getId();
+        }
+        Map<String, String> expected = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            for (int company : List.of(selected, empty)) {
+                for (String kind : List.of("invoice", "credit-invoice")) {
+                    for (String period : kind.equals("invoice") ? List.of("all", "bounded", "outside") : List.of("all")) {
+                        Path pdf = temporaryDirectory.resolve(kind + company + normalized + period + ".pdf");
+                        List<String> args = new ArrayList<>(List.of("--data-dir", data.toString(), "--company-id",
+                                Integer.toString(company), "--format", "json", kind, "list", "--output", pdf.toString()));
+                        if (!period.equals("all")) args.addAll(List.of("--from", period.equals("bounded")
+                                ? "2024-02-10" : "2025-01-01", "--to", period.equals("bounded")
+                                ? "2024-02-20" : "2025-12-31"));
+                        Result result = execute(args.toArray(String[]::new));
+                        assertThat(result.code()).as(result.error()).isZero();
+                        var json = new ObjectMapper().readTree(result.output());
+                        int count = company == empty ? 0 : kind.equals("credit-invoice") ? 1
+                                : period.equals("all") ? 5 : period.equals("bounded") ? 3 : 1;
+                        assertThat(json.path("count").asInt()).isEqualTo(count);
+                        String text = text(pdf);
+                        assertThat(text).contains(company == selected ? "Selected invoice register"
+                                : "Empty invoice register").doesNotContain("Other");
+                        if (count > 0) assertThat(text).contains("Selected row");
+                        String key = kind + company + period;
+                        if (normalized) {
+                            assertThat(text).isEqualTo(expected.get(key));
+                            byte[] original = Files.readAllBytes(pdf);
+                            assertThat(execute(args.toArray(String[]::new)).code()).isEqualTo(1);
+                            assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                            args.add("--overwrite");
+                            Result overwritten = execute(args.toArray(String[]::new));
+                            assertThat(overwritten.code()).as(overwritten.error()).isZero();
+                            assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                            assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                        } else expected.put(key, text);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void addCustomerInvoiceListDocuments(BokfriRuntime runtime, String name) {
+        for (String date : List.of("2023-12-31", "2024-02-10", "2024-02-20", "2024-02-21", "undated")) {
+            SSInvoice invoice = customerListSale(new SSInvoice(), name);
+            invoice.setLocalDate(date.equals("undated") ? null : LocalDate.parse(date));
+            runtime.database().addInvoice(invoice);
+        }
+        SSCreditInvoice credit = customerListSale(new SSCreditInvoice(), name);
+        credit.setCreditingNr(1);
+        credit.setLocalDate(LocalDate.of(2024, 2, 20));
+        runtime.database().addCreditInvoice(credit);
+    }
+
+    private static <T extends SSInvoice> T customerListSale(T invoice, String name) {
+        invoice.setCustomerNr("C1");
+        invoice.setCustomerName(name + " customer snapshot");
+        invoice.setTaxFree(true);
+        invoice.setCurrencyRate(new BigDecimal("2"));
+        SSSaleRow row = new SSSaleRow();
+        row.setProductNr("P1");
+        row.setDescription(name + " row");
+        row.setQuantity(2);
+        row.setUnitprice(new BigDecimal("100.25"));
+        row.setDiscount(new BigDecimal("10"));
+        invoice.getRows().add(row);
+        return invoice;
+    }
+
     private static void addBalanceDocuments(BokfriRuntime runtime) throws Exception {
         // Legacy insert methods do not invalidate every cached register list.
         runtime.database().clearLists();

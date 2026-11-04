@@ -2532,8 +2532,10 @@ public class BokfriCli implements Runnable {
                 result.put("count", invoices.size());
                 result.put("invoices", invoices);
                 if (output != null) {
-                    addPdf(result, exportPdf(new SSInvoiceListPrinter(
-                            new java.util.ArrayList<>(listedInvoices)), output, overwrite));
+                    SSInvoiceListPrinter printer = runtime.isNormalized()
+                            ? new SSInvoiceListPrinter(company, listedInvoices)
+                            : new SSInvoiceListPrinter(new java.util.ArrayList<>(listedInvoices));
+                    addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 root.output(result,
                         table(invoices, "No invoices found", right("Number", "number"),
@@ -2871,7 +2873,12 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "list") static class CreditInvoiceList implements Callable<Integer> {
         @CliMetadata.ParentCommand CreditInvoiceCommand command;
-        @Option(names="--output") java.nio.file.Path output; @Option(names="--overwrite") boolean overwrite; public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());if(!r.isNormalized())r.database().init(false);List<SSCreditInvoice> items=r.getCreditInvoices().stream().sorted(java.util.Comparator.comparing(SSCreditInvoice::getNumber,java.util.Comparator.nullsLast(Integer::compareTo))).toList();List<Map<String,Object>> rows=items.stream().map(i->{try{return creditInvoiceDetails(i,r);}catch(java.sql.SQLException e){throw new RuntimeException(e);}}).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("creditInvoices",rows);result.put("count",rows.size());if(output!=null)addPdf(result,exportPdf(new SSCreditInvoiceListPrinter(new java.util.ArrayList<>(items)),output,overwrite));root.output(result,table(rows,"No credit invoices found",right("Number","number"),left("Date","date"),left("Customer","customerName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}
+        @Option(names="--output") java.nio.file.Path output; @Option(names="--overwrite") boolean overwrite; public Integer call() { BokfriCli root=command.parent; ResolvedContext c=root.resolveContext(true,false); try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());if(!r.isNormalized())r.database().init(false);List<SSCreditInvoice> items=r.getCreditInvoices().stream().sorted(java.util.Comparator.comparing(SSCreditInvoice::getNumber,java.util.Comparator.nullsLast(Integer::compareTo))).toList();List<Map<String,Object>> rows=items.stream().map(i->{try{return creditInvoiceDetails(i,r);}catch(java.sql.SQLException e){throw new RuntimeException(e);}}).toList();Map<String,Object> result=new LinkedHashMap<>();result.put("selection",selectedCompanyContext(c,co));result.put("creditInvoices",rows);result.put("count",rows.size());if (output != null) {
+                    SSCreditInvoiceListPrinter printer = r.isNormalized()
+                            ? new SSCreditInvoiceListPrinter(co, items)
+                            : new SSCreditInvoiceListPrinter(new java.util.ArrayList<>(items));
+                    addPdf(result, exportPdf(printer, output, overwrite));
+                }root.output(result,table(rows,"No credit invoices found",right("Number","number"),left("Date","date"),left("Customer","customerName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}
     }
 
     @Command(mixinStandardHelpOptions = true, name = "show") static class CreditInvoiceShow implements Callable<Integer> {
