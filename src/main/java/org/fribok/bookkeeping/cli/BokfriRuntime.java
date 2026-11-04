@@ -8,6 +8,7 @@ import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore;
 import org.fribok.bookkeeping.dataformat.NormalizedOutpaymentStore;
 import org.fribok.bookkeeping.dataformat.NormalizedRegisterStore;
 import org.fribok.bookkeeping.dataformat.NormalizedSaleValuesStore;
+import org.fribok.bookkeeping.dataformat.NormalizedStockStore;
 import org.fribok.bookkeeping.service.SaleValuesData;
 import org.fribok.bookkeeping.dataformat.NormalizedSupplierInvoiceStore;
 import se.swedsoft.bookkeeping.data.SSAccount;
@@ -21,6 +22,7 @@ import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSNewProject;
 import se.swedsoft.bookkeeping.data.SSNewResultUnit;
 import se.swedsoft.bookkeeping.data.SSProduct;
+import se.swedsoft.bookkeeping.data.SSStock;
 import se.swedsoft.bookkeeping.data.SSSupplier;
 import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
@@ -530,6 +532,12 @@ public final class BokfriRuntime implements AutoCloseable {
                     "Normalized storage is not active for this database (data format " + dataFormat + ")");
         }
         return outpaymentStore;
+    }
+
+    /** Reads all-time stock for the supplied selected-company register without legacy cache access. */
+    public SSStock normalizedStock(List<SSProduct> products) throws SQLException {
+        if (!isNormalized()) throw new IllegalStateException("Normalized storage is required");
+        return new NormalizedStockStore(connection).read(requireCurrentCompany().getId(), products);
     }
 
     /** Reads report-only sale projections from the selected normalized company. */

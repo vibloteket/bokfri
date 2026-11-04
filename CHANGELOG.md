@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable normalized format 3 product-register PDF and XLSX exports with read-only all-time stock projections across invoices/credits, orders, purchase orders, inventory and deliveries. Preserve stock flags, unlinked-order rules, integer quantities and one-level parcel expansion; explicit company/parcel headers and lookups avoid singleton caches (#75).
+
 - Enable normalized format 3 `customer list --output` and `supplier list --output` PDFs with explicit company headers and copied register lists, including companies without accounting years. Retain legacy fields, sorting, templates and GUI constructors (#75).
 
 - Enable normalized format 3 CLI `accounts-payable` and `supplier-debts` PDFs with explicit company/year, supplier, invoice, credit and outpayment inputs. Preserve stored tax/rounding amounts, inclusive cutoff rules and report-specific balance precision; payable subreports no longer require singleton headers or supplier caches (#75).

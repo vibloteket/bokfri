@@ -94,7 +94,7 @@ public final class CliSmokeTest {
             require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
                     "VAT " + report + " did not produce a normalized PDF");
         }
-        for (String register : List.of("customer", "supplier")) {
+        for (String register : List.of("customer", "supplier", "product")) {
             Path pdf = temporary.resolve("normalized-" + register + "-list.pdf");
             Result exported = cli("--company-id", company, "--format", "json", register, "list",
                     "--output", pdf.toString());
@@ -104,6 +104,14 @@ public final class CliSmokeTest {
             require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
                     register + " list did not produce a normalized PDF");
         }
+        Path productsXlsx = temporary.resolve("normalized-product-stock.xlsx");
+        Result productExport = cli("--company-id", company, "--year-id", year, "--format", "json",
+                "product", "export", "--output", productsXlsx.toString());
+        productExport.success();
+        productExport.jsonObject();
+        byte[] xlsxBytes = Files.readAllBytes(productsXlsx);
+        require(xlsxBytes.length > 4 && xlsxBytes[0] == 0x50 && xlsxBytes[1] == 0x4b,
+                "product export did not produce normalized XLSX");
         String yearJson = Files.readString(temporary.resolve("year-2026.json"));
         for (String report : List.of("accounts-receivable", "customer-claims", "accounts-payable", "supplier-debts")) {
             Path pdf = temporary.resolve("normalized-" + report + ".pdf");

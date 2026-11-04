@@ -41,6 +41,19 @@ public class SSStock {
     /**
      *
      */
+    /** Creates an all-time export snapshot from explicit product-number counts without reading SSDB. */
+    public SSStock(List<SSProduct> products, Map<String, Integer> quantity,
+            Map<String, Integer> reserved, Map<String, Integer> ordered) {
+        this(false);
+        for (SSProduct product : products) {
+            if (product.isStockProduct()) {
+                iQuantity.put(product, quantity.getOrDefault(product.getNumber(), 0));
+                iReserved.put(product, reserved.getOrDefault(product.getNumber(), 0));
+                iOrdered.put(product, ordered.getOrDefault(product.getNumber(), 0));
+            }
+        }
+    }
+
     public SSStock() {
         this(false);
     }

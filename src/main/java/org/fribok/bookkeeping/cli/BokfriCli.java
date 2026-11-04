@@ -1982,8 +1982,10 @@ public class BokfriCli implements Runnable {
                 result.put("selection", selectedCompanyContext(context, company));
                 result.put("count", products.size()); result.put("products", products);
                 if (output != null) {
-                    addPdf(result, exportPdf(new SSProductListPrinter(
-                            new java.util.ArrayList<>(listedProducts)), output, overwrite));
+                    SSProductListPrinter printer = runtime.isNormalized()
+                            ? new SSProductListPrinter(company, listedProducts, runtime.normalizedStock(listedProducts))
+                            : new SSProductListPrinter(new java.util.ArrayList<>(listedProducts));
+                    addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 root.output(result,
                         table(products, "No products found", left("Number", "number"),
@@ -2007,10 +2009,15 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                List<SSProduct> products = new ProductService(runtime.database()).list();
+                if (!runtime.isNormalized()) runtime.database().init(false);
+                List<SSProduct> products = runtime.isNormalized()
+                        ? runtime.getProducts().stream().sorted(Comparator.comparing(SSProduct::getNumber,
+                                Comparator.nullsLast(String::compareTo))).toList()
+                        : new ProductService(runtime.database()).list();
+                se.swedsoft.bookkeeping.data.SSStock stock = runtime.isNormalized()
+                        ? runtime.normalizedStock(products) : new se.swedsoft.bookkeeping.data.SSStock(true);
                 java.nio.file.Path exported = new ProductSpreadsheetService().write(products,
-                        new se.swedsoft.bookkeeping.data.SSStock(true), company, output, overwrite);
+                        stock, company, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("output", exported.toString()); result.put("bytes", Files.size(exported));
                 result.put("count", products.size());
