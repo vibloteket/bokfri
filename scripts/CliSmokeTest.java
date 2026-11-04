@@ -144,6 +144,43 @@ public final class CliSmokeTest {
             require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
                     report + " did not produce a normalized PDF");
         }
+        runNormalizedPaymentJournalPdfFlow(temporary, company, year);
+    }
+
+    private static void runNormalizedPaymentJournalPdfFlow(Path temporary, String company, String year)
+            throws Exception {
+        for (String payment : List.of("inpayment", "outpayment")) {
+            String invoice = payment.equals("inpayment") ? "invoice" : "supplier-invoice";
+            Result created = cli("--company-id", company, "--year-id", year, "--format", "json",
+                    invoice, "create", "--file", temporary.resolve(invoice + ".json").toString());
+            created.success();
+            int number = firstInt(created.stdout, "number");
+            Result shown = cli("--company-id", company, "--year-id", year, "--format", "json",
+                    invoice, "show", Integer.toString(number));
+            shown.success();
+            String date = firstString(shown.stdout, "date");
+            cli("--company-id", company, "--year-id", year, "--format", "json", invoice, "journal",
+                    "--from", date, "--to", date, "--commit").success();
+            Path input = temporary.resolve("normalized-" + payment + "-journal.json");
+            Files.writeString(input, """
+                    {"date":"%s","text":"Normalized journal PDF","rows":[{"invoiceNumber":%d,"amount":"%s"}]}
+                    """.formatted(date, number, firstString(shown.stdout, "balance")), StandardCharsets.UTF_8);
+            cli("--company-id", company, "--year-id", year, "--format", "json", payment,
+                    "create", "--file", input.toString()).success();
+            for (boolean commit : List.of(false, true)) {
+                Path pdf = temporary.resolve("normalized-" + payment + "-journal-" + commit + ".pdf");
+                List<String> args = new ArrayList<>(List.of("--company-id", company, "--year-id", year,
+                        "--format", "json", payment, "journal", "--from", date, "--to", date,
+                        "--output", pdf.toString()));
+                if (commit) args.add("--commit");
+                Result exported = cli(args.toArray(String[]::new));
+                exported.success();
+                require(exported.stdout.contains("\"committed\":" + commit), "journal commit state mismatch");
+                byte[] bytes = Files.readAllBytes(pdf);
+                require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
+                        payment + " journal did not produce a normalized PDF");
+            }
+        }
     }
 
     private static void runReadOnlyAndSelectionFlow() throws Exception {

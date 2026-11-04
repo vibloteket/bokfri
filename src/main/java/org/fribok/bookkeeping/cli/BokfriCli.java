@@ -3145,9 +3145,13 @@ public class BokfriCli implements Runnable {
                 result.put("committed", commit);
                 result.put("selection", selectedContext(context, company, year));
                 if (output != null) {
-                    addPdf(result, exportPdf(new SSInpaymentjournalPrinter(
-                            new java.util.ArrayList<>(plan.inpayments()), plan.journalNumber(), plan.to()),
-                            output, overwrite));
+                    SSInpaymentjournalPrinter printer = runtime.isNormalized()
+                            ? new SSInpaymentjournalPrinter(company, runtime.hydrateYear(year),
+                                    plan.inpayments(), plan.journalNumber(), plan.to(),
+                                    runtime.getProjects(), runtime.getResultUnits())
+                            : new SSInpaymentjournalPrinter(new java.util.ArrayList<>(plan.inpayments()),
+                                    plan.journalNumber(), plan.to());
+                    addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 if (commit) {
                     for (SSInpayment item : plan.inpayments()) {
@@ -3345,9 +3349,13 @@ public class BokfriCli implements Runnable {
                 result.put("committed", commit);
                 result.put("selection", selectedContext(context, company, year));
                 if (output != null) {
-                    addPdf(result, exportPdf(new SSOutpaymentjournalPrinter(
-                            new java.util.ArrayList<>(plan.outpayments()), plan.journalNumber(), plan.to()),
-                            output, overwrite));
+                    SSOutpaymentjournalPrinter printer = runtime.isNormalized()
+                            ? new SSOutpaymentjournalPrinter(company, runtime.hydrateYear(year),
+                                    plan.outpayments(), plan.journalNumber(), plan.to(),
+                                    runtime.getProjects(), runtime.getResultUnits())
+                            : new SSOutpaymentjournalPrinter(new java.util.ArrayList<>(plan.outpayments()),
+                                    plan.journalNumber(), plan.to());
+                    addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 if (commit) {
                     for (SSOutpayment item : plan.outpayments()) {
