@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable normalized invoice/credit-invoice journal PDFs with explicit company rounding, headers and account/dimension lookups. Add optional `credit-invoice journal --output`/`--overwrite` for both storage formats; preserve existing no-output preview/commit behavior and export-before-booking protection. Fix normalized credit creation to defer singleton-backed voucher generation until journal planning (#75).
+
 - Enable normalized format 3 inpayment/outpayment journal PDFs for preview and commit using explicit company/year headers and voucher-row account/project/result-unit lookups. Preserve journal planning, totals, posting order, templates and legacy constructors; failed PDF export still prevents commit (#75).
 
 - Enable normalized format 3 `inpayment pdf-list` and `outpayment pdf-list` exports with explicit company/year and payment snapshots for outer and nested reports. Preserve currency-rate snapshots, nullable row values, totals, sorting and existing templates without mutating caller-owned lists or using legacy invoice caches (#75).

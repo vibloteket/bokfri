@@ -64,6 +64,21 @@ public class SSCreditInvoice extends SSInvoice {
         generateVoucher();
     }
 
+    /**
+     * Creates an unbooked credit snapshot with explicit company text, without legacy lookup or voucher generation.
+     * The journal service generates the voucher after any row adjustments.
+     */
+    public SSCreditInvoice(SSInvoice original, SSNewCompany company) {
+        copyFrom(original);
+        iCrediting = original;
+        iCreditingNr = original.getNumber();
+        iDate = SSDateUtil.today();
+        iEntered = false;
+        iPrinted = false;
+        setText(company.getStandardText(SSStandardText.Creditinvoice).orElse(null));
+        iVoucher = new SSVoucher();
+    }
+
     // //////////////////////////////////////////////////
 
     /**
