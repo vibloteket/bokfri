@@ -4,6 +4,8 @@ package se.swedsoft.bookkeeping.print.report;
 import se.swedsoft.bookkeeping.calc.math.SSInpaymentMath;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSInpayment;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSInpaymentRow;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -14,6 +16,7 @@ import se.swedsoft.bookkeeping.print.util.SSDefaultJasperDataSource;
 
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -30,6 +33,19 @@ public class SSInpaymentListPrinter extends SSPrinter {
     private SSDefaultJasperDataSource iDataSource;
 
     private List<SSInpayment> iInpayments;
+    private SSNewCompany explicitCompany;
+    private SSNewAccountingYear explicitYear;
+
+    /** Creates a payment-list report from explicit company/year and payment snapshots. */
+    public SSInpaymentListPrinter(SSNewCompany company, SSNewAccountingYear year,
+            List<SSInpayment> payments) {
+        super(company, year);
+        explicitCompany = company;
+        explicitYear = year;
+        iInpayments = new ArrayList<>(payments);
+        configureReport();
+    }
+
 
     /**
      *
@@ -46,6 +62,10 @@ public class SSInpaymentListPrinter extends SSPrinter {
         // Get all orders
         this.iInpayments = iInpayments;
 
+        configureReport();
+    }
+
+    private void configureReport() {
         setPageHeader("header_period.jrxml");
         setColumnHeader("inpaymentlist.jrxml");
         setDetail("inpaymentlist.jrxml");
@@ -68,7 +88,8 @@ public class SSInpaymentListPrinter extends SSPrinter {
     @Override
     protected SSDefaultTableModel getModel() {
 
-        iPrinter = new SSInpaymentRowPrinter();
+        iPrinter = explicitCompany == null ? new SSInpaymentRowPrinter()
+                : new SSInpaymentRowPrinter(explicitCompany, explicitYear);
         iPrinter.generateReport();
 
         addParameter("Report", iPrinter.getReport());
@@ -143,6 +164,15 @@ public class SSInpaymentListPrinter extends SSPrinter {
          *
          */
         public SSInpaymentRowPrinter() {
+            configureRows();
+        }
+
+        private SSInpaymentRowPrinter(SSNewCompany company, SSNewAccountingYear year) {
+            super(company, year);
+            configureRows();
+        }
+
+        private void configureRows() {
             setMargins(0, 0, 0, 0);
 
             setDetail("inpaymentlist.row.jrxml");
