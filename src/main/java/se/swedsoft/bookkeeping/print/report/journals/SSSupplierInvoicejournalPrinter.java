@@ -5,6 +5,11 @@ import se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
+import se.swedsoft.bookkeeping.data.SSAccount;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewProject;
+import se.swedsoft.bookkeeping.data.SSNewResultUnit;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 import se.swedsoft.bookkeeping.print.util.SSDefaultJasperDataSource;
@@ -13,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -25,6 +31,26 @@ import java.util.List;
 public class SSSupplierInvoicejournalPrinter extends SSPrinter {
 
     private Integer iNumber;
+    private SSNewCompany explicitCompany;
+    private SSNewAccountingYear explicitYear;
+    private SSJournalRowContext explicitRows;
+
+    /** Creates a journal from explicit company/year, supplier invoice snapshots and dimension lookups. */
+    public SSSupplierInvoicejournalPrinter(SSNewCompany company, SSNewAccountingYear year, List<SSSupplierInvoice> invoices,
+            Integer number, LocalDate date, List<SSNewProject> projects, List<SSNewResultUnit> resultUnits) {
+        super(company, year);
+        explicitCompany = company;
+        explicitYear = year;
+        explicitRows = new SSJournalRowContext(year, projects, resultUnits);
+        iInvoices = new ArrayList<>(invoices);
+        iNumber = number;
+        configureReport(date);
+    }
+
+    private SSAccount account(SSVoucherRow row) {
+        return explicitRows == null ? row.getAccount() : explicitRows.account(row);
+    }
+
 
     private List<SSSupplierInvoice> iInvoices;
 
@@ -42,6 +68,10 @@ public class SSSupplierInvoicejournalPrinter extends SSPrinter {
         this.iInvoices = iInvoices;
         this.iNumber = iNumber;
 
+        configureReport(iDate);
+    }
+
+    private void configureReport(LocalDate iDate) {
         setPageHeader("header_period.jrxml");
         setColumnHeader("journals/supplierinvoicejournal.jrxml");
         setDetail("journals/supplierinvoicejournal.jrxml");
@@ -68,7 +98,8 @@ public class SSSupplierInvoicejournalPrinter extends SSPrinter {
     @Override
     protected SSDefaultTableModel getModel() {
 
-        iPrinter = new SSVoucherPrinter();
+        iPrinter = explicitRows == null ? new SSVoucherPrinter()
+                : new SSVoucherPrinter(explicitCompany, explicitYear);
         iPrinter.generateReport();
 
         addParameter("Report", iPrinter.getReport());
@@ -174,6 +205,15 @@ public class SSSupplierInvoicejournalPrinter extends SSPrinter {
          *
          */
         public SSVoucherPrinter() {
+            configureRows();
+        }
+
+        private SSVoucherPrinter(SSNewCompany company, SSNewAccountingYear year) {
+            super(company, year);
+            configureRows();
+        }
+
+        private void configureRows() {
             setMargins(0, 0, 0, 0);
 
             setDetail("journals/supplierinvoicejournal.rows.jrxml");
@@ -193,15 +233,15 @@ public class SSSupplierInvoicejournalPrinter extends SSPrinter {
 
                     switch (columnIndex) {
                     case 0:
-                        value = iRow.getAccount() == null
+                        value = account(iRow) == null
                                 ? null
-                                : iRow.getAccount().getNumber();
+                                : account(iRow).getNumber();
                         break;
 
                     case 1:
-                        value = iRow.getAccount() == null
+                        value = account(iRow) == null
                                 ? null
-                                : iRow.getAccount().getDescription();
+                                : account(iRow).getDescription();
                         break;
 
                     case 2:
@@ -213,15 +253,15 @@ public class SSSupplierInvoicejournalPrinter extends SSPrinter {
                         break;
 
                     case 4:
-                        value = iRow.getProject() == null
-                                ? null
-                                : iRow.getProject().getNumber();
+                        value = explicitRows == null
+                                ? (iRow.getProject() == null ? null : iRow.getProject().getNumber())
+                                : explicitRows.project(iRow);
                         break;
 
                     case 5:
-                        value = iRow.getResultUnit() == null
-                                ? null
-                                : iRow.getResultUnit().getNumber();
+                        value = explicitRows == null
+                                ? (iRow.getResultUnit() == null ? null : iRow.getResultUnit().getNumber())
+                                : explicitRows.resultUnit(iRow);
                         break;
 
                     }
