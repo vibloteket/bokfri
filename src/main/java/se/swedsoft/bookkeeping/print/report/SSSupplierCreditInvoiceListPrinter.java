@@ -3,6 +3,7 @@ package se.swedsoft.bookkeeping.print.report;
 
 import se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath;
 import se.swedsoft.bookkeeping.data.SSAccount;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSSupplierInvoiceRow;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
@@ -15,8 +16,8 @@ import se.swedsoft.bookkeeping.print.util.SSDefaultJasperDataSource;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 
@@ -31,6 +32,8 @@ public class SSSupplierCreditInvoiceListPrinter extends SSPrinter {
     private SSDefaultJasperDataSource iDataSource;
 
     private List<SSSupplierCreditInvoice> iInvoices;
+
+    private SSNewCompany explicitCompany;
 
     /**
      *
@@ -47,10 +50,27 @@ public class SSSupplierCreditInvoiceListPrinter extends SSPrinter {
         // Get all orders
         this.iInvoices = iInvoices;
 
+        configureReport();
+    }
+
+    private void configureReport() {
         setPageHeader("header_period.jrxml");
         setColumnHeader("suppliercreditinvoicelist.jrxml");
         setDetail("suppliercreditinvoicelist.jrxml");
         setSummary("suppliercreditinvoicelist.jrxml");
+    }
+
+    /**
+     * Creates a supplier register from explicit company and document snapshots.
+     *
+     * @param company selected company
+     * @param invoices selected document snapshots
+     */
+    public SSSupplierCreditInvoiceListPrinter(SSNewCompany company, List<SSSupplierCreditInvoice> invoices) {
+        super(company);
+        explicitCompany = company;
+        iInvoices = new ArrayList<>(invoices);
+        configureReport();
     }
 
     /**
@@ -69,7 +89,8 @@ public class SSSupplierCreditInvoiceListPrinter extends SSPrinter {
     @Override
     protected SSDefaultTableModel getModel() {
 
-        iPrinter = new SSInvoiceRowPrinter();
+        iPrinter = explicitCompany == null ? new SSInvoiceRowPrinter()
+                : new SSInvoiceRowPrinter(explicitCompany);
         iPrinter.generateReport();
 
         addParameter("Report", iPrinter.getReport());
@@ -180,6 +201,15 @@ public class SSSupplierCreditInvoiceListPrinter extends SSPrinter {
          *
          */
         public SSInvoiceRowPrinter() {
+            configureRows();
+        }
+
+        SSInvoiceRowPrinter(SSNewCompany company) {
+            super(company);
+            configureRows();
+        }
+
+        private void configureRows() {
             setMargins(0, 0, 0, 0);
 
             setDetail("suppliercreditinvoicelist.row.jrxml");
