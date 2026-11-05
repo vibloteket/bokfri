@@ -57,6 +57,7 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Keep keyboard focus in searchable dropdown fields when account and other suggestion lists open, including on macOS. Preserve mouse selection, scrolling, dropdown buttons and add/edit/delete menus; add cross-platform GUI regression tests and opt-in, metadata-only focus diagnostics with a legacy comparison mode.
 
 ### Changed
+- Normalized storage now supports supplier invoice and credit-invoice list PDF exports with explicit company headers and stored row snapshots; preserves supplier tax/rounding totals, local-currency conversion, and legacy GUI constructors.
 
 - Fixed the SIE import voucher-number existence check: an empty `Optional` no longer counts
   as an existing voucher. Unused source numbers (including mapped series numbers) are preserved;
