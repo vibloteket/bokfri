@@ -15,7 +15,11 @@ import se.swedsoft.bookkeeping.util.SSDateUtil;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.ResourceBundle;
 
 
 /**
@@ -33,6 +37,9 @@ public class SSReminderPrinter extends SSPrinter {
     private Integer iMaxReminders;
 
     private java.time.LocalDate iReminderDate;
+
+    private SSNewCompany explicitCompany;
+    private Map<Integer, BigDecimal> explicitBalances;
 
     /**
      *
@@ -53,6 +60,29 @@ public class SSReminderPrinter extends SSPrinter {
      * @param iReminderDate reminder date used for the report and overdue days
      */
     public SSReminderPrinter(List<SSInvoice> iInvoices, SSCustomer iCustomer, Locale iLocale,
+            java.time.LocalDate iReminderDate) {
+        initialize(iInvoices, iCustomer, iLocale, iReminderDate);
+    }
+
+    /**
+     * Creates a reminder from explicit company data and outstanding balances without legacy storage access.
+     *
+     * @param invoices invoices included in the reminder
+     * @param customer customer receiving the reminder
+     * @param locale report locale
+     * @param reminderDate reminder date used for the report and overdue days
+     * @param company selected company with reminder settings and standard texts
+     * @param balances outstanding balances keyed by invoice number, including credits and payments
+     */
+    public SSReminderPrinter(List<SSInvoice> invoices, SSCustomer customer, Locale locale,
+            java.time.LocalDate reminderDate, SSNewCompany company, Map<Integer, BigDecimal> balances) {
+        super(company);
+        explicitCompany = company;
+        explicitBalances = Map.copyOf(balances);
+        initialize(List.copyOf(invoices), customer, locale, reminderDate);
+    }
+
+    private void initialize(List<SSInvoice> iInvoices, SSCustomer iCustomer, Locale iLocale,
             java.time.LocalDate iReminderDate) {
         this.iInvoices = iInvoices;
         this.iCustomer = iCustomer;
@@ -93,7 +123,7 @@ public class SSReminderPrinter extends SSPrinter {
      *
      */
     private void addParameters() {
-        SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
+        SSNewCompany iCompany = explicitCompany != null ? explicitCompany : SSDB.getInstance().getCurrentCompany();
 
         SSSalePrinterUtils.addParametersForCompany(iCompany, this);
 
@@ -117,7 +147,8 @@ public class SSReminderPrinter extends SSPrinter {
                     iCustomer.getInvoiceAddress().getCountry());
 
             addParameter("customer.customernr", iCustomer.getNumber());
-            addParameter("customer.currency", iCustomer.getInvoiceCurrency(), true);
+            addParameter("customer.currency", explicitCompany != null
+                    ? iCustomer.getStoredInvoiceCurrency() : iCustomer.getInvoiceCurrency(), true);
             addParameter("customer.ourcontact", iCustomer.getOurContactPerson());
             addParameter("customer.yourcontact", iCustomer.getYourContactPerson());
         }
@@ -144,7 +175,7 @@ public class SSReminderPrinter extends SSPrinter {
         BigDecimal interestSum = BigDecimal.ZERO;
 
         for (SSInvoice invoice : iInvoices) {
-            BigDecimal saldo = SSInvoiceMath.getSaldo(invoice.getNumber());
+            BigDecimal saldo = balance(invoice);
             int delayedDays = getNumDelayedDays(invoice);
 
             saldoSum = saldoSum.add(saldo);
@@ -161,7 +192,7 @@ public class SSReminderPrinter extends SSPrinter {
      */
     @Override
     protected SSDefaultTableModel getModel() {
-        final SSPrinter iPrinter = new SSRowReport();
+        final SSPrinter iPrinter = explicitCompany != null ? new SSRowReport(explicitCompany) : new SSRowReport();
 
         iPrinter.setBundle(iBundle);
         iPrinter.setLocale(iLocale);
@@ -201,6 +232,15 @@ public class SSReminderPrinter extends SSPrinter {
          *
          */
         public SSRowReport() {
+            initialize();
+        }
+
+        private SSRowReport(SSNewCompany company) {
+            super(company);
+            initialize();
+        }
+
+        private void initialize() {
             setMargins(0, 0, 0, 0);
 
             setColumnHeader("sales/reminder.rows.jrxml");
@@ -258,7 +298,7 @@ public class SSReminderPrinter extends SSPrinter {
                         break;
 
                     case 5:
-                        value = SSInvoiceMath.getSaldo(iInvoice.getNumber());
+                        value = balance(iInvoice);
                         break;
 
                     case 6:
@@ -267,7 +307,7 @@ public class SSReminderPrinter extends SSPrinter {
 
                     case 7:
                         value = SSInvoiceMath.getInterestSum(iInvoice,
-                                SSInvoiceMath.getSaldo(iInvoice.getNumber()),
+                                balance(iInvoice),
                                 getNumDelayedDays(iInvoice));
                         break;
                     }
@@ -300,6 +340,12 @@ public class SSReminderPrinter extends SSPrinter {
             return null;
         }
 
+    }
+
+    private BigDecimal balance(SSInvoice invoice) {
+        return explicitBalances != null
+                ? Objects.requireNonNull(explicitBalances.get(invoice.getNumber()), "Missing invoice balance")
+                : SSInvoiceMath.getSaldo(invoice.getNumber());
     }
 
     /**

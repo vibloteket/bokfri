@@ -115,6 +115,37 @@ class NormalizedAccountingStoreTest {
     }
 
     @Test
+    void readsStandardTextsFromOnlyTheRequestedCompany() throws Exception {
+        try (Connection connection = connection();
+             NormalizedAccountingStore store = store(connection)) {
+            migrate(connection);
+            for (int id : new int[] {5, 6}) {
+                SSNewCompany company = new SSNewCompany();
+                company.setId(id);
+                company.setName("Company " + id);
+                store.addCompany(company);
+            }
+            try (var statement = connection.createStatement()) {
+                statement.executeUpdate("""
+                        INSERT INTO company_standard_text (company_id,text_type,text_value)
+                        SELECT id,'Reminder','Reminder five' FROM company WHERE legacy_id=5
+                        """);
+                statement.executeUpdate("""
+                        INSERT INTO company_standard_text (company_id,text_type,text_value)
+                        SELECT id,'Reminder','Reminder six' FROM company WHERE legacy_id=6
+                        """);
+            }
+            var companies = store.getCompanies();
+            assertThat(companies.get(0).getStandardText(se.swedsoft.bookkeeping.data.SSStandardText.Reminder))
+                    .contains("Reminder five");
+            assertThat(companies.get(1).getStandardText(se.swedsoft.bookkeeping.data.SSStandardText.Reminder))
+                    .contains("Reminder six");
+            assertThat(companies.get(0).getStandardTexts()).hasSize(1);
+            connection.rollback();
+        }
+    }
+
+    @Test
     void requiresSelectionBeforeYearScopedWork() throws Exception {
         try (Connection connection = connection();
              NormalizedAccountingStore store = store(connection)) {

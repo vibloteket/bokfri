@@ -163,6 +163,7 @@ public final class CliSmokeTest {
         }
         runNormalizedPaymentJournalPdfFlow(temporary, company, year);
         runNormalizedInvoiceJournalPdfFlow(temporary, company, year);
+        runNormalizedReminderPdfFlow(temporary, company, year);
     }
 
     private static void runNormalizedInvoiceJournalPdfFlow(Path temporary, String company, String year)
@@ -200,6 +201,28 @@ public final class CliSmokeTest {
                 }
             }
         }
+    }
+
+    private static void runNormalizedReminderPdfFlow(Path temporary, String company, String year) throws Exception {
+        Result created = cli("--company-id", company, "--year-id", year, "--format", "json",
+                "invoice", "create", "--file", temporary.resolve("invoice.json").toString());
+        created.success();
+        String number = Integer.toString(firstInt(created.stdout, "number"));
+        String date = firstString(created.stdout, "date");
+        cli("--company-id", company, "--year-id", year, "--format", "json", "invoice", "journal",
+                "--from", date, "--to", date, "--commit").success();
+        Result shown = cli("--company-id", company, "--year-id", year, "--format", "json",
+                "invoice", "show", number);
+        shown.success();
+        String reminderDate = java.time.LocalDate.parse(firstString(shown.stdout, "dueDate")).plusDays(15).toString();
+        Path pdf = temporary.resolve("normalized-invoice-reminder.pdf");
+        Result exported = cli("--company-id", company, "--year-id", year, "--format", "json",
+                "invoice", "reminder", number, "--date", reminderDate, "--output", pdf.toString());
+        exported.success();
+        exported.jsonObject();
+        byte[] bytes = Files.readAllBytes(pdf);
+        require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
+                "reminder did not produce a normalized PDF");
     }
 
     private static void runNormalizedPaymentJournalPdfFlow(Path temporary, String company, String year)
