@@ -53,16 +53,37 @@ public final class NormalizedAccountingReader {
         return companies;
     }
 
-    /** Reads contact/default-account fields needed by headless SIE exports. */
+    /** Reads company presentation/contact fields and defaults needed by headless exports. */
     private void readExportCompanyFields(Connection connection, SSNewCompany company) throws SQLException {
-        try (var statement = connection.prepareStatement("SELECT phone FROM company WHERE legacy_id=?")) {
+        try (var statement = connection.prepareStatement("""
+                SELECT phone,telefax,residence,email,web_address,reminder_fee,delay_interest,
+                plus_account_number,bank_account_number,swift_bic,iban,bank,tax_registered,
+                weight_unit,volume_unit,logotype_path FROM company WHERE legacy_id=?
+                """)) {
             statement.setInt(1, company.getId());
             try (ResultSet result = statement.executeQuery()) {
-                if (result.next()) company.setPhone(result.getString(1));
+                if (result.next()) {
+                    company.setPhone(result.getString(1));
+                    company.setTelefax(result.getString(2));
+                    company.setResidence(result.getString(3));
+                    company.setEMail(result.getString(4));
+                    company.setHomepage(result.getString(5));
+                    company.setReminderfee(result.getBigDecimal(6));
+                    company.setDelayInterest(result.getBigDecimal(7));
+                    company.setPlusGiroNumber(result.getString(8));
+                    company.setBankGiroNumber(result.getString(9));
+                    company.setBIC(result.getString(10));
+                    company.setIBAN(result.getString(11));
+                    company.setBank(result.getString(12));
+                    company.setTaxRegistered(result.getBoolean(13));
+                    company.setWeightUnit(result.getString(14));
+                    company.setVolumeUnit(result.getString(15));
+                    company.setLogotype(result.getString(16));
+                }
             }
         }
         try (var statement = connection.prepareStatement(
-                "SELECT a.name,a.address_line_1,a.postal_code,a.city FROM company_address a "
+                "SELECT a.name,a.address_line_1,a.postal_code,a.city,a.address_line_2,a.country FROM company_address a "
                         + "JOIN company c ON c.id=a.company_id WHERE c.legacy_id=? AND a.address_type='postal'")) {
             statement.setInt(1, company.getId());
             try (ResultSet result = statement.executeQuery()) {
@@ -72,6 +93,8 @@ public final class NormalizedAccountingReader {
                     address.setAddress1(result.getString(2));
                     address.setZipCode(result.getString(3));
                     address.setCity(result.getString(4));
+                    address.setAddress2(result.getString(5));
+                    address.setCountry(result.getString(6));
                     company.setAddress(address);
                 }
             }

@@ -737,6 +737,124 @@ class BokfriCliRevenueReportTest {
         }
     }
 
+    @Test
+    void invoiceDocumentPdfsMatchLegacyForStandardAndOcrWithoutYear() throws Exception {
+        Path data = temporaryDirectory.resolve("invoice-documents");
+        int selected;
+        int empty;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            SSNewCompany company = addCompany(runtime, "Selected invoice company");
+            selected = company.getId();
+            company.setBankGiroNumber("123-4567");
+            company.setPlusGiroNumber("765-4321");
+            company.setBIC("TESTBIC");
+            company.setIBAN("SE123456");
+            company.setBank("Selected bank");
+            company.setTelefax("FAX-SELECTED");
+            company.setEMail("selected@example.test");
+            company.setHomepage("https://example.test");
+            company.setResidence("Selected residence");
+            company.getAddress().setAddress2("Selected address line two");
+            company.getAddress().setCountry("Selected country");
+            company.setRoundingOff(false);
+            runtime.database().updateCompany(company);
+            addInvoiceDocuments(runtime, "Selected");
+            addCompany(runtime, "Other invoice company");
+            addInvoiceDocuments(runtime, "Other");
+            empty = addCompany(runtime, "Empty invoice company").getId();
+        }
+        Map<String, String> expected = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            for (int number : List.of(1, 2)) {
+                for (String language : List.of("sv-SE", "en-US")) {
+                    for (String variant : List.of("standard", "ocr", "background")) {
+                        String key = number + language + variant;
+                        Path pdf = temporaryDirectory.resolve("invoice-" + key + normalized + ".pdf");
+                        String[] args = {"--data-dir", data.toString(), "--company-id",
+                                Integer.toString(selected), "--format", "json", "invoice", "pdf",
+                                Integer.toString(number), "--language", language, "--output", pdf.toString()};
+                        if (!variant.equals("standard")) args = concat(args, "--ocr");
+                        if (variant.equals("background")) args = concat(args, "--ocr-background");
+                        Result result = execute(args);
+                        assertThat(result.code()).as(result.error()).isZero();
+                        var json = new ObjectMapper().readTree(result.output());
+                        assertThat(json.path("invoiceNumber").asInt()).isEqualTo(number);
+                        assertThat(json.path("language").asText()).isEqualTo(language);
+                        assertThat(json.path("ocr").asBoolean()).isEqualTo(!variant.equals("standard"));
+                        assertThat(json.path("bytes").asLong()).isEqualTo(Files.size(pdf));
+                        if (!variant.equals("standard")) {
+                            SSInvoice reference = new SSInvoice();
+                            reference.setNumber(number);
+                            assertThat(json.path("ocrNumber").asText())
+                                    .isEqualTo(se.swedsoft.bookkeeping.calc.SSOCRNumber.getOCRNumber(reference));
+                        } else assertThat(json.has("ocrNumber")).isFalse();
+                        String content = text(pdf);
+                        assertThat(content).contains("Selected invoice company", "Selected invoice address",
+                                "123-4567", "FAX-SELECTED", "selected@example.test", "SE123456", "TESTBIC")
+                                .doesNotContain("Other");
+                        assertThat(content).contains(language.equals("en-US")
+                                ? "Selected localized product" : "Selected row");
+                        if (number == 1) assertThat(content).contains("VAT-SELECTED");
+                        if (normalized) {
+                            assertThat(content).isEqualTo(expected.get(key));
+                            byte[] original = Files.readAllBytes(pdf);
+                            Result refused = execute(args);
+                            assertThat(refused.code()).isEqualTo(1);
+                            assertThat(refused.error()).contains("OUTPUT_EXISTS");
+                            assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                            Result overwritten = execute(concat(args, "--overwrite"));
+                            assertThat(overwritten.code()).as(overwritten.error()).isZero();
+                            assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                            assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                        } else expected.put(key, content);
+                    }
+                }
+            }
+            for (String variant : List.of("standard", "ocr")) {
+                Path missing = temporaryDirectory.resolve("missing-invoice" + variant + normalized + ".pdf");
+                String[] args = {"--data-dir", data.toString(), "--company-id", Integer.toString(empty),
+                        "--format", "json", "invoice", "pdf", "1", "--output", missing.toString()};
+                if (variant.equals("ocr")) args = concat(args, "--ocr");
+                Result result = execute(args);
+                assertThat(result.code()).isEqualTo(1);
+                assertThat(result.error()).contains("INVOICE_NOT_FOUND");
+                assertThat(missing).doesNotExist();
+            }
+            try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+                runtime.selectCompany(selected);
+                // Exporting an OCR form must not persist a new reference or alter stored rows.
+                for (SSInvoice invoice : runtime.getInvoices()) {
+                    assertThat(invoice.getOCRNumber()).isEqualTo("987654321");
+                    assertThat(invoice.getRows().get(0).getDescription()).isEqualTo("Selected row");
+                }
+            }
+        }
+    }
+
+    private static void addInvoiceDocuments(BokfriRuntime runtime, String name) {
+        SSCustomer customer = new SSCustomer();
+        customer.setNumber("C1");
+        customer.setName(name + " current customer");
+        customer.setVATNumber("VAT-" + name.toUpperCase(java.util.Locale.ROOT));
+        runtime.database().addCustomer(customer);
+        SSProduct product = new SSProduct();
+        product.setNumber("P1");
+        product.setDescription(java.util.Locale.forLanguageTag("en-US"), name + " localized product");
+        runtime.database().addProduct(product);
+        for (int number : List.of(1, 2)) {
+            SSInvoice invoice = customerListSale(new SSInvoice(), name);
+            invoice.setLocalDate(LocalDate.of(2024, 2, 20));
+            invoice.getInvoiceAddress().setName(name + " invoice address");
+            invoice.setOCRNumber("987654321");
+            if (number == 2) {
+                invoice.setCustomerNr("missing");
+                invoice.setType(SSInvoiceType.CASH);
+            }
+            runtime.database().addInvoice(invoice);
+        }
+    }
+
     private static String[] concat(String[] prefix, String... suffix) {
         List<String> args = new ArrayList<>(List.of(prefix));
         args.addAll(List.of(suffix));

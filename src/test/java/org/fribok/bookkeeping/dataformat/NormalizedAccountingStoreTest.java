@@ -64,6 +64,57 @@ class NormalizedAccountingStoreTest {
     }
 
     @Test
+    void readsAllSalesReportCompanyFieldsAndCompletePostalAddress() throws Exception {
+        try (Connection connection = connection();
+             NormalizedAccountingStore store = store(connection)) {
+            migrate(connection);
+            SSNewCompany company = new SSNewCompany();
+            company.setId(5);
+            company.setName("Sales company");
+            store.addCompany(company);
+            try (var statement = connection.createStatement()) {
+                statement.executeUpdate("""
+                        UPDATE company SET phone='phone',telefax='fax',residence='residence',
+                        email='mail@example.test',web_address='https://example.test',reminder_fee=42.5,
+                        delay_interest=8.5,plus_account_number='765-4321',bank_account_number='123-4567',
+                        swift_bic='BICCODE',iban='SE123456',bank='Bank name',tax_registered=TRUE,
+                        weight_unit='kg',volume_unit='m3',logotype_path='company-logo.png'
+                        """);
+                statement.executeUpdate("""
+                        INSERT INTO company_address (company_id,address_type,name,address_line_1,
+                        address_line_2,postal_code,city,country)
+                        SELECT id,'postal','Postal name','Line one','Line two','12345','City','Country'
+                        FROM company
+                        """);
+            }
+            SSNewCompany actual = store.getCompanies().get(0);
+            assertThat(actual.getPhone()).isEqualTo("phone");
+            assertThat(actual.getTelefax()).isEqualTo("fax");
+            assertThat(actual.getResidence()).isEqualTo("residence");
+            assertThat(actual.getEMail()).isEqualTo("mail@example.test");
+            assertThat(actual.getHomepage()).isEqualTo("https://example.test");
+            assertThat(actual.getReminderfee()).isEqualByComparingTo("42.5");
+            assertThat(actual.getDelayInterest()).isEqualByComparingTo("8.5");
+            assertThat(actual.getPlusGiroNumber()).isEqualTo("765-4321");
+            assertThat(actual.getBankGiroNumber()).isEqualTo("123-4567");
+            assertThat(actual.getBIC()).isEqualTo("BICCODE");
+            assertThat(actual.getIBAN()).isEqualTo("SE123456");
+            assertThat(actual.getBank()).isEqualTo("Bank name");
+            assertThat(actual.getTaxRegistered()).isTrue();
+            assertThat(actual.getWeightUnit()).isEqualTo("kg");
+            assertThat(actual.getVolumeUnit()).isEqualTo("m3");
+            assertThat(actual.getLogotype()).isEqualTo("company-logo.png");
+            assertThat(actual.getAddress().getName()).isEqualTo("Postal name");
+            assertThat(actual.getAddress().getAddress1()).isEqualTo("Line one");
+            assertThat(actual.getAddress().getAddress2()).isEqualTo("Line two");
+            assertThat(actual.getAddress().getZipCode()).isEqualTo("12345");
+            assertThat(actual.getAddress().getCity()).isEqualTo("City");
+            assertThat(actual.getAddress().getCountry()).isEqualTo("Country");
+            connection.rollback();
+        }
+    }
+
+    @Test
     void requiresSelectionBeforeYearScopedWork() throws Exception {
         try (Connection connection = connection();
              NormalizedAccountingStore store = store(connection)) {
