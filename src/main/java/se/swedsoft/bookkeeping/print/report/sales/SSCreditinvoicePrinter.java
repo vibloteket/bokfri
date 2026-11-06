@@ -6,6 +6,7 @@ import se.swedsoft.bookkeeping.data.SSCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.common.SSTaxCode;
 import se.swedsoft.bookkeeping.data.system.SSDB;
@@ -13,7 +14,9 @@ import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Map;
 import java.util.ResourceBundle;
 
@@ -27,12 +30,48 @@ public class SSCreditinvoicePrinter extends SSPrinter {
 
     private Locale iLocale;
 
+    private final SSNewCompany company;
+    private final SSCustomer customer;
+    private final SSInvoice creditedInvoice;
+    private final boolean explicit;
+    private final List<SSProduct> products;
+
     /**
      *
      * @param iInvoice
      * @param iLocale
      */
     public SSCreditinvoicePrinter(SSCreditInvoice iInvoice, Locale iLocale) {
+        company = SSDB.getInstance().getCurrentCompany();
+        customer = iInvoice.getCustomer(SSDB.getInstance().getCustomers());
+        creditedInvoice = iInvoice.getCrediting();
+        explicit = false;
+        products = List.of();
+        initialize(iInvoice, iLocale);
+    }
+
+    /**
+     * Creates a report from explicit company and reference data, without legacy storage access.
+     *
+     * @param iInvoice credit invoice with stored row and address snapshots
+     * @param iLocale report language
+     * @param company selected company
+     * @param customer current customer, or null if no longer present
+     * @param creditedInvoice original invoice, or null if no longer present
+     * @param products current company products for localized descriptions
+     */
+    public SSCreditinvoicePrinter(SSCreditInvoice iInvoice, Locale iLocale, SSNewCompany company,
+            SSCustomer customer, SSInvoice creditedInvoice, List<SSProduct> products) {
+        super(company);
+        this.company = company;
+        this.customer = customer;
+        this.creditedInvoice = creditedInvoice;
+        explicit = true;
+        this.products = List.copyOf(products);
+        initialize(iInvoice, iLocale);
+    }
+
+    private void initialize(SSCreditInvoice iInvoice, Locale iLocale) {
         iCreditInvoice = iInvoice;
         this.iLocale = iLocale;
 
@@ -72,10 +111,8 @@ public class SSCreditinvoicePrinter extends SSPrinter {
      *
      */
     private void addParameters() {
-        SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
-
-        SSCustomer iCustomer = iCreditInvoice.getCustomer(
-                SSDB.getInstance().getCustomers());
+        SSNewCompany iCompany = company;
+        SSCustomer iCustomer = customer;
 
         // Company parameters
         SSSalePrinterUtils.addParametersForCompany(iCompany, this);
@@ -114,7 +151,7 @@ public class SSCreditinvoicePrinter extends SSPrinter {
         addParameter("creditinvoice.invoiceadress.country",
                 iCreditInvoice.getInvoiceAddress().getCountry());
 
-        SSInvoice iInvoice = iCreditInvoice.getCrediting();
+        SSInvoice iInvoice = creditedInvoice;
 
         addParameter("creditinvoice.ourcontact", iCreditInvoice.getOurContactPerson());
         addParameter("creditinvoice.deliveryterm", iCreditInvoice.getDeliveryTerm(), true);
@@ -146,8 +183,8 @@ public class SSCreditinvoicePrinter extends SSPrinter {
         // Calculate the sum fields...
         BigDecimal                 iNetSum = SSInvoiceMath.getNetSum(iCreditInvoice);
         Map<SSTaxCode, BigDecimal> iTaxSum = SSInvoiceMath.getTaxSum(iCreditInvoice);
-        BigDecimal                 iTotalSum = SSInvoiceMath.getTotalSum(iCreditInvoice);
-        BigDecimal                 iRounding = SSInvoiceMath.getRounding(iCreditInvoice);
+        BigDecimal                 iTotalSum = SSInvoiceMath.getTotalSum(iCreditInvoice, company.isRoundingOff());
+        BigDecimal                 iRounding = SSInvoiceMath.getRounding(iCreditInvoice, company.isRoundingOff());
 
         // ... add them to the report
         addParameter("creditinvoice.netsum", iNetSum);
@@ -165,7 +202,7 @@ public class SSCreditinvoicePrinter extends SSPrinter {
      */
     @Override
     protected SSDefaultTableModel getModel() {
-        final SSPrinter iPrinter = new SSRowReport();
+        final SSPrinter iPrinter = explicit ? new SSRowReport(company) : new SSRowReport();
 
         iPrinter.setBundle(iBundle);
         iPrinter.setLocale(iLocale);
@@ -205,6 +242,15 @@ public class SSCreditinvoicePrinter extends SSPrinter {
          *
          */
         public SSRowReport() {
+            initialize();
+        }
+
+        private SSRowReport(SSNewCompany company) {
+            super(company);
+            initialize();
+        }
+
+        private void initialize() {
             setMargins(0, 0, 0, 0);
 
             setColumnHeader("sales/creditinvoice.rows.jrxml");
@@ -238,7 +284,10 @@ public class SSCreditinvoicePrinter extends SSPrinter {
                         break;
 
                     case 1:
-                        value = iRow.getDescription(iLocale);
+                        value = explicit ? products.stream()
+                                .filter(product -> Objects.equals(product.getNumber(), iRow.getProductNr()))
+                                .findFirst().flatMap(product -> product.getDescription(iLocale))
+                                .orElse(iRow.getDescription()) : iRow.getDescription(iLocale);
                         break;
 
                     case 2:

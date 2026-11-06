@@ -2885,9 +2885,31 @@ public class BokfriCli implements Runnable {
                 }root.output(result,table(rows,"No credit invoices found",right("Number","number"),left("Date","date"),left("Customer","customerName"),right("Total","total")));return 0;}catch(Exception e){throw databaseFailure(e);}}
     }
 
-    @Command(mixinStandardHelpOptions = true, name = "show") static class CreditInvoiceShow implements Callable<Integer> {
-        @CliMetadata.ParentCommand CreditInvoiceCommand command; @Parameters(index="0") int number;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());r.database().init(false);SSCreditInvoice i=new CreditInvoiceService(r.database()).find(number).orElseThrow(()->new CliException("CREDIT_INVOICE_NOT_FOUND","No credit invoice has number "+number));Map<String,Object>x=creditInvoiceDetails(i,r);x.put("selection",selectedCompanyContext(c,co));root.output(x,"Credit invoice "+number+" for invoice "+i.getCreditingNr());return 0;}catch(CliException e){throw e;}catch(Exception e){throw databaseFailure(e);}}
+    @Command(mixinStandardHelpOptions = true, name = "show")
+    static class CreditInvoiceShow implements Callable<Integer> {
+        @CliMetadata.ParentCommand CreditInvoiceCommand command;
+        @Parameters(index = "0") int number;
+
+        public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                if (!runtime.isNormalized()) runtime.database().init(false);
+                SSCreditInvoice invoice = runtime.getCreditInvoices().stream()
+                        .filter(credit -> Objects.equals(credit.getNumber(), number)).findFirst()
+                        .orElseThrow(() -> new CliException("CREDIT_INVOICE_NOT_FOUND",
+                                "No credit invoice has number " + number));
+                Map<String, Object> result = creditInvoiceDetails(invoice, runtime);
+                result.put("selection", selectedCompanyContext(context, company));
+                root.output(result, "Credit invoice " + number + " for invoice " + invoice.getCreditingNr());
+                return 0;
+            } catch (CliException exception) {
+                throw exception;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
     }
 
     @Command(mixinStandardHelpOptions = true, name = "pdf",
@@ -2907,14 +2929,21 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                runtime.database().init(false);
-                SSCreditInvoice invoice = new CreditInvoiceService(runtime.database()).find(number)
+                if (!runtime.isNormalized()) runtime.database().init(false);
+                SSCreditInvoice invoice = runtime.getCreditInvoices().stream()
+                        .filter(credit -> Objects.equals(credit.getNumber(), number)).findFirst()
                         .orElseThrow(() -> new CliException("CREDIT_INVOICE_NOT_FOUND",
                                 "No credit invoice has number " + number));
                 Map<String, Object> result = creditInvoiceDetails(invoice, runtime);
                 result.put("selection", selectedCompanyContext(context, company));
-                addPdf(result, exportPdf(new SSCreditinvoicePrinter(invoice,
-                        java.util.Locale.forLanguageTag(language)), output, overwrite));
+                var locale = java.util.Locale.forLanguageTag(language);
+                SSCreditinvoicePrinter printer = runtime.isNormalized()
+                        ? new SSCreditinvoicePrinter(invoice, locale, company,
+                                runtime.findCustomer(invoice.getCustomerNr()).orElse(null),
+                                invoice.getCreditingNr() == null ? null : runtime.findInvoice(invoice.getCreditingNr()).orElse(null),
+                                runtime.getProducts())
+                        : new SSCreditinvoicePrinter(invoice, locale);
+                addPdf(result, exportPdf(printer, output, overwrite));
                 root.output(result, "Created credit invoice PDF " + result.get("output"));
                 return 0;
             } catch (Exception exception) {
