@@ -3,12 +3,15 @@ package se.swedsoft.bookkeeping.print.report.sales;
 
 import se.swedsoft.bookkeeping.calc.SSOCRNumber;
 import se.swedsoft.bookkeeping.calc.math.SSInvoiceMath;
+import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInvoice;
-import se.swedsoft.bookkeeping.data.system.SSDB;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.gui.util.graphics.SSImage;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
+import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
@@ -28,6 +31,26 @@ public class SSOCRInvoicePrinter extends SSInvoicePrinter {
      * @param iShowBackground
      */
     public SSOCRInvoicePrinter(SSInvoice iInvoice, Locale iLocale, boolean iShowBackground) {
+        initialize(iInvoice, iLocale, iShowBackground);
+    }
+
+    /**
+     * Creates an OCR invoice report without legacy storage access.
+     *
+     * @param invoice invoice with an OCR reference already assigned
+     * @param locale report language
+     * @param showBackground whether to include the OCR form background
+     * @param company selected company and bank-giro/rounding settings
+     * @param customer current customer, or null if no longer present
+     * @param products company products for localized descriptions
+     */
+    public SSOCRInvoicePrinter(SSInvoice invoice, Locale locale, boolean showBackground,
+            SSNewCompany company, SSCustomer customer, List<SSProduct> products) {
+        super(company, customer, products);
+        initialize(invoice, locale, showBackground);
+    }
+
+    private void initialize(SSInvoice iInvoice, Locale iLocale, boolean iShowBackground) {
         this.iInvoice = iInvoice;
         this.iLocale = iLocale;
         super.iLocale = iLocale;
@@ -49,18 +72,10 @@ public class SSOCRInvoicePrinter extends SSInvoicePrinter {
 
         setMargins(0, 0, 0, 0);
 
-        /* SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
-
-         String iOCRNumber = SSOCRNumber.getOCRNumber(iInvoice);
-
-         iInvoice.setOCRNumber(iOCRNumber);*/
-
         iCodeRow = new SSORCInvoiceCodeRow();
-        // iCodeRow.setReferenceNumber( iOCRNumber );
-        // iCodeRow.setBankNumber     ( iCompany.getBankGiroNumber() );
         iCodeRow.setReferenceNumber(iInvoice.getOCRNumber());
-        iCodeRow.setBankNumber(SSDB.getInstance().getCurrentCompany().getBankGiroNumber());
-        iCodeRow.setValue(SSInvoiceMath.getTotalSum(iInvoice));
+        iCodeRow.setBankNumber(reportCompany().getBankGiroNumber());
+        iCodeRow.setValue(SSInvoiceMath.getTotalSum(iInvoice, reportCompany().isRoundingOff()));
 
         addParameters();
 

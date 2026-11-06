@@ -4,6 +4,7 @@ import se.swedsoft.bookkeeping.calc.math.SSInvoiceMath;
 import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSProduct;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 import se.swedsoft.bookkeeping.data.common.SSInvoiceType;
 import se.swedsoft.bookkeeping.data.common.SSTaxCode;
@@ -12,7 +13,12 @@ import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.ResourceBundle;
 
 /**
  *
@@ -23,6 +29,10 @@ public class SSInvoicePrinter extends SSPrinter {
     protected SSInvoice iInvoice;
 
     protected Locale iLocale;
+
+    private SSNewCompany explicitCompany;
+    private SSCustomer explicitCustomer;
+    private List<SSProduct> explicitProducts;
 
     /**
      *
@@ -35,6 +45,44 @@ public class SSInvoicePrinter extends SSPrinter {
      * @param iLocale
      */
     public SSInvoicePrinter(SSInvoice iInvoice, Locale iLocale) {
+        initialize(iInvoice, iLocale);
+    }
+
+    /**
+     * Creates an invoice report without legacy storage access.
+     *
+     * @param invoice invoice with stored row and address snapshots
+     * @param locale report language
+     * @param company selected company
+     * @param customer current customer, or null if no longer present
+     * @param products company products for localized descriptions
+     */
+    public SSInvoicePrinter(SSInvoice invoice, Locale locale, SSNewCompany company,
+            SSCustomer customer, List<SSProduct> products) {
+        this(company, customer, products);
+        initialize(invoice, locale);
+    }
+
+    /**
+     * Initializes explicit report context for invoice variants without rendering parameters yet.
+     *
+     * @param company selected company
+     * @param customer current customer, or null if no longer present
+     * @param products company products for localized descriptions
+     */
+    protected SSInvoicePrinter(SSNewCompany company, SSCustomer customer, List<SSProduct> products) {
+        super(company);
+        explicitCompany = company;
+        explicitCustomer = customer;
+        explicitProducts = List.copyOf(products);
+    }
+
+    /** Returns the explicit company, or the current company for legacy callers. */
+    protected SSNewCompany reportCompany() {
+        return explicitCompany != null ? explicitCompany : SSDB.getInstance().getCurrentCompany();
+    }
+
+    private void initialize(SSInvoice iInvoice, Locale iLocale) {
         this.iInvoice = iInvoice;
         this.iLocale = iLocale;
 
@@ -82,9 +130,10 @@ public class SSInvoicePrinter extends SSPrinter {
      *
      */
     protected void addParameters() {
-        SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
+        SSNewCompany iCompany = reportCompany();
 
-        SSCustomer iCustomer = iInvoice.getCustomer(SSDB.getInstance().getCustomers());
+        SSCustomer iCustomer = explicitCompany != null ? explicitCustomer
+                : iInvoice.getCustomer(SSDB.getInstance().getCustomers());
 
         SSSalePrinterUtils.addParametersForCompany(iCompany, this);
 
@@ -142,8 +191,8 @@ public class SSInvoicePrinter extends SSPrinter {
         // Calculate the sum fields...
         BigDecimal                 iNetSum = SSInvoiceMath.getNetSum(iInvoice);
         Map<SSTaxCode, BigDecimal> iTaxSum = SSInvoiceMath.getTaxSum(iInvoice);
-        BigDecimal                 iTotalSum = SSInvoiceMath.getTotalSum(iInvoice);
-        BigDecimal                 iRounding = SSInvoiceMath.getRounding(iInvoice);
+        BigDecimal                 iTotalSum = SSInvoiceMath.getTotalSum(iInvoice, iCompany.isRoundingOff());
+        BigDecimal                 iRounding = SSInvoiceMath.getRounding(iInvoice, iCompany.isRoundingOff());
 
         // ... add them to the report
         addParameter("invoice.netsum", iNetSum);
@@ -163,7 +212,7 @@ public class SSInvoicePrinter extends SSPrinter {
      */
     @Override
     protected SSDefaultTableModel getModel() {
-        final SSPrinter iPrinter = new SSRowReport();
+        final SSPrinter iPrinter = explicitCompany != null ? new SSRowReport(explicitCompany) : new SSRowReport();
 
         iPrinter.setBundle(iBundle);
         iPrinter.setLocale(iLocale);
@@ -202,6 +251,15 @@ public class SSInvoicePrinter extends SSPrinter {
          *
          */
         public SSRowReport() {
+            initialize();
+        }
+
+        private SSRowReport(SSNewCompany company) {
+            super(company);
+            initialize();
+        }
+
+        private void initialize() {
             setMargins(0, 0, 0, 0);
 
             setColumnHeader("sales/invoice.rows.jrxml");
@@ -236,7 +294,10 @@ public class SSInvoicePrinter extends SSPrinter {
                         break;
 
                     case 1:
-                        value = iRow.getDescription(iLocale);
+                        value = explicitCompany != null ? explicitProducts.stream()
+                                .filter(product -> Objects.equals(product.getNumber(), iRow.getProductNr()))
+                                .findFirst().flatMap(product -> product.getDescription(iLocale))
+                                .orElse(iRow.getDescription()) : iRow.getDescription(iLocale);
                         break;
 
                     case 2:

@@ -147,6 +147,7 @@ import se.swedsoft.bookkeeping.print.report.journals.SSCreditinvoicejournalPrint
 import se.swedsoft.bookkeeping.print.report.sales.SSCreditinvoicePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSDeliverynotePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSOCRInvoicePrinter;
+import se.swedsoft.bookkeeping.print.report.sales.SSInvoicePrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSPickingslipPrinter;
 import se.swedsoft.bookkeeping.print.report.sales.SSReminderPrinter;
 
@@ -2672,18 +2673,23 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                runtime.database().init(false);
-                InvoiceService service = new InvoiceService(runtime.database());
-                SSInvoice invoice = service.find(number).orElseThrow(() ->
+                if (!runtime.isNormalized()) runtime.database().init(false);
+                SSInvoice invoice = runtime.findInvoice(number).orElseThrow(() ->
                         new CliException("INVOICE_NOT_FOUND", "No invoice has number " + number));
+                java.util.Locale locale = java.util.Locale.forLanguageTag(language);
                 java.nio.file.Path pdf;
-                if (ocr) {
-                    invoice.setOCRNumber(SSOCRNumber.getOCRNumber(invoice));
-                    pdf = exportPdf(new SSOCRInvoicePrinter(invoice,
-                            java.util.Locale.forLanguageTag(language), ocrBackground), output, overwrite);
+                if (ocr) invoice.setOCRNumber(SSOCRNumber.getOCRNumber(invoice));
+                if (runtime.isNormalized()) {
+                    SSCustomer customer = runtime.findCustomer(invoice.getCustomerNr()).orElse(null);
+                    List<SSProduct> products = runtime.getProducts();
+                    SSPrinter printer = ocr
+                            ? new SSOCRInvoicePrinter(invoice, locale, ocrBackground, company, customer, products)
+                            : new SSInvoicePrinter(invoice, locale, company, customer, products);
+                    pdf = exportPdf(printer, output, overwrite);
+                } else if (ocr) {
+                    pdf = exportPdf(new SSOCRInvoicePrinter(invoice, locale, ocrBackground), output, overwrite);
                 } else {
-                    pdf = service.exportPdf(invoice, output,
-                            java.util.Locale.forLanguageTag(language), overwrite);
+                    pdf = new InvoiceService(runtime.database()).exportPdf(invoice, output, locale, overwrite);
                 }
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("invoiceNumber", number);

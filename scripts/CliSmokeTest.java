@@ -145,6 +145,22 @@ public final class CliSmokeTest {
             require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
                     report + " did not produce a normalized PDF");
         }
+        Result invoices = cli("--company-id", company, "--format", "json", "invoice", "list");
+        invoices.success();
+        String invoice = Integer.toString(firstInt(invoices.stdout, "number"));
+        for (String variant : List.of("standard", "ocr", "background")) {
+            Path pdf = temporary.resolve("normalized-invoice-" + variant + ".pdf");
+            List<String> args = new ArrayList<>(List.of("--company-id", company, "--format", "json",
+                    "invoice", "pdf", invoice, "--output", pdf.toString()));
+            if (!variant.equals("standard")) args.add("--ocr");
+            if (variant.equals("background")) args.add("--ocr-background");
+            Result exported = cli(args.toArray(String[]::new));
+            exported.success();
+            exported.jsonObject();
+            byte[] bytes = Files.readAllBytes(pdf);
+            require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
+                    "invoice " + variant + " did not produce a normalized PDF");
+        }
         runNormalizedPaymentJournalPdfFlow(temporary, company, year);
         runNormalizedInvoiceJournalPdfFlow(temporary, company, year);
     }
@@ -273,7 +289,8 @@ public final class CliSmokeTest {
         plans.success();
         int planId = firstInt(plans.stdout, "id");
         Path company = temporary.resolve("company.json");
-        Files.writeString(company, "{\"name\":\"CLI isolated full-year company\"}", StandardCharsets.UTF_8);
+        Files.writeString(company, "{\"name\":\"CLI isolated full-year company\",\"bankgiro\":\"123-4567\"}",
+                StandardCharsets.UTF_8);
         Result created = cli("--format", "json", "company", "create", "--file", company.toString());
         created.success();
         int companyId = firstInt(created.stdout, "id");
