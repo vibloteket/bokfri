@@ -669,6 +669,99 @@ class BokfriCliRevenueReportTest {
         }
     }
 
+    @Test
+    void creditInvoiceDocumentsMatchLegacyWithoutYearAndStayCompanyScoped() throws Exception {
+        Path data = temporaryDirectory.resolve("credit-documents");
+        int selected;
+        int empty;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            selected = addCompany(runtime, "Selected credit company").getId();
+            addCreditDocuments(runtime, "Selected");
+            addCompany(runtime, "Other credit company");
+            addCreditDocuments(runtime, "Other");
+            empty = addCompany(runtime, "Empty credit company").getId();
+        }
+        Map<String, String> expected = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            for (int number : List.of(1, 2)) {
+                String[] context = {"--data-dir", data.toString(), "--company-id",
+                        Integer.toString(selected), "--format", "json", "credit-invoice"};
+                Result shown = execute(concat(context, "show", Integer.toString(number)));
+                assertThat(shown.code()).as(shown.error()).isZero();
+                String key = "show" + number;
+                if (normalized) {
+                    var actual = new ObjectMapper().readTree(shown.output());
+                    var legacy = new ObjectMapper().readTree(expected.get(key));
+                    for (String field : List.of("number", "creditingNumber", "customerNumber", "customerName",
+                            "date", "total", "rounding", "selection")) {
+                        assertThat(actual.get(field)).as(field).isEqualTo(legacy.get(field));
+                    }
+                    assertThat(actual.path("rows").get(0).path("description").asText()).isEqualTo("Selected row");
+                    assertThat(actual.path("rows").get(0).path("discount").decimalValue())
+                            .isEqualByComparingTo(legacy.path("rows").get(0).path("discount").decimalValue());
+                } else expected.put(key, shown.output());
+                for (String language : List.of("sv-SE", "en-US")) {
+                    Path pdf = temporaryDirectory.resolve("credit-" + number + language + normalized + ".pdf");
+                    String[] args = concat(context, "pdf", Integer.toString(number), "--language", language,
+                            "--output", pdf.toString());
+                    Result result = execute(args);
+                    assertThat(result.code()).as(result.error()).isZero();
+                    String content = text(pdf);
+                    assertThat(content).contains("Selected credit company", "Selected row",
+                            "Selected invoice address").doesNotContain("Other");
+                    if (number == 1) assertThat(content).contains("987654321", "VAT-SELECTED");
+                    key = number + language;
+                    if (normalized) {
+                        assertThat(content).isEqualTo(expected.get(key));
+                        byte[] original = Files.readAllBytes(pdf);
+                        assertThat(execute(args).code()).isEqualTo(1);
+                        assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                        Result overwritten = execute(concat(args, "--overwrite"));
+                        assertThat(overwritten.code()).as(overwritten.error()).isZero();
+                        assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                        assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                    } else expected.put(key, content);
+                }
+            }
+            for (String operation : List.of("show", "pdf")) {
+                Path missing = temporaryDirectory.resolve("missing-credit" + normalized + ".pdf");
+                String[] args = {"--data-dir", data.toString(), "--company-id", Integer.toString(empty),
+                        "--format", "json", "credit-invoice", operation, "1"};
+                if (operation.equals("pdf")) args = concat(args, "--output", missing.toString());
+                Result result = execute(args);
+                assertThat(result.code()).isEqualTo(1);
+                assertThat(result.error()).contains("CREDIT_INVOICE_NOT_FOUND");
+                assertThat(missing).doesNotExist();
+            }
+        }
+    }
+
+    private static String[] concat(String[] prefix, String... suffix) {
+        List<String> args = new ArrayList<>(List.of(prefix));
+        args.addAll(List.of(suffix));
+        return args.toArray(String[]::new);
+    }
+
+    private static void addCreditDocuments(BokfriRuntime runtime, String name) {
+        SSCustomer customer = new SSCustomer();
+        customer.setNumber("C1");
+        customer.setName(name + " current customer");
+        customer.setVATNumber("VAT-" + name.toUpperCase(java.util.Locale.ROOT));
+        runtime.database().addCustomer(customer);
+        SSInvoice invoice = customerListSale(new SSInvoice(), name);
+        invoice.setOCRNumber("987654321");
+        runtime.database().addInvoice(invoice);
+        for (int number : List.of(1, 2)) {
+            SSCreditInvoice credit = customerListSale(new SSCreditInvoice(), name);
+            credit.setLocalDate(LocalDate.of(2024, 2, 20));
+            credit.getInvoiceAddress().setName(name + " invoice address");
+            credit.setCreditingNr(number == 1 ? invoice.getNumber() : 999);
+            if (number == 2) credit.setCustomerNr("missing");
+            runtime.database().addCreditInvoice(credit);
+        }
+    }
+
     private static void addSupplierInvoiceListDocuments(BokfriRuntime runtime, String name) {
         for (String date : List.of("2023-12-31", "2024-02-10", "2024-02-20", "2024-02-21", "undated")) {
             SSSupplierInvoice invoice = supplierListSale(new SSSupplierInvoice(), name);

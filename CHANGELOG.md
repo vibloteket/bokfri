@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable normalized credit-invoice `show` and single-document PDF export without legacy database initialization. Explicit company, customer, original-invoice and product lookups preserve OCR references, localized descriptions, stored addresses and company rounding without requiring an accounting year (#75).
+
 - Enable normalized customer invoice/credit-invoice list PDFs using explicit company rounding and company-wide headers for outer and nested reports. Preserve stored row details, totals, date filters and templates; support empty/no-year registers without legacy selections and avoid sorting caller-owned lists (#75).
 
 - Enable normalized supplier invoice/credit-invoice journal PDFs with explicit company/year headers and voucher account/project/result-unit lookups for outer and nested reports. Preserve stored tax/rounding totals, existing journal metadata, templates and export-before-booking behavior (#75).
