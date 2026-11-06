@@ -2724,13 +2724,12 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, true);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                runtime.selectYear(company, context.yearId());
-                runtime.database().init(false);
-                SSInvoice invoice = new InvoiceService(runtime.database()).find(number)
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                if (!runtime.isNormalized()) runtime.database().init(false);
+                SSInvoice invoice = runtime.findInvoice(number)
                         .orElseThrow(() -> new CliException("INVOICE_NOT_FOUND",
                                 "No invoice has number " + number));
-                java.math.BigDecimal balance = se.swedsoft.bookkeeping.calc.math.SSInvoiceMath
-                        .getSaldo(invoice);
+                java.math.BigDecimal balance = runtime.invoiceBalance(invoice);
                 if (!invoice.isEntered()) {
                     throw new CliException("REMINDER_INVOICE_NOT_ENTERED",
                             "Invoice " + number + " must be entered before a reminder is generated");
@@ -2743,17 +2742,20 @@ public class BokfriCli implements Runnable {
                     throw new CliException("REMINDER_INVOICE_NOT_OVERDUE",
                             "Reminder date must be after the invoice due date");
                 }
-                SSCustomer customer = runtime.database().getCustomer(invoice.getCustomerNr())
+                SSCustomer customer = runtime.findCustomer(invoice.getCustomerNr())
                         .orElseThrow(() -> new CliException("INVOICE_CUSTOMER_NOT_FOUND",
                                 "No customer has number " + invoice.getCustomerNr()));
-                java.nio.file.Path pdf = exportPdf(new SSReminderPrinter(List.of(invoice), customer,
-                        java.util.Locale.forLanguageTag(language), date), output, overwrite);
+                java.util.Locale locale = java.util.Locale.forLanguageTag(language);
+                SSReminderPrinter printer = runtime.isNormalized()
+                        ? new SSReminderPrinter(List.of(invoice), customer, locale, date, company,
+                                Map.of(invoice.getNumber(), balance))
+                        : new SSReminderPrinter(List.of(invoice), customer, locale, date);
+                java.nio.file.Path pdf = exportPdf(printer, output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("invoiceNumber", number); result.put("date", date);
                 result.put("dueDate", invoice.getLocalDueDate()); result.put("balance", money(balance));
                 result.put("output", pdf.toString()); result.put("bytes", Files.size(pdf));
-                result.put("selection", selectedContext(context, company,
-                        runtime.database().getCurrentYear()));
+                result.put("selection", selectedContext(context, company, year));
                 root.output(result, "Created payment-reminder PDF " + pdf);
                 return 0;
             } catch (CliException exception) { throw exception; }

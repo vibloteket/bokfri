@@ -4,6 +4,7 @@ import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSAccountPlan;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSStandardText;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 
@@ -115,6 +116,18 @@ public final class NormalizedAccountingReader {
             }
         }
         company.setDefaultAccounts(defaults);
+        java.util.Map<SSStandardText, String> texts = new java.util.EnumMap<>(SSStandardText.class);
+        try (var statement = connection.prepareStatement(
+                "SELECT t.text_type,t.text_value FROM company_standard_text t "
+                        + "JOIN company c ON c.id=t.company_id WHERE c.legacy_id=?")) {
+            statement.setInt(1, company.getId());
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    texts.put(SSStandardText.valueOf(result.getString(1)), result.getString(2));
+                }
+            }
+        }
+        company.setStandardTexts(texts);
     }
 
     public List<SSNewAccountingYear> years(Connection connection, int companyLegacyId)

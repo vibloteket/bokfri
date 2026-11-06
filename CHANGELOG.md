@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable normalized `invoice reminder` PDF export with explicit outstanding balances, company/customer data and nested report headers. Read stored company standard texts and customer currency without the legacy singleton; preserve reminder-date validation, credit/payment deductions, interest, reminder fees and export-only reminder counts (#75).
+
 - Enable normalized single-invoice PDF exports, including OCR forms with optional backgrounds, using explicit company/customer/product data and nested headers. Hydrate stored company payment/contact/logo fields and complete postal addresses for sales-report headers/footers; preserve company rounding, localized descriptions, cash invoices, order references and export-only OCR behavior (#75).
 
 - Enable normalized credit-invoice `show` and single-document PDF export without legacy database initialization. Explicit company, customer, original-invoice and product lookups preserve OCR references, localized descriptions, stored addresses and company rounding without requiring an accounting year (#75).

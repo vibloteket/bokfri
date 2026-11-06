@@ -855,6 +855,141 @@ class BokfriCliRevenueReportTest {
         }
     }
 
+    @Test
+    void reminderPdfsAndValidationMatchLegacyWithCreditsPaymentsAndCompanyIsolation() throws Exception {
+        Path data = temporaryDirectory.resolve("reminder-documents");
+        int selected;
+        int year;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            SSNewCompany company = addCompany(runtime, "Selected reminder company");
+            selected = company.getId();
+            company.setReminderfee(new BigDecimal("42.50"));
+            company.setBankGiroNumber("123-4567");
+            company.getStandardTexts().put(se.swedsoft.bookkeeping.data.SSStandardText.Reminder,
+                    "Selected reminder standard text");
+            runtime.database().updateCompany(company);
+            year = addYear(runtime).getId();
+            addReminderDocuments(runtime, "Selected");
+            addCompany(runtime, "Other reminder company");
+            addYear(runtime);
+            addReminderDocuments(runtime, "Other");
+        }
+        Map<String, String> expected = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            String[] context = {"--data-dir", data.toString(), "--company-id", Integer.toString(selected),
+                    "--year-id", Integer.toString(year), "--format", "json", "invoice", "reminder"};
+            for (String language : List.of("sv-SE", "en-US")) {
+                Path pdf = temporaryDirectory.resolve("reminder-" + language + normalized + ".pdf");
+                String[] args = concat(context, "1", "--date", "2024-03-15", "--language", language,
+                        "--output", pdf.toString());
+                Result result = execute(args);
+                assertThat(result.code()).as(result.error()).isZero();
+                var json = new ObjectMapper().readTree(result.output());
+                assertThat(json.path("balance").asText()).isEqualTo("55.00");
+                assertThat(json.path("date").asText()).isEqualTo("2024-03-15");
+                assertThat(json.path("dueDate").asText()).isEqualTo("2024-02-15");
+                String content = text(pdf);
+                assertThat(content).contains("Selected reminder company", "Selected current customer",
+                        "Selected reminder standard text", "987654321", "123-4567").doesNotContain("Other");
+                if (normalized) {
+                    assertThat(content).isEqualTo(expected.get(language));
+                    byte[] original = Files.readAllBytes(pdf);
+                    assertThat(execute(args).code()).isEqualTo(1);
+                    assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                    Result overwritten = execute(concat(args, "--overwrite"));
+                    assertThat(overwritten.code()).as(overwritten.error()).isZero();
+                    assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                    assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                } else expected.put(language, content);
+            }
+            for (String scenario : List.of("unentered", "settled", "not-overdue", "missing-date",
+                    "missing-customer", "missing-invoice", "cash")) {
+                int number = switch (scenario) {
+                    case "unentered" -> 2;
+                    case "settled" -> 3;
+                    case "missing-date" -> 4;
+                    case "missing-customer" -> 5;
+                    case "missing-invoice" -> 999;
+                    case "cash" -> 6;
+                    default -> 1;
+                };
+                String code = switch (scenario) {
+                    case "unentered" -> "REMINDER_INVOICE_NOT_ENTERED";
+                    case "settled", "cash" -> "REMINDER_INVOICE_SETTLED";
+                    case "missing-customer" -> "INVOICE_CUSTOMER_NOT_FOUND";
+                    case "missing-invoice" -> "INVOICE_NOT_FOUND";
+                    default -> "REMINDER_INVOICE_NOT_OVERDUE";
+                };
+                Path pdf = temporaryDirectory.resolve(scenario + normalized + ".pdf");
+                Result result = execute(concat(context, Integer.toString(number), "--date",
+                        scenario.equals("not-overdue") ? "2024-02-15" : "2024-03-15",
+                        "--output", pdf.toString()));
+                assertThat(result.code()).as(scenario).isEqualTo(1);
+                assertThat(result.error()).contains(code);
+                assertThat(pdf).doesNotExist();
+            }
+            try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+                runtime.selectCompany(selected);
+                SSInvoice invoice = runtime.findInvoice(1).orElseThrow();
+                assertThat(invoice.getNumReminders()).isEqualTo(2);
+                assertThat(invoice.getOCRNumber()).isEqualTo("987654321");
+                assertThat(runtime.invoiceBalance(invoice)).isEqualByComparingTo("55");
+            }
+        }
+    }
+
+    private static void addReminderDocuments(BokfriRuntime runtime, String name) {
+        SSCustomer customer = new SSCustomer();
+        customer.setNumber("C1");
+        customer.setName(name + " current customer");
+        customer.getInvoiceAddress().setName(name + " current customer");
+        var currency = new se.swedsoft.bookkeeping.data.common.SSCurrency("XTS", "Test currency");
+        if (runtime.database().getCurrencies().stream().noneMatch(value -> "XTS".equals(value.getName()))) {
+            runtime.database().addCurrency(currency);
+        }
+        customer.setInvoiceCurrency(currency);
+        runtime.database().addCustomer(customer);
+        for (int number = 1; number <= 6; number++) {
+            SSInvoice invoice = new SSInvoice();
+            invoice.setCustomerNr(number == 5 ? "missing" : "C1");
+            invoice.setCustomerName(name + " snapshot");
+            invoice.setLocalDate(LocalDate.of(2024, 2, 1));
+            invoice.setLocalDueDate(number == 4 ? null : LocalDate.of(2024, 2, 15));
+            invoice.setTaxFree(true);
+            invoice.setDelayInterest(new BigDecimal("8.5"));
+            invoice.setNumRemainders(2);
+            invoice.setOCRNumber("987654321");
+            if (number != 2) invoice.setEntered();
+            if (number == 6) invoice.setType(SSInvoiceType.CASH);
+            SSSaleRow row = new SSSaleRow();
+            row.setDescription(name + " row");
+            row.setQuantity(1);
+            row.setUnitprice(new BigDecimal("100"));
+            invoice.getRows().add(row);
+            runtime.database().addInvoice(invoice);
+        }
+        SSCreditInvoice credit = new SSCreditInvoice();
+        credit.setCreditingNr(1);
+        credit.setCustomerNr("C1");
+        credit.setTaxFree(true);
+        credit.setLocalDate(LocalDate.of(2024, 2, 20));
+        SSSaleRow creditRow = new SSSaleRow();
+        creditRow.setQuantity(1);
+        creditRow.setUnitprice(new BigDecimal("20"));
+        credit.getRows().add(creditRow);
+        runtime.database().addCreditInvoice(credit);
+        for (int number : List.of(1, 3)) {
+            SSInpayment payment = new SSInpayment();
+            payment.setLocalDate(LocalDate.of(2024, 2, 21));
+            SSInpaymentRow row = new SSInpaymentRow();
+            row.setInvoiceNr(number);
+            row.setValue(new BigDecimal(number == 1 ? "25" : "100"));
+            payment.getRows().add(row);
+            runtime.database().addInpayment(payment);
+        }
+    }
+
     private static String[] concat(String[] prefix, String... suffix) {
         List<String> args = new ArrayList<>(List.of(prefix));
         args.addAll(List.of(suffix));
