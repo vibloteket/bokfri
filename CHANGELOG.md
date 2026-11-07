@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Preserve global reusable account-plan templates in normalized migration V19, separately from accounting-year plan copies. Verify template metadata, ordered accounts, codes and flags before commit, after reopen and after activation; reject inconsistent source keys/accounts and report verified catalogue counts. Runtime catalogue/year-creation support and upgrades of earlier normalized snapshots remain follow-up work (#75).
+
 - Enable normalized `company create` with saved contact/payment/tax settings, default accounts and explicit currency/payment-term/unit lookups. Preserve registered lookup values and built-in fallbacks, duplicate-name validation and legacy creation behavior; roll back company/default/lookup writes together on failure (#75).
 
 - Enable normalized `voucher show` text/JSON and optional PDF exports using the selected year's accounts/vouchers and explicit company/project/result-unit context. Preserve correction links, row edit flags, totals, nested headers and legacy constructors; explicit totals avoid singleton-backed row validity checks (#75).

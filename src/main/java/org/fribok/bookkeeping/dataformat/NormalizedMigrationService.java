@@ -62,6 +62,13 @@ public final class NormalizedMigrationService {
                 throw new IOException("Activated catalog fingerprint mismatch: "
                         + String.join("; ", differences));
             }
+            SemanticFingerprint reopenedCatalog = new AccountPlanCatalogStagingConverter()
+                    .fingerprintNormalized(normalized);
+            var catalogDifferences = staged.accountPlanCatalog().destinationFingerprint().differences(reopenedCatalog);
+            if (!catalogDifferences.isEmpty()) {
+                throw new IOException("Activated account-plan catalogue fingerprint mismatch: "
+                        + String.join("; ", catalogDifferences));
+            }
             DataFormatManager.recordVersion(normalized,
                     DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION);
             try (var statement = normalized.createStatement()) { statement.execute("SHUTDOWN"); }

@@ -260,6 +260,27 @@ A mismatch aborts activation and reports the first differing domain plus counts/
 
 Each implementation slice requires `mvn verify`, representative old databases, empty/minimal/multi-company/multi-year fixtures, interruption tests and packaged Linux/Windows/macOS startup checks.
 
+## Global account-plan catalogue staging
+
+Schema migration `V19__create_account_plan_catalog.sql` preserves the reusable
+`tbl_accountplan` templates in `account_plan_catalog` and ordered
+`account_plan_catalog_account` rows. These are global templates, **not** the
+per-year `account_plan`/`account` copies. Unused and empty templates, duplicate
+names with distinct IDs, base/assessment/type metadata, account order, all codes
+and active/project/result-unit flags are fingerprinted separately. Inconsistent
+legacy object keys, invalid accounts and duplicate account numbers reject staging
+rather than silently dropping data. Catalogue fingerprints are checked before
+commit, after staging shutdown/reopen and again after activation. Normalization
+JSON reports the verified template/account counts.
+
+This is a migration foundation, not yet the normalized runtime implementation of
+`account-plan list`, XLSX import/export or `year create`. Existing format-3 data
+created before V19 is not silently upgraded or seeded with replacement templates:
+the original global catalogue was not included in those snapshots. Recovery or
+upgrade needs the retained legacy source/backup; a safe explicit path remains
+follow-up work. Normal startup and an already-normalized `database normalize`
+no-op do not rewrite such databases.
+
 ## Company creation runtime support
 
 `company create --file` supports normalized format 3 without opening legacy object
