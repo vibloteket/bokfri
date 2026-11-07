@@ -66,6 +66,18 @@ public final class CliSmokeTest {
         Result status = cli("--format", "json", "database", "status");
         status.success();
         require(status.stdout.contains("\"format\":3"), "database was not normalized");
+        Path newCompany = temporary.resolve("normalized-new-company.json");
+        Files.writeString(newCompany, """
+                {"schemaVersion":1,"name":"Normalized smoke company","email":"smoke@example.test",
+                 "currency":"SEK","paymentTerms":"30","standardUnit":"st","vatPeriod":3}
+                """);
+        Result companyCreated = cli("--format", "json", "company", "create", "--file", newCompany.toString());
+        companyCreated.success();
+        companyCreated.jsonObject();
+        Result companyList = cli("--format", "json", "company", "list");
+        companyList.success();
+        require(companyList.stdout.contains("Normalized smoke company"),
+                "created normalized company was not retained after reopening");
         Result accounts = cli("--company-id", company, "--year-id", year,
                 "--format", "json", "account", "list");
         accounts.success();

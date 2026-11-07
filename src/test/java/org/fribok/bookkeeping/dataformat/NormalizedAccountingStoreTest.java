@@ -64,6 +64,34 @@ class NormalizedAccountingStoreTest {
     }
 
     @Test
+    void companyCreationRetainsRegisteredLookupValuesInsteadOfOverwritingThem() throws Exception {
+        try (Connection connection = connection();
+             NormalizedAccountingStore store = store(connection)) {
+            migrate(connection);
+            try (var statement = connection.createStatement()) {
+                statement.executeUpdate("INSERT INTO currency VALUES ('XTS','Stored currency',2.125)");
+                statement.executeUpdate("INSERT INTO unit_definition VALUES ('custom','Stored unit')");
+                statement.executeUpdate("INSERT INTO payment_term VALUES ('45','Stored payment term')");
+            }
+            SSNewCompany company = new SSNewCompany();
+            company.setId(5);
+            company.setName("Lookup company");
+            var currency = new se.swedsoft.bookkeeping.data.common.SSCurrency("XTS", "Must not overwrite");
+            currency.setExchangeRate(new BigDecimal("9.99"));
+            company.setCurrency(currency);
+            company.setStandardUnit(new se.swedsoft.bookkeeping.data.common.SSUnit("custom", "Must not overwrite"));
+            company.setPaymentTerm(new se.swedsoft.bookkeeping.data.common.SSPaymentTerm("45", "Must not overwrite"));
+            store.addCompany(company);
+            store.commit();
+            SSNewCompany stored = store.getCompanies().get(0);
+            assertThat(stored.getCurrency().getDescription()).isEqualTo("Stored currency");
+            assertThat(stored.getCurrency().getExchangeRate()).isEqualByComparingTo("2.125");
+            assertThat(stored.getStandardUnit().getDescription()).isEqualTo("Stored unit");
+            assertThat(stored.getPaymentTerm().getDescription()).isEqualTo("Stored payment term");
+        }
+    }
+
+    @Test
     void readsAllSalesReportCompanyFieldsAndCompletePostalAddress() throws Exception {
         try (Connection connection = connection();
              NormalizedAccountingStore store = store(connection)) {

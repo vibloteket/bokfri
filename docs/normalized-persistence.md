@@ -260,6 +260,19 @@ A mismatch aborts activation and reports the first differing domain plus counts/
 
 Each implementation slice requires `mvn verify`, representative old databases, empty/minimal/multi-company/multi-year fixtures, interruption tests and packaged Linux/Windows/macOS startup checks.
 
+## Company creation runtime support
+
+`company create --file` supports normalized format 3 without opening legacy object
+storage. It retains the existing JSON schema, validation and duplicate-name rules.
+All supported creation fields, default accounts, currency, payment terms and unit
+are saved in one transaction. Registered lookup values take precedence over the
+built-in fallback definitions; missing fallback definitions are inserted without
+replacing existing descriptions or currency rates. Company reads restore those
+references, VAT period and contact person after reopening. Failed writes roll back
+both the company and newly inserted lookups; creation does not change the saved
+company/year selection. This does not enable demo generation, global account-plan
+catalog operations, year creation or normalized GUI activation.
+
 ## Financial PDF runtime support
 
 The CLI `balance-sheet --output`, `income-statement --output`,
