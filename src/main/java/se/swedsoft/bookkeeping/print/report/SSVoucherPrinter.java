@@ -4,6 +4,10 @@ package se.swedsoft.bookkeeping.print.report;
 import se.swedsoft.bookkeeping.calc.math.SSVoucherMath;
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSInvoice;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSNewProject;
+import se.swedsoft.bookkeeping.data.SSNewResultUnit;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
@@ -16,6 +20,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -23,6 +30,12 @@ import java.util.List;
  * Time: 16:06:12
  */
 public class SSVoucherPrinter extends SSPrinter {
+
+    private SSNewCompany explicitCompany;
+    private SSNewAccountingYear explicitYear;
+    private List<SSAccount> explicitAccounts;
+    private Set<String> explicitProjects;
+    private Set<String> explicitResultUnits;
 
     private String iTitle;
 
@@ -40,6 +53,36 @@ public class SSVoucherPrinter extends SSPrinter {
      * @param pTitle
      */
     public SSVoucherPrinter(SSVoucher pVoucher, String pTitle) {
+        initialize(pVoucher, pTitle);
+    }
+
+    /**
+     * Creates a voucher report with explicit headers and row lookups, without legacy storage access.
+     *
+     * @param voucher voucher snapshot
+     * @param title report title
+     * @param company selected company
+     * @param year hydrated year with accounts and vouchers
+     * @param projects company project register
+     * @param resultUnits company result-unit register
+     */
+    public SSVoucherPrinter(SSVoucher voucher, String title, SSNewCompany company, SSNewAccountingYear year,
+            List<SSNewProject> projects, List<SSNewResultUnit> resultUnits) {
+        super(company, year);
+        explicitCompany = company;
+        explicitYear = year;
+        explicitAccounts = List.copyOf(year.getAccounts());
+        explicitProjects = projects.stream().map(SSNewProject::getNumber).collect(Collectors.toSet());
+        explicitResultUnits = resultUnits.stream().map(SSNewResultUnit::getNumber).collect(Collectors.toSet());
+        initialize(voucher, title);
+    }
+
+    private SSAccount account(SSVoucherRow row) {
+        return explicitCompany == null ? row.getAccount() : explicitAccounts.stream()
+                .filter(account -> Objects.equals(account.getNumber(), row.getAccountNr())).findFirst().orElse(null);
+    }
+
+    private void initialize(SSVoucher pVoucher, String pTitle) {
         iVoucher = pVoucher;
         iTitle = pTitle;
         iMarkedAccounts = Collections.emptyList();
@@ -88,7 +131,8 @@ public class SSVoucherPrinter extends SSPrinter {
      */
     @Override
     protected SSDefaultTableModel getModel() {
-        iPrinter = new SSVoucherRowPrinter();
+        iPrinter = explicitCompany == null ? new SSVoucherRowPrinter()
+                : new SSVoucherRowPrinter(explicitCompany, explicitYear);
         iPrinter.generateReport();
 
         addParameter("Report", iPrinter.getReport());
@@ -125,11 +169,13 @@ public class SSVoucherPrinter extends SSPrinter {
                     break;
 
                 case 3:
-                    value = SSVoucherMath.getDebetSum(iVoucher);
+                    value = explicitCompany == null ? SSVoucherMath.getDebetSum(iVoucher)
+                            : SSVoucherMath.getDebetSum(iVoucher, explicitAccounts);
                     break;
 
                 case 4:
-                    value = SSVoucherMath.getCreditSum(iVoucher);
+                    value = explicitCompany == null ? SSVoucherMath.getCreditSum(iVoucher)
+                            : SSVoucherMath.getCreditSum(iVoucher, explicitAccounts);
                     break;
 
                 case 5:
@@ -168,6 +214,15 @@ public class SSVoucherPrinter extends SSPrinter {
          *
          */
         public SSVoucherRowPrinter() {
+            initialize();
+        }
+
+        private SSVoucherRowPrinter(SSNewCompany company, SSNewAccountingYear year) {
+            super(company, year);
+            initialize();
+        }
+
+        private void initialize() {
             setMargins(0, 0, 0, 0);
 
             setDetail("voucher.rows.jrxml");
@@ -187,15 +242,11 @@ public class SSVoucherPrinter extends SSPrinter {
 
                     switch (columnIndex) {
                     case 0:
-                        value = iRow.getAccount() == null
-                                ? null
-                                : iRow.getAccount().getNumber();
+                        value = account(iRow) == null ? null : account(iRow).getNumber();
                         break;
 
                     case 1:
-                        value = iRow.getAccount() == null
-                                ? null
-                                : iRow.getAccount().getDescription();
+                        value = account(iRow) == null ? null : account(iRow).getDescription();
                         break;
 
                     case 2:
@@ -207,15 +258,15 @@ public class SSVoucherPrinter extends SSPrinter {
                         break;
 
                     case 4:
-                        value = iRow.getProject() == null
-                                ? null
-                                : iRow.getProject().getNumber();
+                        value = explicitCompany == null
+                                ? (iRow.getProject() == null ? null : iRow.getProject().getNumber())
+                                : (explicitProjects.contains(iRow.getProjectNr()) ? iRow.getProjectNr() : null);
                         break;
 
                     case 5:
-                        value = iRow.getResultUnit() == null
-                                ? null
-                                : iRow.getResultUnit().getNumber();
+                        value = explicitCompany == null
+                                ? (iRow.getResultUnit() == null ? null : iRow.getResultUnit().getNumber())
+                                : (explicitResultUnits.contains(iRow.getResultUnitNr()) ? iRow.getResultUnitNr() : null);
                         break;
 
                     case 6:
@@ -227,7 +278,7 @@ public class SSVoucherPrinter extends SSPrinter {
                         break;
 
                     case 8:
-                        value = iMarkedAccounts.contains(iRow.getAccount());
+                        value = iMarkedAccounts.contains(account(iRow));
                         break;
 
                     }

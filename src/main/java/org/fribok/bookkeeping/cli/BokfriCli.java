@@ -3859,17 +3859,24 @@ public class BokfriCli implements Runnable {
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
-                VoucherService service = new VoucherService(runtime.database());
-                SSVoucher voucher = service.find(number).orElseThrow(() ->
-                        new CliException("VOUCHER_NOT_FOUND", "No voucher has number " + number));
-                Map<String, Object> result = voucherDetails(voucher);
+                if (runtime.isNormalized()) runtime.hydrateYear(year);
+                List<SSAccount> accounts = runtime.isNormalized() ? year.getAccounts() : null;
+                List<SSVoucher> vouchers = runtime.isNormalized() ? year.getVouchers() : runtime.getVouchers();
+                SSVoucher voucher = vouchers.stream().filter(candidate -> candidate.getNumber() == number)
+                        .findFirst().orElseThrow(() ->
+                                new CliException("VOUCHER_NOT_FOUND", "No voucher has number " + number));
+                Map<String, Object> result = voucherDetails(voucher, accounts);
                 result.put("selection", selectedContext(context, company, year));
                 if (output != null) {
-                    addPdf(result, exportPdf(new SSVoucherPrinter(voucher,
-                            se.swedsoft.bookkeeping.gui.util.SSBundle.getBundle()
-                                    .getString("voucherreport.title")), output, overwrite));
+                    String title = se.swedsoft.bookkeeping.gui.util.SSBundle.getBundle()
+                            .getString("voucherreport.title");
+                    SSPrinter printer = runtime.isNormalized()
+                            ? new SSVoucherPrinter(voucher, title, company, year,
+                                    runtime.getProjects(), runtime.getResultUnits())
+                            : new SSVoucherPrinter(voucher, title);
+                    addPdf(result, exportPdf(printer, output, overwrite));
                 }
-                root.output(result, voucherDetailsText(voucher));
+                root.output(result, voucherDetailsText(voucher, accounts));
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);
@@ -4995,22 +5002,32 @@ public class BokfriCli implements Runnable {
     private static Map<String,Object> vatSettlementDetails(VatSettlementPlan p){Map<String,Object>x=new LinkedHashMap<>();x.put("from",p.report().from());x.put("to",p.report().to());x.put("boxes",vatBoxes(p.report().boxes()));x.put("vatToPayOrRefund",money(p.report().vatToPayOrRefund()));x.put("debitTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(p.voucher())));x.put("creditTotal",money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(p.voucher())));x.put("voucherRows",p.voucher().getRows().stream().map(r->{Map<String,Object> v=new LinkedHashMap<>();v.put("account",r.getAccountNr());v.put("debit",money(r.getDebet()));v.put("credit",money(r.getCredit()));return v;}).toList());return x;}
 
     private static Map<String, Object> voucherSummary(SSVoucher voucher) {
+        return voucherSummary(voucher, null);
+    }
+
+    private static Map<String, Object> voucherSummary(SSVoucher voucher, List<SSAccount> accounts) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("number", voucher.getNumber());
         result.put("date", voucher.getLocalDate());
         result.put("description", voucher.getDescription());
-        result.put("debitTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher)));
-        result.put("creditTotal", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher)));
+        result.put("debitTotal", money(accounts == null
+                ? se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher)
+                : se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher, accounts)));
+        result.put("creditTotal", money(accounts == null
+                ? se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher)
+                : se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher, accounts)));
         result.put("rowCount", voucher.getRows().size());
         return result;
     }
 
-    private static Map<String, Object> voucherDetails(SSVoucher voucher) {
-        Map<String, Object> result = voucherSummary(voucher);
+    private static Map<String, Object> voucherDetails(SSVoucher voucher, List<SSAccount> accounts) {
+        Map<String, Object> result = voucherSummary(voucher, accounts);
         List<Map<String, Object>> rows = voucher.getRows().stream().map(row -> {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("account", row.getAccountNr());
-            SSAccount account = row.getAccount();
+            SSAccount account = accounts == null ? row.getAccount() : accounts.stream()
+                    .filter(candidate -> Objects.equals(candidate.getNumber(), row.getAccountNr()))
+                    .findFirst().orElse(null);
             item.put("accountDescription", account == null ? null : account.getDescription());
             item.put("debit", money(row.getDebet()));
             item.put("credit", money(row.getCredit()));
@@ -5053,10 +5070,12 @@ public class BokfriCli implements Runnable {
         return selected;
     }
 
-    private static String voucherDetailsText(SSVoucher voucher) {
+    private static String voucherDetailsText(SSVoucher voucher, List<SSAccount> accounts) {
         List<Map<String, Object>> rows = new java.util.ArrayList<>();
         for (SSVoucherRow row : voucher.getRows()) {
-            SSAccount account = row.getAccount();
+            SSAccount account = accounts == null ? row.getAccount() : accounts.stream()
+                    .filter(candidate -> Objects.equals(candidate.getNumber(), row.getAccountNr()))
+                    .findFirst().orElse(null);
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("account", row.getAccountNr());
             item.put("description", account == null ? "" : account.getDescription());
@@ -5067,8 +5086,10 @@ public class BokfriCli implements Runnable {
         Map<String, Object> total = new LinkedHashMap<>();
         total.put("account", "Total");
         total.put("description", "");
-        total.put("debit", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher)));
-        total.put("credit", money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher)));
+        total.put("debit", money(accounts == null ? se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher)
+                : se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getDebetSum(voucher, accounts)));
+        total.put("credit", money(accounts == null ? se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher)
+                : se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(voucher, accounts)));
         rows.add(total);
 
         return "Voucher " + voucher.getNumber()
