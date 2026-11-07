@@ -3,6 +3,7 @@ package org.fribok.bookkeeping.cli;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
+import org.fribok.bookkeeping.dataformat.NormalizedAccountPlanCatalogStore;
 import org.fribok.bookkeeping.dataformat.NormalizedInpaymentStore;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore;
 import org.fribok.bookkeeping.dataformat.NormalizedOutpaymentStore;
@@ -12,6 +13,7 @@ import org.fribok.bookkeeping.dataformat.NormalizedStockStore;
 import org.fribok.bookkeeping.service.SaleValuesData;
 import org.fribok.bookkeeping.dataformat.NormalizedSupplierInvoiceStore;
 import se.swedsoft.bookkeeping.data.SSAccount;
+import se.swedsoft.bookkeeping.data.SSAccountPlan;
 import se.swedsoft.bookkeeping.data.SSCustomer;
 import se.swedsoft.bookkeeping.data.SSCreditInvoice;
 import se.swedsoft.bookkeeping.data.SSInpayment;
@@ -41,6 +43,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Clock;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Headless database lifecycle used by command-line operations.
@@ -206,6 +209,53 @@ public final class BokfriRuntime implements AutoCloseable {
                 exception.addSuppressed(rollback);
             }
             company.setId(previousId);
+            throw exception;
+        }
+    }
+
+    private NormalizedAccountPlanCatalogStore accountPlanCatalog() throws SQLException {
+        var catalog = new NormalizedAccountPlanCatalogStore(connection);
+        if (!catalog.isAvailable()) {
+            throw new CliException("NORMALIZED_ACCOUNT_PLAN_CATALOG_REQUIRED",
+                    "This normalized database lacks the V19 account-plan catalogue. "
+                            + "Recovery needs its retained legacy source/backup; "
+                            + "no templates were created and no schema was changed.");
+        }
+        return catalog;
+    }
+
+    /** Lists global reusable account-plan templates without requiring a company or accounting year. */
+    public List<SSAccountPlan> getAccountPlans() throws SQLException {
+        return isNormalized() ? accountPlanCatalog().getAccountPlans() : database().getAccountPlans();
+    }
+
+    /**
+     * Imports a global template, committing its header/accounts together in normalized storage.
+     * @param plan template to append; normalized imports reject duplicate names
+     * @throws SQLException if persistence fails
+     */
+    public void addAccountPlan(SSAccountPlan plan) throws SQLException {
+        if (!isNormalized()) {
+            database().addAccountPlan(plan);
+            return;
+        }
+        var catalog = accountPlanCatalog();
+        if (catalog.getAccountPlans().stream()
+                .anyMatch(existing -> Objects.equals(existing.getName(), plan.getName()))) {
+            throw new CliException("ACCOUNT_PLAN_EXISTS",
+                    "An account plan named '" + plan.getName() + "' already exists");
+        }
+        Integer previousId = plan.getId();
+        try {
+            catalog.addAccountPlan(plan);
+            connection.commit();
+        } catch (SQLException | RuntimeException exception) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollback) {
+                exception.addSuppressed(rollback);
+            }
+            plan.setId(previousId);
             throw exception;
         }
     }
