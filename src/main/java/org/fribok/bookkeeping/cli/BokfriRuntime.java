@@ -176,6 +176,40 @@ public final class BokfriRuntime implements AutoCloseable {
         return isNormalized() ? normalizedStore.getCompanies() : database().getCompanies();
     }
 
+    /**
+     * Creates a company in the active storage; normalized settings and lookup defaults commit atomically.
+     * @param company validated company creation settings
+     * @throws SQLException if normalized persistence fails
+     * @throws IllegalArgumentException if the name is missing or already exists
+     */
+    public void createCompany(SSNewCompany company) throws SQLException {
+        if (!isNormalized()) {
+            new org.fribok.bookkeeping.service.company.CompanyService(database()).create(company);
+            return;
+        }
+        if (company == null || company.getName() == null || company.getName().isBlank()) {
+            throw new IllegalArgumentException("Company name is required");
+        }
+        List<SSNewCompany> companies = getCompanies();
+        if (companies.stream().anyMatch(existing -> company.getName().equals(existing.getName()))) {
+            throw new IllegalArgumentException("Company name already exists");
+        }
+        Integer previousId = company.getId();
+        company.setId(Math.addExact(companies.stream().mapToInt(SSNewCompany::getId).max().orElse(-1), 1));
+        try {
+            normalizedStore.addCompany(company);
+            connection.commit();
+        } catch (SQLException | RuntimeException exception) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollback) {
+                exception.addSuppressed(rollback);
+            }
+            company.setId(previousId);
+            throw exception;
+        }
+    }
+
     /** Lists the accounting years of a company from the active storage. */
     public List<SSNewAccountingYear> getYears(SSNewCompany company) throws SQLException {
         if (isNormalized()) {

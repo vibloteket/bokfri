@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable normalized `company create` with saved contact/payment/tax settings, default accounts and explicit currency/payment-term/unit lookups. Preserve registered lookup values and built-in fallbacks, duplicate-name validation and legacy creation behavior; roll back company/default/lookup writes together on failure (#75).
+
 - Enable normalized `voucher show` text/JSON and optional PDF exports using the selected year's accounts/vouchers and explicit company/project/result-unit context. Preserve correction links, row edit flags, totals, nested headers and legacy constructors; explicit totals avoid singleton-backed row validity checks (#75).
 
 - Enable normalized `account-plan pdf` exports with explicit selected company/year headers and hydrated accounts/vouchers. Preserve active-account filtering, account codes, empty plans, selected-year isolation and legacy report constructors (#75).

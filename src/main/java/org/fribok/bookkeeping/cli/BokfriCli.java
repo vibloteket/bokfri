@@ -14,7 +14,6 @@ import org.fribok.bookkeeping.service.backup.BackupDetails;
 import org.fribok.bookkeeping.service.backup.BackupRestorePlan;
 import org.fribok.bookkeeping.service.backup.BackupService;
 import org.fribok.bookkeeping.service.backup.BackupVerification;
-import org.fribok.bookkeeping.service.company.CompanyService;
 import org.fribok.bookkeeping.service.creditinvoice.CreditInvoiceJournalPlan;
 import org.fribok.bookkeeping.service.creditinvoice.CreditInvoiceJournalResult;
 import org.fribok.bookkeeping.service.creditinvoice.CreditInvoiceService;
@@ -576,7 +575,57 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(mixinStandardHelpOptions = true, name="create",description="Create a company from JSON") static class CompanyCreate implements Callable<Integer>{@CliMetadata.ParentCommand CompanyCommand command;@Option(names="--file",required=true)String file;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);CompanyInput in=readCompanyInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=new SSNewCompany();co.setName(normalized(in.getName()));co.setCorporateID(normalized(in.getCorporateId()));co.setVATNumber(normalized(in.getVatNumber()));co.setEMail(normalized(in.getEmail()));co.setPhone(normalized(in.getPhone()));co.setContactPerson(normalized(in.getContactPerson()));co.setBankGiroNumber(normalized(in.getBankgiro()));co.setLogotype(normalized(in.getLogotype()));co.setVatPeriod(in.getVatPeriod());co.setReminderfee(in.getReminderFee());co.setDelayInterest(in.getDelayInterest());Map<SSDefaultAccount,Integer> defaultAccounts=new LinkedHashMap<>();for(SSDefaultAccount account:SSDefaultAccount.values()){defaultAccounts.put(account,account.getDefaultAccountNumber());}co.setDefaultAccounts(defaultAccounts);co.setCurrency(java.util.stream.Stream.concat(r.database().getCurrencies().stream(),se.swedsoft.bookkeeping.data.common.SSCurrency.getDefaultCurrencies().stream()).filter(x->in.getCurrency().equalsIgnoreCase(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_CURRENCY_NOT_FOUND","No currency has code "+in.getCurrency())));co.setPaymentTerm(java.util.stream.Stream.concat(r.database().getPaymentTerms().stream(),se.swedsoft.bookkeeping.data.common.SSPaymentTerm.getDefaultPaymentTerms().stream()).filter(x->in.getPaymentTerms().equals(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_PAYMENT_TERMS_NOT_FOUND","No payment terms have code "+in.getPaymentTerms())));co.setStandardUnit(java.util.stream.Stream.concat(r.database().getUnits().stream(),se.swedsoft.bookkeeping.data.common.SSUnit.getDefaultUnits().stream()).filter(x->in.getStandardUnit().equals(x.getName())).findFirst().orElseThrow(()->new CliException("COMPANY_UNIT_NOT_FOUND","No unit has code "+in.getStandardUnit())));new CompanyService(r.database()).create(co);root.output(Map.of("id",co.getId(),"name",co.getName()),"Created company "+co.getId()+" - "+co.getName());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name = "create", description = "Create a company from JSON")
+    static class CompanyCreate implements Callable<Integer> {
+        @CliMetadata.ParentCommand CompanyCommand command;
+        @Option(names = "--file", required = true) String file;
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(false, false);
+            CompanyInput input = readCompanyInput(file);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = new SSNewCompany();
+                company.setName(normalized(input.getName()));
+                company.setCorporateID(normalized(input.getCorporateId()));
+                company.setVATNumber(normalized(input.getVatNumber()));
+                company.setEMail(normalized(input.getEmail()));
+                company.setPhone(normalized(input.getPhone()));
+                company.setContactPerson(normalized(input.getContactPerson()));
+                company.setBankGiroNumber(normalized(input.getBankgiro()));
+                company.setLogotype(normalized(input.getLogotype()));
+                company.setVatPeriod(input.getVatPeriod());
+                company.setReminderfee(input.getReminderFee());
+                company.setDelayInterest(input.getDelayInterest());
+                Map<SSDefaultAccount, Integer> defaults = new LinkedHashMap<>();
+                for (SSDefaultAccount account : SSDefaultAccount.values()) {
+                    defaults.put(account, account.getDefaultAccountNumber());
+                }
+                company.setDefaultAccounts(defaults);
+                company.setCurrency(java.util.stream.Stream.concat(runtime.getCurrencies().stream(),
+                        se.swedsoft.bookkeeping.data.common.SSCurrency.getDefaultCurrencies().stream())
+                        .filter(value -> input.getCurrency().equalsIgnoreCase(value.getName())).findFirst()
+                        .orElseThrow(() -> new CliException("COMPANY_CURRENCY_NOT_FOUND",
+                                "No currency has code " + input.getCurrency())));
+                company.setPaymentTerm(java.util.stream.Stream.concat(runtime.getPaymentTerms().stream(),
+                        se.swedsoft.bookkeeping.data.common.SSPaymentTerm.getDefaultPaymentTerms().stream())
+                        .filter(value -> input.getPaymentTerms().equals(value.getName())).findFirst()
+                        .orElseThrow(() -> new CliException("COMPANY_PAYMENT_TERMS_NOT_FOUND",
+                                "No payment terms have code " + input.getPaymentTerms())));
+                company.setStandardUnit(java.util.stream.Stream.concat(runtime.getUnits().stream(),
+                        se.swedsoft.bookkeeping.data.common.SSUnit.getDefaultUnits().stream())
+                        .filter(value -> input.getStandardUnit().equals(value.getName())).findFirst()
+                        .orElseThrow(() -> new CliException("COMPANY_UNIT_NOT_FOUND",
+                                "No unit has code " + input.getStandardUnit())));
+                runtime.createCompany(company);
+                root.output(Map.of("id", company.getId(), "name", company.getName()),
+                        "Created company " + company.getId() + " - " + company.getName());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List companies")
     static class CompanyList implements Callable<Integer> {

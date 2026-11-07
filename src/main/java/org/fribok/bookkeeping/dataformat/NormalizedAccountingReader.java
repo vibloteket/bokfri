@@ -128,6 +128,33 @@ public final class NormalizedAccountingReader {
             }
         }
         company.setStandardTexts(texts);
+        try (var statement = connection.prepareStatement("SELECT c.contact_person,c.vat_period,"
+                + "cu.code,cu.description,cu.exchange_rate,p.name,p.description,u.name,u.description "
+                + "FROM company c LEFT JOIN currency cu ON cu.code=c.currency_code "
+                + "LEFT JOIN payment_term p ON p.name=c.payment_term_name "
+                + "LEFT JOIN unit_definition u ON u.name=c.standard_unit_name WHERE c.legacy_id=?")) {
+            statement.setInt(1, company.getId());
+            try (ResultSet result = statement.executeQuery()) {
+                if (result.next()) {
+                    company.setContactPerson(result.getString(1));
+                    company.setVatPeriod((Integer) result.getObject(2));
+                    if (result.getString(3) != null) {
+                        var currency = new se.swedsoft.bookkeeping.data.common.SSCurrency(
+                                result.getString(3), result.getString(4));
+                        currency.setExchangeRate(result.getBigDecimal(5));
+                        company.setCurrency(currency);
+                    }
+                    if (result.getString(6) != null) {
+                        company.setPaymentTerm(new se.swedsoft.bookkeeping.data.common.SSPaymentTerm(
+                                result.getString(6), result.getString(7)));
+                    }
+                    if (result.getString(8) != null) {
+                        company.setStandardUnit(new se.swedsoft.bookkeeping.data.common.SSUnit(
+                                result.getString(8), result.getString(9)));
+                    }
+                }
+            }
+        }
     }
 
     public List<SSNewAccountingYear> years(Connection connection, int companyLegacyId)

@@ -27,11 +27,15 @@ public final class NormalizedAccountingWriter {
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
-    /** Inserts a company and returns the generated key. */
+    /** Inserts a company with CLI creation settings/default accounts and returns the generated key. */
     public long addCompany(Connection connection, SSNewCompany company) throws SQLException {
+        ensureCompanyLookups(connection, company);
         try (PreparedStatement statement = connection.prepareStatement(
                 "INSERT INTO company (legacy_id,name,corporate_id,vat_number,"
-                        + "tax_rate_1,tax_rate_2,tax_rate_3,rounding_off) VALUES (?,?,?,?,?,?,?,?)",
+                        + "tax_rate_1,tax_rate_2,tax_rate_3,rounding_off,currency_code,phone,email,"
+                        + "contact_person,bank_account_number,logotype_path,vat_period,delay_interest,"
+                        + "reminder_fee,standard_unit_name,payment_term_name) "
+                        + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 Statement.RETURN_GENERATED_KEYS)) {
             statement.setInt(1, company.getId());
             statement.setString(2, company.getName());
@@ -41,8 +45,62 @@ public final class NormalizedAccountingWriter {
             statement.setBigDecimal(6, company.getTaxRate2());
             statement.setBigDecimal(7, company.getTaxRate3());
             statement.setBoolean(8, company.isRoundingOff());
+            statement.setString(9, company.getCurrency() == null ? null : company.getCurrency().getName());
+            statement.setString(10, company.getPhone());
+            statement.setString(11, company.getEMail());
+            statement.setString(12, company.getContactPerson());
+            statement.setString(13, company.getBankGiroNumber());
+            statement.setString(14, company.getLogotype());
+            statement.setObject(15, company.getVatPeriod());
+            statement.setBigDecimal(16, company.getDelayInterest());
+            statement.setBigDecimal(17, company.getReminderfee());
+            statement.setString(18, company.getStandardUnit() == null ? null : company.getStandardUnit().getName());
+            statement.setString(19, company.getPaymentTerm() == null ? null : company.getPaymentTerm().getName());
             statement.executeUpdate();
-            return generatedKey(statement);
+            long id = generatedKey(statement);
+            for (var entry : company.getDefaultAccounts().entrySet()) {
+                try (var defaults = connection.prepareStatement("INSERT INTO company_default_account "
+                        + "(company_id,account_type,account_number) VALUES (?,?,?)")) {
+                    defaults.setLong(1, id);
+                    defaults.setString(2, entry.getKey().name());
+                    defaults.setObject(3, entry.getValue());
+                    defaults.executeUpdate();
+                }
+            }
+            return id;
+        }
+    }
+
+    private static void ensureCompanyLookups(Connection connection, SSNewCompany company) throws SQLException {
+        if (company.getCurrency() != null) {
+            var currency = company.getCurrency();
+            try (var insert = connection.prepareStatement("INSERT INTO currency (code,description,exchange_rate) "
+                    + "SELECT ?,?,? FROM (VALUES(0)) WHERE NOT EXISTS (SELECT 1 FROM currency WHERE code=?)")) {
+                insert.setString(1, currency.getName());
+                insert.setString(2, currency.getDescription());
+                insert.setBigDecimal(3, currency.getExchangeRate());
+                insert.setString(4, currency.getName());
+                insert.executeUpdate();
+            }
+        }
+        if (company.getStandardUnit() != null) {
+            ensureNamedLookup(connection, "unit_definition", company.getStandardUnit().getName(),
+                    company.getStandardUnit().getDescription());
+        }
+        if (company.getPaymentTerm() != null) {
+            ensureNamedLookup(connection, "payment_term", company.getPaymentTerm().getName(),
+                    company.getPaymentTerm().getDescription());
+        }
+    }
+
+    private static void ensureNamedLookup(Connection connection, String table, String name, String description)
+            throws SQLException {
+        try (var insert = connection.prepareStatement("INSERT INTO " + table + " (name,description) "
+                + "SELECT ?,? FROM (VALUES(0)) WHERE NOT EXISTS (SELECT 1 FROM " + table + " WHERE name=?)")) {
+            insert.setString(1, name);
+            insert.setString(2, description);
+            insert.setString(3, name);
+            insert.executeUpdate();
         }
     }
 
