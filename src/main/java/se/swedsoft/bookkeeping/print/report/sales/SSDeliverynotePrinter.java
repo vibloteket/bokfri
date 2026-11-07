@@ -22,6 +22,12 @@ import java.util.ResourceBundle;
  */
 public class SSDeliverynotePrinter extends SSPrinter {
 
+    private SSNewCompany explicitCompany;
+
+    private List<SSProduct> explicitProducts;
+
+    private SSCustomer explicitCustomer;
+
     private SSOrder iOrder;
 
     private boolean iHideUnitprice;
@@ -34,6 +40,28 @@ public class SSDeliverynotePrinter extends SSPrinter {
      * @param iLocale
      */
     public SSDeliverynotePrinter(SSOrder iOrder, Locale iLocale) {
+        initialize(iOrder, iLocale);
+    }
+
+    /**
+     * Creates a report from explicit context without reading the selected legacy database.
+     * @param iOrder order snapshot
+     * @param iLocale report language
+     * @param company report company
+     * @param customer current customer, or null if unavailable
+     * @param products current products used for descriptions and stock information
+     */
+    public SSDeliverynotePrinter(SSOrder iOrder, Locale iLocale,
+            SSNewCompany company, SSCustomer customer, List<SSProduct> products) {
+        super(company);
+        explicitCompany = company;
+        explicitProducts = products == null ? List.of() : List.copyOf(products);
+        explicitCustomer = customer;
+
+        initialize(iOrder, iLocale);
+    }
+
+    private void initialize(SSOrder iOrder, Locale iLocale) {
         this.iOrder = iOrder;
         this.iLocale = iLocale;
         iHideUnitprice = iOrder.getHideUnitprice();
@@ -60,6 +88,12 @@ public class SSDeliverynotePrinter extends SSPrinter {
 
     }
 
+    private SSProduct explicitProduct(SSSaleRow row) {
+        return explicitProducts.stream()
+                .filter(product -> java.util.Objects.equals(product.getNumber(), row.getProductNr()))
+                .findFirst().orElse(null);
+    }
+
     /**
      * Gets the title file for this repport
      *
@@ -77,7 +111,8 @@ public class SSDeliverynotePrinter extends SSPrinter {
      *
      */
     private void addParameters() {
-        SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
+        SSNewCompany iCompany = explicitCompany != null ? explicitCompany
+                : SSDB.getInstance().getCurrentCompany();
 
         SSSalePrinterUtils.addParametersForCompany(iCompany, this);
 
@@ -125,7 +160,8 @@ public class SSDeliverynotePrinter extends SSPrinter {
         addParameter("order.taxrate2", iOrder.getTaxRate2().toString());
         addParameter("order.taxrate3", iOrder.getTaxRate3().toString());
 
-        SSCustomer iCustomer = iOrder.getCustomer(SSDB.getInstance().getCustomers());
+        SSCustomer iCustomer = explicitCompany != null ? explicitCustomer
+                : iOrder.getCustomer(SSDB.getInstance().getCustomers());
 
         if (iCustomer != null) {
             addParameter("order.vatnumber", iCustomer.getVATNumber());
@@ -138,7 +174,7 @@ public class SSDeliverynotePrinter extends SSPrinter {
      */
     @Override
     protected SSDefaultTableModel getModel() {
-        final SSPrinter iPrinter = new SSRowReport();
+        final SSPrinter iPrinter = explicitCompany != null ? new SSRowReport(explicitCompany) : new SSRowReport();
 
         iPrinter.setBundle(iBundle);
         iPrinter.setLocale(iLocale);
@@ -178,6 +214,15 @@ public class SSDeliverynotePrinter extends SSPrinter {
          *
          */
         public SSRowReport() {
+            initialize();
+        }
+
+        public SSRowReport(SSNewCompany company) {
+            super(company);
+            initialize();
+        }
+
+        private void initialize() {
             setMargins(0, 0, 0, 0);
             if (!iHideUnitprice) {
                 setColumnHeader("sales/deliverynote.rows.jrxml");
@@ -199,7 +244,8 @@ public class SSDeliverynotePrinter extends SSPrinter {
          */
         @Override
         protected SSDefaultTableModel getModel() {
-            final List<SSProduct> iProducts = SSDB.getInstance().getProducts();
+            final List<SSProduct> iProducts = explicitCompany != null ? explicitProducts
+                    : SSDB.getInstance().getProducts();
 
             SSDefaultTableModel<SSSaleRow> iModel = new SSDefaultTableModel<>() {
 
@@ -219,7 +265,10 @@ public class SSDeliverynotePrinter extends SSPrinter {
                         break;
 
                     case 1:
-                        value = iRow.getDescription(iLocale);
+                        value = explicitCompany != null ? explicitProducts.stream()
+                                .filter(product -> java.util.Objects.equals(product.getNumber(), iRow.getProductNr()))
+                                .findFirst().flatMap(product -> product.getDescription(iLocale))
+                                .orElse(iRow.getDescription()) : iRow.getDescription(iLocale);
                         break;
 
                     case 2:
@@ -231,7 +280,7 @@ public class SSDeliverynotePrinter extends SSPrinter {
                         break;
                     }
 
-                    SSProduct iProduct = iRow.getProduct(iProducts);
+                    SSProduct iProduct = explicitCompany != null ? explicitProduct(iRow) : iRow.getProduct(iProducts);
 
                     if (iProduct == null) {
                         return value;
