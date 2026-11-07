@@ -70,6 +70,14 @@ public final class CliSmokeTest {
                 "--format", "json", "account", "list");
         accounts.success();
         String account = Integer.toString(firstInt(accounts.stdout, "number"));
+        Path planPdf = temporary.resolve("normalized-account-plan.pdf");
+        Result planExport = cli("--company-id", company, "--year-id", year, "--format", "json",
+                "account-plan", "pdf", "--output", planPdf.toString());
+        planExport.success();
+        planExport.jsonObject();
+        byte[] planBytes = Files.readAllBytes(planPdf);
+        require(planBytes.length > 5 && new String(planBytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
+                "account plan did not produce a normalized PDF");
         for (String report : List.of("balance-sheet", "general-ledger", "income-statement")) {
             Path pdf = temporary.resolve("normalized-" + report + ".pdf");
             List<String> args = new ArrayList<>(List.of("--company-id", company, "--year-id", year,

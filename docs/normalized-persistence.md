@@ -277,6 +277,13 @@ to the existing report printers. The shared printer header obtains the company
 name and maximum voucher number from those arguments, not the SSDB singleton.
 Existing legacy constructors retain their previous behavior.
 
+`account-plan pdf --output` also supports format 3. It loads the selected year's
+account plan and vouchers for the explicit company/maximum-voucher header, then
+uses the unchanged account-plan template and active-account filtering. Account
+numbers, descriptions, VAT/SRU/report codes, empty plans and overwrite protection
+are preserved. This does not enable global `account-plan list`, XLSX import or
+XLSX export on normalized storage; those remain separate legacy-register paths.
+
 The same Jasper templates and accounting calculators are used for both formats.
 Regression tests compare extracted legacy and normalized PDF text for a bounded
 period, verify overwrite protection, check empty-year rendering and unsorted

@@ -1163,6 +1163,112 @@ class BokfriCliRevenueReportTest {
         return args.toArray(String[]::new);
     }
 
+    @Test
+    void accountPlanPdfMatchesLegacyWithYearIsolationAndEmptyPlans() throws Exception {
+        Path data = temporaryDirectory.resolve("account-plan-pdfs");
+        int companyId;
+        int populated;
+        int empty;
+        int otherYear;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            companyId = addCompany(runtime, "Selected plan company").getId();
+            populated = addReportPlanYear(runtime, "Selected plan", 2024, false).getId();
+            empty = addReportPlanYear(runtime, "Empty plan", 2025, true).getId();
+            addCompany(runtime, "Other plan company");
+            otherYear = addReportPlanYear(runtime, "Other plan", 2024, false).getId();
+        }
+        Map<Integer, String> expected = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            for (int yearId : List.of(populated, empty)) {
+                Path pdf = temporaryDirectory.resolve("plan-" + yearId + normalized + ".pdf");
+                String[] args = {"--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
+                        "--year-id", Integer.toString(yearId), "--format", "json", "account-plan", "pdf",
+                        "--output", pdf.toString()};
+                Result result = execute(args);
+                assertThat(result.code()).as(result.error()).isZero();
+                var json = new ObjectMapper().readTree(result.output());
+                assertThat(json.path("accountPlan").asText()).isEqualTo(yearId == populated ? "Selected plan" : "Empty plan");
+                assertThat(json.path("selection").path("companyName").asText()).isEqualTo("Selected plan company");
+                assertThat(json.path("bytes").asLong()).isEqualTo(Files.size(pdf));
+                String content = text(pdf);
+                assertThat(content).contains("Selected plan company").doesNotContain("Other", "Inactive");
+                if (yearId == populated) {
+                    assertThat(content).contains("Selected plan", "1930", "Selected plan active", "VAT-X", "SRU-X", "REPORT-X");
+                } else assertThat(content).contains("Empty plan").doesNotContain("1930", "Selected plan active");
+                if (normalized) {
+                    assertThat(content).isEqualTo(expected.get(yearId));
+                    byte[] original = Files.readAllBytes(pdf);
+                    Result refused = execute(args);
+                    assertThat(refused.code()).isEqualTo(1);
+                    assertThat(refused.error()).contains("OUTPUT_EXISTS");
+                    assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                    Result overwritten = execute(concat(args, "--overwrite"));
+                    assertThat(overwritten.code()).as(overwritten.error()).isZero();
+                    assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                    assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                } else expected.put(yearId, content);
+            }
+            for (int invalidYear : List.of(999999, otherYear)) {
+                Path pdf = temporaryDirectory.resolve("invalid-plan-" + invalidYear + normalized + ".pdf");
+                Result result = execute("--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
+                        "--year-id", Integer.toString(invalidYear), "--format", "json", "account-plan", "pdf",
+                        "--output", pdf.toString());
+                assertThat(result.code()).isEqualTo(1);
+                assertThat(result.error()).contains("YEAR_NOT_FOUND");
+                assertThat(pdf).doesNotExist();
+            }
+            try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+                SSNewCompany company = runtime.selectCompany(companyId);
+                SSNewAccountingYear year = runtime.hydrateYear(runtime.selectYear(company, populated));
+                assertThat(year.getAccountPlan().getAccounts()).hasSize(2);
+                assertThat(year.getAccountPlan().getActiveAccounts()).hasSize(1);
+                assertThat(year.getAccountPlan().getAccount(1930).getVATCode()).isEqualTo("VAT-X");
+                assertThat(year.getVouchers()).hasSize(1);
+                assertThat(year.getVouchers().get(0).getNumber()).isEqualTo(19);
+            }
+        }
+    }
+
+    private static SSNewAccountingYear addReportPlanYear(BokfriRuntime runtime, String name, int calendarYear,
+            boolean empty) throws Exception {
+        SSNewAccountingYear year = new SSNewAccountingYear();
+        year.setLocalFrom(LocalDate.of(calendarYear, 1, 1));
+        year.setLocalTo(LocalDate.of(calendarYear, 12, 31));
+        SSAccountPlan plan = new SSAccountPlan();
+        plan.setName(name);
+        if (!empty) {
+            SSAccount active = new SSAccount(1930);
+            active.setDescription(name + " active");
+            active.setVATCode("VAT-X");
+            active.setSRUCode("SRU-X");
+            active.setReportCode("REPORT-X");
+            SSAccount inactive = new SSAccount(1940);
+            inactive.setDescription("Inactive account");
+            inactive.setActive(false);
+            plan.getAccounts().addAll(List.of(active, inactive));
+        }
+        year.setAccountPlan(plan);
+        runtime.database().addAccountingYear(year);
+        runtime.database().setCurrentYear(year);
+        if (!empty) {
+            var voucher = new se.swedsoft.bookkeeping.data.SSVoucher();
+            voucher.setNumber(19);
+            voucher.setLocalDate(year.getLocalFrom());
+            voucher.setDescription("Plan header voucher");
+            var debit = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+            debit.setAccount(plan.getAccount(1930));
+            debit.setDebet(BigDecimal.TEN);
+            var credit = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+            credit.setAccount(plan.getAccount(1940));
+            credit.setCredit(BigDecimal.TEN);
+            voucher.addVoucherRow(debit);
+            voucher.addVoucherRow(credit);
+            runtime.database().addVoucher(voucher, true);
+        }
+        return year;
+    }
+
     private static SSNewCompany addCompany(BokfriRuntime runtime, String name) throws Exception {
         SSNewCompany company = new SSNewCompany();
         company.setName(name);

@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable normalized `account-plan pdf` exports with explicit selected company/year headers and hydrated accounts/vouchers. Preserve active-account filtering, account codes, empty plans, selected-year isolation and legacy report constructors (#75).
+
 - Enable normalized `invoice delivery-note` (including hidden unit prices) and `invoice picking-list` PDFs with explicit company/customer/product context and nested headers. Preserve localized descriptions, stored addresses, product measurements and warehouse sorting without requiring an accounting year or legacy database initialization (#75).
 
 - Enable normalized `invoice reminder` PDF export with explicit outstanding balances, company/customer data and nested report headers. Read stored company standard texts and customer currency without the legacy singleton; preserve reminder-date validation, credit/payment deductions, interest, reminder fees and export-only reminder counts (#75).
