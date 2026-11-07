@@ -49,6 +49,13 @@ class NormalizedMigrationServiceTest {
                 assertThat(count.next()).isTrue();
                 assertThat(count.getLong(1)).isGreaterThanOrEqualTo(1);
             }
+            assertThat(new AccountPlanCatalogStagingConverter().fingerprintNormalized(connection))
+                    .isEqualTo(result.staging().accountPlanCatalog().sourceFingerprint());
+            try (var statement = connection.createStatement();
+                 var count = statement.executeQuery("SELECT COUNT(*) FROM account_plan_catalog")) {
+                assertThat(count.next()).isTrue();
+                assertThat(count.getLong(1)).isEqualTo(result.staging().accountPlanCatalog().plans());
+            }
             try (var statement = connection.createStatement();
                  var legacyTables = statement.executeQuery("SELECT COUNT(*) FROM "
                          + "INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME LIKE 'TBL_%'")) {
@@ -78,6 +85,43 @@ class NormalizedMigrationServiceTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.migrate(data))
                 .isInstanceOf(IOException.class)
                 .hasMessageContaining("Unresolved normalized database migration state");
+    }
+
+    @Test
+    void earlierNormalizedCatalogIsNotSilentlyUpgradedOrSeeded(@TempDir Path tempDir) throws Exception {
+        Path data = tempDir.resolve("older-normalized");
+        Files.createDirectories(data.resolve("db"));
+        String url = "jdbc:hsqldb:file:" + data.resolve("db/JFSDB");
+        Class.forName("org.hsqldb.jdbcDriver");
+        try (var connection = DriverManager.getConnection(url, "sa", "")) {
+            connection.setAutoCommit(false);
+            new SchemaMigrationRunner(Clock.systemUTC()).migrate(connection,
+                    NormalizedSchemaMigrations.load().subList(0, 18));
+            DataFormatManager.recordVersion(connection, DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION);
+            try (var statement = connection.createStatement()) { statement.execute("SHUTDOWN"); }
+        }
+        try (var runtime = org.fribok.bookkeeping.cli.BokfriRuntime.open(data)) {
+            assertThat(runtime.isNormalized()).isTrue();
+            assertThat(runtime.getCompanies()).isEmpty();
+        }
+        var output = new java.io.StringWriter();
+        var error = new java.io.StringWriter();
+        int code = org.fribok.bookkeeping.cli.BokfriCli.execute(new String[]{"--data-dir", data.toString(),
+                "--format", "json", "database", "normalize"}, new java.io.PrintWriter(output, true),
+                new java.io.PrintWriter(error, true));
+        assertThat(code).as(error.toString()).isZero();
+        assertThat(output.toString()).contains("\"normalized\":false").doesNotContain("accountPlanCatalog");
+        try (var connection = DriverManager.getConnection(url, "sa", "")) {
+            try (var tables = connection.getMetaData().getTables(null, "PUBLIC", "ACCOUNT_PLAN_CATALOG", null)) {
+                assertThat(tables.next()).isFalse();
+            }
+            try (var statement = connection.createStatement();
+                 var history = statement.executeQuery("SELECT MAX(version) FROM bokfri_schema_history")) {
+                assertThat(history.next()).isTrue();
+                assertThat(history.getInt(1)).isEqualTo(18);
+            }
+            try (var statement = connection.createStatement()) { statement.execute("SHUTDOWN"); }
+        }
     }
 
     private static void extractFixture(Path destination) throws IOException {

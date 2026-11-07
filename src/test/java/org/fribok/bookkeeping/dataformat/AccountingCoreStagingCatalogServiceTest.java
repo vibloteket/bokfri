@@ -49,6 +49,10 @@ class AccountingCoreStagingCatalogServiceTest {
             assertThat(result.completedAt()).isEqualTo(COMPLETED_AT);
             assertThat(result.conversion().destinationFingerprint())
                     .isEqualTo(result.durableFingerprint());
+            assertThat(result.accountPlanCatalog().plans()).isEqualTo(1);
+            assertThat(result.accountPlanCatalog().accounts()).isEqualTo(1);
+            assertThat(result.accountPlanCatalog().destinationFingerprint())
+                    .isEqualTo(result.durableAccountPlanCatalogFingerprint());
             assertThat(Files.readAllBytes(data.resolve("db/JFSDB.script")))
                     .containsExactly(sourceScript);
             assertThat(count(legacy, "tbl_company")).isEqualTo(1);
@@ -95,6 +99,27 @@ class AccountingCoreStagingCatalogServiceTest {
         }
     }
 
+    @Test
+    void invalidGlobalTemplateRemovesStagingAndLeavesTheActiveSourceUntouched(@TempDir Path data) throws Exception {
+        Files.createDirectories(data.resolve("db"));
+        byte[] marker = "untouched active source".getBytes(StandardCharsets.UTF_8);
+        Files.write(data.resolve("db/JFSDB.script"), marker);
+        Files.writeString(data.resolve("db/JFSDB.properties"), "version=source");
+        try (Connection legacy = legacyConnection()) {
+            populateLegacy(legacy);
+            SSAccountPlan invalid = new SSAccountPlan("Mismatched template");
+            invalid.setId(99);
+            insertObject(legacy, "INSERT INTO tbl_accountplan (id,accountplan) VALUES (?,?)", 7, invalid);
+            assertThatThrownBy(() -> service().create(data, legacy))
+                    .isInstanceOf(java.sql.SQLException.class).hasMessageContaining("key/object mismatch");
+            assertThat(count(legacy, "tbl_accountplan")).isEqualTo(2);
+            assertThat(Files.readAllBytes(data.resolve("db/JFSDB.script"))).containsExactly(marker);
+            try (var paths = Files.list(data)) {
+                assertThat(paths.map(path -> path.getFileName().toString()).toList()).containsExactly("db");
+            }
+        }
+    }
+
     private static AccountingCoreStagingCatalogService service() {
         return new AccountingCoreStagingCatalogService(
                 Clock.fixed(COMPLETED_AT, ZoneOffset.UTC));
@@ -119,6 +144,12 @@ class AccountingCoreStagingCatalogServiceTest {
     }
 
     private static void populateLegacy(Connection connection) throws Exception {
+        SSAccountPlan catalogue = new SSAccountPlan("Global template, not the year's copy");
+        catalogue.setId(4);
+        SSAccount catalogueAccount = new SSAccount(1930);
+        catalogueAccount.setDescription("Global bank description");
+        catalogue.addAccount(catalogueAccount);
+        insertObject(connection, "INSERT INTO tbl_accountplan (id,accountplan) VALUES (?,?)", 4, catalogue);
         SSNewCompany company = new SSNewCompany(); company.setId(1); company.setName("Example AB");
         insertObject(connection, "INSERT INTO tbl_company (id,company) VALUES (?,?)", 1, company);
         SSNewAccountingYear year = year(2);

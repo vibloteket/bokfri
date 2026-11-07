@@ -62,7 +62,13 @@ public final class CliSmokeTest {
     private static void runNormalizedFinancialPdfFlow(Path temporary) throws Exception {
         String company = Files.readString(temporary.resolve("created-company.txt"));
         String year = Files.readString(temporary.resolve("created-year.txt"));
-        cli("--format", "json", "database", "normalize").success();
+        Result normalization = cli("--format", "json", "database", "normalize");
+        normalization.success();
+        normalization.jsonObject();
+        require(normalization.stdout.contains("\"accountPlanCatalog\"")
+                        && firstInt(normalization.stdout, "plans") > 0
+                        && firstInt(normalization.stdout, "accounts") > 0,
+                "normalization did not verify the reusable account-plan catalogue");
         Result status = cli("--format", "json", "database", "status");
         status.success();
         require(status.stdout.contains("\"format\":3"), "database was not normalized");

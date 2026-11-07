@@ -529,6 +529,8 @@ public class BokfriCli implements Runnable {
                 out.put("toFormat", DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION);
                 out.put("backup", result.activation().rollbackArchive().toString());
                 out.put("retainedSource", result.activation().retainedSource().toString());
+                out.put("accountPlanCatalog", Map.of("plans", result.staging().accountPlanCatalog().plans(),
+                        "accounts", result.staging().accountPlanCatalog().accounts()));
                 root.output(out, "Database normalized from format " + before.format()
                         + " to format " + DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION
                         + "\nBackup: " + result.activation().rollbackArchive()
