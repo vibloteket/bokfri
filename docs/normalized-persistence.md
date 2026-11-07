@@ -284,6 +284,15 @@ numbers, descriptions, VAT/SRU/report codes, empty plans and overwrite protectio
 are preserved. This does not enable global `account-plan list`, XLSX import or
 XLSX export on normalized storage; those remain separate legacy-register paths.
 
+`voucher show NUMBER` supports format 3 in text/JSON, including correction links
+and row edit metadata. Its optional `--output` PDF uses explicit company/year
+headers for both report levels and explicit account/project/result-unit lookups.
+Missing references render blank as before; raw stored dimension numbers remain
+in JSON. Explicit debit/credit totals include only non-crossed rows with an
+account in the selected year's plan and a value on that side, without invoking
+singleton-backed row validity checks. Existing templates and GUI constructors
+remain unchanged.
+
 The same Jasper templates and accounting calculators are used for both formats.
 Regression tests compare extracted legacy and normalized PDF text for a bounded
 period, verify overwrite protection, check empty-year rendering and unsorted

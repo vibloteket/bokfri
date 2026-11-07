@@ -98,6 +98,38 @@ public class SSVoucherMath {
     }
 
     /**
+     * Returns the credit total using explicit accounts instead of singleton-backed row validity.
+     * @param voucher voucher snapshot
+     * @param accounts selected year's accounts
+     * @return total for non-crossed rows with a known account and a credit value
+     */
+    public static BigDecimal getCreditSum(SSVoucher voucher, List<SSAccount> accounts) {
+        return explicitSum(voucher, accounts, false);
+    }
+
+    /**
+     * Returns the debit total using explicit accounts instead of singleton-backed row validity.
+     * @param voucher voucher snapshot
+     * @param accounts selected year's accounts
+     * @return total for non-crossed rows with a known account and a debit value
+     */
+    public static BigDecimal getDebetSum(SSVoucher voucher, List<SSAccount> accounts) {
+        return explicitSum(voucher, accounts, true);
+    }
+
+    private static BigDecimal explicitSum(SSVoucher voucher, List<SSAccount> accounts, boolean debit) {
+        Set<Integer> numbers = accounts.stream().map(SSAccount::getNumber).collect(Collectors.toSet());
+        BigDecimal sum = BigDecimal.ZERO;
+        for (SSVoucherRow row : voucher.getRows()) {
+            BigDecimal value = debit ? row.getDebet() : row.getCredit();
+            if (numbers.contains(row.getAccountNr()) && !row.isCrossed() && value != null) {
+                sum = sum.add(value);
+            }
+        }
+        return sum;
+    }
+
+    /**
      *
      * @param iVoucher
      * @return

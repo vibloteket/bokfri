@@ -1269,6 +1269,147 @@ class BokfriCliRevenueReportTest {
         return year;
     }
 
+    @Test
+    void voucherShowAndPdfMatchLegacyWithCorrectionsDimensionsAndYearIsolation() throws Exception {
+        Path data = temporaryDirectory.resolve("voucher-show");
+        int companyId;
+        int selectedYear;
+        int secondYear;
+        int otherYear;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            companyId = addCompany(runtime, "Selected voucher company").getId();
+            selectedYear = addVoucherShowYear(runtime, "Selected", 2024).getId();
+            secondYear = addVoucherShowYear(runtime, "Second year", 2025).getId();
+            addCompany(runtime, "Other voucher company");
+            otherYear = addVoucherShowYear(runtime, "Other", 2024).getId();
+        }
+        Map<String, String> expectedPdfs = new LinkedHashMap<>();
+        Map<String, com.fasterxml.jackson.databind.JsonNode> expectedJson = new LinkedHashMap<>();
+        Map<String, String> expectedText = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            for (int yearId : List.of(selectedYear, secondYear)) {
+                for (int number : List.of(7, 19)) {
+                    String key = yearId + "-" + number;
+                    String[] context = {"--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
+                            "--year-id", Integer.toString(yearId)};
+                    String[] show = concat(context, "--format", "json", "voucher", "show", Integer.toString(number));
+                    Result result = execute(show);
+                    assertThat(result.code()).as(result.error()).isZero();
+                    var json = new ObjectMapper().readTree(result.output());
+                    assertThat(json.path("number").asInt()).isEqualTo(number);
+                    assertThat(json.path("corrects").isNull()).isEqualTo(number == 7);
+                    assertThat(json.path("correctedBy").isNull()).isEqualTo(number == 19);
+                    String label = yearId == selectedYear ? "Selected" : "Second year";
+                    assertThat(json.path("rows").get(0).path("accountDescription").asText())
+                            .isEqualTo(label + " account");
+                    Result textual = execute(concat(context, "voucher", "show", Integer.toString(number)));
+                    assertThat(textual.code()).as(textual.error()).isZero();
+                    Path pdf = temporaryDirectory.resolve("voucher-" + key + normalized + ".pdf");
+                    String[] export = concat(show, "--output", pdf.toString());
+                    Result exported = execute(export);
+                    assertThat(exported.code()).as(exported.error()).isZero();
+                    assertThat(new ObjectMapper().readTree(exported.output()).path("bytes").asLong())
+                            .isEqualTo(Files.size(pdf));
+                    String content = text(pdf);
+                    assertThat(content).contains("Selected voucher company", label + " account")
+                            .doesNotContain("Other");
+                    if (number == 7) assertThat(content).contains("P-X", "U-X");
+                    if (normalized) {
+                        assertThat(json).isEqualTo(expectedJson.get(key));
+                        assertThat(textual.output()).isEqualTo(expectedText.get(key));
+                        assertThat(content).isEqualTo(expectedPdfs.get(key));
+                        byte[] original = Files.readAllBytes(pdf);
+                        Result refused = execute(export);
+                        assertThat(refused.code()).isEqualTo(1);
+                        assertThat(refused.error()).contains("OUTPUT_EXISTS");
+                        assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                        assertThat(execute(concat(export, "--overwrite")).code()).isZero();
+                        assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                        assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                    } else {
+                        expectedJson.put(key, json);
+                        expectedText.put(key, textual.output());
+                        expectedPdfs.put(key, content);
+                    }
+                }
+            }
+            for (int yearId : List.of(selectedYear, otherYear)) {
+                Path missing = temporaryDirectory.resolve("missing-voucher-" + yearId + normalized + ".pdf");
+                Result result = execute("--data-dir", data.toString(), "--company-id", Integer.toString(companyId),
+                        "--year-id", Integer.toString(yearId), "--format", "json", "voucher", "show", "999",
+                        "--output", missing.toString());
+                assertThat(result.code()).isEqualTo(1);
+                assertThat(result.error()).contains(yearId == selectedYear ? "VOUCHER_NOT_FOUND" : "YEAR_NOT_FOUND");
+                assertThat(missing).doesNotExist();
+            }
+        }
+    }
+
+    private static SSNewAccountingYear addVoucherShowYear(BokfriRuntime runtime, String label, int calendarYear)
+            throws Exception {
+        if (runtime.database().getProjects().isEmpty()) {
+            var project = new se.swedsoft.bookkeeping.data.SSNewProject();
+            project.setNumber("P-X");
+            project.setName(label + " project");
+            runtime.database().addProject(project);
+            var unit = new se.swedsoft.bookkeeping.data.SSNewResultUnit();
+            unit.setNumber("U-X");
+            unit.setName(label + " unit");
+            runtime.database().addResultUnit(unit);
+        }
+        SSNewAccountingYear year = new SSNewAccountingYear();
+        year.setLocalFrom(LocalDate.of(calendarYear, 1, 1));
+        year.setLocalTo(LocalDate.of(calendarYear, 12, 31));
+        SSAccountPlan plan = new SSAccountPlan();
+        plan.setName(label + " plan");
+        SSAccount account = new SSAccount(1930);
+        account.setDescription(label + " account");
+        plan.getAccounts().add(account);
+        year.setAccountPlan(plan);
+        runtime.database().addAccountingYear(year);
+        runtime.database().setCurrentYear(year);
+        var original = new se.swedsoft.bookkeeping.data.SSVoucher();
+        original.setNumber(7);
+        original.setLocalDate(year.getLocalFrom());
+        original.setDescription(label + " voucher");
+        var debit = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+        debit.setAccount(account);
+        debit.setProjectNr("P-X");
+        debit.setResultUnitNr("U-X");
+        debit.setDebet(new BigDecimal("25.505"));
+        debit.setAdded(true);
+        debit.setLocalEditedDate(java.time.LocalDateTime.of(calendarYear, 1, 2, 12, 30));
+        debit.setEditedSignature("EDIT");
+        var credit = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+        credit.setAccount(account);
+        credit.setCredit(new BigDecimal("25.505"));
+        var crossed = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+        crossed.setAccount(account);
+        crossed.setDebet(new BigDecimal("999.99"));
+        crossed.setCrossed(true);
+        original.addVoucherRow(debit);
+        original.addVoucherRow(credit);
+        original.addVoucherRow(crossed);
+        var correction = new se.swedsoft.bookkeeping.data.SSVoucher();
+        correction.setNumber(19);
+        correction.setLocalDate(year.getLocalFrom().plusDays(1));
+        correction.setDescription(label + " correction");
+        var correctionDebit = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+        correctionDebit.setAccount(account);
+        correctionDebit.setDebet(BigDecimal.TEN);
+        var correctionCredit = new se.swedsoft.bookkeeping.data.SSVoucherRow();
+        correctionCredit.setAccount(account);
+        correctionCredit.setCredit(BigDecimal.TEN);
+        correction.addVoucherRow(correctionDebit);
+        correction.addVoucherRow(correctionCredit);
+        original.setCorrectedBy(correction);
+        correction.setCorrects(original);
+        runtime.database().addVoucher(original, true);
+        runtime.database().addVoucher(correction, true);
+        return year;
+    }
+
     private static SSNewCompany addCompany(BokfriRuntime runtime, String name) throws Exception {
         SSNewCompany company = new SSNewCompany();
         company.setName(name);

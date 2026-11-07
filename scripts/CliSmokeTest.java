@@ -78,6 +78,23 @@ public final class CliSmokeTest {
         byte[] planBytes = Files.readAllBytes(planPdf);
         require(planBytes.length > 5 && new String(planBytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
                 "account plan did not produce a normalized PDF");
+        Result vouchers = cli("--company-id", company, "--year-id", year,
+                "--format", "json", "voucher", "list");
+        vouchers.success();
+        String voucher = Integer.toString(firstInt(vouchers.stdout, "number"));
+        Result shownVoucher = cli("--company-id", company, "--year-id", year, "--format", "json",
+                "voucher", "show", voucher);
+        shownVoucher.success();
+        shownVoucher.jsonObject();
+        Path voucherPdf = temporary.resolve("normalized-voucher.pdf");
+        Result voucherExport = cli("--company-id", company, "--year-id", year, "--format", "json",
+                "voucher", "show", voucher, "--output", voucherPdf.toString());
+        voucherExport.success();
+        voucherExport.jsonObject();
+        byte[] voucherBytes = Files.readAllBytes(voucherPdf);
+        require(voucherBytes.length > 5
+                        && new String(voucherBytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
+                "voucher show did not produce a normalized PDF");
         for (String report : List.of("balance-sheet", "general-ledger", "income-statement")) {
             Path pdf = temporary.resolve("normalized-" + report + ".pdf");
             List<String> args = new ArrayList<>(List.of("--company-id", company, "--year-id", year,
