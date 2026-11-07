@@ -832,6 +832,74 @@ class BokfriCliRevenueReportTest {
         }
     }
 
+    @Test
+    void invoiceDeliveryPdfsMatchLegacyWithoutYearOrLegacySelections() throws Exception {
+        Path data = temporaryDirectory.resolve("invoice-delivery-documents");
+        int selected;
+        int empty;
+        try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+            selected = addCompany(runtime, "Selected delivery company").getId();
+            addInvoiceDocuments(runtime, "Selected");
+            addCompany(runtime, "Other delivery company");
+            addInvoiceDocuments(runtime, "Other");
+            empty = addCompany(runtime, "Empty delivery company").getId();
+        }
+        Map<String, String> expected = new LinkedHashMap<>();
+        for (boolean normalized : List.of(false, true)) {
+            if (normalized) new NormalizedMigrationService(Clock.systemUTC()).migrate(data);
+            for (int number : List.of(1, 2)) {
+                for (String language : List.of("sv-SE", "en-US")) {
+                    for (String variant : List.of("delivery-note", "hidden", "picking-list")) {
+                        String operation = variant.equals("hidden") ? "delivery-note" : variant;
+                        String key = number + language + variant;
+                        Path pdf = temporaryDirectory.resolve("delivery-" + key + normalized + ".pdf");
+                        String[] args = {"--data-dir", data.toString(), "--company-id",
+                                Integer.toString(selected), "--format", "json", "invoice", operation,
+                                Integer.toString(number), "--language", language, "--output", pdf.toString()};
+                        if (variant.equals("hidden")) args = concat(args, "--hide-unit-price");
+                        Result result = execute(args);
+                        assertThat(result.code()).as(result.error()).isZero();
+                        var json = new ObjectMapper().readTree(result.output());
+                        assertThat(json.path("invoiceNumber").asInt()).isEqualTo(number);
+                        assertThat(json.path("bytes").asLong()).isEqualTo(Files.size(pdf));
+                        String content = text(pdf);
+                        assertThat(content).contains("Selected delivery company")
+                                .doesNotContain("Other", "Empty");
+                        assertThat(content).contains(language.equals("en-US")
+                                ? "Selected localized product" : "Selected row");
+                        if (normalized) {
+                            assertThat(content).isEqualTo(expected.get(key));
+                            byte[] original = Files.readAllBytes(pdf);
+                            Result refused = execute(args);
+                            assertThat(refused.code()).isEqualTo(1);
+                            assertThat(refused.error()).contains("OUTPUT_EXISTS");
+                            assertThat(Files.readAllBytes(pdf)).isEqualTo(original);
+                            Result overwritten = execute(concat(args, "--overwrite"));
+                            assertThat(overwritten.code()).as(overwritten.error()).isZero();
+                            assertThat(SSDB.getInstance().getCurrentCompany()).isNull();
+                            assertThat(SSDB.getInstance().getCurrentYear()).isNull();
+                        } else expected.put(key, content);
+                    }
+                }
+            }
+            for (String operation : List.of("delivery-note", "picking-list")) {
+                Path pdf = temporaryDirectory.resolve("missing-" + operation + normalized + ".pdf");
+                Result result = execute("--data-dir", data.toString(), "--company-id", Integer.toString(empty),
+                        "--format", "json", "invoice", operation, "1", "--output", pdf.toString());
+                assertThat(result.code()).isEqualTo(1);
+                assertThat(result.error()).contains("INVOICE_NOT_FOUND");
+                assertThat(pdf).doesNotExist();
+            }
+            try (BokfriRuntime runtime = BokfriRuntime.open(data)) {
+                runtime.selectCompany(selected);
+                for (SSInvoice invoice : runtime.getInvoices()) {
+                    assertThat(invoice.getOCRNumber()).isEqualTo("987654321");
+                    assertThat(invoice.getRows().get(0).getDescription()).isEqualTo("Selected row");
+                }
+            }
+        }
+    }
+
     private static void addInvoiceDocuments(BokfriRuntime runtime, String name) {
         SSCustomer customer = new SSCustomer();
         customer.setNumber("C1");

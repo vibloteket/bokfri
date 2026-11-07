@@ -161,6 +161,19 @@ public final class CliSmokeTest {
             require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
                     "invoice " + variant + " did not produce a normalized PDF");
         }
+        for (String variant : List.of("delivery-note", "hidden", "picking-list")) {
+            Path pdf = temporary.resolve("normalized-invoice-" + variant + ".pdf");
+            String operation = variant.equals("hidden") ? "delivery-note" : variant;
+            List<String> args = new ArrayList<>(List.of("--company-id", company, "--format", "json",
+                    "invoice", operation, invoice, "--output", pdf.toString()));
+            if (variant.equals("hidden")) args.add("--hide-unit-price");
+            Result exported = cli(args.toArray(String[]::new));
+            exported.success();
+            exported.jsonObject();
+            byte[] bytes = Files.readAllBytes(pdf);
+            require(bytes.length > 5 && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-"),
+                    "invoice " + variant + " did not produce a normalized PDF");
+        }
         runNormalizedPaymentJournalPdfFlow(temporary, company, year);
         runNormalizedInvoiceJournalPdfFlow(temporary, company, year);
         runNormalizedReminderPdfFlow(temporary, company, year);

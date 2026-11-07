@@ -10,7 +10,11 @@ import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
 import se.swedsoft.bookkeeping.print.SSPrinter;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.ResourceBundle;
 
 
 /**
@@ -18,6 +22,10 @@ import java.util.*;
  * Time: 15:32:42
  */
 public class SSPickingslipPrinter extends SSPrinter {
+
+    private SSNewCompany explicitCompany;
+
+    private List<SSProduct> explicitProducts;
 
     private SSOrder iOrder;
 
@@ -29,6 +37,26 @@ public class SSPickingslipPrinter extends SSPrinter {
      * @param iLocale
      */
     public SSPickingslipPrinter(SSOrder iOrder, Locale iLocale) {
+        initialize(iOrder, iLocale);
+    }
+
+    /**
+     * Creates a report from explicit context without reading the selected legacy database.
+     * @param iOrder order snapshot
+     * @param iLocale report language
+     * @param company report company
+     * @param products current products used for descriptions and stock information
+     */
+    public SSPickingslipPrinter(SSOrder iOrder, Locale iLocale,
+            SSNewCompany company, List<SSProduct> products) {
+        super(company);
+        explicitCompany = company;
+        explicitProducts = products == null ? List.of() : List.copyOf(products);
+
+        initialize(iOrder, iLocale);
+    }
+
+    private void initialize(SSOrder iOrder, Locale iLocale) {
         this.iOrder = iOrder;
         this.iLocale = iLocale;
 
@@ -50,6 +78,12 @@ public class SSPickingslipPrinter extends SSPrinter {
 
     }
 
+    private SSProduct explicitProduct(SSSaleRow row) {
+        return explicitProducts.stream()
+                .filter(product -> java.util.Objects.equals(product.getNumber(), row.getProductNr()))
+                .findFirst().orElse(null);
+    }
+
     /**
      * Gets the title file for this repport
      *
@@ -67,7 +101,8 @@ public class SSPickingslipPrinter extends SSPrinter {
      *
      */
     private void addParameters() {
-        SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
+        SSNewCompany iCompany = explicitCompany != null ? explicitCompany
+                : SSDB.getInstance().getCurrentCompany();
 
         SSSalePrinterUtils.addParametersForCompany(iCompany, this);
 
@@ -121,7 +156,7 @@ public class SSPickingslipPrinter extends SSPrinter {
      */
     @Override
     protected SSDefaultTableModel getModel() {
-        final SSPrinter iPrinter = new SSRowReport();
+        final SSPrinter iPrinter = explicitCompany != null ? new SSRowReport(explicitCompany) : new SSRowReport();
 
         iPrinter.setBundle(iBundle);
         iPrinter.setLocale(iLocale);
@@ -161,6 +196,15 @@ public class SSPickingslipPrinter extends SSPrinter {
          *
          */
         public SSRowReport() {
+            initialize();
+        }
+
+        public SSRowReport(SSNewCompany company) {
+            super(company);
+            initialize();
+        }
+
+        private void initialize() {
             setMargins(0, 0, 0, 0);
 
             setColumnHeader("sales/pickingslip.rows.jrxml");
@@ -177,7 +221,8 @@ public class SSPickingslipPrinter extends SSPrinter {
          */
         @Override
         protected SSDefaultTableModel getModel() {
-            final List<SSProduct> iProducts = SSDB.getInstance().getProducts();
+            final List<SSProduct> iProducts = explicitCompany != null ? explicitProducts
+                    : SSDB.getInstance().getProducts();
 
             SSDefaultTableModel<SSSaleRow> iModel = new SSDefaultTableModel<>() {
 
@@ -197,14 +242,17 @@ public class SSPickingslipPrinter extends SSPrinter {
                         break;
 
                     case 1:
-                        value = iRow.getDescription(iLocale);
+                        value = explicitCompany != null ? explicitProducts.stream()
+                                .filter(product -> java.util.Objects.equals(product.getNumber(), iRow.getProductNr()))
+                                .findFirst().flatMap(product -> product.getDescription(iLocale))
+                                .orElse(iRow.getDescription()) : iRow.getDescription(iLocale);
                         break;
 
                     case 2:
                         value = iRow.getQuantity();
                         break;
                     }
-                    SSProduct iProduct = iRow.getProduct(iProducts);
+                    SSProduct iProduct = explicitCompany != null ? explicitProduct(iRow) : iRow.getProduct(iProducts);
 
                     if (iProduct == null) {
                         return value;
@@ -251,10 +299,10 @@ public class SSPickingslipPrinter extends SSPrinter {
             Collections.sort(iRows,
                     (iSaleRow1, iSaleRow2) -> {
 
-                            SSProduct iProduct1 = SSDB.getInstance().getProduct(
-                                    iSaleRow1.getProductNr()).orElse(null);
-                            SSProduct iProduct2 = SSDB.getInstance().getProduct(
-                                    iSaleRow2.getProductNr()).orElse(null);
+                            SSProduct iProduct1 = explicitCompany != null ? explicitProduct(iSaleRow1)
+                                    : SSDB.getInstance().getProduct(iSaleRow1.getProductNr()).orElse(null);
+                            SSProduct iProduct2 = explicitCompany != null ? explicitProduct(iSaleRow2)
+                                    : SSDB.getInstance().getProduct(iSaleRow2.getProductNr()).orElse(null);
 
                             if (iProduct1 != null && iProduct2 != null) {
                                 if (iProduct1.getWarehouseLocation() == null

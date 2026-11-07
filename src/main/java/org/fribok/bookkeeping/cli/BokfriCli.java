@@ -2771,6 +2771,8 @@ public class BokfriCli implements Runnable {
         @Option(names = "--overwrite") boolean overwrite;
 
         abstract SSPrinter printer(SSOrder order, java.util.Locale locale);
+        abstract SSPrinter printer(SSOrder order, java.util.Locale locale, BokfriRuntime runtime)
+                throws java.sql.SQLException;
         abstract String documentName();
 
         @Override public Integer call() {
@@ -2778,13 +2780,14 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(true, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
-                runtime.database().init(false);
-                SSInvoice invoice = new InvoiceService(runtime.database()).find(number)
+                if (!runtime.isNormalized()) runtime.database().init(false);
+                SSInvoice invoice = runtime.findInvoice(number)
                         .orElseThrow(() -> new CliException("INVOICE_NOT_FOUND",
                                 "No invoice has number " + number));
                 SSOrder order = new SSOrder(invoice);
-                java.nio.file.Path pdf = exportPdf(printer(order,
-                        java.util.Locale.forLanguageTag(language)), output, overwrite);
+                java.util.Locale locale = java.util.Locale.forLanguageTag(language);
+                java.nio.file.Path pdf = exportPdf(runtime.isNormalized() ? printer(order, locale, runtime)
+                        : printer(order, locale), output, overwrite);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("invoiceNumber", number);
                 result.put("output", pdf.toString());
@@ -2807,6 +2810,12 @@ public class BokfriCli implements Runnable {
             order.setHideUnitprice(hideUnitPrice);
             return new SSDeliverynotePrinter(order, locale);
         }
+        @Override SSPrinter printer(SSOrder order, java.util.Locale locale, BokfriRuntime runtime)
+                throws java.sql.SQLException {
+            order.setHideUnitprice(hideUnitPrice);
+            return new SSDeliverynotePrinter(order, locale, runtime.currentCompany(),
+                    runtime.findCustomer(order.getCustomerNr()).orElse(null), runtime.getProducts());
+        }
         @Override String documentName() { return "delivery note"; }
     }
 
@@ -2815,6 +2824,10 @@ public class BokfriCli implements Runnable {
     static class InvoicePickingList extends InvoiceSalesDocument {
         @Override SSPrinter printer(SSOrder order, java.util.Locale locale) {
             return new SSPickingslipPrinter(order, locale);
+        }
+        @Override SSPrinter printer(SSOrder order, java.util.Locale locale, BokfriRuntime runtime)
+                throws java.sql.SQLException {
+            return new SSPickingslipPrinter(order, locale, runtime.currentCompany(), runtime.getProducts());
         }
         @Override String documentName() { return "picking list"; }
     }
