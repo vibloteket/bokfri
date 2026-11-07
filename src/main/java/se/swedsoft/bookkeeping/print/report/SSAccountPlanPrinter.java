@@ -3,6 +3,8 @@ package se.swedsoft.bookkeeping.print.report;
 
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSAccountPlan;
+import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewCompany;
 import se.swedsoft.bookkeeping.data.system.SSDB;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 import se.swedsoft.bookkeeping.gui.util.model.SSDefaultTableModel;
@@ -29,6 +31,22 @@ public class SSAccountPlanPrinter extends SSPrinter {
      * @param pAccountPlan The accountplan
      */
     public SSAccountPlanPrinter(SSAccountPlan pAccountPlan) {
+        initialize(pAccountPlan);
+    }
+
+    /**
+     * Creates an account-plan report without reading legacy company/year selections.
+     *
+     * @param accountPlan selected year's account plan
+     * @param company selected company for the report header
+     * @param year selected year with vouchers for the report header
+     */
+    public SSAccountPlanPrinter(SSAccountPlan accountPlan, SSNewCompany company, SSNewAccountingYear year) {
+        super(company, year);
+        initialize(accountPlan);
+    }
+
+    private void initialize(SSAccountPlan pAccountPlan) {
         iAccountPlan = pAccountPlan;
 
         setPageHeader("header.jrxml");

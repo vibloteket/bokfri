@@ -731,7 +731,33 @@ public class BokfriCli implements Runnable {
         @CliMetadata.ParentCommand AccountPlanCommand command;
         @Option(names="--output",required=true) java.nio.file.Path output;
         @Option(names="--overwrite") boolean overwrite;
-        public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,true);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());SSNewAccountingYear y=r.selectYear(co,c.yearId());r.database().init(false);java.nio.file.Path pdf=exportPdf(new SSAccountPlanPrinter(y.getAccountPlan()),output,overwrite);Map<String,Object>x=new LinkedHashMap<>();x.put("output",pdf.toString());x.put("bytes",Files.size(pdf));x.put("accountPlan",y.getAccountPlan().getName());x.put("selection",selectedContext(c,co,y));root.output(x,"Created account-plan PDF "+pdf);return 0;}catch(Exception e){throw databaseFailure(e);}}}
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, true);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
+                SSPrinter printer;
+                if (runtime.isNormalized()) {
+                    runtime.hydrateYear(year);
+                    printer = new SSAccountPlanPrinter(year.getAccountPlan(), company, year);
+                } else {
+                    runtime.database().init(false);
+                    printer = new SSAccountPlanPrinter(year.getAccountPlan());
+                }
+                java.nio.file.Path pdf = exportPdf(printer, output, overwrite);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("output", pdf.toString());
+                result.put("bytes", Files.size(pdf));
+                result.put("accountPlan", year.getAccountPlan().getName());
+                result.put("selection", selectedContext(context, company, year));
+                root.output(result, "Created account-plan PDF " + pdf);
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
 
     @Command(mixinStandardHelpOptions = true, name = "year", description = "Inspect, create, and select accounting years",
             subcommands = {YearList.class, YearUse.class, YearCreate.class,
