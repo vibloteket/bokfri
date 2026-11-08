@@ -725,7 +725,10 @@ filtered and outside-date lists (including undated records), duplicate document 
 in another company, overwrite protection and singleton isolation. Printer tests cover
 snapshot fields, discount/tax totals, both company rounding settings, input preservation
 and empty/populated rendering. Assembled/packaged smoke includes both register exports.
-Supplier invoice/credit register PDFs remain a separate follow-up.
+Supplier invoice/credit register PDFs also use explicit company/document snapshots
+without requiring a year; `supplierInvoiceListPdfsMatchLegacyForEmptyAndNoYearCompanies`
+already covers populated/empty companies, isolation, overwrite protection and exact
+legacy/normalized PDF text parity. Both exports are included in the packaged smoke.
 
 Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
@@ -767,6 +770,31 @@ credit creation from unbooked normalized invoices. `ExplicitVoucherContextTest`
 compares absent auxiliary snapshots against empty ones for both supplier document
 kinds and both payment kinds, with legacy JDBC blocked, and verifies the absent
 snapshots remain absent after booking calculations.
+
+### Explicit customer, supplier and product hydration
+
+`NormalizedRegisterStore` uses dedicated `forPersistence()` factories for customers,
+suppliers and products. They skip selected-company lookups and default addresses,
+prices, tax codes, stock flags, units and product accounts; product containers are
+initialized empty. SQL fields and stored child rows alone populate the snapshots.
+Absent party-address rows stay null and nullable product tax codes stay null; an
+empty product account map does not inherit the selected company's Sales/Purchases
+entries. This is a hydration boundary, not normalized GUI activation.
+
+Legacy no-argument constructors still initialize their original business defaults.
+Customer/supplier copies and sale customer assignment preserve missing addresses
+and deep-copy present ones. Existing lazy currency/product business getters are
+unchanged: persistence paths must continue using the `getStored...` accessors.
+Other constructor, lookup and purchase-order paths are not generally isolated
+from legacy state by this slice.
+
+`NormalizedRegisterHydrationTest` blocks every legacy JDBC call while round-tripping
+empty and populated snapshots, confirms absence survives a read/write cycle without
+adding child rows, and covers company-scoped addresses, account entries (including
+explicit null), translations, components, lookups and dimensions. It also checks
+legacy constructor defaults and null-safe independent party-address copies/customer
+assignment to invoices. Existing full register and migration/PDF parity fixtures
+remain in place.
 
 ## Definition of done for issue #75
 

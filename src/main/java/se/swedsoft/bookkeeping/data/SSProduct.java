@@ -83,8 +83,16 @@ public class SSProduct implements SSTableSearchable, Serializable {
      * Default constructor
      */
     public SSProduct() {
+        this(true);
+    }
+
+    private SSProduct(boolean legacyDefaults) {
         iProductRows = new LinkedList<>();
         iDefaultAccounts = new HashMap<>();
+        if (!legacyDefaults) {
+            iDescriptions = new HashMap<>();
+            return;
+        }
         iUnitprice = new BigDecimal(0);
         iPurchasePrice = new BigDecimal(0);
         iStockPrice = new BigDecimal(0);
@@ -102,6 +110,15 @@ public class SSProduct implements SSTableSearchable, Serializable {
             iDefaultAccounts.put(SSDefaultAccount.Purchases,
                     iCompany.getDefaultAccount(SSDefaultAccount.Purchases));
         }
+    }
+
+    /**
+     * Creates empty storage containers without company, price, tax or stock defaults.
+     * Populate stored fields before business use.
+     * @return a product for typed persistence hydration only
+     */
+    public static SSProduct forPersistence() {
+        return new SSProduct(false);
     }
 
     /**
