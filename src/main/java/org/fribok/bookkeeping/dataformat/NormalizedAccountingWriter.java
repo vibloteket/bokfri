@@ -126,6 +126,7 @@ public final class NormalizedAccountingWriter {
     /** Deletes the company and everything beneath it in dependency order. */
     public void deleteCompany(Connection connection, int companyLegacyId) throws SQLException {
         long companyId = companyId(connection, companyLegacyId);
+        NormalizedCompanyDeletion.deleteDocumentsAndRegisters(connection, companyId);
         deleteWhere(connection,
                 "DELETE FROM voucher_row WHERE voucher_id IN "
                         + "(SELECT v.id FROM voucher v JOIN accounting_year y ON y.id=v.accounting_year_id "
@@ -146,6 +147,7 @@ public final class NormalizedAccountingWriter {
                 "DELETE FROM account_plan WHERE accounting_year_id IN "
                         + "(SELECT id FROM accounting_year WHERE company_id=?)", companyId);
         deleteWhere(connection, "DELETE FROM accounting_year WHERE company_id=?", companyId);
+        NormalizedCompanyDeletion.deleteDimensions(connection, companyId);
         deleteWhere(connection, "DELETE FROM company_address WHERE company_id=?", companyId);
         deleteWhere(connection, "DELETE FROM company_standard_text WHERE company_id=?", companyId);
         deleteWhere(connection, "DELETE FROM company_default_account WHERE company_id=?", companyId);
