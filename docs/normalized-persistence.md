@@ -421,6 +421,46 @@ new year nor changes saved company/year configuration; `year use` remains explic
 Older normalized catalogues fail through the same V19 guard without manufacturing
 templates, upgrading schema or changing accounting data.
 
+## Explicit voucher calculation and reconstruction boundary
+
+`SSVoucher(int, LocalDate)` initializes only its supplied number/date and empty
+rows, without looking up a selected year, next number, legacy connection or current
+clock. Nullable dates remain nullable for historical snapshots. The existing
+zero/one-argument constructors retain their legacy default behavior.
+
+`SSVoucherMath.compress(voucher, accounts, projects, resultUnits)` resolves rows
+through explicit lookup overloads, not singleton-backed getters. It retains legacy
+row ordering, first-row edit/crossed/added metadata, correction links, zero/negative
+value handling and grouping by resolved references. As in legacy compression,
+unresolved references resolve to null and may group together; this is not a new
+raw-identifier regrouping policy. The input rows/amounts are unchanged (existing
+transient reference caches may be populated during lookup). The old one-argument
+compression API remains available for legacy callers.
+
+Customer/supplier invoice and credit-invoice generation now uses explicit headers,
+compression contexts and known-account correction totals. Incoming/outgoing payments
+also accept `(accountPlan, projects, resultUnits)`; the account-plan-only overload
+uses empty dimension lists and never fetches missing dimensions from SSDB. Callers
+with raw dimension references must supply the full context. No-argument booking
+APIs still obtain the legacy context before delegating. Difference/correction totals
+use explicit known-account debit/credit totals and exclude crossed rows without
+calling singleton-backed row validity.
+
+Normalized runtime payment generation and all six CLI journal planners supply the
+full account/dimension context. Their combined headers, voucher JSON input, core
+voucher reads, invoice/payment/supplier snapshots and shared demo voucher factories
+use explicit stored/supplied dates and numbers. Payment difference rows with the
+same account but distinct known dimensions therefore stay separate even when no
+legacy company is selected. Snapshot headers no longer briefly initialize from an
+unrelated selected legacy year before being overwritten.
+
+Tests poison legacy JDBC access and selected-year account lookup to verify explicit
+header construction, compression, all six booking families and core voucher reads;
+legacy/explicit results, stored null dates and correction links are compared.
+This boundary does **not** remove all legacy hooks from parent domain constructors
+or no-argument entity getters, enable normalized GUI startup, or change schemas,
+serialization identifiers, stored accounting values or migration/startup policy.
+
 ## Financial PDF runtime support
 
 The CLI `balance-sheet --output`, `income-statement --output`,

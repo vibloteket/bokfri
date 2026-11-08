@@ -459,6 +459,14 @@ public final class BokfriRuntime implements AutoCloseable {
         return inpaymentStore;
     }
 
+    /** Compresses a journal using the selected normalized context or the legacy compatibility path. */
+    public SSVoucher compressVoucher(SSVoucher voucher) throws SQLException {
+        return isNormalized()
+                ? se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(
+                        voucher, getAccounts(), getProjects(), getResultUnits())
+                : se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(voucher);
+    }
+
     /** Finds an invoice of the selected company by number in the active storage. */
     public java.util.Optional<SSInvoice> findInvoice(int number) throws SQLException {
         return getInvoices().stream()
@@ -544,14 +552,14 @@ public final class BokfriRuntime implements AutoCloseable {
     /** Generates the booking voucher for an inpayment in the active storage. */
     public SSVoucher generateInpaymentVoucher(SSInpayment inpayment) throws SQLException {
         return isNormalized()
-                ? inpayment.generateVoucher(currentAccountPlan())
+                ? inpayment.generateVoucher(currentAccountPlan(), getProjects(), getResultUnits())
                 : inpayment.generateVoucher();
     }
 
     /** Generates the booking voucher for an outpayment in the active storage. */
     public SSVoucher generateOutpaymentVoucher(SSOutpayment outpayment) throws SQLException {
         return isNormalized()
-                ? outpayment.generateVoucher(currentAccountPlan())
+                ? outpayment.generateVoucher(currentAccountPlan(), getProjects(), getResultUnits())
                 : outpayment.generateVoucher();
     }
 

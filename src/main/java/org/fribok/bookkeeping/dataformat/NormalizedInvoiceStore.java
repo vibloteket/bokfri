@@ -564,8 +564,8 @@ public final class NormalizedInvoiceStore {
                         + ") ORDER BY " + kind.idColumn())) {
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
-                    SSVoucher voucher = new SSVoucher(result.getInt(2));
-                    voucher.setLocalDate(result.getObject(3, LocalDate.class));
+                    SSVoucher voucher = new SSVoucher(result.getInt(2),
+                            result.getObject(3, LocalDate.class));
                     voucher.setDescription(result.getString(4));
                     vouchers.put(result.getLong(1), voucher);
                 }

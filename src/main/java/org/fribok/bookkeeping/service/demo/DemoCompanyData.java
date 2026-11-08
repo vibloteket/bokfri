@@ -161,8 +161,7 @@ final class DemoCompanyData {
         inpayment.setText("Betalning faktura " + paid.getNumber());
         // Match the legacy empty difference snapshot after invoice journal voucher 3,
         // without deriving its number/date from SSDB's current year.
-        SSVoucher difference = new SSVoucher(4);
-        difference.setLocalDate(LocalDate.of(2026, 8, 3));
+        SSVoucher difference = new SSVoucher(4, LocalDate.of(2026, 8, 3));
         inpayment.setDifference(difference);
         SSInpaymentRow row = new SSInpaymentRow();
         row.setInvoiceNr(paid.getNumber());
@@ -176,8 +175,7 @@ final class DemoCompanyData {
 
     static SSVoucher voucher(SSNewAccountingYear year, int number, LocalDate date, String description,
             VoucherEntry... entries) {
-        SSVoucher voucher = new SSVoucher(number);
-        voucher.setLocalDate(date);
+        SSVoucher voucher = new SSVoucher(number, date);
         voucher.setDescription(description);
         for (VoucherEntry entry : entries) {
             SSAccount account = year.getAccountPlan().getAccount(entry.account());

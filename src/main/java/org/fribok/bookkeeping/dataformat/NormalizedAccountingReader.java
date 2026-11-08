@@ -326,8 +326,8 @@ public final class NormalizedAccountingReader {
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
                     long id = result.getLong(1);
-                    SSVoucher voucher = new SSVoucher(result.getInt(2));
-                    voucher.setLocalDate(result.getObject(3, java.time.LocalDate.class));
+                    SSVoucher voucher = new SSVoucher(result.getInt(2),
+                            result.getObject(3, java.time.LocalDate.class));
                     voucher.setDescription(result.getString(4));
                     long c = result.getLong(5); if (!result.wasNull()) corrects.put(id, c);
                     long b = result.getLong(6); if (!result.wasNull()) correctedBy.put(id, b);

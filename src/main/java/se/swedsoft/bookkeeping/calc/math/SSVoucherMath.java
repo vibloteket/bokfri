@@ -155,6 +155,11 @@ public class SSVoucherMath {
         return getCreditSum(pVoucher).subtract(getDebetSum(pVoucher));
     }
 
+    /** Returns credit minus debit for non-crossed rows with an account in the explicit plan. */
+    public static BigDecimal getCreditMinusDebetSum(SSVoucher voucher, List<SSAccount> accounts) {
+        return getCreditSum(voucher, accounts).subtract(getDebetSum(voucher, accounts));
+    }
+
     /**
      *
      * @param pVoucher
@@ -595,17 +600,49 @@ public class SSVoucherMath {
      * @return
      */
     public static SSVoucher compress(SSVoucher iVoucher) {
-        SSVoucher iNew = new SSVoucher();
+        return compressResolved(iVoucher, SSVoucherRow::getAccount,
+                SSVoucherRow::getProject, SSVoucherRow::getResultUnit);
+    }
 
-        iNew.setNumber(iVoucher.getNumber());
+    /**
+     * Compresses rows using only explicitly supplied account/dimension lookups. Preserves legacy
+     * row ordering, first-row metadata and unresolved-reference semantics without consulting SSDB.
+     * @param voucher input voucher (its rows/amounts are not changed)
+     * @param accounts selected year's accounts
+     * @param projects selected company's projects
+     * @param resultUnits selected company's result units
+     * @return detached compressed voucher with the original header/correction links
+     */
+    public static SSVoucher compress(SSVoucher voucher, List<SSAccount> accounts,
+            List<SSNewProject> projects, List<SSNewResultUnit> resultUnits) {
+        Objects.requireNonNull(accounts, "accounts");
+        Objects.requireNonNull(projects, "projects");
+        Objects.requireNonNull(resultUnits, "resultUnits");
+        return compressResolved(voucher, row -> row.getAccount(accounts),
+                row -> row.getProject(projects), row -> row.getResultUnit(resultUnits));
+    }
+
+    private static SSVoucher compressResolved(SSVoucher iVoucher,
+            java.util.function.Function<SSVoucherRow, SSAccount> account,
+            java.util.function.Function<SSVoucherRow, SSNewProject> project,
+            java.util.function.Function<SSVoucherRow, SSNewResultUnit> resultUnit) {
+        SSVoucher iNew = new SSVoucher(iVoucher.getNumber(), iVoucher.getLocalDate());
         iNew.setDescription(iVoucher.getDescription());
-        iNew.setLocalDate(iVoucher.getLocalDate());
         iNew.setCorrects(iVoucher.getCorrects());
         iNew.setCorrectedBy(iVoucher.getCorrectedBy());
 
         for (SSVoucherRow iRow : iVoucher.getRows()) {
-            Optional<SSVoucherRow> iCurrentOpt = findRow(iNew, iRow.getAccount(), iRow.getProject(),
-                    iRow.getResultUnit());
+            SSAccount sourceAccount = account.apply(iRow);
+            SSNewProject sourceProject = project.apply(iRow);
+            SSNewResultUnit sourceUnit = resultUnit.apply(iRow);
+            Optional<SSVoucherRow> iCurrentOpt = iNew.getRows().stream().filter(candidate -> {
+                SSAccount candidateAccount = account.apply(candidate);
+                SSNewProject candidateProject = project.apply(candidate);
+                SSNewResultUnit candidateUnit = resultUnit.apply(candidate);
+                return Objects.equals(sourceAccount, candidateAccount)
+                        && Objects.equals(sourceProject, candidateProject)
+                        && Objects.equals(sourceUnit, candidateUnit);
+            }).findFirst();
 
             if (iCurrentOpt.isEmpty()) {
                 iNew.addVoucherRow(new SSVoucherRow(iRow));

@@ -124,7 +124,8 @@ public final class NormalizedDemoCompanyService {
                     List.of(), List.of());
             open.setEntered();
             invoices.addInvoice(company.getId(), open);
-            store.addVoucher(journal(3, "Fakturajournal nr 1", LocalDate.of(2026, 8, 3), paidVoucher, openVoucher));
+            store.addVoucher(journal(current.getAccountPlan(), 3, "Fakturajournal nr 1",
+                    LocalDate.of(2026, 8, 3), paidVoucher, openVoucher));
             registers.bumpAutoIncrement(company.getId(), "invoicejournal");
 
             var inpayment = DemoCompanyData.inpayment(company, paid,
@@ -132,7 +133,8 @@ public final class NormalizedDemoCompanyService {
             SSVoucher paymentVoucher = inpayment.generateVoucher(current.getAccountPlan());
             inpayment.setEntered();
             new NormalizedInpaymentStore(connection).addInpayment(company.getId(), inpayment);
-            store.addVoucher(journal(4, "Inbetalningsjournal nr 1", inpayment.getLocalDate(), paymentVoucher));
+            store.addVoucher(journal(current.getAccountPlan(), 4, "Inbetalningsjournal nr 1",
+                    inpayment.getLocalDate(), paymentVoucher));
             registers.bumpAutoIncrement(company.getId(), "inpaymentjournal");
             SSNewCompany saved = store.getCompanies().stream()
                     .filter(value -> value.getId().equals(company.getId())).findFirst().orElseThrow();
@@ -149,15 +151,15 @@ public final class NormalizedDemoCompanyService {
         }
     }
 
-    private static SSVoucher journal(int number, String description, LocalDate date, SSVoucher... sources) {
-        SSVoucher journal = new SSVoucher(number);
+    private static SSVoucher journal(SSAccountPlan plan, int number, String description, LocalDate date,
+            SSVoucher... sources) {
+        SSVoucher journal = new SSVoucher(number, date);
         journal.setDescription(description);
-        journal.setLocalDate(date);
         for (SSVoucher source : sources) {
             for (SSVoucherRow row : source.getRows()) {
                 journal.addVoucherRow(new SSVoucherRow(row));
             }
         }
-        return SSVoucherMath.compress(journal);
+        return SSVoucherMath.compress(journal, plan.getAccounts(), List.of(), List.of());
     }
 }
