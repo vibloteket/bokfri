@@ -81,6 +81,8 @@ Bokfri-JSON kan skriva sitt code-first JSON Schema, exempelvis med
 `bokfri voucher schema`. Databasformatet kan
 kontrolleras med `bokfri database status`; en äldre databas migreras separat
 med `bokfri database migrate`, som först skapar och verifierar en full backup.
+För explicit normalisering och återställning av kontoplanskatalogen i äldre
+normaliserade databaser, se [dokumentationen för normaliserad lagring](docs/normalized-persistence.md).
 
 Skrivande arbetsflöden kan normalt valideras eller förhandsgranskas med
 `validate`, `--dry-run` eller genom att utelämna `--commit`. Läs den

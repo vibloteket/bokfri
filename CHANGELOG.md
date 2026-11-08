@@ -19,6 +19,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Add explicit offline `database recover-account-plans` for normalized V18 databases, using an operator-trusted, SHA-256 verified legacy rollback ZIP. Apply V19 to a copy of the current normalized database, preserve and fingerprint every pre-existing SQL table and evolved accounting data, verify disk round-trips, and activate with physical rollback artifacts. Require `--commit`, reject dirty/partial/already-upgraded catalogues, and keep ordinary startup unchanged (#75).
+
 - Enable normalized `year create` from V19 global templates with shared date/overlap validation, independent account-plan copies and globally allocated year IDs. Save the new year/plan/accounts atomically, preserve existing years/templates and saved selections, and retain the safe guard for older normalized catalogues (#75).
 
 - Enable normalized global `account-plan list` and XLSX export/import preview/apply using the V19 template catalogue, without company/year selection. Preserve detached template metadata, ordered accounts/flags and the existing spreadsheet format; apply imports atomically with duplicate-name and overwrite protection. Older normalized catalogues fail clearly without schema changes or replacement templates (#75).
