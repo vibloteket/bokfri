@@ -75,6 +75,8 @@ public final class CliSmokeTest {
         Result catalogue = cli("--format", "json", "account-plan", "list");
         catalogue.success();
         catalogue.jsonObject();
+        Result catalogueText = cli("--format", "text", "account-plan", "list");
+        catalogueText.success();
         String template = Integer.toString(firstInt(catalogue.stdout, "id"));
         Path templateXlsx = temporary.resolve("normalized-template.xlsx");
         Result templateExport = cli("--format", "json", "account-plan", "export", "--id", template,
@@ -121,9 +123,11 @@ public final class CliSmokeTest {
         yearAccounts.success();
         require(firstInt(yearAccounts.stdout, "number") > 0,
                 "normalized year did not copy the global template accounts");
-        Result unchangedCatalogue = cli("--format", "json", "account-plan", "list");
+        // JSON object key order can vary between CLI JVMs (Map.of uses randomized iteration order).
+        // The table includes the same template IDs, names, assessment years and account counts.
+        Result unchangedCatalogue = cli("--format", "text", "account-plan", "list");
         unchangedCatalogue.success();
-        require(unchangedCatalogue.stdout.equals(catalogue.stdout), "year creation changed the global templates");
+        require(unchangedCatalogue.stdout.equals(catalogueText.stdout), "year creation changed the global templates");
         Result accounts = cli("--company-id", company, "--year-id", year,
                 "--format", "json", "account", "list");
         accounts.success();
