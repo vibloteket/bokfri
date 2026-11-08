@@ -74,6 +74,13 @@ public class SSSupplier implements Serializable, SSTableSearchable {
      * Default constructor
      */
     public SSSupplier() {
+        this(true);
+    }
+
+    private SSSupplier(boolean legacyDefaults) {
+        if (!legacyDefaults) {
+            return;
+        }
         iAddress = new SSAddress();
 
         SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
@@ -85,6 +92,15 @@ public class SSSupplier implements Serializable, SSTableSearchable {
             iDeliveryTerm = iCompany.getDeliveryTerm();
             iDeliveryWay = iCompany.getDeliveryWay();
         }
+    }
+
+    /**
+     * Creates an empty snapshot for typed persistence hydration, without company defaults or an address.
+     * Populate stored fields before business use.
+     * @return a supplier for persistence hydration only
+     */
+    public static SSSupplier forPersistence() {
+        return new SSSupplier(false);
     }
 
     /**
@@ -110,7 +126,7 @@ public class SSSupplier implements Serializable, SSTableSearchable {
         iPaymentTerm = iSupplier.iPaymentTerm;
         iDeliveryTerm = iSupplier.iDeliveryTerm;
         iDeliveryWay = iSupplier.iDeliveryWay;
-        iAddress = new SSAddress(iSupplier.iAddress);
+        iAddress = iSupplier.iAddress == null ? null : new SSAddress(iSupplier.iAddress);
     }
 
     // ////////////////////////////////////////////////////

@@ -60,7 +60,7 @@ public final class NormalizedRegisterStore {
             statement.setInt(1, companyLegacyId);
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
-                    SSCustomer customer = new SSCustomer();
+                    SSCustomer customer = SSCustomer.forPersistence();
                     int legacyId = result.getInt(1);
                     customer.setNumber(result.getString(2));
                     customer.setName(result.getString(3));
@@ -193,7 +193,7 @@ public final class NormalizedRegisterStore {
             statement.setInt(1, companyLegacyId);
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
-                    SSSupplier supplier = new SSSupplier();
+                    SSSupplier supplier = SSSupplier.forPersistence();
                     int legacyId = result.getInt(1);
                     supplier.setNumber(result.getString(2));
                     supplier.setName(result.getString(3));
@@ -305,15 +305,13 @@ public final class NormalizedRegisterStore {
             statement.setInt(1, companyLegacyId);
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
-                    SSProduct product = new SSProduct();
+                    SSProduct product = SSProduct.forPersistence();
                     int legacyId = result.getInt(1);
                     product.setNumber(result.getString(2));
                     product.setDescription(result.getString(3));
                     product.setSellingPrice(result.getBigDecimal(4));
                     String taxCode = result.getString(5);
-                    if (taxCode != null) {
-                        product.setTaxCode(SSTaxCode.valueOf(taxCode));
-                    }
+                    product.setTaxCode(taxCode == null ? null : SSTaxCode.valueOf(taxCode));
                     product.setWarehouseLocation(result.getString(6));
                     product.setOrderpoint(nullableInt(result, 7));
                     product.setOrdercount(nullableInt(result, 8));

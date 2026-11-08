@@ -720,8 +720,10 @@ public abstract class SSSale implements SSTableSearchable, Serializable {
         iEuSaleCommodity = iCustomer.getEuSaleCommodity();
         iEuSaleYhirdPartCommodity = iCustomer.getEuSaleYhirdPartCommodity();
 
-        iInvoiceAddress = new SSAddress(iCustomer.getInvoiceAddress());
-        iDeliveryAddress = new SSAddress(iCustomer.getDeliveryAddress());
+        iInvoiceAddress = iCustomer.getInvoiceAddress() == null
+                ? null : new SSAddress(iCustomer.getInvoiceAddress());
+        iDeliveryAddress = iCustomer.getDeliveryAddress() == null
+                ? null : new SSAddress(iCustomer.getDeliveryAddress());
     }
 
     // //////////////////////////////////////////////////

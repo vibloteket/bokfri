@@ -89,6 +89,13 @@ public class SSCustomer implements Serializable, SSTableSearchable {
      * Default constructor
      */
     public SSCustomer() {
+        this(true);
+    }
+
+    private SSCustomer(boolean legacyDefaults) {
+        if (!legacyDefaults) {
+            return;
+        }
         iInvoiceAddress = new SSAddress();
         iDeliveryAddress = new SSAddress();
 
@@ -102,6 +109,15 @@ public class SSCustomer implements Serializable, SSTableSearchable {
             iDeliveryWay = iCompany.getDeliveryWay();
             // setCurrency         ( iCompany.getCurrency()  );
         }
+    }
+
+    /**
+     * Creates an empty snapshot for typed persistence hydration, without company defaults or addresses.
+     * Populate stored fields before business use.
+     * @return a customer for persistence hydration only
+     */
+    public static SSCustomer forPersistence() {
+        return new SSCustomer(false);
     }
 
     /**
@@ -134,8 +150,8 @@ public class SSCustomer implements Serializable, SSTableSearchable {
         iDeliveryWay = iCustomer.iDeliveryWay;
         iCreditLimit = iCustomer.iCreditLimit;
         iDiscount = iCustomer.iDiscount;
-        iInvoiceAddress = new SSAddress(iCustomer.iInvoiceAddress);
-        iDeliveryAddress = new SSAddress(iCustomer.iDeliveryAddress);
+        iInvoiceAddress = iCustomer.iInvoiceAddress == null ? null : new SSAddress(iCustomer.iInvoiceAddress);
+        iDeliveryAddress = iCustomer.iDeliveryAddress == null ? null : new SSAddress(iCustomer.iDeliveryAddress);
     }
 
     // ////////////////////////////////////////////////////
