@@ -709,8 +709,7 @@ public class BokfriCli implements Runnable {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(false, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
-                DemoCompanyService service = new DemoCompanyService(runtime.database());
-                List<SSNewCompany> matches = service.findDemoCompanies();
+                List<SSNewCompany> matches = runtime.findDemoCompanies();
                 boolean selectedDemoWillBeRemoved = context.companyId() != null
                         && matches.stream().anyMatch(company -> company.getId().equals(context.companyId()));
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -727,9 +726,10 @@ public class BokfriCli implements Runnable {
                             + DemoCompanyService.NAME + ". Use --commit to apply.");
                     return 0;
                 }
-                DemoCompanyResult created = service.recreate();
-                Integer selectedYearId = runtime.database().getCurrentYear() == null
-                        ? null : runtime.database().getCurrentYear().getId();
+                DemoCompanyResult created = runtime.recreateDemo();
+                Integer selectedYearId = runtime.getYears(created.company()).stream()
+                        .max(java.util.Comparator.comparing(SSNewAccountingYear::getLocalTo))
+                        .map(SSNewAccountingYear::getId).orElse(null);
                 if (selectedDemoWillBeRemoved && root.companyId == null) {
                     SSDBConfig.setCompanyId(root.selectionFile(), created.company().getId());
                     SSDBConfig.setYearId(root.selectionFile(), created.company().getId(), selectedYearId);

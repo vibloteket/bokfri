@@ -179,6 +179,25 @@ public final class BokfriRuntime implements AutoCloseable {
         return isNormalized() ? normalizedStore.getCompanies() : database().getCompanies();
     }
 
+    /** Lists only companies matching both a recognized demo name and corporate ID. */
+    public List<SSNewCompany> findDemoCompanies() throws SQLException {
+        return getCompanies().stream()
+                .filter(org.fribok.bookkeeping.service.demo.DemoCompanyService::isRecognizedDemo).toList();
+    }
+
+    /** Replaces recognized demos; normalized removal and creation commit in one transaction. */
+    public org.fribok.bookkeeping.service.demo.DemoCompanyResult recreateDemo() throws SQLException {
+        if (!isNormalized()) {
+            return new org.fribok.bookkeeping.service.demo.DemoCompanyService(database()).recreate();
+        }
+        accountPlanCatalog();
+        var result = new org.fribok.bookkeeping.service.demo.NormalizedDemoCompanyService(connection).recreate();
+        normalizedStore.setCurrentCompany(result.company());
+        normalizedStore.setCurrentYear(normalizedStore.getYears().stream()
+                .max(java.util.Comparator.comparing(SSNewAccountingYear::getLocalTo)).orElseThrow());
+        return result;
+    }
+
     /**
      * Creates a company in the active storage; normalized settings and lookup defaults commit atomically.
      * @param company validated company creation settings

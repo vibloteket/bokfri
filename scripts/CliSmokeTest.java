@@ -53,10 +53,46 @@ public final class CliSmokeTest {
             runBackupFlow(temporary);
             runErrorFlow(temporary);
             runNormalizedFinancialPdfFlow(temporary);
+            runNormalizedDemoFlow(temporary);
             System.out.println("Bokfri CLI black-box smoke test passed: " + launcher.getFileName());
         } finally {
             deleteRecursively(temporary);
         }
+    }
+
+    private static void runNormalizedDemoFlow(Path temporary) throws Exception {
+        String company = Files.readString(temporary.resolve("created-company.txt"));
+        String year = Files.readString(temporary.resolve("created-year.txt"));
+        Result original = cli("--company-id", company, "--year-id", year, "--format", "text", "trial-balance");
+        original.success();
+        Result catalogue = cli("--format", "text", "account-plan", "list");
+        catalogue.success();
+        byte[] selection = Files.readAllBytes(config);
+        Result preview = cli("--company-id", company, "--format", "json", "demo", "recreate");
+        preview.success();
+        require(preview.stdout.contains("\"commit\":false"), "normalized demo preview wrote data");
+        for (int attempt = 0; attempt < 2; attempt++) {
+            Result recreated = cli("--company-id", company, "--format", "json", "demo", "recreate", "--commit");
+            recreated.success();
+            recreated.jsonObject();
+            require(recreated.stdout.contains("\"vouchers\":10") && recreated.stdout.contains("\"invoices\":2"),
+                    "normalized demo has incorrect accounting/register counts");
+            String demo = Integer.toString(firstInt(recreated.stdout, "companyId"));
+            Result years = cli("--company-id", demo, "--format", "json", "year", "list");
+            years.success();
+            require(allInts(years.stdout, "id").size() == 2, "normalized demo must have two years");
+            Result invoices = cli("--company-id", demo, "--format", "json", "invoice", "list");
+            invoices.success();
+            require(firstInt(invoices.stdout, "count") == 2, "normalized demo must have two invoices");
+            Result unchanged = cli("--company-id", company, "--year-id", year, "--format", "text", "trial-balance");
+            unchanged.success();
+            require(original.stdout.equals(unchanged.stdout), "demo replacement changed unrelated accounting");
+        }
+        Result unchangedCatalogue = cli("--format", "text", "account-plan", "list");
+        unchangedCatalogue.success();
+        require(catalogue.stdout.equals(unchangedCatalogue.stdout), "demo replacement changed global templates");
+        require(java.util.Arrays.equals(selection, Files.readAllBytes(config)),
+                "explicit demo recreation changed saved company/year configuration");
     }
 
     private static void runNormalizedFinancialPdfFlow(Path temporary) throws Exception {

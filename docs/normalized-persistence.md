@@ -358,8 +358,48 @@ built-in fallback definitions; missing fallback definitions are inserted without
 replacing existing descriptions or currency rates. Company reads restore those
 references, VAT period and contact person after reopening. Failed writes roll back
 both the company and newly inserted lookups; creation does not change the saved
-company/year selection. Demo generation and normalized GUI activation remain
-separate follow-up work.
+company/year selection. Normalized GUI activation remains separate follow-up work.
+
+## Explicit demo recreation runtime support
+
+`demo recreate` previews recognized demo removals and the replacement without
+writing; `demo recreate --commit` also supports normalized format 3 with V19.
+Recognition requires **both** the exact demo name and corporate ID (current or
+legacy identity). A matching corporate ID alone never authorizes removal. A
+non-demo company already using the replacement name causes an error instead of
+being removed or overwritten.
+
+Normalized recreation validates the global `BAS 2026 - Aktiebolag` template and
+required posting accounts before removal. It creates independent accounting years
+for July 2025–June 2026 and July 2026–June 2027, six historical and four current-year
+vouchers, carried opening balances, two customers/suppliers/products, two booked
+invoices and one booked customer payment. Shared seed factories preserve the legacy
+demo content and explicitly provide company defaults (including product units,
+payment account mappings and the empty difference-voucher snapshot). Invoice/payment
+voucher calculations receive the account plan and rounding settings explicitly;
+normalized reads/writes never open legacy object storage.
+
+All recognized demo graphs are removed and the replacement is inserted in **one
+SQL transaction**, without disabling constraints/triggers or making a temporary
+fallback company. Existing global templates and shared lookup rows are not deleted.
+Company/year IDs are allocated across the current database before removal. The
+company-deletion writer covers every company-owned normalized domain in dependency
+order, including document rows/snapshots, periodic invoice instances, payments,
+registers, reports, templates, dimensions and accounting years. Additional restrictive
+foreign keys fail the operation rather than being bypassed or silently detached.
+
+A failure rolls back both the old demo removal and every replacement row; runtime
+company/year selection remains valid and retry is possible in the same runtime.
+After success runtime selection points to the replacement/current demo year. Saved
+configuration changes only under the existing CLI rule: when the saved selection
+was a removed demo and no explicit `--company-id` override was supplied, select the
+replacement/current year. Ordinary saved selections and explicit overrides do not
+write configuration. Empty and demo-only normalized databases are supported, but
+nothing is automatically seeded at startup.
+
+V18 preview remains read-only; commit fails through the existing V19 catalogue
+guard without schema or data changes. This does not enable normalized GUI startup
+or retire the remaining legacy persistence paths in issue #75.
 
 ## Accounting-year creation runtime support
 

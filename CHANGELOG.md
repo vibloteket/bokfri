@@ -19,6 +19,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable normalized `demo recreate` preview/commit using the shared two-year demo definition, explicit invoice/payment calculations and an atomic removal/replacement transaction. Complete company-graph deletion across normalized domains while preserving unrelated companies, global templates and shared lookups; retain safe identity matching, saved-selection rules, V19 guards and same-runtime rollback/retry (#75).
+
 - Add explicit offline `database recover-account-plans` for normalized V18 databases, using an operator-trusted, SHA-256 verified legacy rollback ZIP. Apply V19 to a copy of the current normalized database, preserve and fingerprint every pre-existing SQL table and evolved accounting data, verify disk round-trips, and activate with physical rollback artifacts. Require `--commit`, reject dirty/partial/already-upgraded catalogues, and keep ordinary startup unchanged (#75).
 
 - Enable normalized `year create` from V19 global templates with shared date/overlap validation, independent account-plan copies and globally allocated year IDs. Save the new year/plan/accounts atomically, preserve existing years/templates and saved selections, and retain the safe guard for older normalized catalogues (#75).
