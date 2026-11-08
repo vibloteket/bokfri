@@ -35,6 +35,15 @@ public class SSSupplierCreditInvoice extends SSSupplierInvoice {
      */
     public SSSupplierCreditInvoice() {}
 
+    private SSSupplierCreditInvoice(boolean legacyDefaults) {
+        super(legacyDefaults);
+    }
+
+    /** @return an empty supplier credit for typed hydration, without legacy defaults or snapshots */
+    public static SSSupplierCreditInvoice forPersistence() {
+        return new SSSupplierCreditInvoice(false);
+    }
+
     /**
      *
      * @param iSSSupplierCreditInvoice
@@ -230,7 +239,8 @@ public class SSSupplierCreditInvoice extends SSSupplierInvoice {
 
         // Get the total sum for the sales
         BigDecimal iTotalSum = SSSupplierInvoiceMath.getTotalSum(this);
-        BigDecimal iCorrectionSum = SSVoucherMath.getCreditMinusDebetSum(iCorrection, iAccountPlan.getAccounts());
+        BigDecimal iCorrectionSum = iCorrection == null ? BigDecimal.ZERO
+                : SSVoucherMath.getCreditMinusDebetSum(iCorrection, iAccountPlan.getAccounts());
 
         iTotalSum = iTotalSum.subtract(iCorrectionSum);
 
@@ -249,8 +259,10 @@ public class SSSupplierCreditInvoice extends SSSupplierInvoice {
                 iTaxSum);
 
         // Add all rows from the correction voucher
-        for (SSVoucherRow iVoucherRow : iCorrection.getRows()) {
-            iVoucher.addVoucherRow(new SSVoucherRow(iVoucherRow));
+        if (iCorrection != null) {
+            for (SSVoucherRow iVoucherRow : iCorrection.getRows()) {
+                iVoucher.addVoucherRow(new SSVoucherRow(iVoucherRow));
+            }
         }
 
         // Add all products

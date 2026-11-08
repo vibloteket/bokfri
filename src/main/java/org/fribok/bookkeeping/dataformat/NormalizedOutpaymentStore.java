@@ -96,7 +96,7 @@ public final class NormalizedOutpaymentStore {
             statement.setInt(1, companyLegacyId);
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
-                    SSOutpayment outpayment = new SSOutpayment();
+                    SSOutpayment outpayment = SSOutpayment.forPersistence();
                     int number = result.getInt(2);
                     outpayment.setNumber(result.wasNull() ? null : number);
                     outpayment.setLocalDate(result.getObject(3, LocalDate.class));

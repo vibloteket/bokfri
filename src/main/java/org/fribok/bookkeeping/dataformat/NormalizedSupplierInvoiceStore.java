@@ -223,7 +223,7 @@ public final class NormalizedSupplierInvoiceStore {
                 while (result.next()) {
                     @SuppressWarnings("unchecked")
                     T invoice = (T) (kind == Kind.CREDIT
-                            ? new SSSupplierCreditInvoice() : new SSSupplierInvoice());
+                            ? SSSupplierCreditInvoice.forPersistence() : SSSupplierInvoice.forPersistence());
                     int column = 1;
                     long id = result.getLong(column++);
                     int number = result.getInt(column++);

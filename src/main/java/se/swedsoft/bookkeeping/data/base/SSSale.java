@@ -84,11 +84,20 @@ public abstract class SSSale implements SSTableSearchable, Serializable {
      * Default constructor
      */
     public SSSale() {
-        iDate = SSDateUtil.today();
-        iInvoiceAddress = new SSAddress();
-        iDeliveryAddress = new SSAddress();
+        this(true);
+    }
+
+    /** Initializes storage containers without selected-company or date defaults when false. */
+    protected SSSale(boolean legacyDefaults) {
+        iDate = legacyDefaults ? SSDateUtil.today() : null;
+        iInvoiceAddress = legacyDefaults ? new SSAddress() : null;
+        iDeliveryAddress = legacyDefaults ? new SSAddress() : null;
         iRows = new LinkedList<>();
         iPrinted = false;
+        if (!legacyDefaults) {
+            iDefaultAccounts = new HashMap<>();
+            return;
+        }
         SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
 
         if (iCompany != null) {
@@ -149,8 +158,8 @@ public abstract class SSSale implements SSTableSearchable, Serializable {
         iEuSaleYhirdPartCommodity = iSale.iEuSaleYhirdPartCommodity;
         iPrinted = iSale.iPrinted;
         iCustomer = null;
-        iInvoiceAddress = new SSAddress(iSale.iInvoiceAddress);
-        iDeliveryAddress = new SSAddress(iSale.iDeliveryAddress);
+        iInvoiceAddress = iSale.iInvoiceAddress == null ? null : new SSAddress(iSale.iInvoiceAddress);
+        iDeliveryAddress = iSale.iDeliveryAddress == null ? null : new SSAddress(iSale.iDeliveryAddress);
         iRows = new LinkedList<>();
         iDefaultAccounts = new HashMap<>();
 

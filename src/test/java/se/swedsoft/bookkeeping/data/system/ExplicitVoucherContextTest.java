@@ -156,6 +156,44 @@ class ExplicitVoucherContextTest {
     }
 
     @Test
+    void absentCorrectionsAndDifferencesBookLikeEmptySnapshotsWithoutCreatingThem() throws Exception {
+        try (LegacyState state = new LegacyState()) {
+            Fixture fixture = fixture();
+            SSSupplierInvoice supplier = new SSSupplierInvoice();
+            supplier(supplier, fixture, 3);
+            SSSupplierCreditInvoice credit = new SSSupplierCreditInvoice();
+            supplier(credit, fixture, 4);
+            SSInpayment incoming = new SSInpayment();
+            incoming.setDefaultAccounts(fixture.defaults());
+            SSOutpayment outgoing = new SSOutpayment();
+            outgoing.setDefaultAccounts(fixture.defaults());
+            List<Supplier<SSVoucher>> calculations = List.of(
+                    () -> supplier.generateVoucher(fixture.plan(), fixture.projects(), fixture.units()),
+                    () -> credit.generateVoucher(fixture.plan(), fixture.projects(), fixture.units()),
+                    () -> incoming.generateVoucher(fixture.plan(), fixture.projects(), fixture.units()),
+                    () -> outgoing.generateVoucher(fixture.plan(), fixture.projects(), fixture.units()));
+            supplier.setCorrection(new SSVoucher(0, null));
+            credit.setCorrection(new SSVoucher(0, null));
+            incoming.setDifference(new SSVoucher(0, null));
+            outgoing.setDifference(new SSVoucher(0, null));
+            state.poison();
+            List<Object> expected = calculations.stream().map(call -> snapshot(call.get())).toList();
+            supplier.setCorrection(null);
+            credit.setCorrection(null);
+            incoming.setDifference(null);
+            outgoing.setDifference(null);
+            for (int index = 0; index < calculations.size(); index++) {
+                assertThat(snapshot(calculations.get(index).get())).as("absent auxiliary family " + index)
+                        .isEqualTo(expected.get(index));
+            }
+            assertThat(supplier.getCorrection()).isNull();
+            assertThat(credit.getCorrection()).isNull();
+            assertThat(incoming.getStoredDifference()).isNull();
+            assertThat(outgoing.getStoredDifference()).isNull();
+        }
+    }
+
+    @Test
     void paymentDifferencesKeepDistinctRawDimensionsInsteadOfCollapsingThroughEmptyLegacyLookups()
             throws Exception {
         try (LegacyState state = new LegacyState()) {

@@ -731,6 +731,43 @@ Other unported PDF commands remain unsupported on normalized storage. This slice
 does not activate normalized storage in the GUI or retire legacy persistence;
 issue #75 remains open.
 
+### Explicit invoice and payment hydration
+
+The four normalized document stores now hydrate customer invoices/credits, supplier
+invoices/credits, inpayments and outpayments through dedicated `forPersistence()`
+factories. These initialize empty row/default-account containers without invoking
+selected-company lookups, today's date, default addresses, currency defaults or
+synthetic voucher headers. Readers then populate the explicit SQL fields and only
+restore voucher/correction/difference snapshots when their header rows exist.
+Nullable invoice types are assigned explicitly, including SQL null.
+
+This is a hydration boundary, not a change to legacy business initialization.
+Public no-argument constructors still create their existing defaults. Lazy business
+getters also remain unchanged: use `getStoredType()`, `getStoredVoucher()` and
+`getStoredDifference()` where persistence absence matters rather than requesting a
+business default or generating a voucher. Document copies now preserve null
+voucher/correction/difference snapshots and sale addresses, while still deep-copying
+present values. This avoids null dereferences when normalized unbooked invoices
+are used to create credits. Explicit supplier and payment voucher calculations
+treat an absent correction/difference as zero rows and zero adjustment, without
+creating or storing an empty auxiliary snapshot. Copy constructors otherwise retain their existing
+business initialization; they and no-argument entity lookups are not generally
+isolated from legacy state. Normalized
+GUI activation remains disabled; issue #75 is not complete.
+
+`NormalizedDocumentHydrationTest` blocks every legacy JDBC call while inserting
+and loading all six document kinds, verifies nullable fields, absent addresses and
+snapshots, then books and reloads explicit main/payment-difference snapshots with
+null dates. It also guards the existing legacy constructor snapshot defaults. The
+regression fails against the old store constructors on a legacy JDBC lookup;
+existing rich round-trip fixtures continue covering populated rows, dimensions,
+registers and correction snapshots. Additional copy tests cover absent optional
+state and independent copies of present snapshots; the packaged CLI smoke covers
+credit creation from unbooked normalized invoices. `ExplicitVoucherContextTest`
+compares absent auxiliary snapshots against empty ones for both supplier document
+kinds and both payment kinds, with legacy JDBC blocked, and verifies the absent
+snapshots remain absent after booking calculations.
+
 ## Definition of done for issue #75
 
 Issue #75 is complete only when new databases contain no domain `OTHER` columns, supported legacy databases migrate through staging with verified rollback artifacts, every supported persisted domain is represented explicitly, normal GUI/CLI runtime does not deserialize legacy domain objects, and accounting behavior plus relationships match across migration fixtures on all supported platforms.
