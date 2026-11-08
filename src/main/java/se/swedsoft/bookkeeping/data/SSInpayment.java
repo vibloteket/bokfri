@@ -52,7 +52,15 @@ public class SSInpayment implements SSTableSearchable, Serializable {
      * Default constructor
      */
     public SSInpayment() {
+        this(true);
+    }
+
+    private SSInpayment(boolean legacyDefaults) {
         iRows = new LinkedList<>();
+        if (!legacyDefaults) {
+            iDefaultAccounts = new HashMap<>();
+            return;
+        }
         iVoucher = new SSVoucher();
         iDifference = new SSVoucher();
         iEntered = false;
@@ -63,6 +71,11 @@ public class SSInpayment implements SSTableSearchable, Serializable {
         }
 
         // doAutoIncrecement();
+    }
+
+    /** @return an empty payment for typed hydration, without company defaults or voucher snapshots */
+    public static SSInpayment forPersistence() {
+        return new SSInpayment(false);
     }
 
     /**
@@ -97,8 +110,8 @@ public class SSInpayment implements SSTableSearchable, Serializable {
         iDate = iInpayment.iDate;
         iText = iInpayment.iText;
         iEntered = iInpayment.iEntered;
-        iVoucher = new SSVoucher(iInpayment.iVoucher);
-        iDifference = new SSVoucher(iInpayment.iDifference);
+        iVoucher = iInpayment.iVoucher == null ? null : new SSVoucher(iInpayment.iVoucher);
+        iDifference = iInpayment.iDifference == null ? null : new SSVoucher(iInpayment.iDifference);
         iRows = new LinkedList<>();
         iDefaultAccounts = new HashMap<>();
 
@@ -419,7 +432,8 @@ public class SSInpayment implements SSTableSearchable, Serializable {
         BigDecimal iSum = SSInpaymentMath.getSum(this);
         BigDecimal iCurrencyRateDifference = SSInpaymentMath.getCurrencyRateDifference(
                 this);
-        BigDecimal iDifferenceSum = SSVoucherMath.getCreditMinusDebetSum(iDifference, iAccountPlan.getAccounts());
+        BigDecimal iDifferenceSum = iDifference == null ? BigDecimal.ZERO
+                : SSVoucherMath.getCreditMinusDebetSum(iDifference, iAccountPlan.getAccounts());
 
         iSum = iSum.subtract(iCurrencyRateDifference);
         iSum = iSum.subtract(iDifferenceSum);
@@ -444,8 +458,10 @@ public class SSInpayment implements SSTableSearchable, Serializable {
         }
 
         // Add all rows from the difference voucher
-        for (SSVoucherRow iVoucherRow : iDifference.getRows()) {
-            iVoucher.addVoucherRow(new SSVoucherRow(iVoucherRow));
+        if (iDifference != null) {
+            for (SSVoucherRow iVoucherRow : iDifference.getRows()) {
+                iVoucher.addVoucherRow(new SSVoucherRow(iVoucherRow));
+            }
         }
 
         // Add all sales payments

@@ -59,6 +59,15 @@ public class SSInvoice extends SSSale {
      * Default constructor
      */
     public SSInvoice() {
+        this(true);
+    }
+
+    /** Uses no legacy defaults when constructing an object for typed storage hydration. */
+    protected SSInvoice(boolean legacyDefaults) {
+        super(legacyDefaults);
+        if (!legacyDefaults) {
+            return;
+        }
         iType = SSInvoiceType.NORMAL;
         iCurrencyRate = new BigDecimal(1);
         iVoucher = new SSVoucher();
@@ -71,6 +80,15 @@ public class SSInvoice extends SSSale {
         if (iPaymentTerm != null) {
             iPaymentDay = iPaymentTerm.addDaysToLocalDate(SSDateUtil.today());
         }
+    }
+
+    /**
+     * Creates empty storage containers, with no selected-company, clock or voucher defaults.
+     * Populate persisted fields before business use; absent fields and snapshots remain null.
+     * @return an invoice for typed persistence hydration only
+     */
+    public static SSInvoice forPersistence() {
+        return new SSInvoice(false);
     }
 
     /**
@@ -149,7 +167,7 @@ public class SSInvoice extends SSSale {
         iNumReminders = iInvoice.iNumReminders;
         iOCRNumber = iInvoice.iOCRNumber;
         iOrderNumbers = iInvoice.iOrderNumbers;
-        iVoucher = new SSVoucher(iInvoice.iVoucher);
+        iVoucher = iInvoice.iVoucher == null ? null : new SSVoucher(iInvoice.iVoucher);
     }
 
     // //////////////////////////////////////////////////

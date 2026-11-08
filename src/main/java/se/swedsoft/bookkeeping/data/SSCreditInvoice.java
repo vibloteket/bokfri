@@ -38,8 +38,20 @@ public class SSCreditInvoice extends SSInvoice {
      * Default constructor
      */
     public SSCreditInvoice() {
-        iCurrencyRate = new BigDecimal(1);
-        iVoucher = new SSVoucher();
+        this(true);
+    }
+
+    private SSCreditInvoice(boolean legacyDefaults) {
+        super(legacyDefaults);
+        if (legacyDefaults) {
+            iCurrencyRate = new BigDecimal(1);
+            iVoucher = new SSVoucher();
+        }
+    }
+
+    /** @return an empty credit invoice for typed hydration, without legacy defaults or snapshots */
+    public static SSCreditInvoice forPersistence() {
+        return new SSCreditInvoice(false);
     }
 
     /**
@@ -113,7 +125,7 @@ public class SSCreditInvoice extends SSInvoice {
         iCreditingNr = iInvoice.iCreditingNr;
         iCurrencyRate = iInvoice.iCurrencyRate;
         iCrediting = iInvoice.iCrediting;
-        iVoucher = new SSVoucher(iInvoice.iVoucher);
+        iVoucher = iInvoice.iVoucher == null ? null : new SSVoucher(iInvoice.iVoucher);
     }
 
     // //////////////////////////////////////////////////

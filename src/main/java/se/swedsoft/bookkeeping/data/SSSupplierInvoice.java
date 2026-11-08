@@ -77,7 +77,16 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
      *
      */
     public SSSupplierInvoice() {
+        this(true);
+    }
+
+    /** Uses no legacy defaults when constructing an object for typed storage hydration. */
+    protected SSSupplierInvoice(boolean legacyDefaults) {
         iRows = new LinkedList<>();
+        if (!legacyDefaults) {
+            iDefaultAccounts = new HashMap<>();
+            return;
+        }
         iDate = getLastLocalDate();
         iDueDate = getLastLocalDate();
         iCurrencyRate = new BigDecimal(1);
@@ -96,6 +105,11 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
         if (iCompany != null) {
             iCurrency = iCompany.getCurrency();
         }
+    }
+
+    /** @return an empty supplier invoice for typed hydration, without legacy defaults or snapshots */
+    public static SSSupplierInvoice forPersistence() {
+        return new SSSupplierInvoice(false);
     }
 
     /**
@@ -157,8 +171,8 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
         iEntered = iSupplierInvoice.iEntered;
         iBGCEntered = iSupplierInvoice.iBGCEntered;
 
-        iVoucher = new SSVoucher(iSupplierInvoice.iVoucher);
-        iCorrection = new SSVoucher(iSupplierInvoice.iCorrection);
+        iVoucher = iSupplierInvoice.iVoucher == null ? null : new SSVoucher(iSupplierInvoice.iVoucher);
+        iCorrection = iSupplierInvoice.iCorrection == null ? null : new SSVoucher(iSupplierInvoice.iCorrection);
 
         iSupplier = iSupplierInvoice.iSupplier;
         iDefaultAccounts = new HashMap<>();
@@ -746,7 +760,8 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
 
         // Get the total sum for the sales
         BigDecimal iTotalSum = SSSupplierInvoiceMath.getTotalSum(this);
-        BigDecimal iCorrectionSum = SSVoucherMath.getCreditMinusDebetSum(iCorrection, iAccountPlan.getAccounts());
+        BigDecimal iCorrectionSum = iCorrection == null ? BigDecimal.ZERO
+                : SSVoucherMath.getCreditMinusDebetSum(iCorrection, iAccountPlan.getAccounts());
 
         iTotalSum = iTotalSum.subtract(iCorrectionSum);
 
@@ -765,8 +780,10 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
                 null);
 
         // Add all rows from the correction voucher
-        for (SSVoucherRow iVoucherRow : iCorrection.getRows()) {
-            iVoucher.addVoucherRow(new SSVoucherRow(iVoucherRow));
+        if (iCorrection != null) {
+            for (SSVoucherRow iVoucherRow : iCorrection.getRows()) {
+                iVoucher.addVoucherRow(new SSVoucherRow(iVoucherRow));
+            }
         }
 
         // Add all products

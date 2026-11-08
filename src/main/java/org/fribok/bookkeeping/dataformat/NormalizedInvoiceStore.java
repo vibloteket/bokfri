@@ -216,7 +216,7 @@ public final class NormalizedInvoiceStore {
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
                     @SuppressWarnings("unchecked")
-                    T sale = (T) (kind == Kind.CREDIT ? new SSCreditInvoice() : new SSInvoice());
+                    T sale = (T) (kind == Kind.CREDIT ? SSCreditInvoice.forPersistence() : SSInvoice.forPersistence());
                     int column = 1;
                     long id = result.getLong(column++);
                     int number = result.getInt(column++);
@@ -246,9 +246,7 @@ public final class NormalizedInvoiceStore {
                     sale.setEuSaleYhirdPartCommodity(result.getBoolean(column++));
                     sale.setPrinted(result.getBoolean(column++));
                     String type = result.getString(column++);
-                    if (type != null) {
-                        sale.setType(SSInvoiceType.valueOf(type));
-                    }
+                    sale.setType(type == null ? null : SSInvoiceType.valueOf(type));
                     sale.setCurrencyRate(result.getBigDecimal(column++));
                     sale.setYourOrderNumber(result.getString(column++));
                     sale.setOCRNumber(result.getString(column++));

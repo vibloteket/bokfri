@@ -76,7 +76,7 @@ public final class NormalizedInpaymentStore {
             statement.setInt(1, companyLegacyId);
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
-                    SSInpayment inpayment = new SSInpayment();
+                    SSInpayment inpayment = SSInpayment.forPersistence();
                     int number = result.getInt(2);
                     inpayment.setNumber(result.wasNull() ? null : number);
                     inpayment.setLocalDate(result.getObject(3, LocalDate.class));
