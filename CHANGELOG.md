@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Infrastructure
 
+- Enable normalized `year create` from V19 global templates with shared date/overlap validation, independent account-plan copies and globally allocated year IDs. Save the new year/plan/accounts atomically, preserve existing years/templates and saved selections, and retain the safe guard for older normalized catalogues (#75).
+
 - Enable normalized global `account-plan list` and XLSX export/import preview/apply using the V19 template catalogue, without company/year selection. Preserve detached template metadata, ordered accounts/flags and the existing spreadsheet format; apply imports atomically with duplicate-name and overwrite protection. Older normalized catalogues fail clearly without schema changes or replacement templates (#75).
 
 - Preserve global reusable account-plan templates in normalized migration V19, separately from accounting-year plan copies. Verify template metadata, ordered accounts, codes and flags before commit, after reopen and after activation; reject inconsistent source keys/accounts and report verified catalogue counts. Runtime catalogue/year-creation support and upgrades of earlier normalized snapshots remain follow-up work (#75).

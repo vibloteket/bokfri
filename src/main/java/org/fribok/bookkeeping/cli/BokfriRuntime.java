@@ -260,6 +260,40 @@ public final class BokfriRuntime implements AutoCloseable {
         }
     }
 
+    /**
+     * Creates a year for the selected company without changing the year selection or global template.
+     * @param from first day, inclusive
+     * @param to last day, inclusive
+     * @param plan selected reusable template
+     * @return persisted year with its own account-plan copy
+     * @throws SQLException if normalized persistence fails
+     * @throws IllegalArgumentException if dates/template are invalid or the period overlaps
+     */
+    public SSNewAccountingYear createAccountingYear(java.time.LocalDate from, java.time.LocalDate to,
+            SSAccountPlan plan) throws SQLException {
+        if (!isNormalized()) {
+            return new org.fribok.bookkeeping.service.year.AccountingYearService(database()).create(from, to, plan);
+        }
+        requireCurrentCompany();
+        accountPlanCatalog();
+        SSNewAccountingYear year = org.fribok.bookkeeping.service.year.AccountingYearService.prepare(
+                from, to, plan, normalizedStore.getYears());
+        year.setId(normalizedStore.nextAccountingYearId());
+        year.setVouchers(new java.util.ArrayList<>());
+        try {
+            normalizedStore.addAccountingYear(year);
+            connection.commit();
+            return year;
+        } catch (SQLException | RuntimeException exception) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollback) {
+                exception.addSuppressed(rollback);
+            }
+            throw exception;
+        }
+    }
+
     /** Lists the accounting years of a company from the active storage. */
     public List<SSNewAccountingYear> getYears(SSNewCompany company) throws SQLException {
         if (isNormalized()) {
