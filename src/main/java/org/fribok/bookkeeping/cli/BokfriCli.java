@@ -10,6 +10,7 @@ import org.fribok.bookkeeping.app.Version;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.DataMigrationService;
 import org.fribok.bookkeeping.dataformat.NormalizedMigrationService;
+import org.fribok.bookkeeping.dataformat.NormalizedCatalogRecoveryService;
 import org.fribok.bookkeeping.service.backup.BackupDetails;
 import org.fribok.bookkeeping.service.backup.BackupRestorePlan;
 import org.fribok.bookkeeping.service.backup.BackupService;
@@ -424,7 +425,8 @@ public class BokfriCli implements Runnable {
     }
 
     @Command(mixinStandardHelpOptions = true, name = "database", description = "Inspect and migrate the database format",
-            subcommands = {DatabaseStatus.class, DatabaseMigrate.class, DatabaseNormalize.class})
+            subcommands = {DatabaseStatus.class, DatabaseMigrate.class, DatabaseNormalize.class,
+                    DatabaseRecoverAccountPlans.class})
     static class DatabaseCommand extends CliCommand implements Runnable {
         @CliMetadata.Spec CliContext spec;
         @Override public void run() {
@@ -534,6 +536,41 @@ public class BokfriCli implements Runnable {
                         + " to format " + DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION
                         + "\nBackup: " + result.activation().rollbackArchive()
                         + "\nRetained source: " + result.activation().retainedSource());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "recover-account-plans",
+            description = "Offline V18 catalogue recovery from a trusted legacy rollback ZIP (requires --commit)")
+    static class DatabaseRecoverAccountPlans extends DatabaseSubcommand {
+        @Option(names = "--trusted-legacy-backup", required = true,
+                description = "Trusted legacy rollback ZIP; requires Java object deserialization")
+        java.nio.file.Path trustedBackup;
+        @Option(names = "--sha256", required = true,
+                description = "Expected SHA-256 of the trusted ZIP; integrity is not proof of provenance")
+        String sha256;
+        @Option(names = "--commit", description = "Confirm offline recovery and database replacement")
+        boolean commit;
+
+        @Override public Integer call() {
+            if (!commit) {
+                throw new CliException("COMMIT_REQUIRED", "Catalogue recovery requires explicit --commit; "
+                        + "close Bokfri and verify the legacy backup's provenance first");
+            }
+            BokfriCli root = root();
+            try {
+                var result = new NormalizedCatalogRecoveryService(java.time.Clock.systemUTC())
+                        .recover(root.resolveContext(false, false).dataDir(), trustedBackup, sha256);
+                root.output(Map.of("recovered", true,
+                        "legacyBackupSha256", result.legacyBackupSha256(),
+                        "plans", result.catalogue().plans(), "accounts", result.catalogue().accounts(),
+                        "backup", result.activation().rollbackArchive().toString(),
+                        "retainedSource", result.activation().retainedSource().toString()),
+                        "Account-plan catalogue recovered; current normalized data preserved. Backup: "
+                                + result.activation().rollbackArchive());
                 return 0;
             } catch (Exception exception) {
                 throw databaseFailure(exception);

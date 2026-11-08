@@ -72,6 +72,12 @@ public final class CliSmokeTest {
         Result status = cli("--format", "json", "database", "status");
         status.success();
         require(status.stdout.contains("\"format\":3"), "database was not normalized");
+        Result recoveryWithoutCommit = cli("--format", "json", "database", "recover-account-plans",
+                "--trusted-legacy-backup", temporary.resolve("untrusted.zip").toString(),
+                "--sha256", "0".repeat(64));
+        require(recoveryWithoutCommit.exitCode == 1 && recoveryWithoutCommit.stderr.contains("COMMIT_REQUIRED"),
+                "catalogue recovery did not require explicit confirmation");
+        recoveryWithoutCommit.stderrJsonObject();
         Result catalogue = cli("--format", "json", "account-plan", "list");
         catalogue.success();
         catalogue.jsonObject();

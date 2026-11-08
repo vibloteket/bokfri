@@ -289,10 +289,64 @@ format-3 snapshots fail with `NORMALIZED_ACCOUNT_PLAN_CATALOG_REQUIRED` before
 writing output or changing data/schema; they are not silently upgraded or seeded
 with replacement templates. Their original global catalogue was not included in
 those snapshots. Recovery needs the retained legacy source/backup and must retain
-any newer accounting changes in the active normalized database. A safe explicit
-upgrade path and normalized GUI activation remain follow-up work.
+any newer accounting changes in the active normalized database. The explicit V18
+recovery path below supplies that catalogue; normalized GUI activation remains follow-up work.
 Normal startup and an already-normalized `database normalize` no-op do not rewrite
 such databases.
+
+## Explicit catalogue recovery for earlier normalized V18 databases
+
+Close every Bokfri process and obtain exclusive ownership of the data directory.
+Use the **original, operator-trusted legacy rollback ZIP** retained by the original
+normalization, not an older application backup chosen merely because its name looks
+similar. Verify its provenance and independently establish its SHA-256 first:
+
+```sh
+bokfri --data-dir /path/to/data database recover-account-plans \
+  --trusted-legacy-backup /path/to/bokfri-before-normalized-TIMESTAMP.zip \
+  --sha256 EXPECTED_64_HEX_DIGIT_SHA256 --commit
+```
+
+This is a recovery operation, not normal startup or a generic schema upgrade.
+Without `--commit` it does nothing. It accepts only format 3 with exactly V18
+history, validates all installed migration checksums in staging, and never
+replaces an existing/partial V19 catalogue. Missing or future schemas are rejected.
+The legacy ZIP must contain a complete, cleanly shut down HSQLDB catalogue with
+`JFSDB.*` files at its root (or under `db/`), `modified=no`, and no lock/log file.
+Arbitrary application/JAR archives and archives needing crash recovery are not
+accepted. A clean old-engine catalogue is upgraded only inside the disposable copy.
+
+**Trust boundary:** the operation deserializes Java objects from the extracted
+legacy copy. A matching SHA-256 proves byte integrity, **not authenticity or that
+the backup belongs to this database**. The operator must establish both provenance
+and the correct original source. Never use an untrusted ZIP. Only global account-plan
+templates are read from it; no company, year, voucher, balance or document data is
+restored from legacy storage. The supplied ZIP remains unchanged.
+
+The service copies the **current** normalized catalogue, applies V19 only there,
+and converts/verifies the global templates. A deterministic SQL fingerprint covers
+every pre-existing PUBLIC table, including all V1–V18 history rows, nullable/binary
+values and duplicate rows. Unsupported object/LOB SQL columns fail closed. Existing
+accounting data can therefore have evolved since the original normalization.
+The staged catalogue is shut down and reopened for row/catalogue verification.
+Active physical file hashes are checked again before activation to reject changes
+during staging; this is an additional guard, not a replacement for exclusive access.
+
+Activation uses the existing verified physical rollback ZIP plus retained source
+folder and directory-swap mechanism. Here the retained source is the **pre-recovery
+normalized** database, not a legacy replacement. JSON reports the source digest,
+verified plan/account counts, rollback ZIP and retained source path. Reopened active
+data and templates are checked again. Saved company/year configuration is untouched.
+After success the existing catalogue commands and `year create` work normally.
+
+Failures before activation leave the active files untouched and retain staging for
+inspection. Pending staging blocks retry. Inspect it and move it outside the data
+directory before deliberately retrying; do not discard recovery evidence blindly.
+Successful prior migrations' retained sources are permitted, since they are normal
+rollback artifacts. If activation itself is interrupted, use the existing manual
+migration recovery procedure and the preserved normalized source/ZIP; do not run
+normalization again against an old legacy backup. This command does not enable the GUI
+or remove the remaining legacy persistence paths in issue #75.
 
 ## Company creation runtime support
 
