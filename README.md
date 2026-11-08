@@ -14,6 +14,7 @@ abonnemang eller konto och bokföringsdata lagras inte i någon molntjänst.
 **[Webbplats](https://bokfri.viblo.se/) ·
 [Ladda ner](https://bokfri.viblo.se/download/) ·
 [Användarhjälp](https://bokfri.viblo.se/help/) ·
+[Forum](https://forum.bokfri.viblo.se/) ·
 [Rapportera problem](https://github.com/vibloteket/bokfri/issues)**
 
 Bokfri bygger vidare på Fribok och JFS Accounting, som har använts i över 20 år, 
@@ -91,13 +92,17 @@ felsökning. Den exakta syntaxen för den installerade versionen visas med
 ## Hjälp, support och kontakt
 
 - [Användarhjälp](https://bokfri.viblo.se/help/)
+- [Bokfris forum](https://forum.bokfri.viblo.se/) – frågor, erfarenheter och förslag
 - [Rapportera ett problem eller föreslå en förbättring](https://github.com/vibloteket/bokfri/issues)
 - Kontakt: [vb@viblo.se](mailto:vb@viblo.se)
+
+Forumet kan läsas utan konto; för att skriva behövs ett forumkonto. Det är separat
+från Bokfri-programmet, som inte kräver något konto eller någon produktregistrering.
 
 Beskriv operativsystem, Bokfri-version och stegen för att återskapa problemet i
 en felrapport. Utvecklingsbyggen visar även Git-commit i versionsinformationen.
 Publicera aldrig bokföringsdata, personuppgifter eller andra känsliga uppgifter i
-en öppen felrapport.
+forumet eller i en öppen felrapport.
 
 ## Bygga från källkod
 

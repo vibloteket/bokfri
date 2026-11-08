@@ -4,11 +4,15 @@ on:
   pull_request:
     paths:
       - 'forum/**'
+      - 'website/**'
+      - 'README.md'
       - '.github/workflows/forum-theme.yml'
   push:
     branches: [main]
     paths:
       - 'forum/**'
+      - 'website/**'
+      - 'README.md'
       - '.github/workflows/forum-theme.yml'
   workflow_dispatch:
 
@@ -28,4 +32,6 @@ jobs:
       - name: Test header and analytics privacy/navigation behavior
         run: node --test forum/theme/*.test.mjs
       - name: Parse and validate custom CSS
-        run: npx --yes --package=lightningcss-cli@1.33.0 lightningcss forum/theme/custom.css --minify --output-file "$RUNNER_TEMP/bokfri-forum-theme.css"
+        run: |
+          npx --yes --package=lightningcss-cli@1.33.0 lightningcss forum/theme/custom.css --minify --output-file "$RUNNER_TEMP/bokfri-forum-theme.css"
+          npx --yes --package=lightningcss-cli@1.33.0 lightningcss website/style.css --minify --output-file "$RUNNER_TEMP/bokfri-website.css"

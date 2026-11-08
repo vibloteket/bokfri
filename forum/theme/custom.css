@@ -157,7 +157,8 @@ body > #app {
   white-space: nowrap;
   text-decoration: none;
 }
-.bokfri-header-nav a:hover {
+.bokfri-header-nav a:hover,
+.bokfri-header-nav a.active {
   color: #98492e;
 }
 .bokfri-site-header a:focus-visible {
@@ -238,16 +239,19 @@ body > #app {
     max-height: calc(100dvh - var(--bokfri-site-header-height));
   }
 }
-@media (max-width: 359px) {
+@media (max-width: 419px) {
   .bokfri-site-header {
-    padding-inline: 12px;
-    gap: 8px;
+    padding-inline: 10px;
+    gap: 6px;
+  }
+  .bokfri-header-logo img {
+    height: 28px;
   }
   .bokfri-header-nav {
-    gap: 10px;
+    gap: 6px;
   }
   .bokfri-header-nav a {
-    font-size: 15px;
+    font-size: 14px;
   }
 }
 

@@ -17,17 +17,21 @@ In **Administration → Appearance**, replace the entire content of each field w
 Save the settings and refresh the forum. Replace, do not append: these files supersede the previous return-link
 strip and standalone theme. Do not add another GoatCounter script alongside the footer.
 
+For the Forum navigation update, replace **Custom Header** and **Custom CSS / LESS**.
+The footer is unchanged; no container rebuild is needed.
+
 Make future changes here first, review the diff, then paste the updated field(s) into administration.
 To roll back, restore the files from a known-good Git commit and paste those versions into the same fields.
 This is a manual configuration source, not an export of all current database settings.
 
 ## Branding and navigation
 
-- Header reuses the website logo and Hem / Ladda ner / Hjälp links, with absolute URLs.
+- Header reuses the website logo and Hem / Ladda ner / Hjälp / Forum links, with absolute URLs.
+  Forum is marked as the current section.
 - The logo is loaded from `https://bokfri.viblo.se/assets/logo.svg`; changes to that website asset affect this header.
 - Footer reuses © Bokfri / GPLv3. The CSS supplies the cream/teal/sage theme and centered 1200px frame.
 - Native forum navigation remains below the website header. Mobile offsets preserve drawer access.
-- Nothing here edits the GitHub Pages website or adds its pending Forum navigation link.
+- The website has the same navigation and is deployed separately through GitHub Pages after merge.
 - Flarum's uploaded logo/favicon are separate assets persisted under `/data/assets`, not embedded in these files.
 
 Other agreed settings, entered separately under **Administration → Basics**:
@@ -64,11 +68,21 @@ node --test forum/theme/*.test.mjs
 
 Tests exercise the footer in an isolated browser model: no network calls, credentials or production analytics hits.
 They cover History API/SPA navigation, grouping/deduplication, private-route exclusions and payload sanitization.
-The `Forum theme` workflow also parses the CSS with a pinned Lightning CSS CLI. Any `forum/**` change runs
+Navigation tests scan every static website/help page and compare the link order, destinations and logo
+with the forum header. Contact text keeps forum, email and GitHub options. The `Forum theme` workflow
+also parses both stylesheets with a pinned Lightning CSS CLI; website/README changes run these checks too.
+Any `forum/**` change runs
 both forum checks (theme and container), but not Java; see [workflow routing](../../.github/WORKFLOWS.md). These checks do not replace the
 browser/layout checks below.
 
 ## Verify after applying
+
+The Forum navigation update was checked at 320/360/390/419/420/767/768/1440/1920px on the
+home, download, about, help index, CLI guide and support pages, plus a temporary live-forum preview
+with the updated header/CSS injected (no saved settings). All four links fit without overlapping
+the logo; both headers remain 49px on mobile and 69px on desktop, and the mobile drawer/login
+remain usable. The CLI guide has pre-existing narrow-screen content overflow, verified unchanged
+against the previous stylesheet; its shared header fits. Analytics requests were blocked.
 
 - Desktop: centered 1200px frame and visible footer; narrow viewports: no horizontal overflow/clipped links.
 - Test header website links, native drawer/search/login, scrolling and composing a discussion.

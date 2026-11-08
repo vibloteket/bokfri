@@ -12,6 +12,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Website and forum
+- Add Forum to the shared navigation on every website/help page and in the forum header, with matching narrow-screen spacing and keyboard focus styling.
+- Reference the forum alongside email and GitHub in the website help/contact text and README; remove the obsolete product-registration requirement from online support and explain the separate forum account.
+- Test navigation parity across all static pages and the forum header, and validate both stylesheets in CI. Apply the updated forum header/CSS manually; no container rebuild or authentication changes.
+
 ### Infrastructure
 
 - Enable normalized `year create` from V19 global templates with shared date/overlap validation, independent account-plan copies and globally allocated year IDs. Save the new year/plan/accounts atomically, preserve existing years/templates and saved selections, and retain the safe guard for older normalized catalogues (#75).
