@@ -75,6 +75,8 @@ public final class CliSmokeTest {
         Result catalogue = cli("--format", "json", "account-plan", "list");
         catalogue.success();
         catalogue.jsonObject();
+        Result catalogueText = cli("--format", "text", "account-plan", "list");
+        catalogueText.success();
         String template = Integer.toString(firstInt(catalogue.stdout, "id"));
         Path templateXlsx = temporary.resolve("normalized-template.xlsx");
         Result templateExport = cli("--format", "json", "account-plan", "export", "--id", template,
@@ -103,6 +105,29 @@ public final class CliSmokeTest {
         companyList.success();
         require(companyList.stdout.contains("Normalized smoke company"),
                 "created normalized company was not retained after reopening");
+        String newCompanyId = Integer.toString(firstInt(companyCreated.stdout, "id"));
+        Path newYear = temporary.resolve("normalized-new-year.json");
+        Files.writeString(newYear, "{\"from\":\"2035-04-01\",\"to\":\"2036-03-31\",\"accountPlanId\":"
+                + template + "}");
+        Result yearCreated = cli("--company-id", newCompanyId, "--format", "json", "year", "create",
+                "--file", newYear.toString());
+        yearCreated.success();
+        yearCreated.jsonObject();
+        String newYearId = Integer.toString(firstInt(yearCreated.stdout, "id"));
+        Result yearList = cli("--company-id", newCompanyId, "--format", "json", "year", "list");
+        yearList.success();
+        require(yearList.stdout.contains("2035-04-01") && yearList.stdout.contains("2036-03-31"),
+                "created normalized year was not retained after reopening");
+        Result yearAccounts = cli("--company-id", newCompanyId, "--year-id", newYearId,
+                "--format", "json", "account", "list");
+        yearAccounts.success();
+        require(firstInt(yearAccounts.stdout, "number") > 0,
+                "normalized year did not copy the global template accounts");
+        // JSON object key order can vary between CLI JVMs (Map.of uses randomized iteration order).
+        // The table includes the same template IDs, names, assessment years and account counts.
+        Result unchangedCatalogue = cli("--format", "text", "account-plan", "list");
+        unchangedCatalogue.success();
+        require(unchangedCatalogue.stdout.equals(catalogueText.stdout), "year creation changed the global templates");
         Result accounts = cli("--company-id", company, "--year-id", year,
                 "--format", "json", "account", "list");
         accounts.success();

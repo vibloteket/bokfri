@@ -72,7 +72,6 @@ import org.fribok.bookkeeping.service.vat.VatService;
 import org.fribok.bookkeeping.service.vat.VatSettlementPlan;
 import org.fribok.bookkeeping.service.voucher.VoucherService;
 import org.fribok.bookkeeping.service.voucher.VoucherValidator;
-import org.fribok.bookkeeping.service.year.AccountingYearService;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationIssue;
 import org.fribok.bookkeeping.service.voucher.VoucherValidationResult;
 import org.fribok.bookkeeping.cli.CliMetadata.Command;
@@ -868,7 +867,40 @@ public class BokfriCli implements Runnable {
         }
     }
 
-    @Command(mixinStandardHelpOptions = true, name="create",description="Create an accounting year from JSON") static class YearCreate implements Callable<Integer>{@CliMetadata.ParentCommand YearCommand command;@Option(names="--file",required=true)String file;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(true,false);AccountingYearInput in=readAccountingYearInput(file);try(BokfriRuntime r=root.openRuntime(c.dataDir())){SSNewCompany co=r.selectCompany(c.companyId());AccountingYearService s=new AccountingYearService(r.database());List<SSAccountPlan> matches=s.accountPlans().stream().filter(p->in.getAccountPlanId()!=null&&in.getAccountPlanId().equals(p.getId())||in.getAccountPlanName()!=null&&in.getAccountPlanName().equals(p.getName())).toList();if(matches.size()!=1)throw new CliException("ACCOUNT_PLAN_NOT_FOUND","Account plan must match exactly one plan");SSNewAccountingYear y=s.create(in.getFrom(),in.getTo(),matches.get(0));Map<String,Object>x=new LinkedHashMap<>();x.put("id",y.getId());x.put("from",y.getLocalFrom());x.put("to",y.getLocalTo());x.put("accountPlan",y.getAccountPlan().getName());x.put("companyId",co.getId());root.output(x,"Created accounting year "+y.toRenderString());return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name = "create", description = "Create an accounting year from JSON")
+    static class YearCreate implements Callable<Integer> {
+        @CliMetadata.ParentCommand YearCommand command;
+        @Option(names = "--file", required = true) String file;
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(true, false);
+            AccountingYearInput input = readAccountingYearInput(file);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                SSNewCompany company = runtime.selectCompany(context.companyId());
+                List<SSAccountPlan> matches = runtime.getAccountPlans().stream()
+                        .filter(plan -> (input.getAccountPlanId() != null
+                                && input.getAccountPlanId().equals(plan.getId()))
+                                || (input.getAccountPlanName() != null
+                                && input.getAccountPlanName().equals(plan.getName())))
+                        .toList();
+                if (matches.size() != 1) {
+                    throw new CliException("ACCOUNT_PLAN_NOT_FOUND", "Account plan must match exactly one plan");
+                }
+                SSNewAccountingYear year = runtime.createAccountingYear(input.getFrom(), input.getTo(), matches.get(0));
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("id", year.getId());
+                result.put("from", year.getLocalFrom());
+                result.put("to", year.getLocalTo());
+                result.put("accountPlan", year.getAccountPlan().getName());
+                result.put("companyId", company.getId());
+                root.output(result, "Created accounting year " + year.toRenderString());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
 
     @Command(mixinStandardHelpOptions = true, name = "list", description = "List accounting years for the selected company")
     static class YearList implements Callable<Integer> {

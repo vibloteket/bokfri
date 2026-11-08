@@ -290,7 +290,7 @@ writing output or changing data/schema; they are not silently upgraded or seeded
 with replacement templates. Their original global catalogue was not included in
 those snapshots. Recovery needs the retained legacy source/backup and must retain
 any newer accounting changes in the active normalized database. A safe explicit
-upgrade path, `year create` and normalized GUI activation remain follow-up work.
+upgrade path and normalized GUI activation remain follow-up work.
 Normal startup and an already-normalized `database normalize` no-op do not rewrite
 such databases.
 
@@ -304,8 +304,28 @@ built-in fallback definitions; missing fallback definitions are inserted without
 replacing existing descriptions or currency rates. Company reads restore those
 references, VAT period and contact person after reopening. Failed writes roll back
 both the company and newly inserted lookups; creation does not change the saved
-company/year selection. Demo generation, year creation and normalized GUI
-activation remain separate follow-up work.
+company/year selection. Demo generation and normalized GUI activation remain
+separate follow-up work.
+
+## Accounting-year creation runtime support
+
+`year create --file` supports format 3 with the V19 global catalogue. The existing
+input schema selects templates by ID or name and must match exactly one template;
+missing/ambiguous matches keep `ACCOUNT_PLAN_NOT_FOUND`. Shared pure preparation
+preserves legacy date validation and inclusive overlap rules within the selected
+company. Single-day years are permitted, adjacent non-overlapping periods are
+permitted, and another company's dates do not block creation.
+
+A year receives an independent deep copy of the template's accounts/codes/flags.
+The copied plan's base name becomes the template's name, its template ID is not
+retained as a year-plan ID, and the global template is unchanged. Normalized year
+IDs are allocated across all companies. The year/header/accounts commit together;
+failed inserts roll everything back and allow retry. Opening balances, vouchers
+and budget amounts start empty, matching legacy creation. Existing normalized
+account reads retain their normal numeric ordering. Creation neither selects the
+new year nor changes saved company/year configuration; `year use` remains explicit.
+Older normalized catalogues fail through the same V19 guard without manufacturing
+templates, upgrading schema or changing accounting data.
 
 ## Financial PDF runtime support
 

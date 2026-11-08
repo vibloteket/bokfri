@@ -126,6 +126,20 @@ public final class NormalizedAccountingStore implements AutoCloseable {
         }
     }
 
+    /**
+     * Returns a free legacy year ID across all companies, not only the current selection.
+     * @return zero for an empty catalogue, otherwise the maximum stored year ID plus one
+     * @throws SQLException if year IDs cannot be read
+     */
+    public int nextAccountingYearId() throws SQLException {
+        try (var statement = connection.createStatement();
+             var result = statement.executeQuery("SELECT MAX(legacy_id) FROM accounting_year")) {
+            result.next();
+            int maximum = result.getInt(1);
+            return result.wasNull() ? 0 : Math.addExact(maximum, 1);
+        }
+    }
+
     public void addAccountingYear(SSNewAccountingYear year) throws SQLException {
         requireCompany();
         writer.addAccountingYear(connection, currentCompany.getId(), year);
