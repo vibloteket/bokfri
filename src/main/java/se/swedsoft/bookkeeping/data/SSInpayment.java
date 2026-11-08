@@ -397,7 +397,8 @@ public class SSInpayment implements SSTableSearchable, Serializable {
      * @return
      */
     public SSVoucher generateVoucher() {
-        return generateVoucher(SSDB.getInstance().getCurrentAccountPlan());
+        return generateVoucher(SSDB.getInstance().getCurrentAccountPlan(),
+                SSDB.getInstance().getProjects(), SSDB.getInstance().getResultUnits());
     }
 
     /**
@@ -405,6 +406,12 @@ public class SSInpayment implements SSTableSearchable, Serializable {
      * calculation works without the global database singleton (normalized storage).
      */
     public SSVoucher generateVoucher(SSAccountPlan iAccountPlan) {
+        return generateVoucher(iAccountPlan, List.of(), List.of());
+    }
+
+    /** Generates a payment voucher using explicit accounts AND dimension resolution. */
+    public SSVoucher generateVoucher(SSAccountPlan iAccountPlan, List<SSNewProject> projects,
+            List<SSNewResultUnit> resultUnits) {
         String iDescription = SSBundle.getBundle().getString(
                 "inpaymentframe.voucherdescription");
 
@@ -412,14 +419,12 @@ public class SSInpayment implements SSTableSearchable, Serializable {
         BigDecimal iSum = SSInpaymentMath.getSum(this);
         BigDecimal iCurrencyRateDifference = SSInpaymentMath.getCurrencyRateDifference(
                 this);
-        BigDecimal iDifferenceSum = SSVoucherMath.getCreditMinusDebetSum(iDifference);
+        BigDecimal iDifferenceSum = SSVoucherMath.getCreditMinusDebetSum(iDifference, iAccountPlan.getAccounts());
 
         iSum = iSum.subtract(iCurrencyRateDifference);
         iSum = iSum.subtract(iDifferenceSum);
 
-        iVoucher = new SSVoucher();
-        iVoucher.setLocalDate(SSDateUtil.today());
-        iVoucher.setNumber(0);
+        iVoucher = new SSVoucher(0, SSDateUtil.today());
         iVoucher.setDescription(String.format(iDescription, iNumber));
 
         // Add the sum
@@ -455,7 +460,7 @@ public class SSInpayment implements SSTableSearchable, Serializable {
 
             iVoucher.addVoucherRow(iVoucherRow);
         }
-        iVoucher = SSVoucherMath.compress(iVoucher);
+        iVoucher = SSVoucherMath.compress(iVoucher, iAccountPlan.getAccounts(), projects, resultUnits);
 
         return iVoucher;
     }

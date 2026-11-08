@@ -289,8 +289,8 @@ public final class NormalizedOutpaymentStore {
                         + ") ORDER BY outpayment_id,voucher_kind")) {
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
-                    SSVoucher voucher = new SSVoucher(result.getInt(3));
-                    voucher.setLocalDate(result.getObject(4, LocalDate.class));
+                    SSVoucher voucher = new SSVoucher(result.getInt(3),
+                            result.getObject(4, LocalDate.class));
                     voucher.setDescription(result.getString(5));
                     vouchers.put(new VoucherKey(result.getLong(1), result.getString(2)), voucher);
                 }

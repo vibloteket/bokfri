@@ -482,9 +482,7 @@ public class SSInvoice extends SSSale {
 
         SSAccountPlan iAccountPlan = accountPlan;
 
-        iVoucher = new SSVoucher();
-        iVoucher.setLocalDate(SSDateUtil.today());
-        iVoucher.setNumber(0);
+        iVoucher = new SSVoucher(0, SSDateUtil.today());
         iVoucher.setDescription(String.format(iDescription, iNumber));
 
         // Get the total sum for the sales
@@ -557,7 +555,7 @@ public class SSInvoice extends SSSale {
             SSVoucherMath.multiplyRowsBy(iVoucher, iCurrencyRate);
         }
 
-        iVoucher = SSVoucherMath.compress(iVoucher);
+        iVoucher = SSVoucherMath.compress(iVoucher, iAccountPlan.getAccounts(), projects, resultUnits);
 
         return iVoucher;
     }

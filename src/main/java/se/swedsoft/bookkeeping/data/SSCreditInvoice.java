@@ -279,9 +279,7 @@ public class SSCreditInvoice extends SSInvoice {
         String iDescription = SSBundle.getBundle().getString(
                 "creditinvoiceframe.voucherdescription");
 
-        iVoucher = new SSVoucher();
-        iVoucher.setLocalDate(SSDateUtil.today());
-        iVoucher.setNumber(0);
+        iVoucher = new SSVoucher(0, SSDateUtil.today());
         iVoucher.setDescription(String.format(iDescription, iNumber));
 
         // Get the total sum for the sales
@@ -353,7 +351,7 @@ public class SSCreditInvoice extends SSInvoice {
             SSVoucherMath.multiplyRowsBy(iVoucher, iCurrencyRate);
         }
 
-        iVoucher = SSVoucherMath.compress(iVoucher);
+        iVoucher = SSVoucherMath.compress(iVoucher, iAccountPlan.getAccounts(), projects, resultUnits);
 
         return iVoucher;
     }

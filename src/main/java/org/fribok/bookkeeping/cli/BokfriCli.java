@@ -4737,8 +4737,7 @@ public class BokfriCli implements Runnable {
 
     private static SSVoucher toVoucher(VoucherInput input, BokfriRuntime runtime)
             throws java.sql.SQLException {
-        SSVoucher voucher = new SSVoucher(0);
-        voucher.setLocalDate(input.getDate());
+        SSVoucher voucher = new SSVoucher(0, input.getDate());
         voucher.setDescription(input.getDescription());
         List<SSAccount> accounts = runtime.getAccounts();
         List<SSNewProject> projects = runtime.getProjects();
@@ -4885,9 +4884,8 @@ public class BokfriCli implements Runnable {
                         Comparator.nullsLast(Integer::compareTo)))
                 .toList();
         int journalNumber = runtime.counterValue("invoicejournal") + 1;
-        SSVoucher combined = new SSVoucher(0);
+        SSVoucher combined = new SSVoucher(0, to);
         combined.setDescription("Fakturajournal nr " + journalNumber);
-        combined.setLocalDate(to);
         for (SSInvoice invoice : invoices) {
             SSVoucher current = runtime.isNormalized()
                     ? invoice.generateVoucher(runtime.currentAccountPlan(),
@@ -4898,7 +4896,7 @@ public class BokfriCli implements Runnable {
             }
         }
         return new InvoiceJournalPlan(journalNumber, from, to, invoices,
-                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+                runtime.compressVoucher(combined));
     }
 
     /** Plans an inpayment journal on the active storage, mirroring InpaymentService.planJournal. */
@@ -4914,16 +4912,15 @@ public class BokfriCli implements Runnable {
                         Comparator.nullsLast(Integer::compareTo)))
                 .toList();
         int journalNumber = runtime.counterValue("inpaymentjournal") + 1;
-        SSVoucher combined = new SSVoucher(0);
+        SSVoucher combined = new SSVoucher(0, to);
         combined.setDescription("Inbetalningsjournal nr " + journalNumber);
-        combined.setLocalDate(to);
         for (SSInpayment item : inpayments) {
             for (SSVoucherRow row : runtime.generateInpaymentVoucher(item).getRows()) {
                 combined.addVoucherRow(new SSVoucherRow(row));
             }
         }
         return new InpaymentJournalPlan(journalNumber, from, to, inpayments,
-                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+                runtime.compressVoucher(combined));
     }
 
     /** Plans an outpayment journal on the active storage, mirroring OutpaymentService.planJournal. */
@@ -4939,17 +4936,16 @@ public class BokfriCli implements Runnable {
                         Comparator.nullsLast(Integer::compareTo)))
                 .toList();
         int journalNumber = runtime.counterValue("outpaymentjournal") + 1;
-        SSVoucher combined = new SSVoucher(0);
+        SSVoucher combined = new SSVoucher(0, to);
         // Legacy description text kept for output parity.
         combined.setDescription("Inbetalningsjournal nr " + journalNumber);
-        combined.setLocalDate(to);
         for (SSOutpayment item : outpayments) {
             for (SSVoucherRow row : runtime.generateOutpaymentVoucher(item).getRows()) {
                 combined.addVoucherRow(new SSVoucherRow(row));
             }
         }
         return new OutpaymentJournalPlan(journalNumber, from, to, outpayments,
-                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+                runtime.compressVoucher(combined));
     }
 
     /** Plans a credit-invoice journal, mirroring CreditInvoiceService.planJournal. */
@@ -4965,16 +4961,15 @@ public class BokfriCli implements Runnable {
                         Comparator.nullsLast(Integer::compareTo)))
                 .toList();
         int journalNumber = runtime.counterValue("creditinvoicejournal") + 1;
-        SSVoucher combined = new SSVoucher(0);
+        SSVoucher combined = new SSVoucher(0, to);
         combined.setDescription("Kreditfakturajournal nr " + journalNumber);
-        combined.setLocalDate(to);
         for (SSCreditInvoice invoice : invoices) {
             for (SSVoucherRow row : runtime.generateInvoiceVoucher(invoice).getRows()) {
                 combined.addVoucherRow(new SSVoucherRow(row));
             }
         }
         return new CreditInvoiceJournalPlan(journalNumber, from, to, invoices,
-                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+                runtime.compressVoucher(combined));
     }
 
     /** Plans a supplier-invoice journal, mirroring SupplierInvoiceService.planJournal. */
@@ -4991,16 +4986,15 @@ public class BokfriCli implements Runnable {
                         Comparator.nullsLast(Integer::compareTo)))
                 .toList();
         int journalNumber = runtime.counterValue("supplierinvoicejournal") + 1;
-        SSVoucher combined = new SSVoucher(0);
+        SSVoucher combined = new SSVoucher(0, to);
         combined.setDescription("Leverantörsfakturajournal nr " + journalNumber);
-        combined.setLocalDate(to);
         for (SSSupplierInvoice invoice : invoices) {
             for (SSVoucherRow row : runtime.generateSupplierInvoiceVoucher(invoice).getRows()) {
                 combined.addVoucherRow(new SSVoucherRow(row));
             }
         }
         return new SupplierInvoiceJournalPlan(journalNumber, from, to, invoices,
-                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+                runtime.compressVoucher(combined));
     }
 
     /** Plans a supplier credit-invoice journal, mirroring the supplier credit service. */
@@ -5018,16 +5012,15 @@ public class BokfriCli implements Runnable {
                         Comparator.nullsLast(Integer::compareTo)))
                 .toList();
         int journalNumber = runtime.counterValue("suppliercreditinvoicejournal") + 1;
-        SSVoucher combined = new SSVoucher(0);
+        SSVoucher combined = new SSVoucher(0, to);
         combined.setDescription("Leverantörskreditfakturajournal nr " + journalNumber);
-        combined.setLocalDate(to);
         for (SSSupplierCreditInvoice invoice : invoices) {
             for (SSVoucherRow row : runtime.generateSupplierInvoiceVoucher(invoice).getRows()) {
                 combined.addVoucherRow(new SSVoucherRow(row));
             }
         }
         return new SupplierCreditInvoiceJournalPlan(journalNumber, from, to, invoices,
-                se.swedsoft.bookkeeping.calc.math.SSVoucherMath.compress(combined));
+                runtime.compressVoucher(combined));
     }
 
     private static Map<String, Object> invoiceJournalDetails(InvoiceJournalPlan plan) {

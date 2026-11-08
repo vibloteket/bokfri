@@ -221,18 +221,16 @@ public class SSSupplierCreditInvoice extends SSSupplierInvoice {
     @Override
     public SSVoucher generateVoucher(SSAccountPlan iAccountPlan, List<SSNewProject> projects,
             List<SSNewResultUnit> resultUnits) {
-        iVoucher = new SSVoucher();
+        iVoucher = new SSVoucher(0, SSDateUtil.today());
         String iDescription = SSBundle.getBundle().getString(
                 "suppliercreditinvoiceframe.voucherdescription");
 
-        iVoucher = new SSVoucher();
-        iVoucher.setLocalDate(SSDateUtil.today());
-        iVoucher.setNumber(0);
+        iVoucher = new SSVoucher(0, SSDateUtil.today());
         iVoucher.setDescription(String.format(iDescription, iNumber));
 
         // Get the total sum for the sales
         BigDecimal iTotalSum = SSSupplierInvoiceMath.getTotalSum(this);
-        BigDecimal iCorrectionSum = SSVoucherMath.getCreditMinusDebetSum(iCorrection);
+        BigDecimal iCorrectionSum = SSVoucherMath.getCreditMinusDebetSum(iCorrection, iAccountPlan.getAccounts());
 
         iTotalSum = iTotalSum.subtract(iCorrectionSum);
 
@@ -286,7 +284,7 @@ public class SSSupplierCreditInvoice extends SSSupplierInvoice {
             SSVoucherMath.multiplyRowsBy(iVoucher, iCurrencyRate);
         }
 
-        iVoucher = SSVoucherMath.compress(iVoucher);
+        iVoucher = SSVoucherMath.compress(iVoucher, iAccountPlan.getAccounts(), projects, resultUnits);
 
         return iVoucher;
     }

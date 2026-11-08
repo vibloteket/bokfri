@@ -58,6 +58,17 @@ public class SSVoucher implements Serializable, Cloneable, SSTableSearchable {
     }
 
     /**
+     * Creates a voucher header without reading the selected year, clock or legacy database.
+     * @param number explicit voucher number
+     * @param date explicit date, nullable for historical snapshots
+     */
+    public SSVoucher(int number, LocalDate date) {
+        iNumber = number;
+        iDate = date;
+        iVoucherRows = new ArrayList<>();
+    }
+
+    /**
      * Copy constructor.
      *
      * @param voucher The voucher to copy.
