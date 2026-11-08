@@ -70,6 +70,7 @@ test('header and visible footer retain website destinations', () => {
   assert.deepEqual(destinations, [
     'https://bokfri.viblo.se/', 'https://bokfri.viblo.se/',
     'https://bokfri.viblo.se/download/', 'https://bokfri.viblo.se/help/',
+    'https://forum.bokfri.viblo.se/',
   ]);
   assert.match(footer, /class="bokfri-site-footer"/);
   assert.match(footer, /https:\/\/www.gnu.org\/licenses\/gpl-3.0.html/);
