@@ -260,7 +260,7 @@ A mismatch aborts activation and reports the first differing domain plus counts/
 
 Each implementation slice requires `mvn verify`, representative old databases, empty/minimal/multi-company/multi-year fixtures, interruption tests and packaged Linux/Windows/macOS startup checks.
 
-## Global account-plan catalogue staging
+## Global account-plan catalogue staging and runtime
 
 Schema migration `V19__create_account_plan_catalog.sql` preserves the reusable
 `tbl_accountplan` templates in `account_plan_catalog` and ordered
@@ -273,13 +273,26 @@ rather than silently dropping data. Catalogue fingerprints are checked before
 commit, after staging shutdown/reopen and again after activation. Normalization
 JSON reports the verified template/account counts.
 
-This is a migration foundation, not yet the normalized runtime implementation of
-`account-plan list`, XLSX import/export or `year create`. Existing format-3 data
-created before V19 is not silently upgraded or seeded with replacement templates:
-the original global catalogue was not included in those snapshots. Recovery or
-upgrade needs the retained legacy source/backup; a safe explicit path remains
-follow-up work. Normal startup and an already-normalized `database normalize`
-no-op do not rewrite such databases.
+On V19 catalogues, `account-plan list`, `account-plan export --id ... --output ...`
+and `account-plan import --file ...` (preview or `--apply`) use explicit typed
+storage without requiring a company/year. Reads return detached templates and
+preserve stored account order, flags and nullable metadata. Import preview writes
+nothing; applying a new template commits its header/accounts together and assigns
+a fresh ID. Duplicate names are reported in preview and rejected on apply. Failed
+writes roll back all new rows and allow retry; exports retain overwrite protection.
+The existing XLSX format is unchanged: this does not add base-name or account-flag
+columns, and workbook imports retain the legacy spreadsheet defaults for those fields.
+Unknown stored plan types fail rather than being silently replaced with BAS95.
+
+Catalogue commands require both tables and the recorded V19 migration. Earlier
+format-3 snapshots fail with `NORMALIZED_ACCOUNT_PLAN_CATALOG_REQUIRED` before
+writing output or changing data/schema; they are not silently upgraded or seeded
+with replacement templates. Their original global catalogue was not included in
+those snapshots. Recovery needs the retained legacy source/backup and must retain
+any newer accounting changes in the active normalized database. A safe explicit
+upgrade path, `year create` and normalized GUI activation remain follow-up work.
+Normal startup and an already-normalized `database normalize` no-op do not rewrite
+such databases.
 
 ## Company creation runtime support
 
@@ -291,8 +304,8 @@ built-in fallback definitions; missing fallback definitions are inserted without
 replacing existing descriptions or currency rates. Company reads restore those
 references, VAT period and contact person after reopening. Failed writes roll back
 both the company and newly inserted lookups; creation does not change the saved
-company/year selection. This does not enable demo generation, global account-plan
-catalog operations, year creation or normalized GUI activation.
+company/year selection. Demo generation, year creation and normalized GUI
+activation remain separate follow-up work.
 
 ## Financial PDF runtime support
 
@@ -315,8 +328,8 @@ Existing legacy constructors retain their previous behavior.
 account plan and vouchers for the explicit company/maximum-voucher header, then
 uses the unchanged account-plan template and active-account filtering. Account
 numbers, descriptions, VAT/SRU/report codes, empty plans and overwrite protection
-are preserved. This does not enable global `account-plan list`, XLSX import or
-XLSX export on normalized storage; those remain separate legacy-register paths.
+are preserved. This selected-year PDF path is separate from the global template
+catalogue above and does not require V19.
 
 `voucher show NUMBER` supports format 3 in text/JSON, including correction links
 and row edit metadata. Its optional `--output` PDF uses explicit company/year

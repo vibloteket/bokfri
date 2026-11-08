@@ -716,7 +716,33 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name="account-plan",description="Inspect and exchange account plans",subcommands={AccountPlanList.class,AccountPlanPdf.class,AccountPlanExport.class,AccountPlanImport.class})
     static class AccountPlanCommand extends CliCommand implements Runnable{@CliMetadata.Spec CliContext spec;public void run(){throw new CliSyntaxException(spec,"An account-plan command is required");}}
-    @Command(mixinStandardHelpOptions = true, name="list") static class AccountPlanList implements Callable<Integer>{@CliMetadata.ParentCommand AccountPlanCommand command;public Integer call(){BokfriCli root=command.parent;ResolvedContext c=root.resolveContext(false,false);try(BokfriRuntime r=root.openRuntime(c.dataDir())){List<Map<String,Object>> plans=r.database().getAccountPlans().stream().map(p->Map.<String,Object>of("id",p.getId(),"name",p.getName(),"assessmentYear",p.getAssessementYear()==null?"":p.getAssessementYear(),"accountCount",p.getAccounts().size())).toList();root.output(Map.of("accountPlans",plans,"count",plans.size()),table(plans,"No account plans found",right("Id","id"),left("Name","name"),right("Assessment year","assessmentYear"),right("Accounts","accountCount")));return 0;}catch(Exception e){throw databaseFailure(e);}}}
+    @Command(mixinStandardHelpOptions = true, name = "list")
+    static class AccountPlanList implements Callable<Integer> {
+        @CliMetadata.ParentCommand AccountPlanCommand command;
+
+        @Override public Integer call() {
+            BokfriCli root = command.parent;
+            ResolvedContext context = root.resolveContext(false, false);
+            try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
+                List<Map<String, Object>> plans = runtime.getAccountPlans().stream()
+                        .map(plan -> {
+                            Map<String, Object> item = new LinkedHashMap<>();
+                            item.put("id", plan.getId());
+                            item.put("name", plan.getName());
+                            item.put("assessmentYear",
+                                    plan.getAssessementYear() == null ? "" : plan.getAssessementYear());
+                            item.put("accountCount", plan.getAccounts().size());
+                            return item;
+                        }).toList();
+                root.output(Map.of("accountPlans", plans, "count", plans.size()),
+                        table(plans, "No account plans found", right("Id", "id"), left("Name", "name"),
+                                right("Assessment year", "assessmentYear"), right("Accounts", "accountCount")));
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
 
     @Command(mixinStandardHelpOptions = true, name="export", description="Export an account plan as Excel XLSX")
     static class AccountPlanExport implements Callable<Integer> {
@@ -728,7 +754,7 @@ public class BokfriCli implements Runnable {
             BokfriCli root = command.parent;
             ResolvedContext context = root.resolveContext(false, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
-                SSAccountPlan accountPlan = runtime.database().getAccountPlans().stream()
+                SSAccountPlan accountPlan = runtime.getAccountPlans().stream()
                         .filter(candidate -> Objects.equals(candidate.getId(), id)).findFirst()
                         .orElseThrow(() -> new CliException("ACCOUNT_PLAN_NOT_FOUND",
                                 "No account plan has id " + id));
@@ -755,14 +781,14 @@ public class BokfriCli implements Runnable {
             ResolvedContext context = root.resolveContext(false, false);
             try (BokfriRuntime runtime = root.openRuntime(context.dataDir())) {
                 SSAccountPlan accountPlan = new AccountPlanSpreadsheetService().read(file);
-                boolean duplicate = runtime.database().getAccountPlans().stream()
+                boolean duplicate = runtime.getAccountPlans().stream()
                         .anyMatch(existing -> Objects.equals(existing.getName(), accountPlan.getName()));
                 if (apply && duplicate) {
                     throw new CliException("ACCOUNT_PLAN_EXISTS",
                             "An account plan named '" + accountPlan.getName() + "' already exists");
                 }
                 if (apply) {
-                    runtime.database().addAccountPlan(accountPlan);
+                    runtime.addAccountPlan(accountPlan);
                 }
                 Map<String, Object> result = accountPlanSpreadsheetDetails(accountPlan);
                 result.put("file", file.toAbsolutePath().normalize().toString());

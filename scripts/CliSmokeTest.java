@@ -72,6 +72,25 @@ public final class CliSmokeTest {
         Result status = cli("--format", "json", "database", "status");
         status.success();
         require(status.stdout.contains("\"format\":3"), "database was not normalized");
+        Result catalogue = cli("--format", "json", "account-plan", "list");
+        catalogue.success();
+        catalogue.jsonObject();
+        String template = Integer.toString(firstInt(catalogue.stdout, "id"));
+        Path templateXlsx = temporary.resolve("normalized-template.xlsx");
+        Result templateExport = cli("--format", "json", "account-plan", "export", "--id", template,
+                "--output", templateXlsx.toString());
+        templateExport.success();
+        templateExport.jsonObject();
+        Result templatePreview = cli("--format", "json", "account-plan", "import", "--file", templateXlsx.toString());
+        templatePreview.success();
+        templatePreview.jsonObject();
+        require(templatePreview.stdout.contains("\"duplicate\":true")
+                        && templatePreview.stdout.contains("\"applied\":false"),
+                "normalized template import preview lacks duplicate/no-write metadata");
+        Result templateDuplicate = cli("--format", "json", "account-plan", "import", "--file",
+                templateXlsx.toString(), "--apply");
+        require(templateDuplicate.exitCode != 0 && templateDuplicate.stderr.contains("ACCOUNT_PLAN_EXISTS"),
+                "normalized template import did not reject a duplicate name");
         Path newCompany = temporary.resolve("normalized-new-company.json");
         Files.writeString(newCompany, """
                 {"schemaVersion":1,"name":"Normalized smoke company","email":"smoke@example.test",
