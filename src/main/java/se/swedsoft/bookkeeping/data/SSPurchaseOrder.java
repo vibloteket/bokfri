@@ -82,10 +82,17 @@ public class SSPurchaseOrder implements SSTableSearchable, Serializable {
      * Default constructor
      */
     public SSPurchaseOrder() {
+        this(true);
+    }
+
+    private SSPurchaseOrder(boolean legacyDefaults) {
         iRows = new LinkedList<>();
+        iDefaultAccounts = new HashMap<>();
+        if (!legacyDefaults) {
+            return;
+        }
         iDeliveryAddress = new SSAddress();
         iSupplierAddress = new SSAddress();
-        iDefaultAccounts = new HashMap<>();
         iEstimatedDelivery = SSDateUtil.today();
         iStockInfluencing = true;
 
@@ -100,6 +107,14 @@ public class SSPurchaseOrder implements SSTableSearchable, Serializable {
             iCurrency = iSupplier.getCurrency();
             iCurrencyRate = iCurrency.getExchangeRate();
         }
+    }
+
+    /**
+     * Creates empty containers without selected-company, clock, address or stock defaults.
+     * @return a purchase order for typed persistence hydration only
+     */
+    public static SSPurchaseOrder forPersistence() {
+        return new SSPurchaseOrder(false);
     }
 
     /**
@@ -124,9 +139,12 @@ public class SSPurchaseOrder implements SSTableSearchable, Serializable {
         iInvoice = iPurchaseOrder.iInvoice;
         iInvoiceNr = iPurchaseOrder.iInvoiceNr;
         iPrinted = iPurchaseOrder.iPrinted;
+        iStockInfluencing = iPurchaseOrder.iStockInfluencing;
         iCurrencyRate = iPurchaseOrder.iCurrencyRate;
-        iDeliveryAddress = new SSAddress(iPurchaseOrder.iDeliveryAddress);
-        iSupplierAddress = new SSAddress(iPurchaseOrder.iSupplierAddress);
+        iDeliveryAddress = iPurchaseOrder.iDeliveryAddress == null
+                ? null : new SSAddress(iPurchaseOrder.iDeliveryAddress);
+        iSupplierAddress = iPurchaseOrder.iSupplierAddress == null
+                ? null : new SSAddress(iPurchaseOrder.iSupplierAddress);
         iRows = new LinkedList<>();
 
         for (SSPurchaseOrderRow iRow : iPurchaseOrder.iRows) {
@@ -363,10 +381,12 @@ public class SSPurchaseOrder implements SSTableSearchable, Serializable {
 
     // //////////////////////////////////////////////////
 
-    /**
-     *
-     * @return
-     */
+    /** Returns the stored rate without applying supplier or one fallbacks. */
+    public BigDecimal getStoredCurrencyRate() {
+        return iCurrencyRate;
+    }
+
+    /** Returns the business currency rate, retaining the existing supplier/one fallback. */
     public BigDecimal getCurrencyRate() {
         if (iCurrencyRate != null) {
             return iCurrencyRate;
@@ -514,7 +534,7 @@ public class SSPurchaseOrder implements SSTableSearchable, Serializable {
 
         if (iSupplier != null) {
             iSupplierName = iSupplier.getName();
-            iSupplierAddress = iSupplier.getAddress().clone();
+            iSupplierAddress = iSupplier.getAddress() == null ? null : iSupplier.getAddress().clone();
             iOurContact = iSupplier.getOurContact();
             iYourContact = iSupplier.getYourContact();
             iPaymentTerm = iSupplier.getPaymentTerm();
