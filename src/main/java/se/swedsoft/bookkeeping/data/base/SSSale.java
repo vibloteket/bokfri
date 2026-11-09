@@ -418,6 +418,13 @@ public abstract class SSSale implements SSTableSearchable, Serializable {
         return Arrays.asList(iTaxRate1, iTaxRate2, iTaxRate3);
     }
 
+    /** Restores stored tax rates, including nulls, without applying business setter defaults. */
+    public void setStoredTaxRates(BigDecimal rate1, BigDecimal rate2, BigDecimal rate3) {
+        iTaxRate1 = rate1;
+        iTaxRate2 = rate2;
+        iTaxRate3 = rate3;
+    }
+
     public BigDecimal getTaxRate1() {
         if (iTaxRate1 == null) {
             iTaxRate1 = new BigDecimal(25);

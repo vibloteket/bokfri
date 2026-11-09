@@ -216,6 +216,7 @@ class NormalizedDocumentHydrationTest {
 
     private static void assertSaleEmpty(SSSale sale) {
         assertThat(sale.getLocalDate()).isNull();
+        assertThat(sale.getStoredTaxRates()).containsExactly(null, null, null);
         assertThat(sale.getDefaultAccounts()).isEmpty();
         assertThat(sale.getRows()).isEmpty();
         assertThat(sale.getInvoiceAddress()).isNull();
