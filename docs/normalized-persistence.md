@@ -838,6 +838,47 @@ order/quotation GUI or new CLI command. GUI startup still rejects format 3 and
 other editable domains/business lookup paths still require porting. The existing
 sales-values projection remains separate and read-only.
 
+### Complete normalized purchase orders
+
+`NormalizedPurchaseOrderStore` hydrates and edits every field of the existing V16
+purchase-order header and its addresses, default accounts and ordered rows. It
+loads through `SSPurchaseOrder.forPersistence()` without selected-company, address,
+clock or stock defaults. Persisted supplier/currency/terms/unit references are
+restored explicitly; invoice links stay stored numbers, not singleton lookups.
+`getStoredCurrencyRate()` preserves SQL null without applying the business rate
+fallback. Missing addresses and empty containers stay absent/empty.
+
+As with the order/quotation repository, `Stored(id, legacyId, document)` separates
+stable storage identities from nullable or duplicate historical document numbers.
+Company-scoped edits preserve both identities, replace all children atomically,
+and reject foreign-company/missing identities before touching children. New legacy
+identities are allocated across the whole purchase-order table; numbers and company
+counters remain caller-owned. The caller must exclusively manage the connection
+and transaction; this is not a concurrent numbering/allocation service.
+
+Writes require auto-commit disabled and use local savepoints. Neither success nor
+failure commits or closes the caller's connection. A late row constraint or
+parent-delete failure rolls back only that operation, preserving earlier caller
+changes and savepoints for retry or later rollback. HSQLDB discards the local
+savepoint on rollback, so it is released explicitly only on success.
+
+Purchase-order copies preserve nullable addresses and independently copy present
+addresses, rows and default-account maps. They also now retain the stock-influencing
+flag (previously omitted). Assigning a supplier tolerates an absent supplier address;
+other supplier/business resolution behavior remains unchanged and is not generally
+isolated from the legacy singleton by this slice. No-argument business constructors
+and currency-rate fallbacks remain unchanged.
+
+Tests block legacy JDBC while exercising complete migration fingerprint parity,
+all fields/children, optional absence, duplicate/null numbers, identity retention,
+company isolation, detached snapshots, replacement with empty children, late
+insert/update/delete failures, retry, preserved outer savepoints, auto-commit
+rejection, independent copies and file database shutdown/reopen without legacy
+domain tables. This is a typed storage prerequisite only, not GUI activation or
+new purchase-order CLI commands. A separate assembled-JAR probe verifies purchase-order
+CRUD, late rollback/retry, copy flags, null preservation and file shutdown/reopen;
+the full assembled-JAR CLI smoke also passes. GUI startup still rejects format 3.
+
 ## Definition of done for issue #75
 
 Issue #75 is complete only when new databases contain no domain `OTHER` columns, supported legacy databases migrate through staging with verified rollback artifacts, every supported persisted domain is represented explicitly, normal GUI/CLI runtime does not deserialize legacy domain objects, and accounting behavior plus relationships match across migration fixtures on all supported platforms.
