@@ -32,6 +32,12 @@ public class SSOrder extends SSSale {
         return iPurchaseOrderNr;
     }
 
+    /** Sets a stored purchase-order reference without resolving it through the global database. */
+    public void setPurchaseOrderNr(Integer number) {
+        iPurchaseOrderNr = number;
+        iPurchaseOrder = null;
+    }
+
     // Inköpsorder nummer
     private Integer iPurchaseOrderNr;
 
@@ -50,6 +56,14 @@ public class SSOrder extends SSSale {
      * Default constructor
      */
     public SSOrder() {
+        this(true);
+    }
+
+    private SSOrder(boolean legacyDefaults) {
+        super(legacyDefaults);
+        if (!legacyDefaults) {
+            return;
+        }
         SSNewCompany iCompany = SSDB.getInstance().getCurrentCompany();
 
         if (iCompany != null) {
@@ -68,6 +82,14 @@ public class SSOrder extends SSSale {
             iCurrencyRate = iCurrency.getExchangeRate();
 
         }
+    }
+
+    /**
+     * Creates empty containers without legacy company, clock, address or currency defaults.
+     * @return an order for typed persistence hydration only
+     */
+    public static SSOrder forPersistence() {
+        return new SSOrder(false);
     }
 
     @Override
@@ -249,10 +271,12 @@ public class SSOrder extends SSSale {
 
     // //////////////////////////////////////////////////
 
-    /**
-     *
-     * @return
-     */
+    /** Returns the stored currency rate without resolving customers or applying a fallback. */
+    public BigDecimal getStoredCurrencyRate() {
+        return iCurrencyRate;
+    }
+
+    /** Returns the business currency rate, including the existing customer/one fallback. */
     public BigDecimal getCurrencyRate() {
         if (iCurrencyRate != null) {
             return iCurrencyRate;

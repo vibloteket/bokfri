@@ -796,6 +796,48 @@ legacy constructor defaults and null-safe independent party-address copies/custo
 assignment to invoices. Existing full register and migration/PDF parity fixtures
 remain in place.
 
+### Complete normalized orders and quotations
+
+`NormalizedSaleDocumentStore` loads and edits complete `SSOrder`/`SSTender`
+snapshots from the existing V15 tables: every header column, ordered rows, both
+optional addresses, default-account entries (including explicit nulls), lookup
+references and document-number links. `forPersistence()` factories skip legacy
+company/clock/address initialization. Raw stored currency-rate accessors and
+`setStoredTaxRates` avoid business fallbacks; invoice hydration also uses the latter
+so a SQL-null second tax rate is not replaced with 12%.
+
+The repository returns `Stored<T>(id, legacyId, document)`. Edits/deletes use the
+storage identity plus company scope, not the displayed number: migrated numbers
+can be null or duplicated. Updates retain both SQL and migration identities.
+New migration identities are allocated across all companies in the relevant table;
+document numbers and company counters remain caller-owned and are not advanced.
+Reference numbers are snapshots, not instructions to load other entities through
+SSDB. Existing no-argument business constructors/getters retain their behavior.
+
+Insertion, replacement (including child removal) and deletion run within a local
+savepoint. Auto-commit must be disabled; the store never commits or closes the
+connection. A late child constraint or parent-delete failure rolls back only the
+operation, preserving earlier caller changes and enabling retry. Successful writes
+also remain subject to the caller's commit/rollback. Missing/foreign-company
+identities are rejected before any owned children can be removed. The connection
+and transaction must be exclusively managed by the caller, as for other normalized
+stores; this is not a concurrent identity-allocation service.
+
+Tests compare the migration's complete semantic fingerprint before and after
+loading/re-saving populated orders and quotations with legacy JDBC blocked. They
+cover null/duplicate numbers, detached snapshots, optional-value absence, ordered
+blank/populated rows, foreign-company isolation, child removal/replacement, late
+insert/update/delete failures and retry, outer rollback, auto-commit rejection,
+and shutdown/reopen on a file database without legacy domain tables. A separate
+assembled-JAR probe also checks insertion, editing, late rollback, null preservation,
+shutdown/reopen and deletion using the packaged schema resources and classes.
+The full packaged CLI smoke remains unchanged and passes.
+
+This is the typed repository prerequisite for later GUI work, not an activated
+order/quotation GUI or new CLI command. GUI startup still rejects format 3 and
+other editable domains/business lookup paths still require porting. The existing
+sales-values projection remains separate and read-only.
+
 ## Definition of done for issue #75
 
 Issue #75 is complete only when new databases contain no domain `OTHER` columns, supported legacy databases migrate through staging with verified rollback artifacts, every supported persisted domain is represented explicitly, normal GUI/CLI runtime does not deserialize legacy domain objects, and accounting behavior plus relationships match across migration fixtures on all supported platforms.

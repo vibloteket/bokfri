@@ -239,9 +239,8 @@ public final class NormalizedInvoiceStore {
                     sale.setDeliveryWay(deliveryWays.get(result.getString(column++)));
                     sale.setTaxFree(result.getBoolean(column++));
                     sale.setText(result.getString(column++));
-                    sale.setTaxRate1(result.getBigDecimal(column++));
-                    sale.setTaxRate2(result.getBigDecimal(column++));
-                    sale.setTaxRate3(result.getBigDecimal(column++));
+                    sale.setStoredTaxRates(result.getBigDecimal(column++), result.getBigDecimal(column++),
+                            result.getBigDecimal(column++));
                     sale.setEuSaleCommodity(result.getBoolean(column++));
                     sale.setEuSaleYhirdPartCommodity(result.getBoolean(column++));
                     sale.setPrinted(result.getBoolean(column++));

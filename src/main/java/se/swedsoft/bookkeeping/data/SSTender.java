@@ -30,6 +30,12 @@ public class SSTender extends SSSale {
         return iOrderNr;
     }
 
+    /** Sets a stored order reference without resolving it through the global database. */
+    public void setOrderNr(Integer number) {
+        iOrderNr = number;
+        iOrder = null;
+    }
+
     // Order nummer
     private Integer iOrderNr;
 
@@ -44,7 +50,21 @@ public class SSTender extends SSSale {
     /**
      * Default constructor
      */
-    public SSTender() {}
+    public SSTender() {
+        super();
+    }
+
+    private SSTender(boolean legacyDefaults) {
+        super(legacyDefaults);
+    }
+
+    /**
+     * Creates empty containers without legacy company, clock or address defaults.
+     * @return a tender for typed persistence hydration only
+     */
+    public static SSTender forPersistence() {
+        return new SSTender(false);
+    }
 
     /**
      * Copy constructor
@@ -107,10 +127,12 @@ public class SSTender extends SSSale {
 
     // //////////////////////////////////////////////////
 
-    /**
-     *
-     * @return
-     */
+    /** Returns the stored currency rate without resolving customers or applying a fallback. */
+    public BigDecimal getStoredCurrencyRate() {
+        return iCurrencyRate;
+    }
+
+    /** Returns the business currency rate, including the existing customer/one fallback. */
     public BigDecimal getCurrencyRate() {
         if (iCurrencyRate != null) {
             return iCurrencyRate;
