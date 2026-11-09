@@ -879,6 +879,58 @@ new purchase-order CLI commands. A separate assembled-JAR probe verifies purchas
 CRUD, late rollback/retry, copy flags, null preservation and file shutdown/reopen;
 the full assembled-JAR CLI smoke also passes. GUI startup still rejects format 3.
 
+### Complete normalized stock documents
+
+`NormalizedStockDocumentStore` loads and edits complete inventory counts, incoming
+deliveries and outgoing deliveries from the existing V17 header/row tables. The
+three model `forPersistence()` factories initialize only empty rows, bypassing
+legacy numbering, date and text defaults. Readers restore nullable numbers/dates/
+texts, ordered product references and signed changes, plus inventory stock counts;
+null, zero and negative quantities remain distinct. Unregistered product numbers
+remain snapshot references rather than triggering implicit product lookups.
+
+`Stored<T>(id, legacyId, document)` separates stable SQL/migration identities from
+nullable or duplicate historical numbers. Reads, replacements and deletion are
+company-scoped through the parent header, including row tables with no company
+column. Updates retain both identities; new legacy identities are allocated across
+the relevant table, not just the selected company. Numbers/counters remain
+caller-owned. Returned models are detached, editable snapshots, not write-through
+objects. Legacy constructors still auto-number and initialize their original
+business defaults; copy constructors still independently copy their rows.
+
+Each write requires auto-commit disabled and runs inside a local savepoint. The
+caller exclusively manages the connection and outer transaction; this repository
+never commits/closes it or implements concurrent numbering. Late row-write or
+parent-delete failures restore only the failed operation, preserving prior work
+and outer savepoints for retry/rollback. Successful writes also remain subject to
+the caller's rollback. HSQLDB discards the local savepoint on rollback, so explicit
+release is performed only on success.
+
+Tests block every legacy JDBC call while comparing complete migration fingerprints
+after loading/re-saving all three types, checking null/duplicate numbers, ordered
+nullable rows, detached snapshots, company isolation, empty replacement, late
+insert/update/delete failures, retry, outer savepoints and auto-commit rejection.
+File shutdown/reopen tests need no legacy domain tables. Integration tests verify
+that the existing `NormalizedStockStore` projection reflects typed writes, signed
+changes and deletion, excludes other companies and returns to committed totals on
+caller rollback. This adds the editable-document repository, not a GUI/CLI entry
+point; the existing stock projection remains read-only and GUI startup still
+rejects format 3. A separate assembled-JAR probe verifies all three document types,
+late rollback/retry, nullable headers, stock totals, deletion and file reopen; the
+full assembled-JAR CLI smoke also passes.
+
+### Remaining periodic-invoice preservation gap
+
+Static inspection of V11 and `PeriodicInvoiceStagingConverter` shows that its
+fingerprint covers a flattened header/row projection, not every nested invoice
+snapshot. Template/instance addresses, default accounts, voucher snapshots, explicit
+template presence and raw added-state map entries are not all represented. A
+matching fingerprint for that projection is not proof of complete periodic-invoice
+preservation. A separate schema/converter/fingerprint extension and an explicit
+policy for already-normalized databases are required before a complete editable
+periodic-invoice repository or normalized GUI activation. The stock-document slice
+does not change that converter or claim to resolve this gap.
+
 ## Definition of done for issue #75
 
 Issue #75 is complete only when new databases contain no domain `OTHER` columns, supported legacy databases migrate through staging with verified rollback artifacts, every supported persisted domain is represented explicitly, normal GUI/CLI runtime does not deserialize legacy domain objects, and accounting behavior plus relationships match across migration fixtures on all supported platforms.

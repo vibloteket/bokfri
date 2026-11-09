@@ -33,12 +33,27 @@ public class SSInventory implements Serializable {
      *
      */
     public SSInventory() {
+        this(true);
+    }
+
+    private SSInventory(boolean legacyDefaults) {
+        iRows = new LinkedList<>();
+        if (!legacyDefaults) {
+            return;
+        }
         iNumber = 0;
         iDate = SSDateUtil.today();
         iText = "";
-        iRows = new LinkedList<>();
 
         doAutoIncrement();
+    }
+
+    /**
+     * Creates empty rows without legacy numbering, clock or text defaults.
+     * @return a stock document for typed persistence hydration only
+     */
+    public static SSInventory forPersistence() {
+        return new SSInventory(false);
     }
 
     /**

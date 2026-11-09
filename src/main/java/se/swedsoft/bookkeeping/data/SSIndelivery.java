@@ -33,11 +33,26 @@ public class SSIndelivery implements Serializable {
      *
      */
     public SSIndelivery() {
+        this(true);
+    }
+
+    private SSIndelivery(boolean legacyDefaults) {
+        iRows = new LinkedList<>();
+        if (!legacyDefaults) {
+            return;
+        }
         iDate = SSDateUtil.today();
         iText = null;
-        iRows = new LinkedList<>();
 
         doAutoIncrement();
+    }
+
+    /**
+     * Creates empty rows without legacy numbering, clock or text defaults.
+     * @return a stock document for typed persistence hydration only
+     */
+    public static SSIndelivery forPersistence() {
+        return new SSIndelivery(false);
     }
 
     /**
