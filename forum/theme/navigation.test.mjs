@@ -48,6 +48,19 @@ test('all static website pages share the same four navigation destinations', asy
     }
 });
 
+test('website reserves scrollbar space so short pages keep the same header width', () => {
+    const css = read('website/style.css');
+    assert.match(css, /html\s*\{[^}]*overflow-y:\s*scroll\s*;/,
+        'reserve the vertical scrollbar on the root, including the short download page');
+    for (const path of ['website/index.html', 'website/download/index.html', 'website/help/index.html']) {
+        const href = read(path).match(/<link rel="stylesheet" href="([^"]+)">/)?.[1];
+        assert.ok(href, `${path} has a stylesheet`);
+        const pageUrl = new URL(path.replace(/^website\//, ''), site);
+        assert.equal(new URL(href, pageUrl).href, `${site}style.css`,
+            `${path} uses the shared width rules`);
+    }
+});
+
 test('forum header matches website destinations and marks the forum section current', () => {
     const html = read('forum/theme/header.html');
     const { nav, links } = navigation(html, 'bokfri-header-nav', forum);
