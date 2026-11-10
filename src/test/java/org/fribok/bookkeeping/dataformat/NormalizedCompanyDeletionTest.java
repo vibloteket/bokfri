@@ -73,7 +73,7 @@ class NormalizedCompanyDeletionTest {
             var matcher = create.matcher(migration.sql());
             while (matcher.find()) tables.add(matcher.group(1).toUpperCase(java.util.Locale.ROOT));
         }
-        assertThat(tables).hasSize(91);
+        assertThat(tables).hasSize(97);
         return tables;
     }
 
@@ -103,6 +103,7 @@ class NormalizedCompanyDeletionTest {
                                 : table.equals("PURCHASE_ORDER_ADDRESS") ? "delivery" : "invoice";
                     }
                     if (name.equals("VOUCHER_KIND")) value = "main";
+                    if (table.equals("PERIODIC_INVOICE_SNAPSHOT") && name.equals("PRESENT")) value = true;
                     fields.put(name, value);
                 }
             }
