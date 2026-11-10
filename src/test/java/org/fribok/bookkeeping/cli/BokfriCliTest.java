@@ -191,7 +191,8 @@ class BokfriCliTest {
         List<List<String>> paths = new ArrayList<>();
         collectCommandPaths(CliCommandTree.root(), List.of(), paths);
 
-        assertThat(paths).hasSize(143).contains(List.of("database", "recover-account-plans"));
+        assertThat(paths).hasSize(144).contains(List.of("database", "recover-account-plans"),
+                List.of("database", "recover-periodic-invoices"));
         for (List<String> path : paths) {
             for (String helpOption : List.of("--help", "-h")) {
                 List<String> arguments = new ArrayList<>(path);

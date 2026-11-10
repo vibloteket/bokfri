@@ -121,12 +121,12 @@ public final class NormalizedCatalogRecoveryService {
         }
     }
 
-    private static Connection open(Path db, boolean readOnly) throws SQLException {
+    static Connection open(Path db, boolean readOnly) throws SQLException {
         return DriverManager.getConnection("jdbc:hsqldb:file:" + db.resolve("JFSDB")
                 + ";ifexists=true" + (readOnly ? ";readonly=true;shutdown=true" : ";shutdown=true"), "sa", "");
     }
 
-    private static void shutdown(Connection connection) throws SQLException {
+    static void shutdown(Connection connection) throws SQLException {
         try (var statement = connection.createStatement()) {
             statement.execute("SHUTDOWN");
         }
@@ -152,19 +152,25 @@ public final class NormalizedCatalogRecoveryService {
 
     /** Hashes every existing PUBLIC table, not just the original migration's accounting subset. */
     static Map<String, String> fingerprintExistingTables(Connection connection) throws SQLException {
+        return fingerprintExistingTables(connection, java.util.Set.of(
+                "ACCOUNT_PLAN_CATALOG", "ACCOUNT_PLAN_CATALOG_ACCOUNT"), 18);
+    }
+
+    static Map<String, String> fingerprintExistingTables(Connection connection, java.util.Set<String> excluded,
+            int historyCeiling) throws SQLException {
         Map<String, String> result = new TreeMap<>();
         List<String> tables = new ArrayList<>();
         try (var rows = connection.getMetaData().getTables(null, "PUBLIC", "%", new String[]{"TABLE"})) {
             while (rows.next()) {
                 String name = rows.getString("TABLE_NAME");
-                if (!name.equals("ACCOUNT_PLAN_CATALOG") && !name.equals("ACCOUNT_PLAN_CATALOG_ACCOUNT")) {
+                if (!excluded.contains(name)) {
                     tables.add(name);
                 }
             }
         }
         for (String table : tables) {
             String query = "SELECT * FROM \"" + table.replace("\"", "\"\"") + "\""
-                    + (table.equals("BOKFRI_SCHEMA_HISTORY") ? " WHERE version <= 18" : "");
+                    + (table.equals("BOKFRI_SCHEMA_HISTORY") ? " WHERE version <= " + historyCeiling : "");
             try (var statement = connection.createStatement(); var rows = statement.executeQuery(query)) {
                 var metadata = rows.getMetaData();
                 CanonicalFingerprintWriter hash = new CanonicalFingerprintWriter();
@@ -212,7 +218,7 @@ public final class NormalizedCatalogRecoveryService {
         }
     }
 
-    private static void requireClosedCatalog(Path db) throws IOException {
+    static void requireClosedCatalog(Path db) throws IOException {
         if (!Files.isRegularFile(db.resolve("JFSDB.script"))
                 || !Files.isRegularFile(db.resolve("JFSDB.properties"))
                 || Files.exists(db.resolve("JFSDB.lck")) || Files.exists(db.resolve("JFSDB.log"))) {
@@ -227,7 +233,7 @@ public final class NormalizedCatalogRecoveryService {
         }
     }
 
-    private static void copyCatalog(Path source, Path destination) throws IOException {
+    static void copyCatalog(Path source, Path destination) throws IOException {
         Files.createDirectory(destination);
         try (var files = Files.list(source)) {
             for (Path file : files.filter(path -> path.getFileName().toString().startsWith("JFSDB.")).toList()) {
@@ -239,7 +245,7 @@ public final class NormalizedCatalogRecoveryService {
         }
     }
 
-    private static void extractCatalog(Path archive, Path destination) throws IOException {
+    static void extractCatalog(Path archive, Path destination) throws IOException {
         Files.createDirectory(destination);
         // Accept clean rollback ZIPs with root or db/ catalogue entries, not arbitrary archives.
         try (ZipFile zip = new ZipFile(archive.toFile())) {
@@ -260,7 +266,7 @@ public final class NormalizedCatalogRecoveryService {
         }
     }
 
-    private static Map<String, String> catalogHashes(Path db) throws IOException {
+    static Map<String, String> catalogHashes(Path db) throws IOException {
         Map<String, String> hashes = new TreeMap<>();
         try (var paths = Files.list(db)) {
             for (Path path : paths.filter(file -> file.getFileName().toString().startsWith("JFSDB.")).toList()) {
@@ -273,7 +279,7 @@ public final class NormalizedCatalogRecoveryService {
         return Map.copyOf(hashes);
     }
 
-    private static String sha256(Path file) throws IOException {
+    static String sha256(Path file) throws IOException {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             try (InputStream input = Files.newInputStream(file)) {

@@ -114,6 +114,13 @@ public final class CliSmokeTest {
         require(recoveryWithoutCommit.exitCode == 1 && recoveryWithoutCommit.stderr.contains("COMMIT_REQUIRED"),
                 "catalogue recovery did not require explicit confirmation");
         recoveryWithoutCommit.stderrJsonObject();
+        Result periodicRecoveryWithoutCommit = cli("--format", "json", "database", "recover-periodic-invoices",
+                "--trusted-legacy-backup", temporary.resolve("untrusted-periodic.zip").toString(),
+                "--sha256", "0".repeat(64));
+        require(periodicRecoveryWithoutCommit.exitCode == 1
+                        && periodicRecoveryWithoutCommit.stderr.contains("COMMIT_REQUIRED"),
+                "periodic recovery did not require explicit confirmation");
+        periodicRecoveryWithoutCommit.stderrJsonObject();
         Result catalogue = cli("--format", "json", "account-plan", "list");
         catalogue.success();
         catalogue.jsonObject();

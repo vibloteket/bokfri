@@ -11,6 +11,7 @@ import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.DataMigrationService;
 import org.fribok.bookkeeping.dataformat.NormalizedMigrationService;
 import org.fribok.bookkeeping.dataformat.NormalizedCatalogRecoveryService;
+import org.fribok.bookkeeping.dataformat.NormalizedPeriodicRecoveryService;
 import org.fribok.bookkeeping.service.backup.BackupDetails;
 import org.fribok.bookkeeping.service.backup.BackupRestorePlan;
 import org.fribok.bookkeeping.service.backup.BackupService;
@@ -426,7 +427,7 @@ public class BokfriCli implements Runnable {
 
     @Command(mixinStandardHelpOptions = true, name = "database", description = "Inspect and migrate the database format",
             subcommands = {DatabaseStatus.class, DatabaseMigrate.class, DatabaseNormalize.class,
-                    DatabaseRecoverAccountPlans.class})
+                    DatabaseRecoverAccountPlans.class, DatabaseRecoverPeriodicInvoices.class})
     static class DatabaseCommand extends CliCommand implements Runnable {
         @CliMetadata.Spec CliContext spec;
         @Override public void run() {
@@ -570,6 +571,38 @@ public class BokfriCli implements Runnable {
                         "backup", result.activation().rollbackArchive().toString(),
                         "retainedSource", result.activation().retainedSource().toString()),
                         "Account-plan catalogue recovered; current normalized data preserved. Backup: "
+                                + result.activation().rollbackArchive());
+                return 0;
+            } catch (Exception exception) {
+                throw databaseFailure(exception);
+            }
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true, name = "recover-periodic-invoices",
+            description = "Offline V19 periodic snapshot recovery from a trusted legacy ZIP (requires --commit)")
+    static class DatabaseRecoverPeriodicInvoices extends DatabaseSubcommand {
+        @Option(names = "--trusted-legacy-backup", required = true,
+                description = "Trusted legacy rollback ZIP; requires Java object deserialization")
+        java.nio.file.Path trustedBackup;
+        @Option(names = "--sha256", required = true,
+                description = "Expected ZIP SHA-256; integrity is not proof of provenance")
+        String sha256;
+        @Option(names = "--commit", description = "Confirm offline recovery and database replacement")
+        boolean commit;
+
+        @Override public Integer call() {
+            if (!commit) throw new CliException("COMMIT_REQUIRED", "Periodic recovery requires explicit --commit; "
+                    + "close Bokfri and verify the legacy backup's provenance first");
+            BokfriCli root = root();
+            try {
+                var result = new NormalizedPeriodicRecoveryService(java.time.Clock.systemUTC())
+                        .recover(root.resolveContext(false, false).dataDir(), trustedBackup, sha256);
+                root.output(Map.of("recovered", true, "legacyBackupSha256", result.legacyBackupSha256(),
+                        "periodics", result.periodics(), "snapshots", result.snapshots(),
+                        "backup", result.activation().rollbackArchive().toString(),
+                        "retainedSource", result.activation().retainedSource().toString()),
+                        "Periodic snapshots recovered; current normalized data preserved. Backup: "
                                 + result.activation().rollbackArchive());
                 return 0;
             } catch (Exception exception) {
