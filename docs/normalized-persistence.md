@@ -919,17 +919,55 @@ rejects format 3. A separate assembled-JAR probe verifies all three document typ
 late rollback/retry, nullable headers, stock totals, deletion and file reopen; the
 full assembled-JAR CLI smoke also passes.
 
-### Remaining periodic-invoice preservation gap
+### V20 periodic-invoice snapshot preservation and compatibility boundary
 
-Static inspection of V11 and `PeriodicInvoiceStagingConverter` shows that its
-fingerprint covers a flattened header/row projection, not every nested invoice
-snapshot. Template/instance addresses, default accounts, voucher snapshots, explicit
-template presence and raw added-state map entries are not all represented. A
-matching fingerprint for that projection is not proof of complete periodic-invoice
-preservation. A separate schema/converter/fingerprint extension and an explicit
-policy for already-normalized databases are required before a complete editable
-periodic-invoice repository or normalized GUI activation. The stock-document slice
-does not change that converter or claim to resolve this gap.
+V11's original periodic fingerprint covered a flattened header/row projection,
+not every nested invoice snapshot. `V20__preserve_periodic_invoice_snapshots.sql`
+adds six explicit tables without editing any installed migration checksum.
+`PeriodicInvoiceStagingConverter` now preserves and fingerprints template presence,
+template/instance invoice and delivery addresses, default-account entries,
+voucher headers and ordered rows (including dimensions/edit metadata/flags), and
+the raw added-state map. Null, false, true and absent map entries stay distinct;
+orphan/null keys survive. Nested owners use template index -1 or generated-instance
+ordinal, never invoice number, so duplicate or null instance numbers do not merge
+snapshots. An absent template/voucher remains distinct from an empty one.
+
+Fingerprints retain all V11 domains and add six independently named nested domains.
+Canonical decimals follow the existing scale-30 policy; voucher edit timestamps use
+the existing Swedish legacy-time resolver and retain nanoseconds in V20. These
+domains participate in the existing staged/reopened verification chain. A late
+nested write or fingerprint mismatch rolls back the entire periodic conversion,
+not just its new child rows. Company deletion now removes the complete graph with
+foreign keys enabled (97-table ownership matrix) and still supports old V19 graphs.
+Unsupported invoice subclasses and correction-linked voucher object graphs are
+explicitly rejected with `PERIODIC_SNAPSHOT_UNSUPPORTED`, rather than discarding
+subtype fields or referenced vouchers. They require further representation work.
+
+Compatibility is deliberately fail-closed: existing normalized CLI opening does
+not apply new migrations, and V20 has **no data backfill**. Merely adding empty
+V20 tables cannot restore lost legacy values or establish completeness. Complete
+periodic fingerprinting requires all V20 tables/history plus explicit template and
+instance markers, and rejects inconsistent graphs with
+`PERIODIC_SNAPSHOT_RECOVERY_REQUIRED`. Existing V19 non-periodic CLI paths remain
+unchanged. New legacy migrations populate and verify these records from the source.
+
+There is no automatic recovery/upgrade of an already-normalized periodic projection
+in this slice. Preserve its current database and verified legacy rollback artifacts;
+do not replace current accounting data with an old backup, reconstruct addresses
+from today's registers, or fabricate empty snapshots. A separate operator-trusted,
+selective recovery flow must preserve post-migration changes before those older
+projections can be declared complete. Neither a periodic editing repository nor
+normalized GUI activation is enabled by this change.
+
+Regression fixtures cover every new fingerprint domain, null/empty distinctions,
+raw map entries, duplicate instance numbers, nanosecond/DST edit metadata, late
+failure rollback, tampering, missing/partial markers, old V19 and schema-only V20,
+unsupported graph rejection and durable file reopen. A separate assembled-JAR
+probe exercises real legacy file migration through staging, activation, rollback
+archive creation and two reopens, comparing the complete periodic fingerprint and
+nested table contents. The full assembled-JAR CLI smoke also passes. Existing
+catalogue recovery continues to apply only V18-to-V19; its historical fixture
+remains genuinely V18.
 
 ## Definition of done for issue #75
 

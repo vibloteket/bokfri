@@ -12,11 +12,15 @@ import java.util.*;
 public final class PeriodicInvoiceStagingConverter {
     public ConversionResult convert(Connection legacy, Connection normalized) throws SQLException {
         Snapshot source = readLegacy(Objects.requireNonNull(legacy, "legacy"));
-        SemanticFingerprint sf = fingerprint(source);
+        List<PeriodicInvoiceSnapshots.Entry> nested = PeriodicInvoiceSnapshots.readLegacy(legacy);
+        SemanticFingerprint sf = PeriodicInvoiceSnapshots.combine(fingerprint(source),
+                PeriodicInvoiceSnapshots.fingerprint(nested));
         try {
             writeNormalized(Objects.requireNonNull(normalized, "normalized"), source);
+            PeriodicInvoiceSnapshots.write(normalized, nested);
             Snapshot dest = readNormalized(normalized);
-            SemanticFingerprint df = fingerprint(dest);
+            SemanticFingerprint df = PeriodicInvoiceSnapshots.combine(fingerprint(dest),
+                    PeriodicInvoiceSnapshots.fingerprint(PeriodicInvoiceSnapshots.readNormalized(normalized)));
             List<String> d = sf.differences(df);
             if (!d.isEmpty()) { normalized.rollback(); throw new SQLException("Periodic-invoice staging fingerprint mismatch: " + String.join("; ", d)); }
             normalized.commit();
@@ -24,7 +28,10 @@ public final class PeriodicInvoiceStagingConverter {
         } catch (SQLException | RuntimeException e) { normalized.rollback(); throw e; }
     }
 
-    public SemanticFingerprint fingerprintNormalized(Connection c) throws SQLException { return fingerprint(readNormalized(c)); }
+    public SemanticFingerprint fingerprintNormalized(Connection c) throws SQLException {
+        return PeriodicInvoiceSnapshots.combine(fingerprint(readNormalized(c)),
+                PeriodicInvoiceSnapshots.fingerprint(PeriodicInvoiceSnapshots.readNormalized(c)));
+    }
 
     private static Snapshot readLegacy(Connection c) throws SQLException {
         Snapshot s = new Snapshot();
@@ -37,7 +44,7 @@ public final class PeriodicInvoiceStagingConverter {
                 template == null ? null : template.getNumber(), template == null ? null : template.getLocalDate(), template == null ? null : template.getLocalDueDate(), template == null ? null : template.getCustomerNr(), template == null ? null : template.getCustomerName(), template == null ? null : template.getOurContactPerson(), template == null ? null : template.getYourContactPerson(), template == null ? null : template.getStoredDelayInterest(), template == null ? null : template.getCurrency() == null ? null : template.getCurrency().getName(), template == null ? null : name(template.getPaymentTerm()), template == null ? null : name(template.getDeliveryTerm()), template == null ? null : name(template.getDeliveryWay()), template == null ? false : template.getTaxFree(), template == null ? null : template.getText(), tax.isEmpty() ? null : tax.get(0), tax.size() > 1 ? tax.get(1) : null, tax.size() > 2 ? tax.get(2) : null, template == null ? false : template.getEuSaleCommodity(), template == null ? false : template.getEuSaleThirdPartCommodity(), template == null ? false : template.isPrinted(), template == null ? null : template.getStoredType() == null ? null : template.getStoredType().name(), template == null ? null : template.getCurrencyRate(), template == null ? null : template.getYourOrderNumber(), template == null ? null : template.getOCRNumber(), template == null ? false : template.isEntered(), template == null ? 0 : template.getNumReminders(), template == null ? false : template.isInterestInvoiced(), template == null ? false : template.isStockInfluencing(), template == null ? null : template.getOrderNumbers()));
             int tr = 0; if (template != null) for (SSSaleRow row : template.getRows()) { row.fixResultUnitAndProject(); s.templateRows.add(new TemplateRow(id, tr++, row.getProductNr(), row.getDescription(), row.getUnitprice(), row.getQuantity(), row.getUnit() == null ? null : row.getUnit().getName(), row.getDiscount(), row.getTaxCode() == null ? null : row.getTaxCode().name(), row.getAccountNr(), row.getProjectNr(), row.getResultUnitNr())); }
             Map<Integer, Boolean> added = x.getStoredAdded();
-            int n = 0; for (SSInvoice invoice : x.getInvoices()) { boolean isAdded = added.getOrDefault(invoice.getNumber(), false); s.instances.add(new Instance(id, n, invoice.getNumber(), invoice.getLocalDate(), invoice.getLocalDueDate(), invoice.getCustomerNr(), invoice.getCustomerName(), invoice.getOurContactPerson(), invoice.getYourContactPerson(), invoice.getStoredDelayInterest(), invoice.getCurrency() == null ? null : invoice.getCurrency().getName(), name(invoice.getPaymentTerm()), name(invoice.getDeliveryTerm()), name(invoice.getDeliveryWay()), invoice.getTaxFree(), invoice.getText(), invoice.getStoredTaxRates().get(0), invoice.getStoredTaxRates().size() > 1 ? invoice.getStoredTaxRates().get(1) : null, invoice.getStoredTaxRates().size() > 2 ? invoice.getStoredTaxRates().get(2) : null, invoice.getEuSaleCommodity(), invoice.getEuSaleThirdPartCommodity(), invoice.isPrinted(), invoice.getStoredType() == null ? null : invoice.getStoredType().name(), invoice.getCurrencyRate(), invoice.getYourOrderNumber(), invoice.getOCRNumber(), invoice.isEntered(), invoice.getNumReminders(), invoice.isInterestInvoiced(), invoice.isStockInfluencing(), invoice.getOrderNumbers(), isAdded)); int ir = 0; for (SSSaleRow row : invoice.getRows()) { row.fixResultUnitAndProject(); s.instanceRows.add(new InstanceRow(id, n, ir++, row.getProductNr(), row.getDescription(), row.getUnitprice(), row.getQuantity(), row.getUnit() == null ? null : row.getUnit().getName(), row.getDiscount(), row.getTaxCode() == null ? null : row.getTaxCode().name(), row.getAccountNr(), row.getProjectNr(), row.getResultUnitNr())); } n++; }
+            int n = 0; for (SSInvoice invoice : x.getInvoices()) { boolean isAdded = Boolean.TRUE.equals(added.get(invoice.getNumber())); s.instances.add(new Instance(id, n, invoice.getNumber(), invoice.getLocalDate(), invoice.getLocalDueDate(), invoice.getCustomerNr(), invoice.getCustomerName(), invoice.getOurContactPerson(), invoice.getYourContactPerson(), invoice.getStoredDelayInterest(), invoice.getCurrency() == null ? null : invoice.getCurrency().getName(), name(invoice.getPaymentTerm()), name(invoice.getDeliveryTerm()), name(invoice.getDeliveryWay()), invoice.getTaxFree(), invoice.getText(), invoice.getStoredTaxRates().get(0), invoice.getStoredTaxRates().size() > 1 ? invoice.getStoredTaxRates().get(1) : null, invoice.getStoredTaxRates().size() > 2 ? invoice.getStoredTaxRates().get(2) : null, invoice.getEuSaleCommodity(), invoice.getEuSaleThirdPartCommodity(), invoice.isPrinted(), invoice.getStoredType() == null ? null : invoice.getStoredType().name(), invoice.getCurrencyRate(), invoice.getYourOrderNumber(), invoice.getOCRNumber(), invoice.isEntered(), invoice.getNumReminders(), invoice.isInterestInvoiced(), invoice.isStockInfluencing(), invoice.getOrderNumbers(), isAdded)); int ir = 0; for (SSSaleRow row : invoice.getRows()) { row.fixResultUnitAndProject(); s.instanceRows.add(new InstanceRow(id, n, ir++, row.getProductNr(), row.getDescription(), row.getUnitprice(), row.getQuantity(), row.getUnit() == null ? null : row.getUnit().getName(), row.getDiscount(), row.getTaxCode() == null ? null : row.getTaxCode().name(), row.getAccountNr(), row.getProjectNr(), row.getResultUnitNr())); } n++; }
         });
         s.sort(); return s;
     }

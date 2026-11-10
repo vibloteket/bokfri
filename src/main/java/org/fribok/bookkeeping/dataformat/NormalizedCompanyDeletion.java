@@ -11,6 +11,7 @@ final class NormalizedCompanyDeletion {
     static void deleteDocumentsAndRegisters(Connection connection, long companyId) throws SQLException {
         document(connection, companyId, "own_report", "own_report_id",
                 "account_budget", "account_row", "heading");
+        PeriodicInvoiceSnapshots.deleteCompanySnapshots(connection, companyId);
         document(connection, companyId, "periodic_invoice", "periodic_invoice_id",
                 "instance_row", "instance", "template_row");
         document(connection, companyId, "customer_invoice", "invoice_id",

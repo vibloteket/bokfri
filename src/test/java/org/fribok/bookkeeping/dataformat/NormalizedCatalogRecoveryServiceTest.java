@@ -306,7 +306,12 @@ class NormalizedCatalogRecoveryServiceTest {
         Path backup = temporary.resolve("trusted-legacy.zip");
         Files.copy(migration.activation().rollbackArchive(), backup);
         try (Connection connection = open(data); var statement = connection.createStatement()) {
-            // Simulate an older normalized database that has since gained new typed data.
+            // Simulate actual V18, not V20 with just its V19 history row removed.
+            for (String table : java.util.List.of("periodic_invoice_added_state", "periodic_invoice_voucher_row",
+                    "periodic_invoice_voucher", "periodic_invoice_default_account", "periodic_invoice_address",
+                    "periodic_invoice_snapshot")) statement.executeUpdate("DROP TABLE " + table);
+            statement.executeUpdate("DELETE FROM bokfri_schema_history WHERE version=20");
+            // The old catalogue has since gained new typed accounting data.
             statement.executeUpdate("DROP TABLE account_plan_catalog_account");
             statement.executeUpdate("DROP TABLE account_plan_catalog");
             statement.executeUpdate("DELETE FROM bokfri_schema_history WHERE version=19");
