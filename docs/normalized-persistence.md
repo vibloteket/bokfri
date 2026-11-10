@@ -951,13 +951,12 @@ instance markers, and rejects inconsistent graphs with
 `PERIODIC_SNAPSHOT_RECOVERY_REQUIRED`. Existing V19 non-periodic CLI paths remain
 unchanged. New legacy migrations populate and verify these records from the source.
 
-There is no automatic recovery/upgrade of an already-normalized periodic projection
-in this slice. Preserve its current database and verified legacy rollback artifacts;
-do not replace current accounting data with an old backup, reconstruct addresses
-from today's registers, or fabricate empty snapshots. A separate operator-trusted,
-selective recovery flow must preserve post-migration changes before those older
-projections can be declared complete. Neither a periodic editing repository nor
-normalized GUI activation is enabled by this change.
+There is no automatic recovery/upgrade of an already-normalized periodic projection.
+Preserve its current database and verified legacy rollback artifacts; do not replace
+current accounting data with an old backup, reconstruct addresses from today's
+registers, or fabricate empty snapshots. The explicit V19 recovery command below
+preserves post-migration data under strict identity/projection checks. Neither a
+periodic editing repository nor normalized GUI activation is enabled by these changes.
 
 Regression fixtures cover every new fingerprint domain, null/empty distinctions,
 raw map entries, duplicate instance numbers, nanosecond/DST edit metadata, late
@@ -968,6 +967,60 @@ archive creation and two reopens, comparing the complete periodic fingerprint an
 nested table contents. The full assembled-JAR CLI smoke also passes. Existing
 catalogue recovery continues to apply only V18-to-V19; its historical fixture
 remains genuinely V18.
+
+### Explicit recovery for existing V19 periodic projections
+
+Close Bokfri and every process using the data directory, independently back it up,
+and verify the provenance of its legacy rollback ZIP. A SHA-256 proves integrity,
+not that the archive belongs to this database or is safe to deserialize. Recovery
+is an explicit operator decision, never automatic source selection:
+
+```sh
+bokfri --data-dir /path/to/data database recover-periodic-invoices \
+  --trusted-legacy-backup /path/to/verified-legacy.zip \
+  --sha256 EXPECTED_64_CHARACTER_SHA256 --commit
+```
+
+`NormalizedPeriodicRecoveryService` requires exactly normalized format 3/schema V19,
+without any partial/existing V20 snapshot tables. It refuses unresolved staging,
+locked/dirty catalogues and unsupported SQL types that cannot be safely fingerprinted.
+Missing `--commit` performs no recovery. Saved GUI company/year selection is unchanged.
+V20 databases, including manually added empty V20 tables, are not overwritten or
+repaired by this command; they require separate manual assessment.
+
+The service freezes and re-hashes the trusted ZIP, copies the **current normalized
+database**, extracts only permitted catalogue entries into an isolated writable
+legacy copy, and deserializes only periodic rows whose legacy identities still
+exist in the current database. Deleted source records are not resurrected and their
+unsupported nested graphs do not block unrelated surviving records. Every selected
+legacy identity/company, periodic/template header, ordered row, generated instance
+and effective added flag must match the current complete V11 projection. Missing,
+changed or mismatched records are refused; document numbers alone are never used
+as identities. The operator's provenance check remains essential where different
+archives could have identical projections but different omitted snapshots.
+
+Only then is V20 applied in staging and its nested tables populated. All original
+PUBLIC table schemas/rows, including account-plan catalogues, accounting entered
+after normalization, evolved typed tables and schema-history rows through V19, are
+hashed and verified unchanged. Unrelated domains are not reconstructed from legacy.
+The complete periodic fingerprint and original-table hashes are checked before
+activation, after disk reopen and again after activation. A final active-file hash
+check detects intervening changes before any active files are moved.
+
+Activation retains the pre-recovery **current normalized** catalogue and a rollback
+ZIP. The trusted source ZIP stays unchanged. Failures before activation leave the
+active catalogue untouched and retain staging for inspection; there is no automatic
+retry or abandonment cleanup. HSQLDB can commit schema DDL, but failed nested writes
+are rolled back in their staging transaction and never activated. Existing V18
+account-plan recovery remains specifically V18-to-V19, not permission to upgrade
+or overwrite other domains.
+
+Regression tests cover real post-migration vouchers, evolved decimal/binary tables,
+physical rollback equality, two reopens, changed/missing projections, deleted
+unsupported objects, unsupported surviving graphs, late staging failures, pending
+recovery state, unsafe sources/types, dirty catalogues and unchanged GUI selection.
+A separate assembled-JAR CLI probe verifies explicit commit, V19-to-V20 recovery,
+all original SQL rows, rollback artifacts and two reopens; full CLI smoke passes.
 
 ## Definition of done for issue #75
 

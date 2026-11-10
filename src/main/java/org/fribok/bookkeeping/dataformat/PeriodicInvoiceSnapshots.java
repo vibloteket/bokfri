@@ -46,9 +46,13 @@ final class PeriodicInvoiceSnapshots {
     private PeriodicInvoiceSnapshots() {}
 
     static List<Entry> readLegacy(Connection legacy) throws SQLException {
+        return readLegacy(legacy, null);
+    }
+
+    static List<Entry> readLegacy(Connection legacy, java.util.Set<Integer> selected) throws SQLException {
         List<Entry> entries = new ArrayList<>();
         try (var statement = legacy.createStatement(); var rows = statement.executeQuery(
-                "SELECT id,periodicinvoice FROM tbl_periodicinvoice ORDER BY id")) {
+                "SELECT id,periodicinvoice FROM tbl_periodicinvoice" + selection(selected) + " ORDER BY id")) {
             while (rows.next()) {
                 int id = rows.getInt(1);
                 SSPeriodicInvoice periodic = (SSPeriodicInvoice) rows.getObject(2);
@@ -63,6 +67,14 @@ final class PeriodicInvoiceSnapshots {
             }
         }
         return entries;
+    }
+
+    /** Identifiers come from typed SQL integers, never user text; empty selection must not read deleted objects. */
+    static String selection(java.util.Set<Integer> selected) {
+        if (selected == null) return "";
+        if (selected.isEmpty()) return " WHERE 1=0";
+        return " WHERE id IN (" + selected.stream().sorted().map(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(",")) + ")";
     }
 
     private static void invoice(List<Entry> entries, int id, int index, SSInvoice invoice) throws SQLException {

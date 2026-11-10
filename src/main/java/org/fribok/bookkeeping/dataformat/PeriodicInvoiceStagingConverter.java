@@ -33,9 +33,22 @@ public final class PeriodicInvoiceStagingConverter {
                 PeriodicInvoiceSnapshots.fingerprint(PeriodicInvoiceSnapshots.readNormalized(c)));
     }
 
+    static SemanticFingerprint projectionNormalized(Connection connection) throws SQLException {
+        return fingerprint(readNormalized(connection));
+    }
+
+    static SemanticFingerprint projectionLegacy(Connection connection, Set<Integer> selected) throws SQLException {
+        return fingerprint(readLegacy(connection, selected));
+    }
+
     private static Snapshot readLegacy(Connection c) throws SQLException {
+        return readLegacy(c, null);
+    }
+
+    private static Snapshot readLegacy(Connection c, Set<Integer> selected) throws SQLException {
         Snapshot s = new Snapshot();
-        query(c, "SELECT id,companyid,number,periodicinvoice FROM tbl_periodicinvoice ORDER BY companyid,id", r -> {
+        query(c, "SELECT id,companyid,number,periodicinvoice FROM tbl_periodicinvoice"
+                + PeriodicInvoiceSnapshots.selection(selected) + " ORDER BY companyid,id", r -> {
             int id = r.getInt(1), company = r.getInt(2); Integer key = nullableInteger(r,3); SSPeriodicInvoice x = (SSPeriodicInvoice) r.getObject(4);
             if (!Objects.equals(key, x.getNumber())) throw new SQLException("Periodic-invoice key/object mismatch for legacy id " + id + ": table=" + key + ", object=" + x.getNumber());
             SSInvoice template = x.getStoredTemplate();
