@@ -1,6 +1,7 @@
 # Normalized persistence: completion audit and cutover checklist
 
-Audit baseline: `0a2c79a1` (PR #196 merged, 2026-11-10). This is the remaining-work
+Audit baseline: `0a2c79a1` (PR #196 merged, 2026-11-10); runtime progress below
+includes the subsequent customer invoice/credit editing slice. This is the remaining-work
 ledger for issue #75, not a claim that format 3 is ready for normal GUI use.
 The [design and migration notes](normalized-persistence.md) describe implemented
 slices; this ledger distinguishes migration preservation from runtime completion.
@@ -46,7 +47,7 @@ private conversion helpers and demo-only inserts do not establish editing suppor
 | Customer, supplier, product registers | `NormalizedRegisterStore`: read/add/delete, pure hydration and stored references | Complete edit semantics, reference/deletion rules and GUI integration; do not infer update support from insert helpers |
 | Shared lookups, projects, result units | Register store: lookup/dimension reads and dimension-set replacement | Complete GUI-required edit/delete/create operations and reference validation |
 | Voucher templates and automatic distributions | Accounting store: template read/add; schema/converters preserve both domains | Template edit/delete and automatic-distribution runtime operations; calculation/GUI parity |
-| Customer invoices and credits | `NormalizedInvoiceStore`: read/add, numbering, sums and entered-state marking; several CLI/PDF workflows | General edit/delete and all GUI lifecycle actions, including credit/correction and posting transactions |
+| Customer invoices and credits | `NormalizedInvoiceStore`: stable-ID list/find/add, unbooked edit/delete, numbering, sums and atomic entered-state marking; several CLI/PDF workflows | Booked correction/metadata workflows, explicit order detachment and all GUI lifecycle integration/posting transactions |
 | Supplier invoices and credits | `NormalizedSupplierInvoiceStore`: read/add, numbering, sums and entered-state marking | General edit/delete and complete GUI booking/credit/correction workflows |
 | Inpayments and outpayments | Respective stores: read/add, numbering and entered-state marking; explicit voucher calculations | General edit/delete, payment differences, correction and GUI posting transactions |
 | Periodic invoices | V20 complete snapshots/fingerprints for supported graphs; V19 recovery | Typed load/edit/delete/generation service and GUI integration; unsupported graphs below |
@@ -92,20 +93,41 @@ source/fixture evidence and an acceptance test.
 
 - [ ] Expand each matrix row into its GUI actions and required repository/service
   operations; explicitly list missing operations rather than assuming CLI parity.
-- [ ] Implement missing typed operations, including edit/delete for invoices,
-  credits, payments and registers; periodic generation/editing; own reports;
-  helper/lookup/budget workflows identified by the action inventory.
+- [x] Customer invoice/credit unbooked graph edit/delete by stable SQL identity;
+  local rollback/retry, null/default-account preservation, reference protection
+  and disk reopen tests. This is repository coverage, not GUI or booked-edit parity.
+- [ ] Implement remaining typed operations, including booked invoice/credit
+  correction/metadata workflows, payment/register edit/delete, periodic generation/
+  editing, own reports and helper/lookup/budget workflows from the action inventory.
 - [ ] For each write prove company/year isolation, identity/counter semantics,
   late-failure rollback, retry, detached/null snapshot preservation and reopen.
 - [ ] Establish explicit posting services so documents, vouchers, entered flags
   and counters change in one transaction. Repository-local savepoints alone do
   not prove whole-workflow atomicity.
 
-**Next implementation slice:** inventory and complete customer invoice/credit
-edit/delete operations against their GUI callers and reference rules. Use the
-existing sale-document savepoint/identity tests as a pattern, but preserve booked
-invoice/payment/credit relationships rather than blindly replacing child graphs.
-This is a concrete G1 dependency of invoice GUI cutover, not GUI activation itself.
+**Next implementation slice:** explicit customer invoice/credit posting and booked
+metadata/correction workflows, including transaction-wide ledger/document/counter
+atomicity. The new repository deliberately rejects general edit/delete on booked
+documents; this restriction is not legacy GUI parity. Order detachment before
+invoice deletion must likewise become an explicit atomic workflow rather than
+silently clearing number-based links. Do not enable the GUI merely because
+unbooked CRUD now passes.
+
+Customer invoice/credit action inventory (GUI callers remain legacy):
+
+| Action / current caller | Repository evidence | Still required |
+|---|---|---|
+| Create / `SSInvoiceDialog` via `InvoiceService.create`; credit dialogs via `SSDB.addCreditInvoice` | Complete snapshot insertion under a local savepoint; numbering/counters caller-owned | Shared application service, validation and counter transaction |
+| Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Stable-ID replacement for unbooked snapshots; booked edits refused | Booked metadata/correction policy and service, then GUI adapter |
+| Delete / both document frames | Owned graph deletion for unbooked documents; invoice payment/credit/order references protected | GUI confirmation, cache notifications, atomic order detachment and supported booked workflow policy |
+| Journal / `InvoiceService.planJournal` and `commitJournal` | Existing entered-state snapshot write is now locally atomic and refuses ambiguous numbers | Whole journal ledger writes, flags and counters in one transaction; credit journal equivalent |
+| Print/remind/copy/convert | Existing PDFs and detached reads do not establish mutation parity | Inventory and port flag/reminder/interest updates and generated-document/copy actions through explicit services |
+
+Renumbering protects both the old and proposed invoice number from payment,
+credit or order references, including dangling historical references. Inserting a
+new invoice cannot silently adopt such a reference. Null and duplicate historical
+numbers remain readable; edits target SQL identity, not number. These guards are
+fail-closed repository boundaries, not a new claim of complete business validation.
 
 ### G2 — Introduce a shared normalized application boundary
 
