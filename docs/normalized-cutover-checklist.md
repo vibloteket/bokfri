@@ -101,26 +101,29 @@ source/fixture evidence and an acceptance test.
   editing, own reports and helper/lookup/budget workflows from the action inventory.
 - [ ] For each write prove company/year isolation, identity/counter semantics,
   late-failure rollback, retry, detached/null snapshot preservation and reopen.
-- [ ] Establish explicit posting services so documents, vouchers, entered flags
-  and counters change in one transaction. Repository-local savepoints alone do
-  not prove whole-workflow atomicity.
+- [x] Shared normalized customer invoice/credit journal planning and posting:
+  regenerate from stable identities, reject stale financial previews, and change
+  snapshots, entered flags, ledger rows and the journal counter under one savepoint.
+  Both CLI customer journals now use this service and commit once on success.
+- [ ] Establish corresponding posting services for remaining document families;
+  connect the GUI workflows. Repository-local savepoints alone do not prove
+  whole-workflow atomicity.
 
-**Next implementation slice:** explicit customer invoice/credit posting and booked
-metadata/correction workflows, including transaction-wide ledger/document/counter
-atomicity. The new repository deliberately rejects general edit/delete on booked
-documents; this restriction is not legacy GUI parity. Order detachment before
-invoice deletion must likewise become an explicit atomic workflow rather than
-silently clearing number-based links. Do not enable the GUI merely because
-unbooked CRUD now passes.
+**Next implementation slice:** customer invoice/credit booked metadata/correction
+workflows and explicit order detachment. The repository still rejects general
+edit/delete on booked documents; this restriction is not legacy GUI parity.
+Order detachment before invoice deletion must become an explicit atomic workflow
+rather than silently clearing number-based links. Do not enable the GUI merely
+because unbooked CRUD and the customer journal service now pass.
 
 Customer invoice/credit action inventory (GUI callers remain legacy):
 
 | Action / current caller | Repository evidence | Still required |
 |---|---|---|
-| Create / `SSInvoiceDialog` via `InvoiceService.create`; credit dialogs via `SSDB.addCreditInvoice` | Complete snapshot insertion under a local savepoint; numbering/counters caller-owned | Shared application service, validation and counter transaction |
+| Create / `SSInvoiceDialog` via `InvoiceService.create`; credit dialogs via `SSDB.addCreditInvoice` | Complete snapshot insertion under a local savepoint; explicit company/date invoice factory used by normalized CLI creation; numbering/counters caller-owned | Shared GUI application service, validation and counter transaction |
 | Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Stable-ID replacement for unbooked snapshots; booked edits refused | Booked metadata/correction policy and service, then GUI adapter |
 | Delete / both document frames | Owned graph deletion for unbooked documents; invoice payment/credit/order references protected | GUI confirmation, cache notifications, atomic order detachment and supported booked workflow policy |
-| Journal / `InvoiceService.planJournal` and `commitJournal` | Existing entered-state snapshot write is now locally atomic and refuses ambiguous numbers | Whole journal ledger writes, flags and counters in one transaction; credit journal equivalent |
+| Journal / `InvoiceService.planJournal` and `commitJournal` | `NormalizedCustomerJournalService` provides whole invoice/credit journal atomicity, stable-ID posting, stale-financial-plan rejection and caller-owned commit; both normalized CLI journals use it | GUI adapters to this service; booked correction/metadata workflow policy |
 | Print/remind/copy/convert | Existing PDFs and detached reads do not establish mutation parity | Inventory and port flag/reminder/interest updates and generated-document/copy actions through explicit services |
 
 Renumbering protects both the old and proposed invoice number from payment,
