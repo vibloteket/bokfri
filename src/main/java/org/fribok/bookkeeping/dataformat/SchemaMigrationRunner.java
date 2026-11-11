@@ -99,6 +99,15 @@ public final class SchemaMigrationRunner {
         }
     }
 
+    /** Verifies installed history/checksums without DDL, migrations, commits or connection changes. */
+    public List<Integer> validateInstalled(Connection connection, List<SchemaMigration> migrations)
+            throws SQLException {
+        List<SchemaMigration> ordered = validateSequence(migrations);
+        Map<Integer, InstalledMigration> installed = readInstalled(connection);
+        verifyInstalled(ordered, installed);
+        return installed.keySet().stream().sorted().toList();
+    }
+
     private static List<SchemaMigration> validateSequence(List<SchemaMigration> migrations)
             throws SchemaMigrationException {
         Objects.requireNonNull(migrations, "migrations");

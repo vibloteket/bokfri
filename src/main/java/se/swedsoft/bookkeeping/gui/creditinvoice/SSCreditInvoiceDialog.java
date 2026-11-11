@@ -1,6 +1,8 @@
 package se.swedsoft.bookkeeping.gui.creditinvoice;
 
 
+import org.fribok.bookkeeping.gui.creditinvoice.CustomerCreditDialogAdapter;
+import se.swedsoft.bookkeeping.gui.creditinvoice.panel.NormalizedCreditRequestPanel;
 import se.swedsoft.bookkeeping.calc.math.SSOrderMath;
 import se.swedsoft.bookkeeping.calc.math.SSTenderMath;
 import se.swedsoft.bookkeeping.data.SSCreditInvoice;
@@ -36,6 +38,34 @@ public class SSCreditInvoiceDialog {
     private static ResourceBundle bundle = SSBundle.getBundle();
 
     private SSCreditInvoiceDialog() {}
+
+    /**
+     * Builds (but does not show) the normalized request dialog. The composition root supplies
+     * dedicated sessions, selection, a shared transaction gate and committed refresh callback.
+     * Does not change the format-3 startup guard or the legacy dialog path.
+     */
+    public static javax.swing.JDialog normalizedDialog(javax.swing.JFrame owner,
+            CustomerCreditDialogAdapter adapter,
+            java.util.function.Consumer<CustomerCreditDialogAdapter.Created> saved) {
+        javax.swing.JDialog dialog = new javax.swing.JDialog(
+                owner, bundle.getString("creditinvoice.normalized.title"), true);
+        var panel = new NormalizedCreditRequestPanel(
+                adapter, saved, dialog::dispose);
+        dialog.add(panel, BorderLayout.CENTER);
+        dialog.setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
+        dialog.addWindowListener(new WindowAdapter() {
+            @Override public void windowClosing(WindowEvent event) { if (!panel.isBusy()) dialog.dispose(); }
+        });
+        dialog.getRootPane().getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(javax.swing.KeyStroke.getKeyStroke("ESCAPE"), "credit-cancel");
+        dialog.getRootPane().getActionMap().put("credit-cancel", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent event) {
+                if (!panel.isBusy()) dialog.dispose();
+            }
+        });
+        dialog.pack(); dialog.setLocationRelativeTo(owner);
+        return dialog;
+    }
 
     /**
      *

@@ -119,19 +119,19 @@ source/fixture evidence and an acceptance test.
   connect the GUI workflows. Repository-local savepoints alone do not prove
   whole-workflow atomicity.
 
-**Next implementation slice:** the customer-document GUI adapter, starting with
-credit creation routed through an explicit workflow boundary while retaining the
-existing format-3 startup guard. Metadata, deletion and posting services now have
-separate tested contracts to adapt. General booked graph edit/delete and unsupported
-voucher correction graphs remain rejected; credit creation is not permission to
-rewrite the booked original. This is not yet legacy GUI parity, and other G1
-families plus G2–G4 still need implementation and verification.
+**Next implementation slice:** compose the customer-document GUI session/selection
+boundary and credit-menu dispatch with the explicit credit request entry point.
+The request dialog and adapter now have headless and real-display tests, but active
+application menus still use legacy paths. Do not remove the format-3 startup guard
+merely to reach this dialog. Metadata, deletion, journal and other-domain GUI actions
+still need adapters. General booked graph/correction-link editing remains rejected;
+this is not complete legacy GUI parity, and G1–G4 remain unfinished.
 
-Customer invoice/credit action inventory (GUI callers remain legacy):
+Customer invoice/credit action inventory (active menu callers remain legacy):
 
 | Action / current caller | Repository evidence | Still required |
 |---|---|---|
-| Create / `SSInvoiceDialog` via `InvoiceService.create`; credit dialogs via `SSDB.addCreditInvoice` | Explicit invoice factory and `NormalizedCustomerCreditService`; normalized CLI credit creation validates reservations and inserts atomically using stable source identity | GUI adapter and caller commit/notification wiring; general invoice creation workflow integration |
+| Create / `SSInvoiceDialog` via `InvoiceService.create`; legacy credit dialogs via `SSDB.addCreditInvoice` | Explicit invoice factory/credit service plus `CustomerCreditDialogAdapter` and `SSCreditInvoiceDialog.normalizedDialog`: restricted date/amount preview/create, dedicated sessions, commit-confirmed callback | Active menu/selection/session wiring, normalized source selection/list refresh and general invoice creation adapter; legacy row editor is not the normalized request form |
 | Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Unbooked graph replacement, booked metadata and explicit booked-invoice credit creation | GUI adapter; unsupported direct booked graph/correction-link editing stays refused |
 | Delete / both document frames | `NormalizedCustomerDocumentService` detaches scoped orders and deletes the unbooked invoice graph atomically; payment/credit guards and ambiguous-link protection remain | GUI confirmation/cache notifications and adapter; booked invoices require financial correction rather than deletion |
 | Journal / `InvoiceService.planJournal` and `commitJournal` | `NormalizedCustomerJournalService` provides whole invoice/credit journal atomicity, stable-ID posting, stale-financial-plan rejection and caller-owned commit; created credits post through the same explicit service | GUI adapters; unsupported voucher correction graphs remain a compatibility boundary |
@@ -145,6 +145,15 @@ fail-closed repository boundaries, not a new claim of complete business validati
 
 ### G2 — Introduce a shared normalized application boundary
 
+- [x] Explicit normalized credit-request adapter and dialog entry point with no
+  legacy JDBC: dedicated per-action sessions, read-only format/history validation,
+  shared application transaction gate, off-EDT backend work and commit-confirmed
+  EDT notification. Confirmed saves are replay-safe within the dialog; uncertain
+  commits block further requests pending external refresh.
+- [ ] Connect that entry point to active GUI session ownership, selected company/
+  year/source identities, source selection and menu dispatch. The existing format-3
+  startup rejection and legacy dialogs remain unchanged. This partial adapter
+  does not make the full credit frame or other document screens normalized-ready.
 - [ ] Define transaction/connection ownership and selection/cache notifications
   usable by both GUI and CLI. Do not reuse legacy `startupLocal` on format 3.
 - [ ] Route model defaults, calculators, import/export, numbering and trigger-driven

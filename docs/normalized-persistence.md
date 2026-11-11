@@ -1217,6 +1217,60 @@ General booked graph editing, arbitrary voucher correction links and GUI adapter
 activation remain outside this supported credit path; see the
 [cutover ledger](normalized-cutover-checklist.md).
 
+## Explicit normalized credit-request GUI entry point
+
+`CustomerCreditDialogAdapter` binds a GUI request to explicit company/year/source
+identities, a fresh-connection factory, an injected clock and the application-owned
+transaction gate shared by all writers for that database. No legacy singleton or
+selected-global context supplies these dependencies. Each action owns a dedicated
+short-lived JDBC session starting in auto-commit mode, then manages its own
+transaction; borrowed caller transactions are not supported. Preview rolls back
+its read session, save calls the shared credit service and commits once. There is
+no implicit `SHUTDOWN` of the application's database or reuse of `startupLocal`.
+
+The adapter first requires exactly format 3 and validates installed sequential
+migration names/checksums through the read-only
+`SchemaMigrationRunner.validateInstalled` entry point. Credit dependencies require
+at least V12. Missing, incomplete, tampered or future history is refused, never
+created, upgraded or repaired in the dialog. This does not establish that an old
+partial schema is ready for the rest of the GUI.
+
+Preview presentation values are immutable and carry a private workflow token;
+source/balance/number changes are revalidated at save. A confirmed result is cached
+for that preview, so duplicate clicks/calls cannot insert it twice in one dialog.
+A close error after a confirmed commit is logged, not reported as a failed write.
+A commit exception, whether thrown before or after durability, has an unknown
+outcome: the adapter blocks further preview/save requests and the UI directs the
+user to close and refresh the owning context. This cache is not a durable receipt
+or general concurrent allocator. Shared application gating and exclusive database
+ownership still apply; callers must supply the same gate to other writers.
+
+`SSCreditInvoiceDialog.normalizedDialog` builds a separate restricted request form:
+ISO credit date and optional amount (blank means remaining balance), preview, and
+explicit create/cancel. It intentionally does not feed arbitrary legacy editor
+row/customer/product mutations into the request service. Neither construction nor
+cancel/ordinary close writes data, and closing does not auto-save. Backend work
+runs in `SwingWorker`, never on the Swing event thread; input changes invalidate
+the preview, and even programmatic changes during a pending preview cannot enable
+a stale save. Close/Escape/cancel are blocked while an action is in flight.
+Confirmed refresh notification runs on the EDT only after commit, followed by
+disposal. A refresh callback failure is logged as a notification failure, not a
+reason to retry an already committed credit.
+
+The normal legacy editor/dialog methods and active menu paths are unchanged.
+This is an explicit testable entry point awaiting application session/selection
+and menu wiring, **not normalized GUI activation**. Startup still rejects format 3;
+other screens, full credit-frame operations and legacy arbitrary financial editing
+are not made safe by this adapter. GUI labels/messages are resource-bundle keys.
+
+Tests exercise read-only preview, dedicated session closure, confirmed replay,
+stale/foreign previews, format/history refusal without migration, insert rollback/
+retry, uncertain commits on both sides of durability, post-commit close failure,
+shared-gate serialization, headless form validation/invalidation and EDT callbacks.
+A real Xvfb dialog test blocks legacy JDBC, checks background execution and busy
+close/Escape handling, then verifies one committed credit and one EDT table refresh.
+The [cutover ledger](normalized-cutover-checklist.md) records remaining root wiring.
+
 ## Definition of done for issue #75
 
 Issue #75 is complete only when new databases contain no domain `OTHER` columns, supported legacy databases migrate through staging with verified rollback artifacts, every supported persisted domain is represented explicitly, normal GUI/CLI runtime does not deserialize legacy domain objects, and accounting behavior plus relationships match across migration fixtures on all supported platforms.
