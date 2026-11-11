@@ -19,6 +19,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -28,12 +29,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * SSDB-shaped reads/writes over the normalized customer invoice and credit invoice tables,
  * including addresses, default accounts, ordered rows, and the booked voucher snapshot.
+ * Writes use local savepoints and require a caller-owned transaction; they never commit,
+ * close the connection, allocate business numbers or change counters. General editing and
+ * deletion are limited to unbooked documents. Posting/correction and referenced-order
+ * detachment are workflow responsibilities, not implicit side effects of repository writes.
  */
 public final class NormalizedInvoiceStore {
+
+    /** Stable SQL identity, migration identity and detached document snapshot. */
+    public record Stored<T>(long id, int legacyId, T document) { }
 
     /** Which sale table family an operation targets. */
     private enum Kind {
@@ -76,6 +85,7 @@ public final class NormalizedInvoiceStore {
     private final Connection connection;
     private final NormalizedRegisterStore registers;
 
+    /** Uses the supplied connection; the caller owns its transaction and lifecycle. */
     public NormalizedInvoiceStore(Connection connection) {
         this.connection = Objects.requireNonNull(connection, "connection");
         this.registers = new NormalizedRegisterStore(connection);
@@ -158,21 +168,24 @@ public final class NormalizedInvoiceStore {
     // ------------------------------------------------------------------ reads
 
     public List<SSInvoice> getInvoices(int companyLegacyId) throws SQLException {
-        return readSales(Kind.INVOICE, companyLegacyId, null);
+        return this.<SSInvoice>readSales(Kind.INVOICE, companyLegacyId, null).stream()
+                .map(Stored::document).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
     }
 
     /** Reads all credit invoices of a company. */
     public List<SSCreditInvoice> getCreditInvoices(int companyLegacyId) throws SQLException {
-        return readSales(Kind.CREDIT, companyLegacyId, null);
+        return this.<SSCreditInvoice>readSales(Kind.CREDIT, companyLegacyId, null).stream()
+                .map(Stored::document).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
     }
 
     /** Reads the credit invoices crediting a given invoice number. */
     public List<SSCreditInvoice> getCreditInvoices(int companyLegacyId, int creditingNumber)
             throws SQLException {
-        return readSales(Kind.CREDIT, companyLegacyId, creditingNumber);
+        return this.<SSCreditInvoice>readSales(Kind.CREDIT, companyLegacyId, creditingNumber).stream()
+                .map(Stored::document).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
     }
 
-    private <T extends SSInvoice> List<T> readSales(Kind kind, int companyLegacyId,
+    private <T extends SSInvoice> List<Stored<T>> readSales(Kind kind, int companyLegacyId,
             Integer creditingNumber) throws SQLException {
         Map<String, SSCurrency> currencies = new HashMap<>();
         for (SSCurrency currency : registers.getCurrencies()) {
@@ -196,10 +209,11 @@ public final class NormalizedInvoiceStore {
         }
 
         Map<Long, T> byId = new LinkedHashMap<>();
+        Map<Long, Integer> legacyIds = new HashMap<>();
         String creditColumn = kind == Kind.CREDIT ? "crediting_invoice_number," : "";
         String creditFilter = creditingNumber == null ? "" : " AND crediting_invoice_number=?";
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT id,number," + creditColumn + "invoice_date,due_date,customer_number,"
+                "SELECT id,legacy_id,number," + creditColumn + "invoice_date,due_date,customer_number,"
                         + "customer_name,our_contact_person,customer_contact_person,delay_interest,"
                         + "currency_code,payment_term_name,delivery_term_name,delivery_way_name,"
                         + "tax_free,invoice_text,tax_rate_1,tax_rate_2,tax_rate_3,"
@@ -207,7 +221,7 @@ public final class NormalizedInvoiceStore {
                         + "currency_rate,customer_order_number,ocr_number,entered,reminder_count,"
                         + "interest_invoiced,stock_influencing,order_numbers FROM " + kind.table
                         + " WHERE company_id=(SELECT id FROM company WHERE legacy_id=?)"
-                        + creditFilter + " ORDER BY number")) {
+                        + creditFilter + " ORDER BY number,id")) {
             int parameter = 1;
             statement.setInt(parameter++, companyLegacyId);
             if (creditingNumber != null) {
@@ -219,6 +233,7 @@ public final class NormalizedInvoiceStore {
                     T sale = (T) (kind == Kind.CREDIT ? SSCreditInvoice.forPersistence() : SSInvoice.forPersistence());
                     int column = 1;
                     long id = result.getLong(column++);
+                    legacyIds.put(id, result.getInt(column++));
                     int number = result.getInt(column++);
                     sale.setNumber(result.wasNull() ? null : number);
                     if (kind == Kind.CREDIT) {
@@ -268,10 +283,222 @@ public final class NormalizedInvoiceStore {
         readDefaultAccounts(kind, idFilter, byId);
         readRows(kind, idFilter, byId, units);
         readVoucherSnapshots(kind, idFilter, byId);
-        return new ArrayList<>(byId.values());
+        return byId.entrySet().stream()
+                .map(entry -> new Stored<>(entry.getKey(), legacyIds.get(entry.getKey()), entry.getValue()))
+                .toList();
     }
 
-    // ------------------------------------------------------------------ writes
+    /** Lists invoice snapshots with stable SQL identities (numbers may be null/duplicated). */
+    public List<Stored<SSInvoice>> listInvoices(int companyLegacyId) throws SQLException {
+        return readSales(Kind.INVOICE, companyLegacyId, null);
+    }
+
+    /** Lists credit snapshots with stable SQL identities. */
+    public List<Stored<SSCreditInvoice>> listCreditInvoices(int companyLegacyId) throws SQLException {
+        return readSales(Kind.CREDIT, companyLegacyId, null);
+    }
+
+    /** Finds a detached invoice by company and SQL identity, never by displayed number. */
+    public Optional<Stored<SSInvoice>> findInvoice(int companyLegacyId, long id) throws SQLException {
+        return listInvoices(companyLegacyId).stream().filter(stored -> stored.id() == id).findFirst();
+    }
+
+    /** Finds a detached credit by company and SQL identity. */
+    public Optional<Stored<SSCreditInvoice>> findCreditInvoice(int companyLegacyId, long id)
+            throws SQLException {
+        return listCreditInvoices(companyLegacyId).stream().filter(stored -> stored.id() == id).findFirst();
+    }
+
+    /**
+     * Replaces an unbooked invoice graph in place. A referenced number cannot be changed.
+     * Booked-document correction/metadata workflows require a separate posting service.
+     */
+    public void updateInvoice(int companyLegacyId, long id, SSInvoice invoice) throws SQLException {
+        atomic(() -> { updateSale(Kind.INVOICE, companyLegacyId, id, invoice); return null; });
+    }
+
+    /** Replaces an unbooked credit graph, retaining its SQL and migration identities. */
+    public void updateCreditInvoice(int companyLegacyId, long id, SSCreditInvoice credit)
+            throws SQLException {
+        atomic(() -> { updateSale(Kind.CREDIT, companyLegacyId, id, credit); return null; });
+    }
+
+    /** Deletes an unbooked, unreferenced invoice and its snapshots; never deletes ledger vouchers. */
+    public void deleteInvoice(int companyLegacyId, long id) throws SQLException {
+        atomic(() -> { deleteSale(Kind.INVOICE, companyLegacyId, id); return null; });
+    }
+
+    /** Deletes an unbooked credit and its snapshots; never deletes ledger vouchers. */
+    public void deleteCreditInvoice(int companyLegacyId, long id) throws SQLException {
+        atomic(() -> { deleteSale(Kind.CREDIT, companyLegacyId, id); return null; });
+    }
+
+    private record Identity(Integer number, boolean entered) { }
+
+    private Identity editableIdentity(Kind kind, int companyLegacyId, long id) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT number,entered FROM " + kind.table + " WHERE id=? AND company_id="
+                        + "(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setLong(1, id);
+            statement.setInt(2, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    throw new SQLException("Missing " + kind.table + " identity " + id
+                            + " for company " + companyLegacyId);
+                }
+                Identity identity = new Identity(result.getObject(1, Integer.class), result.getBoolean(2));
+                if (identity.entered()) {
+                    throw new SQLException("Booked " + kind.table + " requires a posting/correction workflow");
+                }
+                return identity;
+            }
+        }
+    }
+
+    private void updateSale(Kind kind, int companyLegacyId, long id, SSInvoice invoice)
+            throws SQLException {
+        validateSnapshot(kind, invoice);
+        Identity old = editableIdentity(kind, companyLegacyId, id);
+        if (invoice.isEntered()) {
+            throw new SQLException("Use markEntered in a posting transaction, not document editing");
+        }
+        if (!Objects.equals(old.number(), invoice.getNumber())) {
+            requireUnreferenced(kind, companyLegacyId, old.number());
+            requireUnreferenced(kind, companyLegacyId, invoice.getNumber());
+            requireAvailableNumber(kind, companyLegacyId, invoice.getNumber(), id);
+        }
+        String columns = "number," + (kind == Kind.CREDIT ? "crediting_invoice_number," : "")
+                + "invoice_date,due_date,customer_number,customer_name,our_contact_person,"
+                + "customer_contact_person,delay_interest,currency_code,payment_term_name,"
+                + "delivery_term_name,delivery_way_name,tax_free,invoice_text,tax_rate_1,"
+                + "tax_rate_2,tax_rate_3,eu_sale_commodity,eu_sale_third_party_commodity,printed,"
+                + "invoice_type,currency_rate,customer_order_number,ocr_number,entered,"
+                + "reminder_count,interest_invoiced,stock_influencing,order_numbers";
+        String assignments = String.join("=?,", columns.split(",")) + "=?";
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE " + kind.table + " SET " + assignments + " WHERE id=? AND company_id="
+                        + "(SELECT id FROM company WHERE legacy_id=?)")) {
+            int index = bindHeader(statement, 1, kind, invoice);
+            statement.setLong(index++, id);
+            statement.setInt(index, companyLegacyId);
+            if (statement.executeUpdate() != 1) {
+                throw new SQLException("Missing or company-mismatched " + kind.table + " identity " + id);
+            }
+        }
+        deleteChildren(kind, id);
+        insertChildren(kind, id, companyLegacyId, invoice);
+    }
+
+    private void deleteSale(Kind kind, int companyLegacyId, long id) throws SQLException {
+        Identity identity = editableIdentity(kind, companyLegacyId, id);
+        requireUnreferenced(kind, companyLegacyId, identity.number());
+        deleteChildren(kind, id);
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM " + kind.table + " WHERE id=? AND company_id="
+                        + "(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setLong(1, id);
+            statement.setInt(2, companyLegacyId);
+            if (statement.executeUpdate() != 1) {
+                throw new SQLException("Missing or company-mismatched " + kind.table + " identity " + id);
+            }
+        }
+    }
+
+    private void deleteChildren(Kind kind, long id) throws SQLException {
+        for (String table : List.of(kind.voucherRowTable(), kind.voucherTable(),
+                kind.rowTable(), kind.defaultAccountTable(), kind.addressTable())) {
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "DELETE FROM " + table + " WHERE " + kind.idColumn() + "=?")) {
+                statement.setLong(1, id);
+                statement.executeUpdate();
+            }
+        }
+    }
+
+    private void requireUnreferenced(Kind kind, int companyLegacyId, Integer number) throws SQLException {
+        if (kind != Kind.INVOICE || number == null) {
+            return;
+        }
+        // These legacy relationships are number-based, not foreign keys. Null numbers do not
+        // designate a target. Any match protects every ambiguous historical duplicate.
+        for (String reference : List.of("inpayment_row.invoice_number",
+                "customer_credit_invoice.crediting_invoice_number", "customer_order.invoice_number")) {
+            String[] parts = reference.split("\\.");
+            String scope = parts[0].equals("inpayment_row")
+                    ? "inpayment_id IN (SELECT id FROM inpayment WHERE company_id="
+                            + "(SELECT id FROM company WHERE legacy_id=?))"
+                    : "company_id=(SELECT id FROM company WHERE legacy_id=?)";
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "SELECT COUNT(*) FROM " + parts[0] + " WHERE " + parts[1] + "=? AND " + scope)) {
+                statement.setInt(1, number);
+                statement.setInt(2, companyLegacyId);
+                try (ResultSet result = statement.executeQuery()) {
+                    result.next();
+                    if (result.getLong(1) != 0) {
+                        throw new SQLException("Invoice number " + number + " is referenced by " + parts[0]);
+                    }
+                }
+            }
+        }
+    }
+
+    private void requireAvailableNumber(Kind kind, int companyLegacyId, Integer number, long exceptId)
+            throws SQLException {
+        if (number == null) {
+            return;
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT COUNT(*) FROM " + kind.table + " WHERE number=? AND id<>? AND company_id="
+                        + "(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setInt(1, number);
+            statement.setLong(2, exceptId);
+            statement.setInt(3, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                result.next();
+                if (result.getLong(1) != 0) {
+                    throw new SQLException("Duplicate " + kind.table + " number " + number);
+                }
+            }
+        }
+    }
+
+    private static void validateSnapshot(Kind kind, SSInvoice invoice) throws SQLException {
+        Objects.requireNonNull(invoice, "invoice");
+        if (invoice.getClass() != (kind == Kind.INVOICE ? SSInvoice.class : SSCreditInvoice.class)) {
+            throw new SQLException("Unsupported invoice subtype: " + invoice.getClass().getName());
+        }
+        validateVoucher(invoice.getStoredVoucher());
+    }
+
+    private static void validateVoucher(SSVoucher voucher) throws SQLException {
+        if (voucher != null && (voucher.getCorrects() != null || voucher.getCorrectedBy() != null)) {
+            throw new SQLException("Correction-linked voucher snapshots require explicit graph support");
+        }
+    }
+
+    @FunctionalInterface
+    private interface SqlOperation<T> {
+        T run() throws SQLException;
+    }
+
+    private <T> T atomic(SqlOperation<T> operation) throws SQLException {
+        if (connection.getAutoCommit()) {
+            throw new SQLException("Normalized invoice writes require a caller-owned transaction");
+        }
+        Savepoint savepoint = connection.setSavepoint();
+        try {
+            T result = operation.run();
+            connection.releaseSavepoint(savepoint);
+            return result;
+        } catch (SQLException | RuntimeException | Error failure) {
+            try {
+                connection.rollback(savepoint);
+            } catch (SQLException rollback) {
+                failure.addSuppressed(rollback);
+            }
+            throw failure;
+        }
+    }
 
     // ------------------------------------------------------------------ writes
 
@@ -281,17 +508,29 @@ public final class NormalizedInvoiceStore {
      */
     public void markInvoiceEntered(int companyLegacyId, int number, SSVoucher voucher)
             throws SQLException {
-        markEntered(Kind.INVOICE, companyLegacyId, number, voucher);
+        atomic(() -> { markEntered(Kind.INVOICE, companyLegacyId, number, voucher); return null; });
     }
 
     /** Marks a credit invoice as booked and replaces its voucher snapshot. */
     public void markCreditInvoiceEntered(int companyLegacyId, int number, SSVoucher voucher)
             throws SQLException {
-        markEntered(Kind.CREDIT, companyLegacyId, number, voucher);
+        atomic(() -> { markEntered(Kind.CREDIT, companyLegacyId, number, voucher); return null; });
     }
 
     private void markEntered(Kind kind, int companyLegacyId, int number, SSVoucher voucher)
             throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT COUNT(*) FROM " + kind.table + " WHERE number=? AND company_id="
+                        + "(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setInt(1, number);
+            statement.setInt(2, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                result.next();
+                if (result.getInt(1) != 1) {
+                    throw new SQLException("Missing or ambiguous " + kind.table + " number " + number);
+                }
+            }
+        }
         long id;
         try (PreparedStatement statement = connection.prepareStatement(
                 "UPDATE " + kind.table + " SET entered=true WHERE number=? "
@@ -328,16 +567,20 @@ public final class NormalizedInvoiceStore {
         }
     }
 
-    public void addInvoice(int companyLegacyId, SSInvoice invoice) throws SQLException {
-        addSale(Kind.INVOICE, companyLegacyId, invoice);
+    /** Inserts a complete invoice snapshot and returns its SQL identity without committing. */
+    public long addInvoice(int companyLegacyId, SSInvoice invoice) throws SQLException {
+        return atomic(() -> addSale(Kind.INVOICE, companyLegacyId, invoice));
     }
 
-    public void addCreditInvoice(int companyLegacyId, SSCreditInvoice creditInvoice)
+    /** Inserts a complete credit snapshot and returns its SQL identity without committing. */
+    public long addCreditInvoice(int companyLegacyId, SSCreditInvoice creditInvoice)
             throws SQLException {
-        addSale(Kind.CREDIT, companyLegacyId, creditInvoice);
+        return atomic(() -> addSale(Kind.CREDIT, companyLegacyId, creditInvoice));
     }
 
-    private void addSale(Kind kind, int companyLegacyId, SSInvoice invoice) throws SQLException {
+    private long addSale(Kind kind, int companyLegacyId, SSInvoice invoice) throws SQLException {
+        validateSnapshot(kind, invoice);
+        requireUnreferenced(kind, companyLegacyId, invoice.getNumber());
         long id;
         String creditColumn = kind == Kind.CREDIT ? "crediting_invoice_number," : "";
         try (PreparedStatement statement = connection.prepareStatement(
@@ -352,52 +595,7 @@ public final class NormalizedInvoiceStore {
                         + "? FROM company WHERE legacy_id=?", Statement.RETURN_GENERATED_KEYS)) {
             int i = 1;
             statement.setInt(i++, nextLegacyId(kind));
-            if (invoice.getNumber() == null) {
-                statement.setNull(i++, java.sql.Types.INTEGER);
-            } else {
-                statement.setInt(i++, invoice.getNumber());
-            }
-            if (kind == Kind.CREDIT) {
-                Integer crediting = ((SSCreditInvoice) invoice).getCreditingNr();
-                if (crediting == null) {
-                    statement.setNull(i++, java.sql.Types.INTEGER);
-                } else {
-                    statement.setInt(i++, crediting);
-                }
-            }
-            setLocalDate(statement, i++, invoice.getLocalDate());
-            setLocalDate(statement, i++, invoice.getLocalDueDate());
-            statement.setString(i++, invoice.getCustomerNr());
-            statement.setString(i++, invoice.getCustomerName());
-            statement.setString(i++, invoice.getOurContactPerson());
-            statement.setString(i++, invoice.getYourContactPerson());
-            statement.setBigDecimal(i++, invoice.getStoredDelayInterest());
-            statement.setString(i++, invoice.getCurrency() == null
-                    ? null : invoice.getCurrency().getName());
-            statement.setString(i++, invoice.getPaymentTerm() == null
-                    ? null : invoice.getPaymentTerm().getName());
-            statement.setString(i++, invoice.getDeliveryTerm() == null
-                    ? null : invoice.getDeliveryTerm().getName());
-            statement.setString(i++, invoice.getDeliveryWay() == null
-                    ? null : invoice.getDeliveryWay().getName());
-            statement.setBoolean(i++, invoice.getTaxFree());
-            statement.setString(i++, invoice.getText());
-            statement.setBigDecimal(i++, invoice.getStoredTaxRates().get(0));
-            statement.setBigDecimal(i++, invoice.getStoredTaxRates().get(1));
-            statement.setBigDecimal(i++, invoice.getStoredTaxRates().get(2));
-            statement.setBoolean(i++, invoice.getEuSaleCommodity());
-            statement.setBoolean(i++, invoice.getEuSaleThirdPartCommodity());
-            statement.setBoolean(i++, invoice.isPrinted());
-            statement.setString(i++, invoice.getStoredType() == null
-                    ? null : invoice.getStoredType().name());
-            statement.setBigDecimal(i++, invoice.getCurrencyRate());
-            statement.setString(i++, invoice.getYourOrderNumber());
-            statement.setString(i++, invoice.getOCRNumber());
-            statement.setBoolean(i++, invoice.isEntered());
-            statement.setInt(i++, invoice.getNumReminders());
-            statement.setBoolean(i++, invoice.isInterestInvoiced());
-            statement.setBoolean(i++, invoice.isStockInfluencing());
-            statement.setString(i++, invoice.getOrderNumbers());
+            i = bindHeader(statement, i, kind, invoice);
             statement.setInt(i, companyLegacyId);
             if (statement.executeUpdate() != 1) {
                 throw new SQLException("No company with legacy id " + companyLegacyId);
@@ -409,6 +607,63 @@ public final class NormalizedInvoiceStore {
                 id = keys.getLong(1);
             }
         }
+        insertChildren(kind, id, companyLegacyId, invoice);
+        return id;
+    }
+
+    private int bindHeader(PreparedStatement statement, int i, Kind kind, SSInvoice invoice)
+            throws SQLException {
+        if (invoice.getNumber() == null) {
+            statement.setNull(i++, java.sql.Types.INTEGER);
+        } else {
+            statement.setInt(i++, invoice.getNumber());
+        }
+        if (kind == Kind.CREDIT) {
+            Integer crediting = ((SSCreditInvoice) invoice).getCreditingNr();
+            if (crediting == null) {
+                statement.setNull(i++, java.sql.Types.INTEGER);
+            } else {
+                statement.setInt(i++, crediting);
+            }
+        }
+        setLocalDate(statement, i++, invoice.getLocalDate());
+        setLocalDate(statement, i++, invoice.getLocalDueDate());
+        statement.setString(i++, invoice.getCustomerNr());
+        statement.setString(i++, invoice.getCustomerName());
+        statement.setString(i++, invoice.getOurContactPerson());
+        statement.setString(i++, invoice.getYourContactPerson());
+        statement.setBigDecimal(i++, invoice.getStoredDelayInterest());
+        statement.setString(i++, invoice.getCurrency() == null
+                ? null : invoice.getCurrency().getName());
+        statement.setString(i++, invoice.getPaymentTerm() == null
+                ? null : invoice.getPaymentTerm().getName());
+        statement.setString(i++, invoice.getDeliveryTerm() == null
+                ? null : invoice.getDeliveryTerm().getName());
+        statement.setString(i++, invoice.getDeliveryWay() == null
+                ? null : invoice.getDeliveryWay().getName());
+        statement.setBoolean(i++, invoice.getTaxFree());
+        statement.setString(i++, invoice.getText());
+        statement.setBigDecimal(i++, invoice.getStoredTaxRates().get(0));
+        statement.setBigDecimal(i++, invoice.getStoredTaxRates().get(1));
+        statement.setBigDecimal(i++, invoice.getStoredTaxRates().get(2));
+        statement.setBoolean(i++, invoice.getEuSaleCommodity());
+        statement.setBoolean(i++, invoice.getEuSaleThirdPartCommodity());
+        statement.setBoolean(i++, invoice.isPrinted());
+        statement.setString(i++, invoice.getStoredType() == null
+                ? null : invoice.getStoredType().name());
+        statement.setBigDecimal(i++, invoice.getCurrencyRate());
+        statement.setString(i++, invoice.getYourOrderNumber());
+        statement.setString(i++, invoice.getOCRNumber());
+        statement.setBoolean(i++, invoice.isEntered());
+        statement.setInt(i++, invoice.getNumReminders());
+        statement.setBoolean(i++, invoice.isInterestInvoiced());
+        statement.setBoolean(i++, invoice.isStockInfluencing());
+        statement.setString(i++, invoice.getOrderNumbers());
+        return i;
+    }
+
+    private void insertChildren(Kind kind, long id, int companyLegacyId, SSInvoice invoice)
+            throws SQLException {
         insertAddress(kind, id, companyLegacyId, "invoice", invoice.getInvoiceAddress());
         insertAddress(kind, id, companyLegacyId, "delivery", invoice.getDeliveryAddress());
         for (Map.Entry<SSDefaultAccount, Integer> account
@@ -500,10 +755,9 @@ public final class NormalizedInvoiceStore {
                         + idFilter + ") ORDER BY " + kind.idColumn() + ",account_type")) {
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
-                    int number = result.getInt(3);
+                    Integer number = result.getObject(3, Integer.class);
                     accounts.computeIfAbsent(result.getLong(1), key -> new HashMap<>())
-                            .put(SSDefaultAccount.valueOf(result.getString(2)),
-                                    result.wasNull() ? null : number);
+                            .put(SSDefaultAccount.valueOf(result.getString(2)), number);
                 }
             }
         }
@@ -661,6 +915,7 @@ public final class NormalizedInvoiceStore {
 
     private void insertVoucherSnapshot(Kind kind, long saleId, SSVoucher voucher)
             throws SQLException {
+        validateVoucher(voucher);
         try (PreparedStatement statement = connection.prepareStatement(
                 "INSERT INTO " + kind.voucherTable() + " (" + kind.idColumn()
                         + ",number,voucher_date,description) VALUES (?,?,?,?)")) {
@@ -688,9 +943,13 @@ public final class NormalizedInvoiceStore {
     private int nextLegacyId(Kind kind) throws SQLException {
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(
-                     "SELECT COALESCE(MAX(legacy_id),0)+1 FROM " + kind.table)) {
+                     "SELECT COALESCE(MAX(legacy_id),0) FROM " + kind.table)) {
             result.next();
-            return result.getInt(1);
+            long maximum = result.getLong(1);
+            if (maximum >= Integer.MAX_VALUE) {
+                throw new SQLException("Legacy identity exhausted for " + kind.table);
+            }
+            return (int) maximum + 1;
         }
     }
 

@@ -1025,6 +1025,51 @@ recovery state, unsafe sources/types, dirty catalogues and unchanged GUI selecti
 A separate assembled-JAR CLI probe verifies explicit commit, V19-to-V20 recovery,
 all original SQL rows, rollback artifacts and two reopens; full CLI smoke passes.
 
+## Customer invoice and credit editing boundary
+
+`NormalizedInvoiceStore` now exposes stable-ID `list`/`find`, insertion returning
+its SQL identity, in-place update and owned-graph deletion for customer invoices
+and credits. SQL `id` and migration `legacy_id` survive replacement; neither
+nullable nor duplicated historical document numbers are used as edit identities.
+Existing document-only list methods remain available. Absent addresses/vouchers,
+raw null tax rates, nullable default-account values, ordered sale rows and voucher
+metadata survive loading and saving. A JDBC `wasNull()` ordering bug that converted
+null default-account values to zero is fixed for both document families.
+
+Every write, including existing insertion and entered-state marking, requires
+auto-commit disabled and uses a local savepoint. A late SQL or runtime failure
+restores only that operation; earlier caller work and savepoints remain usable.
+The repository never commits/closes the connection, increments business counters,
+allocates document numbers or mutates ledger vouchers. Legacy-ID exhaustion is
+rejected instead of overflowing. Existing number-based booking refuses missing or
+ambiguous numbers before changing any row, and snapshot replacement is atomic.
+Unsupported invoice subtypes and correction-linked embedded voucher graphs are
+rejected rather than partially stored.
+
+General update/delete is deliberately limited to **unbooked** documents; editing
+cannot set the entered flag. Invoice renumber/delete refuses company-scoped
+inpayment, credit and order references, even for zero-valued payments. Renumbering
+also protects the proposed number, and insertion refuses adopting dangling
+references. An unchanged number preserves its scalar links; duplicate target
+numbers cannot be introduced by renumbering. Historical duplicate/null numbers
+remain readable and can be addressed by SQL identity. No other company's
+references block an operation. The repository does not automatically detach orders,
+rewrite payments/credits or validate every possible business relationship.
+
+This is not complete legacy GUI parity: the old invoice/credit dialogs can write
+through legacy services, and invoice-frame deletion explicitly clears order links.
+Those actions, booked metadata/correction, journal transactions, numbering and
+cache notifications still require a shared application workflow. Format-3 GUI
+startup remains disabled. Track these remaining operations in the
+[cutover checklist](normalized-cutover-checklist.md), rather than marking the
+whole invoice domain complete.
+
+Regression tests cover full migration/load/resave fingerprints with legacy JDBC
+blocked, company isolation, stable identities, null/empty snapshots, reference
+protection, booked-document refusal, ambiguous booking numbers, unsupported graphs,
+late insert/update/delete/booking failures, caller rollback/retry and two file
+reopens. The full assembled-JAR CLI smoke also passes.
+
 ## Definition of done for issue #75
 
 Issue #75 is complete only when new databases contain no domain `OTHER` columns, supported legacy databases migrate through staging with verified rollback artifacts, every supported persisted domain is represented explicitly, normal GUI/CLI runtime does not deserialize legacy domain objects, and accounting behavior plus relationships match across migration fixtures on all supported platforms.
