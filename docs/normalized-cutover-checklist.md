@@ -47,7 +47,7 @@ private conversion helpers and demo-only inserts do not establish editing suppor
 | Customer, supplier, product registers | `NormalizedRegisterStore`: read/add/delete, pure hydration and stored references | Complete edit semantics, reference/deletion rules and GUI integration; do not infer update support from insert helpers |
 | Shared lookups, projects, result units | Register store: lookup/dimension reads and dimension-set replacement | Complete GUI-required edit/delete/create operations and reference validation |
 | Voucher templates and automatic distributions | Accounting store: template read/add; schema/converters preserve both domains | Template edit/delete and automatic-distribution runtime operations; calculation/GUI parity |
-| Customer invoices and credits | Stable-ID unbooked CRUD; guarded booked metadata; atomic order detachment/deletion and customer journal services; several CLI/PDF workflows | Financial correction workflows, complete interest/copy/convert operations and GUI lifecycle adapters |
+| Customer invoices and credits | Stable-ID unbooked CRUD; booked metadata; atomic order detachment/deletion, journal posting and booked-invoice credit creation services; CLI/PDF workflows | Unsupported direct booked/correction graphs, complete interest/copy/convert operations and GUI adapters |
 | Supplier invoices and credits | `NormalizedSupplierInvoiceStore`: read/add, numbering, sums and entered-state marking | General edit/delete and complete GUI booking/credit/correction workflows |
 | Inpayments and outpayments | Respective stores: read/add, numbering and entered-state marking; explicit voucher calculations | General edit/delete, payment differences, correction and GUI posting transactions |
 | Periodic invoices | V20 complete snapshots/fingerprints for supported graphs; V19 recovery | Typed load/edit/delete/generation service and GUI integration; unsupported graphs below |
@@ -102,8 +102,12 @@ source/fixture evidence and an acceptance test.
   guards overflow. This does not complete interest-invoice generation or GUI printing.
 - [x] Atomic unbooked invoice deletion with explicit company-scoped order detachment;
   no guessed duplicate-number ownership, payment/credit rewriting or ledger deletion.
-- [ ] Implement remaining typed operations, including booked invoice/credit
-  financial correction workflows, payment/register edit/delete, periodic generation/
+- [x] Explicit booked customer-invoice correction by credit creation: stable source
+  identity, source/balance/number revalidation, available-balance reservation and
+  atomic credit graph insertion without rewriting the booked original or ledger.
+  Credit posting remains a separate explicit customer journal transaction.
+- [ ] Implement remaining typed operations, including unsupported direct booked
+  financial/correction graphs, payment/register edit/delete, periodic generation/
   editing, own reports and helper/lookup/budget workflows from the action inventory.
 - [ ] For each write prove company/year isolation, identity/counter semantics,
   late-failure rollback, retry, detached/null snapshot preservation and reopen.
@@ -115,21 +119,22 @@ source/fixture evidence and an acceptance test.
   connect the GUI workflows. Repository-local savepoints alone do not prove
   whole-workflow atomicity.
 
-**Next implementation slice:** explicit booked customer invoice/credit financial
-correction workflows, then GUI adapters for the now-separate metadata, deletion
-and posting services. General booked graph edit/delete remains rejected: metadata
-updates cannot change amounts, dates, booking flags or vouchers. This is not yet
-legacy GUI parity. Do not enable the GUI merely because these service operations
-and the customer journal transaction now pass.
+**Next implementation slice:** the customer-document GUI adapter, starting with
+credit creation routed through an explicit workflow boundary while retaining the
+existing format-3 startup guard. Metadata, deletion and posting services now have
+separate tested contracts to adapt. General booked graph edit/delete and unsupported
+voucher correction graphs remain rejected; credit creation is not permission to
+rewrite the booked original. This is not yet legacy GUI parity, and other G1
+families plus G2–G4 still need implementation and verification.
 
 Customer invoice/credit action inventory (GUI callers remain legacy):
 
 | Action / current caller | Repository evidence | Still required |
 |---|---|---|
-| Create / `SSInvoiceDialog` via `InvoiceService.create`; credit dialogs via `SSDB.addCreditInvoice` | Complete snapshot insertion under a local savepoint; explicit company/date invoice factory used by normalized CLI creation; numbering/counters caller-owned | Shared GUI application service, validation and counter transaction |
-| Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Stable-ID replacement for unbooked snapshots; guarded four-field metadata updates also work on booked documents | Financial correction workflow, then GUI adapter; general booked graph editing stays refused |
+| Create / `SSInvoiceDialog` via `InvoiceService.create`; credit dialogs via `SSDB.addCreditInvoice` | Explicit invoice factory and `NormalizedCustomerCreditService`; normalized CLI credit creation validates reservations and inserts atomically using stable source identity | GUI adapter and caller commit/notification wiring; general invoice creation workflow integration |
+| Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Unbooked graph replacement, booked metadata and explicit booked-invoice credit creation | GUI adapter; unsupported direct booked graph/correction-link editing stays refused |
 | Delete / both document frames | `NormalizedCustomerDocumentService` detaches scoped orders and deletes the unbooked invoice graph atomically; payment/credit guards and ambiguous-link protection remain | GUI confirmation/cache notifications and adapter; booked invoices require financial correction rather than deletion |
-| Journal / `InvoiceService.planJournal` and `commitJournal` | `NormalizedCustomerJournalService` provides whole invoice/credit journal atomicity, stable-ID posting, stale-financial-plan rejection and caller-owned commit; both normalized CLI journals use it | GUI adapters to this service; financial correction workflows |
+| Journal / `InvoiceService.planJournal` and `commitJournal` | `NormalizedCustomerJournalService` provides whole invoice/credit journal atomicity, stable-ID posting, stale-financial-plan rejection and caller-owned commit; created credits post through the same explicit service | GUI adapters; unsupported voucher correction graphs remain a compatibility boundary |
 | Print/remind/copy/convert | Explicit metadata compare-and-set and reminder-count service; existing CLI PDF generation remains read-only | GUI print success callbacks, full interest-invoice generation and generated-document/copy actions; SQL metadata writes do not establish exactly-once external printing |
 
 Renumbering protects both the old and proposed invoice number from payment,

@@ -1157,6 +1157,66 @@ JDBC and two disk reopens. GUI adapters and financial correction workflows remai
 open in the [cutover ledger](normalized-cutover-checklist.md); metadata support is
 not permission to replace a booked document's financial graph.
 
+## Explicit booked customer-invoice credit corrections
+
+`NormalizedCustomerCreditService` plans by company/year and stable original SQL
+identity, then creates an **unbooked** credit under one savepoint. It never changes
+the booked original, embedded original voucher, ledger, payments or earlier credits.
+The existing customer credit journal service remains the separate explicit posting
+step; creation alone does not add ledger rows or mark the new credit entered.
+
+The original must be booked, non-cash and have a unique non-null invoice number
+within its company, because payment/credit references remain number-based.
+All existing credits, including unbooked reservations, and inpayments reduce the
+available balance using the existing invoice-balance calculation (two decimals,
+HALF_UP). Explicit amounts must be positive and not exceed that balance. The
+reusable service also accepts an omitted amount to mean the **remaining** balance,
+not a blind full-total copy after partial payments/credits. Existing CLI input
+schema still requires explicit date and amount; no input requirements or command
+paths change in this slice.
+
+Proportional credits retain the existing scale-12 HALF_UP unit-price algorithm,
+including source tax/discount/currency/dimension snapshots. Non-monetary text rows
+with null prices survive. The resulting monetary value must be positive, fit the
+available balance and agree with the request at the existing two-decimal balance
+precision. If whole-unit company rounding or another representation constraint
+prevents that, the service refuses creation instead of silently over-crediting or
+inventing adjustment lines. Raw stored decimals are not globally rounded to cents.
+An explicit-account voucher preview also refuses missing nonzero sales accounts
+and unbalanced results. It is never persisted as a speculative booked snapshot.
+
+An opaque, non-durable token covers the complete original SQL graph, proposed
+number/date/value, available balance, relevant company policy/text and accounting
+preview. Creation re-reads/regenerates those inputs and rejects stale source,
+reservation or numbering changes. Even source metadata changes invalidate this
+copy token, since those fields are copied into a new document. Mutable presentation
+snapshots are ignored as creation inputs. No Java-object serialization is used;
+source fingerprinting reads only known typed SQL columns and refuses unknown types.
+
+The next credit number is one above the maximum existing company credit number or
+configured counter floor, with overflow rejection. The floor remains unchanged,
+as in legacy insertion; there is no unrelated counter bump or new concurrent
+allocator. Number derivation, graph insertion and monetary readback verification
+are in the caller-owned transaction. Late failures restore the entire new graph,
+retain earlier caller work/savepoints and permit retry without consuming a number.
+Exclusive application ownership remains required.
+
+The normalized CLI validate/create paths now use this service, with one final
+commit on creation. Legacy paths and response keys remain unchanged. A normalized
+unbooked credit's absent voucher is rendered as an empty row list, without invoking
+the legacy lazy voucher generator. Stored original snapshots are never backfilled
+or rewritten to make an unsupported correction appear valid.
+
+Tests cover all-table original/ledger preservation, partial payments and existing
+credit reservations, full remaining/partial amounts, stale source/reservation/
+numbering, preview tampering, late insert rollback/retry, caller savepoints,
+company/year isolation, number floors/overflow, rounding refusals, blocked legacy
+JDBC, explicit credit journal posting and two reopens. CLI integration exercises
+partial payment → credit creation → separate posting and duplicate-credit refusal.
+General booked graph editing, arbitrary voucher correction links and GUI adapter
+activation remain outside this supported credit path; see the
+[cutover ledger](normalized-cutover-checklist.md).
+
 ## Definition of done for issue #75
 
 Issue #75 is complete only when new databases contain no domain `OTHER` columns, supported legacy databases migrate through staging with verified rollback artifacts, every supported persisted domain is represented explicitly, normal GUI/CLI runtime does not deserialize legacy domain objects, and accounting behavior plus relationships match across migration fixtures on all supported platforms.
