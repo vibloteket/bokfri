@@ -2810,7 +2810,9 @@ public class BokfriCli implements Runnable {
                 if (!runtime.isNormalized()) {
                     runtime.database().init(false);
                 }
-                InvoiceJournalPlan plan = planInvoiceJournal(runtime, company, from, to);
+                var normalizedPlan = runtime.isNormalized() ? runtime.planCustomerJournal(false, from, to) : null;
+                InvoiceJournalPlan plan = normalizedPlan == null
+                        ? planInvoiceJournal(runtime, company, from, to) : normalizedPlan.invoicePlan();
                 if (plan.invoices().isEmpty()) {
                     throw new CliException("INVOICE_JOURNAL_EMPTY",
                             "No unbooked invoices exist in the selected period");
@@ -2827,19 +2829,24 @@ public class BokfriCli implements Runnable {
                     addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 if (commit) {
-                    for (SSInvoice invoice : plan.invoices()) {
-                        if (invoice.isEntered()) {
-                            throw new CliException("INVOICE_JOURNAL_INVALID", "Invoice "
-                                    + invoice.getNumber() + " is already entered");
+                    if (normalizedPlan != null) {
+                        var posted = runtime.commitCustomerJournal(normalizedPlan);
+                        result.put("voucherNumber", posted.voucherNumber());
+                    } else {
+                        for (SSInvoice invoice : plan.invoices()) {
+                            if (invoice.isEntered()) {
+                                throw new CliException("INVOICE_JOURNAL_INVALID", "Invoice "
+                                        + invoice.getNumber() + " is already entered");
+                            }
                         }
+                        for (SSInvoice invoice : plan.invoices()) {
+                            invoice.setEntered();
+                            runtime.markInvoiceEntered(invoice);
+                        }
+                        runtime.bumpCounter("invoicejournal");
+                        runtime.addVoucher(plan.voucher());
+                        result.put("voucherNumber", plan.voucher().getNumber());
                     }
-                    for (SSInvoice invoice : plan.invoices()) {
-                        invoice.setEntered();
-                        runtime.markInvoiceEntered(invoice);
-                    }
-                    runtime.bumpCounter("invoicejournal");
-                    runtime.addVoucher(plan.voucher());
-                    result.put("voucherNumber", plan.voucher().getNumber());
                 }
                 root.output(result, commit
                         ? "Committed invoice journal " + plan.journalNumber() + " with voucher "
@@ -2850,6 +2857,8 @@ public class BokfriCli implements Runnable {
                                 + "\nCredit: " + money(se.swedsoft.bookkeeping.calc.math.SSVoucherMath.getCreditSum(plan.voucher()))
                                 + "\nNo changes written");
                 return 0;
+            } catch (org.fribok.bookkeeping.service.invoice.NormalizedCustomerJournalService.EmptyJournalException exception) {
+                throw new CliException("INVOICE_JOURNAL_EMPTY", exception.getMessage(), exception);
             } catch (IllegalArgumentException exception) {
                 throw new CliException("INVOICE_JOURNAL_INVALID", exception.getMessage(), exception);
             } catch (Exception exception) {
@@ -3266,7 +3275,9 @@ public class BokfriCli implements Runnable {
                 SSNewCompany company = runtime.selectCompany(context.companyId());
                 SSNewAccountingYear year = runtime.selectYear(company, context.yearId());
                 if (!runtime.isNormalized()) runtime.database().init(false);
-                CreditInvoiceJournalPlan plan = planCreditInvoiceJournal(runtime, from, to);
+                var normalizedPlan = runtime.isNormalized() ? runtime.planCustomerJournal(true, from, to) : null;
+                CreditInvoiceJournalPlan plan = normalizedPlan == null
+                        ? planCreditInvoiceJournal(runtime, from, to) : normalizedPlan.creditPlan();
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("journalNumber", plan.journalNumber());
                 result.put("from", from);
@@ -3286,17 +3297,22 @@ public class BokfriCli implements Runnable {
                     addPdf(result, exportPdf(printer, output, overwrite));
                 }
                 if (commit) {
-                    for (SSCreditInvoice invoice : plan.invoices()) {
-                        if (invoice.isEntered()) throw new CliException("CREDIT_INVOICE_JOURNAL_INVALID",
-                                "Credit invoice " + invoice.getNumber() + " is already entered");
+                    if (normalizedPlan != null) {
+                        var posted = runtime.commitCustomerJournal(normalizedPlan);
+                        result.put("voucherNumber", posted.voucherNumber());
+                    } else {
+                        for (SSCreditInvoice invoice : plan.invoices()) {
+                            if (invoice.isEntered()) throw new CliException("CREDIT_INVOICE_JOURNAL_INVALID",
+                                    "Credit invoice " + invoice.getNumber() + " is already entered");
+                        }
+                        for (SSCreditInvoice invoice : plan.invoices()) {
+                            invoice.setEntered();
+                            runtime.markCreditInvoiceEntered(invoice);
+                        }
+                        runtime.bumpCounter("creditinvoicejournal");
+                        runtime.addVoucher(plan.voucher());
+                        result.put("voucherNumber", plan.voucher().getNumber());
                     }
-                    for (SSCreditInvoice invoice : plan.invoices()) {
-                        invoice.setEntered();
-                        runtime.markCreditInvoiceEntered(invoice);
-                    }
-                    runtime.bumpCounter("creditinvoicejournal");
-                    runtime.addVoucher(plan.voucher());
-                    result.put("voucherNumber", plan.voucher().getNumber());
                 }
                 result.put("selection", selectedContext(context, company, year));
                 root.output(result, commit ? "Credit invoice journal committed"
@@ -4548,7 +4564,9 @@ public class BokfriCli implements Runnable {
 
     private static SSInvoice toInvoice(InvoiceInput input, BokfriRuntime runtime)
             throws java.sql.SQLException {
-        SSInvoice invoice = new SSInvoice(se.swedsoft.bookkeeping.data.common.SSInvoiceType.NORMAL);
+        SSInvoice invoice = runtime.isNormalized()
+                ? org.fribok.bookkeeping.service.invoice.CustomerInvoiceFactory.create(runtime.currentCompany(), input.getDate())
+                : new SSInvoice(se.swedsoft.bookkeeping.data.common.SSInvoiceType.NORMAL);
         SSCustomer customer = runtime.findCustomer(input.getCustomerNumber())
                 .orElseThrow(() -> new CliException("INVOICE_CUSTOMER_NOT_FOUND",
                         "No customer has number " + input.getCustomerNumber()));

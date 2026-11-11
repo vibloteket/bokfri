@@ -2002,6 +2002,8 @@ class BokfriCliTest {
         assertThat(preview.exitCode()).as(preview.stderr()).isZero();
         JsonNode previewJson = new ObjectMapper().readTree(preview.stdout());
         assertThat(previewJson.path("committed").asBoolean()).isFalse();
+        assertThat(new java.math.BigDecimal(previewJson.path("debitTotal").asText()))
+                .isEqualByComparingTo(new java.math.BigDecimal(previewJson.path("creditTotal").asText()));
         // The fixture can contain its own unbooked invoices in the period.
         assertThat(previewJson.path("invoiceCount").asInt()).isGreaterThanOrEqualTo(1);
         assertThat(previewJson.path("invoiceNumbers").toString())

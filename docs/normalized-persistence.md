@@ -1070,6 +1070,50 @@ protection, booked-document refusal, ambiguous booking numbers, unsupported grap
 late insert/update/delete/booking failures, caller rollback/retry and two file
 reopens. The full assembled-JAR CLI smoke also passes.
 
+## Atomic normalized customer journal workflow
+
+`NormalizedCustomerJournalService` is the shared invoice/credit journal boundary.
+Planning reads the explicit company/year, accounts and dimensions, selects unbooked
+documents using the existing CLI period rules, and generates detached document and
+compressed journal vouchers. Posting re-reads and regenerates that data rather than
+trusting mutable preview objects. An opaque token fingerprints selected SQL and
+migration identities, numbers/dates, per-document accounting vouchers, journal
+counter and next ledger number. Changed financial output, selection, counters or
+number allocation refuse posting and require a fresh preview. Non-posting metadata
+can change without invalidating the token; fresh stored values are retained.
+
+A single local savepoint encloses all selected document voucher snapshots and
+entered flags, the complete ledger voucher/rows, and the company journal counter.
+Late document, ledger or counter failures restore the whole journal while
+preserving earlier caller work and outer savepoints. Stable-ID entered-state
+writes refuse wrong-company, missing or already-booked records. The reusable
+service never commits/closes the connection; both normalized CLI journal commands
+now call it and commit once on success. Exclusive application ownership remains
+required; this is not a concurrent numbering implementation.
+
+Missing/ambiguous selected document numbers, exhausted counters/ledger numbering,
+missing nonzero sales-row accounts and per-document/journal imbalances fail closed.
+Two opposite document errors cannot merely cancel into a balanced combined journal.
+The injected clock supplies generated snapshot dates in `Europe/Stockholm`; the
+ledger date remains the requested journal end date. A nullable persisted invoice
+type uses its normal business fallback only on detached posting objects; posting
+never fills in the raw header or missing historical default accounts.
+
+Normalized CLI invoice creation now uses `CustomerInvoiceFactory` with explicit
+company/date defaults instead of a legacy-selected-company constructor. This fixes
+new invoices losing account/tax defaults when the legacy singleton has no company.
+It does **not** backfill existing incomplete snapshots: operators must correct
+unbooked input explicitly if it cannot produce a balanced journal. Legacy GUI
+creation, journal paths and CLI response shapes remain unchanged.
+
+Tests cover invoice/credit totals, scope and dimensions with legacy JDBC blocked,
+late failures in each write phase, caller rollback/retry, stale finance/selection/
+counters/ledger numbers, mutable preview tampering, metadata preservation,
+nullable header preservation, explicit creation defaults and two disk reopens.
+Full CLI integration tests and assembled-JAR smoke include customer invoice and
+credit journal commits. Booked metadata/correction, order detachment and GUI
+adapters remain open in the [cutover ledger](normalized-cutover-checklist.md).
+
 ## Definition of done for issue #75
 
 Issue #75 is complete only when new databases contain no domain `OTHER` columns, supported legacy databases migrate through staging with verified rollback artifacts, every supported persisted domain is represented explicitly, normal GUI/CLI runtime does not deserialize legacy domain objects, and accounting behavior plus relationships match across migration fixtures on all supported platforms.

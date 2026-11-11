@@ -517,6 +517,37 @@ public final class NormalizedInvoiceStore {
         atomic(() -> { markEntered(Kind.CREDIT, companyLegacyId, number, voucher); return null; });
     }
 
+    /** Books a previously unbooked invoice by stable identity inside the caller transaction. */
+    public void markInvoiceEnteredById(int companyLegacyId, long id, SSVoucher voucher) throws SQLException {
+        atomic(() -> { markEnteredById(Kind.INVOICE, companyLegacyId, id, voucher); return null; });
+    }
+
+    /** Books a previously unbooked credit by stable identity inside the caller transaction. */
+    public void markCreditInvoiceEnteredById(int companyLegacyId, long id, SSVoucher voucher) throws SQLException {
+        atomic(() -> { markEnteredById(Kind.CREDIT, companyLegacyId, id, voucher); return null; });
+    }
+
+    private void markEnteredById(Kind kind, int companyLegacyId, long id, SSVoucher voucher) throws SQLException {
+        validateVoucher(voucher);
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE " + kind.table + " SET entered=true WHERE id=? AND entered=false AND company_id="
+                        + "(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setLong(1, id);
+            statement.setInt(2, companyLegacyId);
+            if (statement.executeUpdate() != 1) {
+                throw new SQLException("Missing, already booked or company-mismatched " + kind.table + " identity " + id);
+            }
+        }
+        for (String table : List.of(kind.voucherRowTable(), kind.voucherTable())) {
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "DELETE FROM " + table + " WHERE " + kind.idColumn() + "=?")) {
+                statement.setLong(1, id);
+                statement.executeUpdate();
+            }
+        }
+        if (voucher != null) insertVoucherSnapshot(kind, id, voucher);
+    }
+
     private void markEntered(Kind kind, int companyLegacyId, int number, SSVoucher voucher)
             throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
