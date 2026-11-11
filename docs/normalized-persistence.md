@@ -1114,6 +1114,49 @@ Full CLI integration tests and assembled-JAR smoke include customer invoice and
 credit journal commits. Booked metadata/correction, order detachment and GUI
 adapters remain open in the [cutover ledger](normalized-cutover-checklist.md).
 
+## Guarded customer metadata and explicit order detachment
+
+`NormalizedCustomerDocumentService` separates non-posting document state from
+financial graph replacement. Invoice and credit metadata APIs use stable SQL ID
+plus company scope, and update only `printed`, `ocr_number`, `reminder_count` and
+`interest_invoiced`. They work on booked documents without rewriting entered flags,
+amounts, dates, addresses, ordered rows, default accounts, voucher snapshots or
+ledger records. Four expected metadata values must still match the stored values;
+null and empty OCR values remain distinct. Missing/wrong-company/stale updates
+are refused. Negative replacement reminder counts and increment overflow fail
+without changes. Historical negative counts can be read for explicit repair.
+
+The optimistic comparison is value-based, not a new row-version/event receipt.
+Callers own print/PDF success handling and any full interest-invoice generation
+transaction; these APIs do not establish exactly-once external printing or by
+themselves create interest invoices. Existing CLI PDF commands stay read-only,
+legacy GUI paths stay unchanged, and there are no new CLI commands in this slice.
+
+`deleteInvoiceWithOrderDetachment` coordinates the legacy invoice-frame sequence
+as one SQL operation: load an unbooked invoice by stable identity, explicitly clear
+only matching company-scoped order `invoice_number` fields, then delete its owned
+graph through the guarded repository. Order identities and every other order
+header/child value remain unchanged. Booked invoices remain undeletable; payment
+and credit references remain protective and are never rewritten. If they cause
+refusal after detachment, or a later child/parent delete fails, the outer savepoint
+restores both invoice data and all order links. Prior caller work/savepoints are
+preserved, and successful operations still require the caller's commit.
+
+A null invoice number designates no order link. If linked orders exist for a
+number shared by multiple historical invoices in the company, the service refuses
+to guess ownership. Other-company links never detach or block the operation.
+The lower-level order helper changes only the link column, not a hydrated/re-saved
+order graph, and still requires a caller-owned transaction and exclusive access.
+
+Regression tests compare every PUBLIC table while excluding only specifically
+permitted metadata/link/deleted-graph differences. They cover booked invoice and
+credit metadata, untouched financial and other-company data, stale/null/empty OCR,
+reminder limits, late SQL failures, caller rollback/retry, ambiguity, payment/credit
+and booked guards, posting interoperability with metadata changes, blocked legacy
+JDBC and two disk reopens. GUI adapters and financial correction workflows remain
+open in the [cutover ledger](normalized-cutover-checklist.md); metadata support is
+not permission to replace a booked document's financial graph.
+
 ## Definition of done for issue #75
 
 Issue #75 is complete only when new databases contain no domain `OTHER` columns, supported legacy databases migrate through staging with verified rollback artifacts, every supported persisted domain is represented explicitly, normal GUI/CLI runtime does not deserialize legacy domain objects, and accounting behavior plus relationships match across migration fixtures on all supported platforms.

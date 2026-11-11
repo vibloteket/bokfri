@@ -288,6 +288,74 @@ public final class NormalizedInvoiceStore {
                 .toList();
     }
 
+    /** Non-financial persisted fields; deliberately excludes dates, amounts, booking and voucher data. */
+    public record Metadata(boolean printed, String ocrNumber, int reminderCount, boolean interestInvoiced) { }
+
+    /** Reads invoice metadata by stable identity without hydrating or generating financial snapshots. */
+    public Optional<Metadata> findInvoiceMetadata(int companyLegacyId, long id) throws SQLException {
+        return readMetadata(Kind.INVOICE, companyLegacyId, id);
+    }
+
+    /** Reads credit metadata by stable identity, including booked documents. */
+    public Optional<Metadata> findCreditInvoiceMetadata(int companyLegacyId, long id) throws SQLException {
+        return readMetadata(Kind.CREDIT, companyLegacyId, id);
+    }
+
+    /**
+     * Changes only non-financial invoice fields, including on booked documents. Expected fields
+     * must still match; changes never replace voucher snapshots or mark a document unbooked.
+     */
+    public void updateInvoiceMetadata(int companyLegacyId, long id, Metadata expected, Metadata replacement)
+            throws SQLException {
+        atomic(() -> { updateMetadata(Kind.INVOICE, companyLegacyId, id, expected, replacement); return null; });
+    }
+
+    /** Changes only credit metadata with the same optimistic comparison and transaction contract. */
+    public void updateCreditInvoiceMetadata(int companyLegacyId, long id, Metadata expected, Metadata replacement)
+            throws SQLException {
+        atomic(() -> { updateMetadata(Kind.CREDIT, companyLegacyId, id, expected, replacement); return null; });
+    }
+
+    private Optional<Metadata> readMetadata(Kind kind, int companyLegacyId, long id) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT printed,ocr_number,reminder_count,interest_invoiced FROM " + kind.table
+                        + " WHERE id=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setLong(1, id);
+            statement.setInt(2, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next() ? Optional.of(new Metadata(result.getBoolean(1), result.getString(2),
+                        result.getInt(3), result.getBoolean(4))) : Optional.empty();
+            }
+        }
+    }
+
+    private void updateMetadata(Kind kind, int companyLegacyId, long id, Metadata expected, Metadata replacement)
+            throws SQLException {
+        Objects.requireNonNull(expected, "expected metadata");
+        Objects.requireNonNull(replacement, "replacement metadata");
+        if (replacement.reminderCount() < 0) throw new IllegalArgumentException("Negative reminder count");
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE " + kind.table + " SET printed=?,ocr_number=?,reminder_count=?,interest_invoiced=?"
+                        + " WHERE id=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)"
+                        + " AND printed=? AND reminder_count=? AND interest_invoiced=?"
+                        + " AND (ocr_number=? OR (ocr_number IS NULL AND ? IS NULL))")) {
+            statement.setBoolean(1, replacement.printed());
+            statement.setString(2, replacement.ocrNumber());
+            statement.setInt(3, replacement.reminderCount());
+            statement.setBoolean(4, replacement.interestInvoiced());
+            statement.setLong(5, id);
+            statement.setInt(6, companyLegacyId);
+            statement.setBoolean(7, expected.printed());
+            statement.setInt(8, expected.reminderCount());
+            statement.setBoolean(9, expected.interestInvoiced());
+            statement.setString(10, expected.ocrNumber());
+            statement.setString(11, expected.ocrNumber());
+            if (statement.executeUpdate() != 1) {
+                throw new SQLException("Missing, company-mismatched or stale " + kind.table + " metadata for " + id);
+            }
+        }
+    }
+
     /** Lists invoice snapshots with stable SQL identities (numbers may be null/duplicated). */
     public List<Stored<SSInvoice>> listInvoices(int companyLegacyId) throws SQLException {
         return readSales(Kind.INVOICE, companyLegacyId, null);
