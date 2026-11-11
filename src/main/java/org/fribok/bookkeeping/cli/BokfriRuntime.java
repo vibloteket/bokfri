@@ -522,6 +522,38 @@ public final class BokfriRuntime implements AutoCloseable {
         database().updateCompany(company);
     }
 
+    /** Plans a normalized booked-invoice credit using a unique business number and stable source identity. */
+    public org.fribok.bookkeeping.service.creditinvoice.NormalizedCustomerCreditService.Plan planCustomerCredit(
+            int invoiceNumber, java.time.LocalDate date, java.math.BigDecimal amount) throws SQLException {
+        int company = requireCurrentCompany().getId();
+        var year = normalizedStore().getCurrentYear();
+        if (year == null) throw new SQLException("No selected accounting year");
+        var matches = invoiceStore.listInvoices(company).stream()
+                .filter(item -> java.util.Objects.equals(item.document().getNumber(), invoiceNumber)).toList();
+        if (matches.isEmpty()) throw new CliException("INVOICE_NOT_FOUND", "No invoice has number " + invoiceNumber);
+        if (matches.size() != 1) throw new CliException("CREDIT_INVOICE_INVALID", "Original invoice number is ambiguous");
+        return new org.fribok.bookkeeping.service.creditinvoice.NormalizedCustomerCreditService(connection, Clock.systemUTC())
+                .plan(company, year.getId(), matches.get(0).id(), date, amount);
+    }
+
+    /** Creates and commits a normalized credit correction once, without posting or changing the original. */
+    public SSCreditInvoice commitCustomerCredit(
+            org.fribok.bookkeeping.service.creditinvoice.NormalizedCustomerCreditService.Plan plan) throws SQLException {
+        if (plan.companyId() != requireCurrentCompany().getId() || normalizedStore().getCurrentYear() == null
+                || plan.yearId() != normalizedStore().getCurrentYear().getId()) {
+            throw new SQLException("Credit plan does not match current selection");
+        }
+        var created = new org.fribok.bookkeeping.service.creditinvoice.NormalizedCustomerCreditService(
+                connection, Clock.systemUTC()).create(plan);
+        try { connection.commit(); }
+        catch (SQLException failure) {
+            try { connection.rollback(); }
+            catch (SQLException rollback) { failure.addSuppressed(rollback); }
+            throw failure;
+        }
+        return created.credit();
+    }
+
     /** Plans a normalized customer journal without legacy globals or SQL writes. */
     public NormalizedCustomerJournalService.Plan planCustomerJournal(
             boolean credit, java.time.LocalDate from, java.time.LocalDate to) throws SQLException {

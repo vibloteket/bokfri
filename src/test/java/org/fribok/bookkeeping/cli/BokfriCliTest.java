@@ -1907,6 +1907,67 @@ class BokfriCliTest {
     }
 
     @Test
+    void normalizedCreditCorrectionReservesRemainingBalanceAndPostsSeparately() throws Exception {
+        Path data = temporaryDirectory.resolve("normalized-credit-workflow");
+        extractLegacyDatabase(data.resolve("db"));
+        Result normalized = execute("--data-dir", data.toString(), "--format", "json", "database", "normalize");
+        assertThat(normalized.exitCode()).as(normalized.stderr()).isZero();
+        ObjectMapper mapper = new ObjectMapper();
+        int company = mapper.readTree(execute("--data-dir", data.toString(), "--format", "json",
+                "company", "list").stdout()).path("companies").get(0).path("id").asInt();
+        JsonNode year = mapper.readTree(execute("--data-dir", data.toString(), "--company-id", Integer.toString(company),
+                "--format", "json", "year", "list").stdout()).path("years").get(0);
+        String date = year.path("from").asText();
+        String[] context = {"--data-dir", data.toString(), "--company-id", Integer.toString(company),
+                "--year-id", year.path("id").asText(), "--format", "json"};
+        int sales = mapper.readTree(execute(concat(context, "account", "list")).stdout())
+                .path("accounts").get(0).path("number").asInt();
+        Path customer = temporaryDirectory.resolve("correction-customer.json");
+        Files.writeString(customer, "{\"number\":\"CORRECTION\",\"name\":\"Correction customer\"}");
+        assertThat(execute(concat(context, "customer", "create", "--file", customer.toString())).exitCode()).isZero();
+        Path invoice = temporaryDirectory.resolve("correction-invoice.json");
+        Files.writeString(invoice, String.format("{\"customerNumber\":\"CORRECTION\",\"date\":\"%s\",\"rows\":["
+                + "{\"description\":\"Service\",\"quantity\":1,\"unitPrice\":100,\"vatRate\":0,\"salesAccount\":%d}]}", date, sales));
+        Result created = execute(concat(context, "invoice", "create", "--file", invoice.toString()));
+        assertThat(created.exitCode()).as(created.stderr()).isZero();
+        int number = mapper.readTree(created.stdout()).path("number").asInt();
+        Result booked = execute(concat(context, "invoice", "journal", "--from", date, "--to", date, "--commit"));
+        assertThat(booked.exitCode()).as(booked.stderr()).isZero();
+        Path payment = temporaryDirectory.resolve("correction-payment.json");
+        Files.writeString(payment, String.format("{\"date\":\"%s\",\"text\":\"Partial payment\","
+                + "\"rows\":[{\"invoiceNumber\":%d,\"amount\":25}]}", date, number));
+        Result paid = execute(concat(context, "inpayment", "create", "--file", payment.toString()));
+        assertThat(paid.exitCode()).as(paid.stderr()).isZero();
+        int ledgerCount = mapper.readTree(execute(concat(context, "voucher", "list")).stdout()).path("vouchers").size();
+        int creditCount = mapper.readTree(execute(concat(context, "credit-invoice", "list")).stdout()).path("count").asInt();
+        Path correction = temporaryDirectory.resolve("correction-credit.json");
+        Files.writeString(correction, String.format("{\"invoiceNumber\":%d,\"date\":\"%s\",\"amount\":75}", number, date));
+        Result preview = execute(concat(context, "credit-invoice", "validate", "--file", correction.toString()));
+        assertThat(preview.exitCode()).as(preview.stderr()).isZero();
+        assertThat(mapper.readTree(preview.stdout()).path("created").asBoolean()).isFalse();
+        assertThat(mapper.readTree(execute(concat(context, "credit-invoice", "list")).stdout()).path("count").asInt())
+                .isEqualTo(creditCount);
+        Result credit = execute(concat(context, "credit-invoice", "create", "--file", correction.toString()));
+        assertThat(credit.exitCode()).as(credit.stderr()).isZero();
+        JsonNode result = mapper.readTree(credit.stdout());
+        assertThat(result.path("entered").asBoolean()).isFalse();
+        assertThat(result.path("creditingInvoiceNumber").asInt()).isEqualTo(number);
+        assertThat(new java.math.BigDecimal(result.path("total").asText())).isEqualByComparingTo("75");
+        assertThat(result.path("voucher").size()).isZero(); // no implicit legacy voucher generation
+        assertThat(mapper.readTree(execute(concat(context, "voucher", "list")).stdout()).path("vouchers").size())
+                .isEqualTo(ledgerCount);
+        Result duplicate = execute(concat(context, "credit-invoice", "create", "--file", correction.toString()));
+        assertThat(duplicate.exitCode()).isEqualTo(1);
+        assertThat(mapper.readTree(duplicate.stderr()).at("/error/code").asText()).isEqualTo("CREDIT_INVOICE_INVALID");
+        Result journal = execute(concat(context, "credit-invoice", "journal", "--from", date, "--to", date, "--commit"));
+        assertThat(journal.exitCode()).as(journal.stderr()).isZero();
+        JsonNode source = mapper.readTree(execute(concat(context, "invoice", "show", Integer.toString(number))).stdout());
+        assertThat(source.path("entered").asBoolean()).isTrue();
+        assertThat(new java.math.BigDecimal(source.path("total").asText())).isEqualByComparingTo("100");
+        assertThat(new java.math.BigDecimal(source.path("balance").asText())).isEqualByComparingTo("0");
+    }
+
+    @Test
     void supplierSideWorksOnNormalizedStorage() throws Exception {
         Path data = temporaryDirectory.resolve("normalized-supplier-data");
         extractLegacyDatabase(data.resolve("db"));
