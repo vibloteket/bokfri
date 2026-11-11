@@ -1,6 +1,9 @@
 # Normalized persistence design
 
-Status: design proposal for issue #75. This document does not change the active database format.
+Status: design and implementation record for issue #75. Normalized storage is opt-in;
+normal GUI startup and new-database creation still use legacy format 2. See the
+[completion audit and cutover checklist](normalized-cutover-checklist.md) for
+remaining runtime operations, GUI integration and activation gates.
 
 ## Purpose
 
