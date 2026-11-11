@@ -79,6 +79,41 @@ public final class NormalizedSaleDocumentStore {
         registers = new NormalizedRegisterStore(connection);
     }
 
+    /** Lists stable order identities linked to a non-null invoice number in this company only. */
+    public List<Long> orderIdsForInvoice(int companyLegacyId, int invoiceNumber) throws SQLException {
+        List<Long> ids = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT id FROM customer_order WHERE invoice_number=? AND company_id="
+                        + "(SELECT id FROM company WHERE legacy_id=?) ORDER BY id")) {
+            statement.setInt(1, invoiceNumber);
+            statement.setInt(2, companyLegacyId);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) ids.add(result.getLong(1));
+            }
+        }
+        return List.copyOf(ids);
+    }
+
+    /**
+     * Clears only the company-scoped order invoice link, preserving every other header/child value.
+     * The caller coordinates invoice deletion and owns the outer transaction; this method does not commit.
+     */
+    public List<Long> detachOrdersFromInvoice(int companyLegacyId, int invoiceNumber) throws SQLException {
+        return atomic(() -> {
+            List<Long> ids = orderIdsForInvoice(companyLegacyId, invoiceNumber);
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "UPDATE customer_order SET invoice_number=NULL WHERE invoice_number=? AND company_id="
+                            + "(SELECT id FROM company WHERE legacy_id=?)")) {
+                statement.setInt(1, invoiceNumber);
+                statement.setInt(2, companyLegacyId);
+                if (statement.executeUpdate() != ids.size()) {
+                    throw new SQLException("Order links changed during detachment");
+                }
+            }
+            return ids;
+        });
+    }
+
     /** Returns detached orders in stable storage order, scoped to one company. */
     public List<Stored<SSOrder>> getOrders(int companyLegacyId) throws SQLException {
         return read(Kind.ORDER, companyLegacyId, null);
