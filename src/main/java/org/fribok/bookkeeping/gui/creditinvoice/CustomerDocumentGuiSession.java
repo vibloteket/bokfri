@@ -155,6 +155,12 @@ public final class CustomerDocumentGuiSession implements AutoCloseable {
                 invoice.isEntered(), crediting);
     }
 
+    /** Explicit whole-journal planning/posting for this exact company/year selection. */
+    public CustomerJournalAdapter journal(CustomerJournalAdapter.Kind kind) throws SQLException {
+        requireActive();
+        return new CustomerJournalAdapter(this::open, gate, company, year, kind, clock);
+    }
+
     /** Preview/confirm deletion bound to this exact selection and stable document identity. */
     public CustomerDocumentDeletionAdapter deletion(org.fribok.bookkeeping.service.invoice.NormalizedCustomerDocumentDeletionService.Kind kind, long id)
             throws SQLException {
