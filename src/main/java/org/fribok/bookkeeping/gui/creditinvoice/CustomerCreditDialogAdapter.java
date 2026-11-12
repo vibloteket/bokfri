@@ -133,19 +133,7 @@ public final class CustomerCreditDialogAdapter {
                 throw new SQLException("GUI factory must supply a fresh auto-commit session");
             }
             connection.setAutoCommit(false); transaction = true;
-            if (DataFormatManager.detect(connection) != DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION) {
-                throw new SQLException("Credit dialog requires normalized format 3; no migration is performed");
-            }
-            final java.util.List<Integer> installed;
-            try {
-                installed = new SchemaMigrationRunner(clock)
-                        .validateInstalled(connection, NormalizedSchemaMigrations.load());
-            } catch (java.io.IOException resources) {
-                throw new SQLException("Cannot verify packaged normalized schema resources", resources);
-            }
-            if (!installed.contains(12)) {
-                throw new SQLException("Credit workflow requires normalized schema V12 or later");
-            }
+            validateNormalizedConnection(connection, clock);
             result = action.run(connection);
             if (write) {
                 try { connection.commit(); }
@@ -171,4 +159,21 @@ public final class CustomerCreditDialogAdapter {
         }
         return result;
     }
+    /** Shared read-only guard for explicitly owned normalized GUI sessions; never migrates. */
+    static void validateNormalizedConnection(Connection connection, Clock clock) throws SQLException {
+        if (DataFormatManager.detect(connection) != DataFormatManager.NORMALIZED_DATA_FORMAT_VERSION) {
+            throw new SQLException("Credit dialog requires normalized format 3; no migration is performed");
+        }
+        final java.util.List<Integer> installed;
+        try {
+            installed = new SchemaMigrationRunner(clock)
+                    .validateInstalled(connection, NormalizedSchemaMigrations.load());
+        } catch (java.io.IOException resources) {
+            throw new SQLException("Cannot verify packaged normalized schema resources", resources);
+        }
+        if (!installed.contains(12)) {
+            throw new SQLException("Credit workflow requires normalized schema V12 or later");
+        }
+    }
+
 }
