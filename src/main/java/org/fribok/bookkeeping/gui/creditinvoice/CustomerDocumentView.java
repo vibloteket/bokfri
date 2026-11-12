@@ -21,6 +21,8 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
     private final JTable invoiceTable = new JTable(invoices), creditTable = new JTable(credits);
     private final JLabel context = new JLabel(), status = new JLabel();
     private final JButton refresh = new JButton(text("refresh")), credit = new JButton(text("credit"));
+    private final JButton invoiceMetadata = new JButton(text("invoicemetadata")), creditMetadata = new JButton(text("creditmetadata"));
+    private final java.util.List<CustomerDocumentMetadataDialog> metadataDialogs = new java.util.ArrayList<>();
     private long revision;
     private boolean closed;
 
@@ -34,7 +36,11 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab(text("invoices"), new JScrollPane(invoiceTable));
         tabs.addTab(text("credits"), new JScrollPane(creditTable));
-        JPanel actions = new JPanel(); actions.add(refresh); actions.add(credit);
+        invoiceMetadata.setName("invoice-metadata"); creditMetadata.setName("credit-metadata");
+        JPanel actions = new JPanel(); actions.add(refresh); actions.add(credit); actions.add(invoiceMetadata); actions.add(creditMetadata);
+        invoiceTable.getSelectionModel().addListSelectionListener(event -> metadataEnablement());
+        creditTable.getSelectionModel().addListSelectionListener(event -> metadataEnablement());
+        invoiceMetadata.addActionListener(event -> metadata(false)); creditMetadata.addActionListener(event -> metadata(true));
         JPanel bottom = new JPanel(new BorderLayout()); bottom.add(status); bottom.add(actions, BorderLayout.EAST);
         add(context, BorderLayout.NORTH); add(tabs); add(bottom, BorderLayout.SOUTH);
         refresh.addActionListener(event -> refresh());
@@ -47,8 +53,9 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         requireEdt(); if (closed) throw new IllegalStateException("Document view is closed");
         Objects.requireNonNull(selected, "session");
         CustomerCreditMenuBinding.install(owner, selected, this::creditSaved);
+        for (var dialog : List.copyOf(metadataDialogs)) dialog.invalidateSelection();
         session = selected; revision++;
-        setTables(List.of(), List.of());
+        setTables(List.of(), List.of()); metadataEnablement();
         context.setText(text("loading")); refresh();
     }
 
@@ -57,6 +64,33 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         requireEdt(); Objects.requireNonNull(saved, "saved");
         if (!closed && session.isActive() && saved.companyId() == session.companyId()
                 && saved.yearId() == session.yearId()) refresh();
+    }
+
+    private void metadataEnablement() {
+        boolean active = !closed && session != null && session.isActive();
+        invoiceMetadata.setEnabled(active && invoiceTable.getSelectedRow() >= 0);
+        creditMetadata.setEnabled(active && creditTable.getSelectedRow() >= 0);
+    }
+
+    private void metadata(boolean isCredit) {
+        requireEdt(); if (closed || !session.isActive()) return;
+        Long id = selection(isCredit ? creditTable : invoiceTable, isCredit ? credits : invoices);
+        if (id == null) return;
+        CustomerDocumentGuiSession selected = session;
+        try {
+            var kind = isCredit ? CustomerDocumentMetadataAdapter.Kind.CREDIT : CustomerDocumentMetadataAdapter.Kind.INVOICE;
+            var dialog = new CustomerDocumentMetadataDialog(owner, selected.metadata(kind, id), saved -> {
+                if (!closed && session == selected && selected.isActive() && saved.companyId() == selected.companyId()
+                        && saved.yearId() == selected.yearId()) refresh();
+            });
+            metadataDialogs.add(dialog);
+            dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override public void windowClosed(java.awt.event.WindowEvent event) { metadataDialogs.remove(dialog); }
+            });
+            dialog.setVisible(true);
+        } catch (java.sql.SQLException failure) {
+            status.setText(MessageFormat.format(text("failed"), failure.getMessage()));
+        }
     }
 
     /** Explicit reload; both tables are replaced from the same successful snapshot on the EDT. */
@@ -77,7 +111,7 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
                 try {
                     var snapshot = get();
                     setTables(snapshot.invoices(), snapshot.credits());
-                    restore(invoiceTable, invoices, invoiceId); restore(creditTable, credits, creditId);
+                    restore(invoiceTable, invoices, invoiceId); restore(creditTable, credits, creditId); metadataEnablement();
                     context.setText(MessageFormat.format(text("context"), snapshot.companyName(),
                             Integer.toString(snapshot.companyId()), String.valueOf(snapshot.from()),
                             String.valueOf(snapshot.to()), Integer.toString(snapshot.yearId())));
@@ -95,8 +129,9 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
     @Override public void close() {
         requireEdt(); if (closed) return;
         closed = true; revision++;
+        for (var dialog : List.copyOf(metadataDialogs)) dialog.invalidateSelection();
         CustomerCreditMenuBinding.closeIfInstalled(owner, session);
-        setTables(List.of(), List.of()); refresh.setEnabled(false); credit.setEnabled(false);
+        setTables(List.of(), List.of()); refresh.setEnabled(false); credit.setEnabled(false); metadataEnablement();
         status.setText(text("closed"));
     }
 

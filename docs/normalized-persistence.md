@@ -1285,12 +1285,13 @@ confirmed creation, qualified callbacks, selection replacement, legacy fallback 
 unbound owners and toolbar enablement independent of legacy row selection.
 The [cutover ledger](normalized-cutover-checklist.md) records remaining root wiring.
 
-### Explicit read-only customer-document view
+### Explicit customer-document view and metadata dialog
 
 `CustomerDocumentView(owner, session)` is an EDT-created, opt-in normalized panel; it
 installs the owner's credit-menu binding and displays separate invoice and credit tables.
-It does not instantiate legacy document frames/models, call `SSDB` caches, edit documents,
-or bypass the format-3 startup guard. The selected year is posting context; document lists
+Its tables remain read-only; explicitly selected documents can open the metadata-only dialog
+described below. It does not instantiate legacy frames/models, call `SSDB` caches, allow
+financial edits, or bypass the format-3 startup guard. The selected year is posting context; document lists
 are company-wide, matching the existing document scope rather than filtering by year dates.
 
 `session.documents()` reads both lists in one dedicated transaction under the shared
@@ -1316,6 +1317,40 @@ real source-selector/request-dialog commit updating both tables with legacy JDBC
 stable selection after sorting/reordering, failed refresh/retry, foreign notifications,
 cross-company replacement during a blocked load, and close during reload. These are evidence
 for this restricted view, not full legacy invoice/credit editor or application GUI parity.
+
+### Guarded customer-document metadata editing
+
+`session.metadata(kind, sqlId)` binds a `CustomerDocumentMetadataAdapter` to the explicit
+company/year, document kind and stable SQL identity. It reads only the four supported
+metadata fields and calls `NormalizedCustomerDocumentService` to update printed status,
+OCR, reminder count and interest-invoiced status. No dates, amounts, entered flags, document
+rows, voucher snapshots or ledger data are changed. Booked documents remain booked.
+
+Each load/save uses a dedicated, format/history-validated connection under the same gate
+as credit creation. Reads roll back; writes commit only after a successful four-field
+compare-and-swap. Foreign adapter snapshots and stale expected values are rejected. A
+confirmed identical replay returns the original result without writing again; a different
+replacement requires a new load. Ordinary failed updates roll back and can be retried.
+A commit exception blocks further requests on that adapter because durability is unknown;
+a connection-close failure after a confirmed commit does not turn success into a failed save.
+
+The view's invoice and credit metadata actions resolve sorted table selection to SQL ID
+and document kind before opening `CustomerDocumentMetadataDialog`. Its title identifies
+the target and company/year. Load/save run off-EDT; close/Escape/cancel are blocked while
+busy. The form preserves null OCR separately from the empty string, validates nonnegative
+reminder counts and offers an explicit reload after stale-data failure. Successful save
+closes the dialog and refreshes only the still-current view on the EDT. Replacement/close
+invalidates metadata dialogs; an already accepted write may finish in its original context,
+but cannot dispatch a stale-context refresh. Unknown commit outcomes disable save/reload
+and require closing/refreshing the external context before another attempt.
+
+Tests compare every SQL table excluding only the intended four metadata columns, check
+stale/foreign/closed-context and format refusal, late-update rollback/retry, shared gating
+with credit creation, replay and unknown commits before/after durability. Xvfb tests cover
+both invoice and credit routes (including overlapping SQL IDs), legacy-JDBC refusal,
+commit-confirmed refresh, busy-close protection, reload and OCR null/empty handling,
+selection invalidation during accepted save and uncertain-commit UI blocking. This remains
+a restricted metadata adapter, not the legacy financial editor or production GUI cutover.
 
 ## Definition of done for issue #75
 

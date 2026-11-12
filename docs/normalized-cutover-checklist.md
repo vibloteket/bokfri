@@ -158,6 +158,11 @@ fail-closed repository boundaries, not a new claim of complete business validati
   invoice/credit snapshots, explicit totals/balances, stable-ID sorted selection, background
   loading and confirmed-commit refresh of both tables. Replace/close discards stale loads;
   failures retain the last good snapshot. No legacy frame models/caches are used.
+- [x] Add stable-ID invoice/credit metadata actions and a restricted normalized dialog:
+  printed/OCR/reminder/interest flags only, four-field stale-value protection, dedicated
+  gated sessions, off-EDT work, rollback/retry and uncertain-commit blocking. Confirmed
+  saves refresh only the current view; selection replacement invalidates pending dialogs.
+  This does not enable financial editing or make legacy document editors normalized-safe.
 - [ ] Install bindings/views from production normalized application bootstrap, replace
   legacy screen/cache paths and remaining credit-frame/editor operations. Format-3 startup
   remains rejected; these restricted integration boundaries do not make the full credit
