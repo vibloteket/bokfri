@@ -25,6 +25,9 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
     private final java.util.List<CustomerDocumentMetadataDialog> metadataDialogs = new java.util.ArrayList<>();
     private final JButton invoiceDelete = new JButton(text("invoicedelete")), creditDelete = new JButton(text("creditdelete"));
     private final java.util.List<CustomerDocumentDeletionDialog> deletionDialogs = new java.util.ArrayList<>();
+    private final JButton invoiceJournal = new JButton(text("invoicejournal")), creditJournal = new JButton(text("creditjournal"));
+    private final java.util.List<CustomerJournalDialog> journalDialogs = new java.util.ArrayList<>();
+    private java.time.LocalDate yearFrom, yearTo;
     private long revision;
     private boolean closed;
 
@@ -43,6 +46,10 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         JPanel actions = new JPanel(new java.awt.GridLayout(0, 3, 4, 4));
         actions.add(refresh); actions.add(credit); actions.add(invoiceMetadata); actions.add(creditMetadata);
         actions.add(invoiceDelete); actions.add(creditDelete);
+        invoiceJournal.setName("invoice-journal"); creditJournal.setName("credit-journal");
+        actions.add(invoiceJournal); actions.add(creditJournal);
+        invoiceJournal.addActionListener(event -> journal(CustomerJournalAdapter.Kind.INVOICE));
+        creditJournal.addActionListener(event -> journal(CustomerJournalAdapter.Kind.CREDIT));
         invoiceDelete.addActionListener(event -> deletion(false)); creditDelete.addActionListener(event -> deletion(true));
         invoiceTable.getSelectionModel().addListSelectionListener(event -> selectionEnablement());
         creditTable.getSelectionModel().addListSelectionListener(event -> selectionEnablement());
@@ -61,7 +68,8 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         CustomerCreditMenuBinding.install(owner, selected, this::creditSaved);
         for (var dialog : List.copyOf(metadataDialogs)) dialog.invalidateSelection();
         for (var dialog : List.copyOf(deletionDialogs)) dialog.invalidateSelection();
-        session = selected; revision++;
+        for (var dialog : List.copyOf(journalDialogs)) dialog.invalidateSelection();
+        session = selected; revision++; yearFrom = null; yearTo = null;
         setTables(List.of(), List.of()); selectionEnablement();
         context.setText(text("loading")); refresh();
     }
@@ -79,6 +87,8 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         creditMetadata.setEnabled(active && creditTable.getSelectedRow() >= 0);
         invoiceDelete.setEnabled(active && invoiceTable.getSelectedRow() >= 0);
         creditDelete.setEnabled(active && creditTable.getSelectedRow() >= 0);
+        invoiceJournal.setEnabled(active && yearFrom != null && yearTo != null);
+        creditJournal.setEnabled(active && yearFrom != null && yearTo != null);
     }
 
     private void metadata(boolean isCredit) {
@@ -124,6 +134,24 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         }
     }
 
+    private void journal(CustomerJournalAdapter.Kind kind) {
+        requireEdt(); if (closed || !session.isActive() || yearFrom == null || yearTo == null) return;
+        CustomerDocumentGuiSession selected = session;
+        try {
+            var dialog = new CustomerJournalDialog(owner, selected.journal(kind), yearFrom, yearTo, saved -> {
+                if (!closed && session == selected && selected.isActive() && saved.companyId() == selected.companyId()
+                        && saved.yearId() == selected.yearId()) refresh();
+            });
+            journalDialogs.add(dialog);
+            dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override public void windowClosed(java.awt.event.WindowEvent event) { journalDialogs.remove(dialog); }
+            });
+            dialog.setVisible(true);
+        } catch (java.sql.SQLException failure) {
+            status.setText(MessageFormat.format(text("failed"), failure.getMessage()));
+        }
+    }
+
     /** Explicit reload; both tables are replaced from the same successful snapshot on the EDT. */
     public void refresh() {
         requireEdt();
@@ -142,6 +170,7 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
                 try {
                     var snapshot = get();
                     setTables(snapshot.invoices(), snapshot.credits());
+                    yearFrom = snapshot.from(); yearTo = snapshot.to();
                     restore(invoiceTable, invoices, invoiceId); restore(creditTable, credits, creditId); selectionEnablement();
                     context.setText(MessageFormat.format(text("context"), snapshot.companyName(),
                             Integer.toString(snapshot.companyId()), String.valueOf(snapshot.from()),
@@ -162,6 +191,7 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         closed = true; revision++;
         for (var dialog : List.copyOf(metadataDialogs)) dialog.invalidateSelection();
         for (var dialog : List.copyOf(deletionDialogs)) dialog.invalidateSelection();
+        for (var dialog : List.copyOf(journalDialogs)) dialog.invalidateSelection();
         CustomerCreditMenuBinding.closeIfInstalled(owner, session);
         setTables(List.of(), List.of()); refresh.setEnabled(false); credit.setEnabled(false); selectionEnablement();
         status.setText(text("closed"));

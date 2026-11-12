@@ -69,6 +69,10 @@ public final class NormalizedCustomerJournalService {
         public int companyId() { return company; }
         /** Accounting-year migration identity bound to this plan. */
         public int yearId() { return year; }
+        public int journalNumber() { return journalNumber; }
+        public int voucherNumber() { return voucherNumber; }
+        /** Stable identities in exactly the same order as the presentation documents. */
+        public List<Long> documentIds() { return documents.stream().map(item -> item.id()).toList(); }
         /** Invoice-only view for existing presentation/PDF code. */
         public InvoiceJournalPlan invoicePlan() {
             if (credit) throw new IllegalStateException("Credit journal has no invoice-only view");

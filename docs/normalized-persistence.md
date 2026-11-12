@@ -1289,8 +1289,8 @@ The [cutover ledger](normalized-cutover-checklist.md) records remaining root wir
 
 `CustomerDocumentView(owner, session)` is an EDT-created, opt-in normalized panel; it
 installs the owner's credit-menu binding and displays separate invoice and credit tables.
-Its table cells remain read-only; explicit actions support metadata editing and confirmed
-unbooked-document deletion as described below. It does not instantiate legacy frames/models,
+Its table cells remain read-only; explicit actions support metadata editing, confirmed
+unbooked-document deletion and explicit customer journal posting as described below. It does not instantiate legacy frames/models,
 call `SSDB` caches, allow arbitrary financial editing, or bypass the format-3 startup guard. The selected year is posting context; document lists
 are company-wide, matching the existing document scope rather than filtering by year dates.
 
@@ -1390,6 +1390,48 @@ routes and explicit confirmation with legacy JDBC blocked, test credit removal/b
 refresh, stale reload, busy-close protection, replacement during an accepted deletion and
 uncertain-outcome UI blocking. Production bootstrap and financial editors remain separate;
 this restricted deletion workflow does not enable format-3 GUI startup.
+
+### Explicit customer journal preview and posting
+
+`session.journal(kind)` binds `CustomerJournalAdapter` to the selected company/year,
+clock, connection factory and shared transaction gate. It delegates financial planning
+and whole-workflow posting to `NormalizedCustomerJournalService`; it does not duplicate
+calculators, numbering or ledger logic. New read-only plan accessors expose stable document
+IDs and the actual allocated journal/voucher numbers (the legacy presentation voucher's
+placeholder number is not shown as the eventual ledger number).
+
+The adapter copies presentation into immutable document and voucher-row records, preserving
+account numbers and string project/result-unit codes (including leading zeroes). It exposes
+no mutable domain objects, voucher edits or posting-token construction. A preview rolls back
+its dedicated read transaction. Posting revalidates the backend token and changes document
+snapshots/entered flags, ledger rows and the counter in one outer commit. Confirmed replay
+returns its prior result without posting twice; ordinary failures roll back and can be retried.
+Unknown commit outcomes block further requests; a connection-close failure after confirmed
+commit does not misreport posting as failed.
+
+The restricted view offers separate invoice and credit journal actions, independent of
+legacy table selection. `CustomerJournalDialog` prefills the period from the selected year's
+confirmed view context but performs no planning or posting merely on open. Users explicitly
+preview an inclusive range, inspect stable document IDs, voucher rows/dimensions, debit/credit
+totals and allocated numbers, then tick confirmation before posting. The backend's established
+selection rules apply: undated invoices are included, undated credits are excluded. Invalid
+or changed dates clear the preview and confirmation; a late result for an older range is
+discarded. Stale source/selection/accounting/numbering inputs require a new preview.
+
+All JDBC work runs off-EDT; tables are read-only. Busy close/Escape/cancel are blocked.
+Selection replacement/close invalidates dialogs and suppresses stale-context refreshes while
+accepted work retains its original company/year. Only confirmed current-context success
+refreshes both view tables. Unknown outcomes disable preview/posting and range inputs rather
+than allowing a blind repost; external context must be refreshed/reconciled before trying again.
+
+Tests cover immutable read-only previews with actual allocated numbers, invoice and credit
+posting, source/dimension preservation, stale financial inputs/document sets/counters, late
+counter failure restoring every SQL table, foreign/closed/format/year refusal, replay and
+unknown commits before/after durability. Xvfb tests exercise both actual view routes with
+legacy JDBC blocked, explicit confirmation and one commit refresh, date input/generation
+invalidation, stale re-preview, replacement during an accepted post and uncertain-outcome UI
+blocking. These are restricted customer-journal adapters, not production format-3 startup,
+other document-family posting adapters or full legacy financial-editor parity.
 
 ## Definition of done for issue #75
 
