@@ -63,13 +63,17 @@ class CustomerDocumentGuiSessionTest {
                     f::open, f.gate, 71, 999, CustomerCreditGuiFixture.CLOCK).sources());
             assertThrows(SQLException.class, () -> new CustomerDocumentGuiSession(
                     f::open, f.gate, 999, 11, CustomerCreditGuiFixture.CLOCK).sources());
+            assertThrows(SQLException.class, () -> new CustomerDocumentGuiSession(
+                    f::open, f.gate, 71, 999, CustomerCreditGuiFixture.CLOCK).documents());
             DataFormatManager.recordVersion(f.anchor, 2);
             assertThrows(SQLException.class, () -> session(f, f::open).sources());
+            assertThrows(SQLException.class, () -> session(f, f::open).documents());
             assertEquals(2, DataFormatManager.detect(f.anchor));
             DataFormatManager.recordVersion(f.anchor, 3);
             try (var s = f.anchor.createStatement()) { s.executeUpdate("DELETE FROM bokfri_schema_history"); }
             f.anchor.commit();
             assertThrows(SQLException.class, () -> session(f, f::open).sources());
+            assertThrows(SQLException.class, () -> session(f, f::open).documents());
             try (var s = f.anchor.createStatement(); var r = s.executeQuery("SELECT COUNT(*) FROM bokfri_schema_history")) {
                 r.next(); assertEquals(0, r.getInt(1));
             }
@@ -172,6 +176,60 @@ class CustomerDocumentGuiSessionTest {
         SSSaleRow row = new SSSaleRow(); row.setAccountNr(3010); row.setUnitprice(new BigDecimal("100"));
         row.setQuantity(BigDecimal.ONE); invoice.getRows().add(row); return invoice;
     }
+    @Test void documentSnapshotIsImmutableReadOnlyAndIncludesCreditsPaymentsAndStableIds() throws Exception {
+        try (var f = new CustomerCreditGuiFixture()) {
+            addOtherSelection(f);
+            var adapter = f.adapter(); var created = adapter.save(adapter.preview(null, new BigDecimal("25")));
+            try (var s = f.anchor.createStatement()) {
+                s.executeUpdate("INSERT INTO inpayment(legacy_id,company_id,entered) SELECT 1,id,FALSE FROM company WHERE legacy_id=71");
+                s.executeUpdate("INSERT INTO inpayment_row(inpayment_id,row_number,invoice_number,value) SELECT id,0,1,10 FROM inpayment");
+            }
+            f.anchor.commit();
+            var before = new CustomerInvoiceStagingConverter().fingerprintNormalized(f.anchor);
+            AtomicInteger commits = new AtomicInteger(), closes = new AtomicInteger();
+            var selection = session(f, () -> proxy(f.open(), (connection, method) -> {
+                if (method.equals("commit")) commits.incrementAndGet();
+                if (method.equals("close")) closes.incrementAndGet();
+            }));
+            var documents = selection.documents();
+            assertEquals(71, documents.companyId()); assertEquals(11, documents.yearId());
+            assertEquals("GUI company", documents.companyName()); assertEquals(1, documents.invoices().size());
+            var invoice = documents.invoices().getFirst();
+            assertEquals(f.invoice, invoice.id()); assertTrue(invoice.entered());
+            assertEquals(0, new BigDecimal("100").compareTo(invoice.total()));
+            assertEquals(0, new BigDecimal("65.00").compareTo(invoice.balance()));
+            assertEquals(1, documents.credits().size()); assertEquals(created.id(), documents.credits().getFirst().id());
+            assertEquals(1, documents.credits().getFirst().creditingNumber());
+            assertFalse(documents.credits().getFirst().entered());
+            assertThrows(UnsupportedOperationException.class, () -> documents.invoices().clear());
+            assertEquals(before, new CustomerInvoiceStagingConverter().fingerprintNormalized(f.anchor));
+            assertEquals(0, commits.get()); assertEquals(1, closes.get());
+        }
+    }
+
+    @Test void documentBalancesRespectCompanyRoundingCashAndAmbiguousNumbers() throws Exception {
+        try (var f = new CustomerCreditGuiFixture()) {
+            var store = new NormalizedInvoiceStore(f.anchor);
+            var fractional = source(2, false); fractional.getRows().getFirst().setUnitprice(new BigDecimal("12.49"));
+            long fractionalId = store.addInvoice(71, fractional);
+            var cash = source(3, false); cash.setType(SSInvoiceType.CASH); long cashId = store.addInvoice(71, cash);
+            store.addInvoice(71, source(4, true)); store.addInvoice(71, source(4, false));
+            store.addInvoice(71, source(null, false)); f.anchor.commit();
+            var selection = session(f, f::open);
+            var snapshot = selection.documents();
+            assertEquals(0, new BigDecimal("12.49").compareTo(snapshot.invoices().stream()
+                    .filter(r -> r.id() == fractionalId).findFirst().orElseThrow().total()));
+            assertEquals(0, BigDecimal.ZERO.compareTo(snapshot.invoices().stream()
+                    .filter(r -> r.id() == cashId).findFirst().orElseThrow().balance()));
+            for (var row : snapshot.invoices()) if (row.number() == null || row.number() == 4) assertNull(row.balance());
+            try (var s = f.anchor.createStatement()) { s.executeUpdate("UPDATE company SET rounding_off=FALSE WHERE legacy_id=71"); }
+            f.anchor.commit();
+            assertEquals(0, new BigDecimal("12").compareTo(selection.documents().invoices().stream()
+                    .filter(r -> r.id() == fractionalId).findFirst().orElseThrow().total()));
+            selection.close(); assertThrows(SQLException.class, selection::documents);
+        }
+    }
+
     private static CustomerDocumentGuiSession session(CustomerCreditGuiFixture f, CustomerCreditDialogAdapter.Connections c) {
         return new CustomerDocumentGuiSession(c, f.gate, 71, 11, CustomerCreditGuiFixture.CLOCK);
     }

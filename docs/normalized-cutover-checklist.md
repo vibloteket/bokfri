@@ -154,10 +154,14 @@ fail-closed repository boundaries, not a new claim of complete business validati
   credit-invoice New through an installed binding before legacy row lookup. Select
   booked sources by stable SQL ID off-EDT; qualify commit notifications and invalidate
   old selections/dialogs on replacement or owner close. Unbound owners retain legacy behavior.
-- [ ] Install bindings from production normalized application bootstrap, implement
-  normalized table refresh/cache coordination and replace remaining legacy credit-frame
-  operations. Format-3 startup remains rejected; these integration boundaries do not
-  make the full credit frame or other document screens normalized-ready.
+- [x] Provide an explicit read-only normalized customer-document panel: immutable
+  invoice/credit snapshots, explicit totals/balances, stable-ID sorted selection, background
+  loading and confirmed-commit refresh of both tables. Replace/close discards stale loads;
+  failures retain the last good snapshot. No legacy frame models/caches are used.
+- [ ] Install bindings/views from production normalized application bootstrap, replace
+  legacy screen/cache paths and remaining credit-frame/editor operations. Format-3 startup
+  remains rejected; these restricted integration boundaries do not make the full credit
+  frame or other document screens normalized-ready.
 - [ ] Define transaction/connection ownership and selection/cache notifications
   usable by both GUI and CLI. Do not reuse legacy `startupLocal` on format 3.
 - [ ] Route model defaults, calculators, import/export, numbering and trigger-driven
