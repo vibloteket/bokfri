@@ -208,6 +208,8 @@ public class SSInvoiceFrame extends SSDefaultTableFrame {
         // ***************************
         iButton = new SSButton("ICON_CREATECHANGE", "invoiceframe.creditinvoicebutton",
                 e -> {
+                        if (org.fribok.bookkeeping.gui.creditinvoice.CustomerCreditMenuBinding
+                                .openIfInstalled(getMainFrame())) return;
 
                         SSInvoice iSelected = iModel.getSelectedRow(iTable);
                         Integer iNumber = null;
@@ -229,6 +231,8 @@ public class SSInvoiceFrame extends SSDefaultTableFrame {
                         }
 
                     });
+        iButton.setName("customer-invoice-credit");
+        org.fribok.bookkeeping.gui.creditinvoice.CustomerCreditMenuBinding.bindMenuButton(getMainFrame(), iButton);
         iTable.addSelectionDependentComponent(iButton);
         toolBar.add(iButton);
 

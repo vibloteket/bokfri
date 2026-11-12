@@ -73,6 +73,15 @@ jobs:
         test -n "$CLI_JAR"
         java scripts/CliSmokeTest.java "$CLI_JAR"
 
+    - name: Test normalized credit GUI boundaries
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          xvfb-run -a mvn -B test -Dawt.headless=false '-Dtest=CustomerCredit*Test,CustomerDocumentGuiSessionTest'
+        else
+          mvn -B test -Dawt.headless=false '-Dtest=CustomerCredit*Test,CustomerDocumentGuiSessionTest'
+        fi
+
     - name: Generate and compare PDF gallery
       if: runner.os == 'Linux'
       shell: bash

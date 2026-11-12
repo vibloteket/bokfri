@@ -87,8 +87,13 @@ public class SSCreditInvoiceFrame extends SSDefaultTableFrame {
 
         // New
         // ***************************
-        SSButton iButton = new SSButton("ICON_NEWITEM", "creditinvoiceframe.newbutton",
-                e -> SSCreditInvoiceDialog.newDialog(getMainFrame(), iModel));
+        SSButton iButton = new SSButton("ICON_NEWITEM", "creditinvoiceframe.newbutton", e -> {
+            if (org.fribok.bookkeeping.gui.creditinvoice.CustomerCreditMenuBinding
+                    .openIfInstalled(getMainFrame())) return;
+            SSCreditInvoiceDialog.newDialog(getMainFrame(), iModel);
+        });
+        iButton.setName("customer-credit-new");
+        org.fribok.bookkeeping.gui.creditinvoice.CustomerCreditMenuBinding.bindMenuButton(getMainFrame(), iButton);
 
         iToolBar.add(iButton);
         iToolBar.addSeparator();

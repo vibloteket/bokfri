@@ -1257,11 +1257,21 @@ Confirmed refresh notification runs on the EDT only after commit, followed by
 disposal. A refresh callback failure is logged as a notification failure, not a
 reason to retry an already committed credit.
 
-The normal legacy editor/dialog methods and active menu paths are unchanged.
-This is an explicit testable entry point awaiting application session/selection
-and menu wiring, **not normalized GUI activation**. Startup still rejects format 3;
-other screens, full credit-frame operations and legacy arbitrary financial editing
-are not made safe by this adapter. GUI labels/messages are resource-bundle keys.
+`CustomerDocumentGuiSession` supplies explicit company/year IDs, a fresh connection
+factory, clock and shared gate. Its read-only selector lists booked, non-cash invoices
+with unique company-wide numbers; credit requests retain SQL identity, not a legacy row.
+`CustomerCreditMenuBinding.install` (on the EDT) binds that selection to an owner frame.
+The invoice Credit and credit-invoice New actions route through it before consulting
+legacy selection. Unbound owners retain legacy behavior. Source loading and requests
+run off the EDT; confirmed notifications carry company/year/source IDs. Replacement
+closes the old session, invalidates dialogs and suppresses stale-selection refreshes;
+owner disposal also invalidates the session. Closed installed bindings consume actions
+rather than falling back to legacy storage. Labels/messages are resource-bundle keys.
+
+This is an explicit integration boundary, **not normalized GUI activation**. Production
+format-3 bootstrap, application-wide GUI/CLI ownership and normalized table refresh/cache
+migration remain open. Startup still rejects format 3; other screens, full credit-frame
+operations and arbitrary legacy financial editing are not made safe by this adapter.
 
 Tests exercise read-only preview, dedicated session closure, confirmed replay,
 stale/foreign previews, format/history refusal without migration, insert rollback/
@@ -1269,6 +1279,10 @@ retry, uncertain commits on both sides of durability, post-commit close failure,
 shared-gate serialization, headless form validation/invalidation and EDT callbacks.
 A real Xvfb dialog test blocks legacy JDBC, checks background execution and busy
 close/Escape handling, then verifies one committed credit and one EDT table refresh.
+Session tests additionally cover explicit selection, source filtering, lifecycle invalidation
+and in-flight commit ownership. Xvfb menu tests cover stable-ID source selection through
+confirmed creation, qualified callbacks, selection replacement, legacy fallback only for
+unbound owners and toolbar enablement independent of legacy row selection.
 The [cutover ledger](normalized-cutover-checklist.md) records remaining root wiring.
 
 ## Definition of done for issue #75

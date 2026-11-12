@@ -150,10 +150,14 @@ fail-closed repository boundaries, not a new claim of complete business validati
   shared application transaction gate, off-EDT backend work and commit-confirmed
   EDT notification. Confirmed saves are replay-safe within the dialog; uncertain
   commits block further requests pending external refresh.
-- [ ] Connect that entry point to active GUI session ownership, selected company/
-  year/source identities, source selection and menu dispatch. The existing format-3
-  startup rejection and legacy dialogs remain unchanged. This partial adapter
-  does not make the full credit frame or other document screens normalized-ready.
+- [x] Add explicit owner-scoped customer-document sessions and route invoice Credit /
+  credit-invoice New through an installed binding before legacy row lookup. Select
+  booked sources by stable SQL ID off-EDT; qualify commit notifications and invalidate
+  old selections/dialogs on replacement or owner close. Unbound owners retain legacy behavior.
+- [ ] Install bindings from production normalized application bootstrap, implement
+  normalized table refresh/cache coordination and replace remaining legacy credit-frame
+  operations. Format-3 startup remains rejected; these integration boundaries do not
+  make the full credit frame or other document screens normalized-ready.
 - [ ] Define transaction/connection ownership and selection/cache notifications
   usable by both GUI and CLI. Do not reuse legacy `startupLocal` on format 3.
 - [ ] Route model defaults, calculators, import/export, numbering and trigger-driven
