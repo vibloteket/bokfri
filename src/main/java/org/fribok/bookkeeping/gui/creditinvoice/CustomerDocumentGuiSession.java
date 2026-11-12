@@ -155,6 +155,12 @@ public final class CustomerDocumentGuiSession implements AutoCloseable {
                 invoice.isEntered(), crediting);
     }
 
+    /** Metadata-only adapter bound to this exact selection and stable document identity. */
+    public CustomerDocumentMetadataAdapter metadata(CustomerDocumentMetadataAdapter.Kind kind, long id) throws SQLException {
+        requireActive();
+        return new CustomerDocumentMetadataAdapter(this::open, gate, company, year, kind, id, clock);
+    }
+
     /** Binds a request adapter to a chosen SQL identity; preview still validates ownership and staleness. */
     public CustomerCreditDialogAdapter credit(long sourceId) throws SQLException {
         requireActive();
