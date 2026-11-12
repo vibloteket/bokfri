@@ -1269,8 +1269,8 @@ owner disposal also invalidates the session. Closed installed bindings consume a
 rather than falling back to legacy storage. Labels/messages are resource-bundle keys.
 
 This is an explicit integration boundary, **not normalized GUI activation**. Production
-format-3 bootstrap, application-wide GUI/CLI ownership and normalized table refresh/cache
-migration remain open. Startup still rejects format 3; other screens, full credit-frame
+format-3 bootstrap, application-wide GUI/CLI ownership and replacement of the legacy
+screen/cache paths remain open. Startup still rejects format 3; other screens, full credit-frame
 operations and arbitrary legacy financial editing are not made safe by this adapter.
 
 Tests exercise read-only preview, dedicated session closure, confirmed replay,
@@ -1284,6 +1284,38 @@ and in-flight commit ownership. Xvfb menu tests cover stable-ID source selection
 confirmed creation, qualified callbacks, selection replacement, legacy fallback only for
 unbound owners and toolbar enablement independent of legacy row selection.
 The [cutover ledger](normalized-cutover-checklist.md) records remaining root wiring.
+
+### Explicit read-only customer-document view
+
+`CustomerDocumentView(owner, session)` is an EDT-created, opt-in normalized panel; it
+installs the owner's credit-menu binding and displays separate invoice and credit tables.
+It does not instantiate legacy document frames/models, call `SSDB` caches, edit documents,
+or bypass the format-3 startup guard. The selected year is posting context; document lists
+are company-wide, matching the existing document scope rather than filtering by year dates.
+
+`session.documents()` reads both lists in one dedicated transaction under the shared
+application gate and returns immutable values with stable SQL IDs. It explicitly uses the
+selected company's rounding policy. Invoice balances subtract payments and credits just
+as the normalized CLI does; cash invoices have zero balance. Missing/duplicated invoice
+numbers display an unknown (blank) balance instead of assigning number-based references
+to an arbitrary row. Credit rows show their credited invoice number. Currency snapshots
+may be absent; the view does not invent defaults. Reads roll back and close their lease.
+
+The view loads off-EDT and replaces both table models before notifying EDT listeners.
+A confirmed credit notification for its company/year reloads both tables; foreign-context
+notifications do nothing. Sorting does not change identity: row selection is restored by
+SQL ID, never old row index or business number. Refresh failure retains the last successful
+snapshot and exposes an error with retry rather than presenting a false empty result.
+Selection replacement clears prior rows immediately; generation/session checks discard
+late loads from replaced or closed selections. Closing the view invalidates its own installed
+binding, clears rows, and prevents legacy fallback, without closing a newer owner's binding.
+
+Tests cover immutable/read-only snapshots, explicit rounding, payment/credit balance parity,
+cash/ambiguous numbers, connection closure and format/selection refusal. Xvfb tests cover a
+real source-selector/request-dialog commit updating both tables with legacy JDBC blocked,
+stable selection after sorting/reordering, failed refresh/retry, foreign notifications,
+cross-company replacement during a blocked load, and close during reload. These are evidence
+for this restricted view, not full legacy invoice/credit editor or application GUI parity.
 
 ## Definition of done for issue #75
 

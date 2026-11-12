@@ -86,6 +86,75 @@ public final class CustomerDocumentGuiSession implements AutoCloseable {
         }
     }
 
+    /** Immutable table values; no hydrated mutable domain objects escape the session. */
+    public record Document(long id, Integer number, LocalDate date, String customer, String currency,
+                           java.math.BigDecimal total, java.math.BigDecimal balance,
+                           boolean entered, Integer creditingNumber) { }
+    public record Documents(int companyId, int yearId, String companyName, LocalDate from, LocalDate to,
+                            List<Document> invoices, List<Document> credits) {
+        public Documents { invoices = List.copyOf(invoices); credits = List.copyOf(credits); }
+    }
+
+    /**
+     * Both company-wide document tables in one gated read transaction. The selected year supplies
+     * posting context, not a document date filter. Ambiguous/null numbers have no invoice balance:
+     * payments and credits cannot safely be assigned to one such document.
+     */
+    public Documents documents() throws SQLException {
+        synchronized (gate) {
+            try (Connection connection = open()) {
+                if (!connection.getAutoCommit()) throw new SQLException("GUI factory must supply a fresh session");
+                connection.setAutoCommit(false);
+                try {
+                    CustomerCreditDialogAdapter.validateNormalizedConnection(connection, clock);
+                    var accounting = new NormalizedAccountingStore(connection, clock);
+                    var selectedCompany = accounting.getCompanies().stream().filter(c -> c.getId() == company)
+                            .findFirst().orElseThrow(() -> new SQLException("Selected company no longer exists"));
+                    accounting.setCurrentCompany(selectedCompany);
+                    var selectedYear = accounting.getYears().stream().filter(y -> y.getId() == year)
+                            .findFirst().orElseThrow(() -> new SQLException("Selected year does not belong to company"));
+                    var store = new NormalizedInvoiceStore(connection);
+                    var stored = store.listInvoices(company);
+                    Map<Integer, Integer> counts = new HashMap<>();
+                    for (var item : stored) counts.merge(item.document().getNumber(), 1, Integer::sum);
+                    List<Document> invoices = new java.util.ArrayList<>(), credits = new java.util.ArrayList<>();
+                    boolean rounding = selectedCompany.isRoundingOff();
+                    for (var item : stored) {
+                        var invoice = item.document();
+                        var total = se.swedsoft.bookkeeping.calc.math.SSSaleMath.getTotalSum(invoice, rounding);
+                        java.math.BigDecimal balance = null;
+                        if (invoice.getType() == SSInvoiceType.CASH) balance = java.math.BigDecimal.ZERO;
+                        else if (invoice.getNumber() != null && counts.get(invoice.getNumber()) == 1)
+                            balance = total.subtract(store.creditInvoiceSum(company, invoice.getNumber(), rounding))
+                                    .subtract(store.inpaymentSum(company, invoice.getNumber()))
+                                    .setScale(2, java.math.RoundingMode.HALF_UP);
+                        invoices.add(document(item.id(), invoice, total, balance, null));
+                    }
+                    for (var item : store.listCreditInvoices(company)) {
+                        var credit = item.document();
+                        credits.add(document(item.id(), credit,
+                                se.swedsoft.bookkeeping.calc.math.SSSaleMath.getTotalSum(credit, rounding),
+                                null, credit.getCreditingNr()));
+                    }
+                    requireActive(); connection.rollback();
+                    return new Documents(company, year, selectedCompany.getName(), selectedYear.getLocalFrom(),
+                            selectedYear.getLocalTo(), invoices, credits);
+                } catch (SQLException | RuntimeException | Error failure) {
+                    try { connection.rollback(); }
+                    catch (SQLException rollback) { failure.addSuppressed(rollback); }
+                    throw failure;
+                }
+            }
+        }
+    }
+
+    private static Document document(long id, se.swedsoft.bookkeeping.data.SSInvoice invoice,
+                                     java.math.BigDecimal total, java.math.BigDecimal balance, Integer crediting) {
+        return new Document(id, invoice.getNumber(), invoice.getLocalDate(), invoice.getCustomerName(),
+                invoice.getCurrency() == null ? null : invoice.getCurrency().getName(), total, balance,
+                invoice.isEntered(), crediting);
+    }
+
     /** Binds a request adapter to a chosen SQL identity; preview still validates ownership and staleness. */
     public CustomerCreditDialogAdapter credit(long sourceId) throws SQLException {
         requireActive();

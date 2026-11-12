@@ -112,6 +112,13 @@ public final class CustomerCreditMenuBinding {
         if (button.isDisplayable()) attach.run();
     }
 
+    /** Closes only the matching installed selection; keeps its consumed marker to prevent fallback. */
+    static void closeIfInstalled(JFrame owner, CustomerDocumentGuiSession session) {
+        requireEdt();
+        var binding = (CustomerCreditMenuBinding) owner.getRootPane().getClientProperty(KEY);
+        if (binding != null && binding.session == session) binding.deactivate();
+    }
+
     private boolean current() {
         return active && session.isActive() && owner.getRootPane().getClientProperty(KEY) == this;
     }
