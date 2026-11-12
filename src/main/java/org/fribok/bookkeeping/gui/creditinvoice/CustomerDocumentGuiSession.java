@@ -155,6 +155,13 @@ public final class CustomerDocumentGuiSession implements AutoCloseable {
                 invoice.isEntered(), crediting);
     }
 
+    /** Preview/confirm deletion bound to this exact selection and stable document identity. */
+    public CustomerDocumentDeletionAdapter deletion(org.fribok.bookkeeping.service.invoice.NormalizedCustomerDocumentDeletionService.Kind kind, long id)
+            throws SQLException {
+        requireActive();
+        return new CustomerDocumentDeletionAdapter(this::open, gate, company, year, kind, id, clock);
+    }
+
     /** Metadata-only adapter bound to this exact selection and stable document identity. */
     public CustomerDocumentMetadataAdapter metadata(CustomerDocumentMetadataAdapter.Kind kind, long id) throws SQLException {
         requireActive();

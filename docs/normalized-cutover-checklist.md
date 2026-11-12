@@ -163,6 +163,11 @@ fail-closed repository boundaries, not a new claim of complete business validati
   gated sessions, off-EDT work, rollback/retry and uncertain-commit blocking. Confirmed
   saves refresh only the current view; selection replacement invalidates pending dialogs.
   This does not enable financial editing or make legacy document editors normalized-safe.
+- [x] Add preview/confirm deletion for unbooked invoices and credits from the explicit
+  view: source-graph/order-set stale tokens, booked/payment/credit guards, atomic invoice
+  order detachment, dedicated sessions and commit-confirmed current-context refresh.
+  Destructive confirmation is explicit; late failures roll back and unknown commits block
+  blind retry. No legacy caches or booked financial edits are introduced.
 - [ ] Install bindings/views from production normalized application bootstrap, replace
   legacy screen/cache paths and remaining credit-frame/editor operations. Format-3 startup
   remains rejected; these restricted integration boundaries do not make the full credit

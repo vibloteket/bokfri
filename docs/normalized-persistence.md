@@ -1289,9 +1289,9 @@ The [cutover ledger](normalized-cutover-checklist.md) records remaining root wir
 
 `CustomerDocumentView(owner, session)` is an EDT-created, opt-in normalized panel; it
 installs the owner's credit-menu binding and displays separate invoice and credit tables.
-Its tables remain read-only; explicitly selected documents can open the metadata-only dialog
-described below. It does not instantiate legacy frames/models, call `SSDB` caches, allow
-financial edits, or bypass the format-3 startup guard. The selected year is posting context; document lists
+Its table cells remain read-only; explicit actions support metadata editing and confirmed
+unbooked-document deletion as described below. It does not instantiate legacy frames/models,
+call `SSDB` caches, allow arbitrary financial editing, or bypass the format-3 startup guard. The selected year is posting context; document lists
 are company-wide, matching the existing document scope rather than filtering by year dates.
 
 `session.documents()` reads both lists in one dedicated transaction under the shared
@@ -1351,6 +1351,45 @@ both invoice and credit routes (including overlapping SQL IDs), legacy-JDBC refu
 commit-confirmed refresh, busy-close protection, reload and OCR null/empty handling,
 selection invalidation during accepted save and uncertain-commit UI blocking. This remains
 a restricted metadata adapter, not the legacy financial editor or production GUI cutover.
+
+### Confirmed unbooked invoice/credit deletion
+
+`session.deletion(kind, sqlId)` supplies an owner-bound `CustomerDocumentDeletionAdapter`
+for the explicitly selected company/year and stable document identity. The read-only plan
+from `NormalizedCustomerDocumentDeletionService` presents kind, number, customer, date,
+SQL ID and the exact order IDs whose invoice links will be cleared. Booked documents,
+invoice payment/credit references, and ambiguous invoice numbers owning linked orders
+are refused. Null or duplicated numbers without references still target only the selected
+SQL identity, never an arbitrary business-number match.
+
+The ephemeral plan hashes every typed scalar column in all six source-document tables,
+plus the linked-order identity list. Row-signature sorting preserves multiplicity without
+relying on JDBC row order; unsupported SQL types fail closed. Execution re-plans under
+the shared application gate, rejects changed source snapshots/order sets or new references,
+and uses a savepoint around guarded deletion. Invoice deletion delegates to the existing
+atomic order-detachment workflow; credit deletion leaves its original invoice intact.
+Caller-owned commit and fresh connection lifecycle are shared with the metadata adapter
+via `CustomerDocumentTransactions`, including rollback/retry, uncertain-outcome blocking
+and confirmed-success handling after a connection-close failure.
+
+`CustomerDocumentDeletionDialog` requires a loaded preview and a separate confirmation
+checkbox before enabling deletion. Loading/deleting runs off-EDT. Busy close/Escape/cancel
+are blocked; stale/failing attempts require reload and renewed confirmation. Confirmed
+success closes the dialog and refreshes both tables only in the still-current view.
+Selection replacement/close invalidates the dialog, allowing accepted work to finish only
+in its original context without a stale refresh. Unknown commit outcomes disable deletion
+and reload instead of reporting success or permitting a blind retry. Confirmed duplicate
+execution of one preview returns its prior result without another write.
+
+Tests compare all PUBLIC SQL tables while excluding only the deleted graph and explicitly
+listed order-link columns, and verify rollback restores all tables after a late delete failure.
+They cover booked/reference guards, changed row values/order sets, exact SQL identity for
+null/duplicate business numbers, foreign previews/selections, format/year refusal, unknown
+commits on both sides of durability and post-commit close failure. Xvfb tests use actual view
+routes and explicit confirmation with legacy JDBC blocked, test credit removal/balance
+refresh, stale reload, busy-close protection, replacement during an accepted deletion and
+uncertain-outcome UI blocking. Production bootstrap and financial editors remain separate;
+this restricted deletion workflow does not enable format-3 GUI startup.
 
 ## Definition of done for issue #75
 
