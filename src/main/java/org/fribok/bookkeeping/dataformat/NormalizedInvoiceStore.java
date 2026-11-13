@@ -212,16 +212,21 @@ public final class NormalizedInvoiceStore {
         Map<Long, Integer> legacyIds = new HashMap<>();
         String creditColumn = kind == Kind.CREDIT ? "crediting_invoice_number," : "";
         String creditFilter = creditingNumber == null ? "" : " AND crediting_invoice_number=?";
-        try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT id,legacy_id,number," + creditColumn + "invoice_date,due_date,customer_number,"
-                        + "customer_name,our_contact_person,customer_contact_person,delay_interest,"
-                        + "currency_code,payment_term_name,delivery_term_name,delivery_way_name,"
-                        + "tax_free,invoice_text,tax_rate_1,tax_rate_2,tax_rate_3,"
-                        + "eu_sale_commodity,eu_sale_third_party_commodity,printed,invoice_type,"
-                        + "currency_rate,customer_order_number,ocr_number,entered,reminder_count,"
-                        + "interest_invoiced,stock_influencing,order_numbers FROM " + kind.table
-                        + " WHERE company_id=(SELECT id FROM company WHERE legacy_id=?)"
-                        + creditFilter + " ORDER BY number,id")) {
+        try (PreparedStatement statement =
+                connection.prepareStatement(
+                        "SELECT id,legacy_id,number,"
+                                + creditColumn
+                                + "invoice_date,due_date,customer_number,"
+                                + "customer_name,our_contact_person,customer_contact_person,delay_interest,"
+                                + "currency_code,payment_term_name,delivery_term_name,delivery_way_name,"
+                                + "tax_free,invoice_text,tax_rate_1,tax_rate_2,tax_rate_3,"
+                                + "eu_sale_commodity,eu_sale_third_party_commodity,printed,invoice_type,"
+                                + "currency_rate,customer_order_number,ocr_number,entered,reminder_count,interest_invoiced,stock_influencing,order_numbers"
+                                + " FROM "
+                                + kind.table
+                                + " WHERE company_id=(SELECT id FROM company WHERE legacy_id=?)"
+                                + creditFilter
+                                + " ORDER BY number,id")) {
             int parameter = 1;
             statement.setInt(parameter++, companyLegacyId);
             if (creditingNumber != null) {
@@ -288,6 +293,127 @@ public final class NormalizedInvoiceStore {
                 .toList();
     }
 
+    /**
+     * Existing-row amounts; no displayed/list index is used.
+     *
+     * @param rowNumber persisted row key
+     * @param quantity nullable quantity, exactly representable as DECIMAL(100,30)
+     * @param unitPrice nullable unit price, exactly representable as DECIMAL(100,30)
+     */
+    public record LineAmounts(
+            int rowNumber, java.math.BigDecimal quantity, java.math.BigDecimal unitPrice) {
+        /** Validates both nullable amounts without rounding. */
+        public LineAmounts {
+            requireExactAmount(quantity);
+            requireExactAmount(unitPrice);
+        }
+    }
+
+    /**
+     * Immutable dates and existing-row amounts; all other fields remain untouched.
+     *
+     * @param date nullable invoice date, within SQL DATE years 0001-9999
+     * @param dueDate nullable due date, within SQL DATE years 0001-9999
+     * @param rows row updates; empty means date-only editing
+     */
+    public record FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows) {
+        /** Copies row updates and validates nullable SQL dates. */
+        public FinancialValues {
+            rows = List.copyOf(rows);
+            requireSqlDate(date);
+            requireSqlDate(dueDate);
+        }
+    }
+
+    private static void requireExactAmount(java.math.BigDecimal value) {
+        if (value == null) return;
+        try {
+            if (value.setScale(30, java.math.RoundingMode.UNNECESSARY).precision() > 100)
+                throw new ArithmeticException();
+        } catch (ArithmeticException error) {
+            throw new IllegalArgumentException("Amount must fit DECIMAL(100,30) exactly", error);
+        }
+    }
+
+    private static void requireSqlDate(LocalDate value) {
+        if (value != null && (value.getYear() < 1 || value.getYear() > 9999))
+            throw new IllegalArgumentException("Date must fit SQL DATE");
+    }
+
+    /**
+     * Updates only unbooked invoice dates and existing-row amounts under a local savepoint.
+     *
+     * @param company company migration identity
+     * @param id stable SQL identity
+     * @param values explicit date and row amount updates
+     * @throws SQLException for missing/foreign/booked targets, row keys or transaction errors
+     */
+    public void updateInvoiceFinancialValues(int company, long id, FinancialValues values)
+            throws SQLException {
+        atomic(
+                () -> {
+                    updateFinancialValues(Kind.INVOICE, company, id, values);
+                    return null;
+                });
+    }
+
+    /**
+     * Updates only unbooked credit dates and existing-row amounts under a local savepoint.
+     *
+     * @param company company migration identity
+     * @param id stable SQL identity
+     * @param values explicit date and row amount updates
+     * @throws SQLException for missing/foreign/booked targets, row keys or transaction errors
+     */
+    public void updateCreditFinancialValues(int company, long id, FinancialValues values)
+            throws SQLException {
+        atomic(
+                () -> {
+                    updateFinancialValues(Kind.CREDIT, company, id, values);
+                    return null;
+                });
+    }
+
+    private void updateFinancialValues(Kind kind, int company, long id, FinancialValues values)
+            throws SQLException {
+        Objects.requireNonNull(values, "values");
+        editableIdentity(kind, company, id);
+        try (var statement =
+                connection.prepareStatement(
+                        "UPDATE "
+                                + kind.table
+                                + " SET invoice_date=?,due_date=? WHERE id=? AND entered=FALSE AND"
+                                + " company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            setLocalDate(statement, 1, values.date());
+            setLocalDate(statement, 2, values.dueDate());
+            statement.setLong(3, id);
+            statement.setInt(4, company);
+            if (statement.executeUpdate() != 1)
+                throw new SQLException("Missing, foreign or booked document");
+        }
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        for (var row : values.rows()) {
+            if (!seen.add(row.rowNumber()))
+                throw new IllegalArgumentException("Duplicate stored row key");
+            try (var statement =
+                    connection.prepareStatement(
+                            "UPDATE "
+                                    + kind.rowTable()
+                                    + " SET quantity=?,unit_price=? WHERE "
+                                    + kind.idColumn()
+                                    + "=? AND row_number=? AND company_id=(SELECT id FROM company"
+                                    + " WHERE legacy_id=?)")) {
+                statement.setBigDecimal(1, row.quantity());
+                statement.setBigDecimal(2, row.unitPrice());
+                statement.setLong(3, id);
+                statement.setInt(4, row.rowNumber());
+                statement.setInt(5, company);
+                if (statement.executeUpdate() != 1)
+                    throw new SQLException("Missing or foreign stored row key");
+            }
+        }
+    }
+
     /** Non-financial persisted fields; deliberately excludes dates, amounts, booking and voucher data. */
     public record Metadata(boolean printed, String ocrNumber, int reminderCount, boolean interestInvoiced) { }
 
@@ -317,9 +443,12 @@ public final class NormalizedInvoiceStore {
     }
 
     private Optional<Metadata> readMetadata(Kind kind, int companyLegacyId, long id) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT printed,ocr_number,reminder_count,interest_invoiced FROM " + kind.table
-                        + " WHERE id=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+        try (PreparedStatement statement =
+                connection.prepareStatement(
+                        "SELECT printed,ocr_number,reminder_count,interest_invoiced FROM "
+                                + kind.table
+                                + " WHERE id=? AND company_id=(SELECT id FROM company WHERE"
+                                + " legacy_id=?)")) {
             statement.setLong(1, id);
             statement.setInt(2, companyLegacyId);
             try (ResultSet result = statement.executeQuery()) {
@@ -333,12 +462,17 @@ public final class NormalizedInvoiceStore {
             throws SQLException {
         Objects.requireNonNull(expected, "expected metadata");
         Objects.requireNonNull(replacement, "replacement metadata");
-        if (replacement.reminderCount() < 0) throw new IllegalArgumentException("Negative reminder count");
-        try (PreparedStatement statement = connection.prepareStatement(
-                "UPDATE " + kind.table + " SET printed=?,ocr_number=?,reminder_count=?,interest_invoiced=?"
-                        + " WHERE id=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)"
-                        + " AND printed=? AND reminder_count=? AND interest_invoiced=?"
-                        + " AND (ocr_number=? OR (ocr_number IS NULL AND ? IS NULL))")) {
+        if (replacement.reminderCount() < 0)
+            throw new IllegalArgumentException("Negative reminder count");
+        try (PreparedStatement statement =
+                connection.prepareStatement(
+                        "UPDATE "
+                                + kind.table
+                                + " SET printed=?,ocr_number=?,reminder_count=?,interest_invoiced=?"
+                                + " WHERE id=? AND company_id=(SELECT id FROM company WHERE"
+                                + " legacy_id=?) AND printed=? AND reminder_count=? AND"
+                                + " interest_invoiced=? AND (ocr_number=? OR (ocr_number IS NULL"
+                                + " AND ? IS NULL))")) {
             statement.setBoolean(1, replacement.printed());
             statement.setString(2, replacement.ocrNumber());
             statement.setInt(3, replacement.reminderCount());
@@ -351,7 +485,11 @@ public final class NormalizedInvoiceStore {
             statement.setString(10, expected.ocrNumber());
             statement.setString(11, expected.ocrNumber());
             if (statement.executeUpdate() != 1) {
-                throw new SQLException("Missing, company-mismatched or stale " + kind.table + " metadata for " + id);
+                throw new SQLException(
+                        "Missing, company-mismatched or stale "
+                                + kind.table
+                                + " metadata for "
+                                + id);
             }
         }
     }
@@ -416,7 +554,8 @@ public final class NormalizedInvoiceStore {
                 }
                 Identity identity = new Identity(result.getObject(1, Integer.class), result.getBoolean(2));
                 if (identity.entered()) {
-                    throw new SQLException("Booked " + kind.table + " requires a posting/correction workflow");
+                    throw new SQLException(
+                            "Booked " + kind.table + " requires a posting/correction workflow");
                 }
                 return identity;
             }
@@ -428,7 +567,8 @@ public final class NormalizedInvoiceStore {
         validateSnapshot(kind, invoice);
         Identity old = editableIdentity(kind, companyLegacyId, id);
         if (invoice.isEntered()) {
-            throw new SQLException("Use markEntered in a posting transaction, not document editing");
+            throw new SQLException(
+                    "Use markEntered in a posting transaction, not document editing");
         }
         if (!Objects.equals(old.number(), invoice.getNumber())) {
             requireUnreferenced(kind, companyLegacyId, old.number());
@@ -450,7 +590,8 @@ public final class NormalizedInvoiceStore {
             statement.setLong(index++, id);
             statement.setInt(index, companyLegacyId);
             if (statement.executeUpdate() != 1) {
-                throw new SQLException("Missing or company-mismatched " + kind.table + " identity " + id);
+                throw new SQLException(
+                        "Missing or company-mismatched " + kind.table + " identity " + id);
             }
         }
         deleteChildren(kind, id);
@@ -467,7 +608,8 @@ public final class NormalizedInvoiceStore {
             statement.setLong(1, id);
             statement.setInt(2, companyLegacyId);
             if (statement.executeUpdate() != 1) {
-                throw new SQLException("Missing or company-mismatched " + kind.table + " identity " + id);
+                throw new SQLException(
+                        "Missing or company-mismatched " + kind.table + " identity " + id);
             }
         }
     }
@@ -489,21 +631,31 @@ public final class NormalizedInvoiceStore {
         }
         // These legacy relationships are number-based, not foreign keys. Null numbers do not
         // designate a target. Any match protects every ambiguous historical duplicate.
-        for (String reference : List.of("inpayment_row.invoice_number",
-                "customer_credit_invoice.crediting_invoice_number", "customer_order.invoice_number")) {
+        for (String reference :
+                List.of(
+                        "inpayment_row.invoice_number",
+                        "customer_credit_invoice.crediting_invoice_number",
+                        "customer_order.invoice_number")) {
             String[] parts = reference.split("\\.");
             String scope = parts[0].equals("inpayment_row")
                     ? "inpayment_id IN (SELECT id FROM inpayment WHERE company_id="
                             + "(SELECT id FROM company WHERE legacy_id=?))"
                     : "company_id=(SELECT id FROM company WHERE legacy_id=?)";
-            try (PreparedStatement statement = connection.prepareStatement(
-                    "SELECT COUNT(*) FROM " + parts[0] + " WHERE " + parts[1] + "=? AND " + scope)) {
+            try (PreparedStatement statement =
+                    connection.prepareStatement(
+                            "SELECT COUNT(*) FROM "
+                                    + parts[0]
+                                    + " WHERE "
+                                    + parts[1]
+                                    + "=? AND "
+                                    + scope)) {
                 statement.setInt(1, number);
                 statement.setInt(2, companyLegacyId);
                 try (ResultSet result = statement.executeQuery()) {
                     result.next();
                     if (result.getLong(1) != 0) {
-                        throw new SQLException("Invoice number " + number + " is referenced by " + parts[0]);
+                        throw new SQLException(
+                                "Invoice number " + number + " is referenced by " + parts[0]);
                     }
                 }
             }
@@ -540,7 +692,8 @@ public final class NormalizedInvoiceStore {
 
     private static void validateVoucher(SSVoucher voucher) throws SQLException {
         if (voucher != null && (voucher.getCorrects() != null || voucher.getCorrectedBy() != null)) {
-            throw new SQLException("Correction-linked voucher snapshots require explicit graph support");
+            throw new SQLException(
+                    "Correction-linked voucher snapshots require explicit graph support");
         }
     }
 
@@ -597,13 +750,20 @@ public final class NormalizedInvoiceStore {
 
     private void markEnteredById(Kind kind, int companyLegacyId, long id, SSVoucher voucher) throws SQLException {
         validateVoucher(voucher);
-        try (PreparedStatement statement = connection.prepareStatement(
-                "UPDATE " + kind.table + " SET entered=true WHERE id=? AND entered=false AND company_id="
-                        + "(SELECT id FROM company WHERE legacy_id=?)")) {
+        try (PreparedStatement statement =
+                connection.prepareStatement(
+                        "UPDATE "
+                                + kind.table
+                                + " SET entered=true WHERE id=? AND entered=false AND company_id="
+                                + "(SELECT id FROM company WHERE legacy_id=?)")) {
             statement.setLong(1, id);
             statement.setInt(2, companyLegacyId);
             if (statement.executeUpdate() != 1) {
-                throw new SQLException("Missing, already booked or company-mismatched " + kind.table + " identity " + id);
+                throw new SQLException(
+                        "Missing, already booked or company-mismatched "
+                                + kind.table
+                                + " identity "
+                                + id);
             }
         }
         for (String table : List.of(kind.voucherRowTable(), kind.voucherTable())) {
@@ -626,7 +786,8 @@ public final class NormalizedInvoiceStore {
             try (ResultSet result = statement.executeQuery()) {
                 result.next();
                 if (result.getInt(1) != 1) {
-                    throw new SQLException("Missing or ambiguous " + kind.table + " number " + number);
+                    throw new SQLException(
+                            "Missing or ambiguous " + kind.table + " number " + number);
                 }
             }
         }
@@ -682,16 +843,22 @@ public final class NormalizedInvoiceStore {
         requireUnreferenced(kind, companyLegacyId, invoice.getNumber());
         long id;
         String creditColumn = kind == Kind.CREDIT ? "crediting_invoice_number," : "";
-        try (PreparedStatement statement = connection.prepareStatement(
-                "INSERT INTO " + kind.table + " (legacy_id,company_id,number," + creditColumn
-                        + "invoice_date,due_date,customer_number,customer_name,our_contact_person,"
-                        + "customer_contact_person,delay_interest,currency_code,payment_term_name,"
-                        + "delivery_term_name,delivery_way_name,tax_free,invoice_text,tax_rate_1,"
-                        + "tax_rate_2,tax_rate_3,eu_sale_commodity,eu_sale_third_party_commodity,"
-                        + "printed,invoice_type,currency_rate,customer_order_number,ocr_number,"
-                        + "entered,reminder_count,interest_invoiced,stock_influencing,order_numbers)"
-                        + " SELECT ?,id," + repeat("?,", 28 + (kind == Kind.CREDIT ? 1 : 0))
-                        + "? FROM company WHERE legacy_id=?", Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement statement =
+                connection.prepareStatement(
+                        "INSERT INTO "
+                                + kind.table
+                                + " (legacy_id,company_id,number,"
+                                + creditColumn
+                                + "invoice_date,due_date,customer_number,customer_name,our_contact_person,"
+                                + "customer_contact_person,delay_interest,currency_code,payment_term_name,"
+                                + "delivery_term_name,delivery_way_name,tax_free,invoice_text,tax_rate_1,"
+                                + "tax_rate_2,tax_rate_3,eu_sale_commodity,eu_sale_third_party_commodity,"
+                                + "printed,invoice_type,currency_rate,customer_order_number,ocr_number,"
+                                + "entered,reminder_count,interest_invoiced,stock_influencing,order_numbers)"
+                                + " SELECT ?,id,"
+                                + repeat("?,", 28 + (kind == Kind.CREDIT ? 1 : 0))
+                                + "? FROM company WHERE legacy_id=?",
+                        Statement.RETURN_GENERATED_KEYS)) {
             int i = 1;
             statement.setInt(i++, nextLegacyId(kind));
             i = bindHeader(statement, i, kind, invoice);

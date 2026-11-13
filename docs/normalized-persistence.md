@@ -1289,8 +1289,9 @@ The [cutover ledger](normalized-cutover-checklist.md) records remaining root wir
 
 `CustomerDocumentView(owner, session)` is an EDT-created, opt-in normalized panel; it
 installs the owner's credit-menu binding and displays separate invoice and credit tables.
-Its table cells remain read-only; explicit actions support metadata editing, confirmed
-unbooked-document deletion and explicit customer journal posting as described below. It does not instantiate legacy frames/models,
+Its overview table cells remain read-only; explicit actions support metadata editing,
+bounded unbooked financial editing, confirmed deletion and customer journal posting as
+described below. It does not instantiate legacy frames/models,
 call `SSDB` caches, allow arbitrary financial editing, or bypass the format-3 startup guard. The selected year is posting context; document lists
 are company-wide, matching the existing document scope rather than filtering by year dates.
 
@@ -1432,6 +1433,54 @@ legacy JDBC blocked, explicit confirmation and one commit refresh, date input/ge
 invalidation, stale re-preview, replacement during an accepted post and uncertain-outcome UI
 blocking. These are restricted customer-journal adapters, not production format-3 startup,
 other document-family posting adapters or full legacy financial-editor parity.
+
+### Bounded unbooked financial editing
+
+`session.financialEdit(kind, sqlId)` binds `CustomerFinancialEditAdapter` to one explicit
+company/year/kind/stable identity. The restricted form changes only invoice date, due date,
+and quantities/unit prices on existing rows. Blank dates/amounts mean SQL NULL, not a default
+date, price or zero. Numbers, customers, addresses, currency/rates, accounts, taxes, discounts,
+dimensions, product/unit/description snapshots, metadata, order/payment/credit links and
+stored voucher snapshots are not replaced. Booked documents are refused. New document
+creation and row insertion/deletion/reordering or other financial-field editing remain open.
+
+`NormalizedCustomerFinancialEditService` loads immutable values and real persisted row keys
+(not list/display indexes), with an ephemeral token over all six source tables and the
+company rounding policy. It requires the complete unchanged row-key set, recomputes totals
+using explicit rounding, and rejects stale graphs, metadata or rounding context. The shared
+typed fingerprint helper preserves deletion's existing token semantics. Quantities and prices
+must fit DECIMAL(100,30) exactly; dates must fit SQL DATE (years 0001–9999). Unsupported
+values fail rather than being silently rounded/coerced. Decimal scales do not trigger needless
+row writes when the numeric value is unchanged.
+
+The new `NormalizedInvoiceStore` narrow update methods use a local savepoint, company/SQL-ID
+scope and unbooked guard. They update only the two header date columns and changed existing
+rows' quantity/unit-price columns; no graph reconstruction or number-based retargeting occurs.
+The service revalidates the source, applies those updates, and verifies persisted dates,
+amounts and totals against the preview before the caller commits. Late failures restore both
+header and row changes. Existing unbooked voucher snapshots remain untouched until the
+separate journal workflow regenerates them from the edited rows. This is draft editing, not
+an assertion that every draft is bookable; posting still requires its own validated preview.
+
+`CustomerFinancialEditDialog` loads off-EDT, shows readonly stored keys/descriptions/accounts,
+and allows nullable dates/quantity/price editing. A fresh totals preview and checkbox confirmation
+are required before save. Starting or committing a cell edit, changing a date, or reloading
+invalidates prior confirmation; invalid/inexact cell input refuses editor commit. Pending
+preview results are generation-fenced. Reload explicitly discards the draft. Busy close/Escape/
+cancel are blocked; selection replacement invalidates dialogs, accepted work retains original
+context and only current-context confirmed success refreshes the view. Confirmed replay is
+idempotent; unknown commit outcomes disable editing/reload/preview/save pending reconciliation.
+
+Tests compare every PUBLIC SQL table excluding only the intended target date and row amount
+columns. They cover both kinds, non-contiguous row keys, NULL fields, metadata/reference/
+voucher preservation, exact decimal limits, stale graph/rounding inputs, bad row-key sets,
+booked/foreign/closed/format guards, partial-write rollback/retry, unknown commits on either
+side of durability and confirmed close failure. A separate journal test proves posting uses
+new edited amounts, not the preserved old voucher snapshot. Xvfb tests cover both actual view
+routes with legacy JDBC blocked, sorted identity, real cell editor validation and confirmation,
+stale reload, input-generation changes, accepted-save selection replacement and uncertain UI
+blocking. These bounded editors do not establish full legacy financial editor or production
+format-3 GUI parity.
 
 ## Definition of done for issue #75
 

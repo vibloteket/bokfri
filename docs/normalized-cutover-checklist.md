@@ -119,11 +119,11 @@ source/fixture evidence and an acceptance test.
   connect the GUI workflows. Repository-local savepoints alone do not prove
   whole-workflow atomicity.
 
-**Next implementation slices:** general unbooked invoice/credit creation and financial
-editing adapters, remaining document-family workflows, and explicit production ownership/
-bootstrap only once the cutover gates are met. The restricted normalized view now supports
-credit requests, metadata editing, confirmed unbooked deletion and explicit customer journal
-posting, with headless and real-display tests. Production application menus remain legacy;
+**Next implementation slices:** general document creation, full row/account/tax/currency
+editing, remaining document-family workflows, and explicit production ownership/bootstrap
+only once the cutover gates are met. The restricted normalized view supports credit requests,
+metadata editing, bounded unbooked date/quantity/price editing, confirmed unbooked deletion
+and explicit customer journal posting, with headless and real-display tests. Production application menus remain legacy;
 only the explicit owner-scoped credit actions and restricted view use these adapters. Do not
 remove the format-3 startup guard merely to reach them. General booked graph/correction-link editing remains rejected;
 this is not complete legacy GUI parity, and G1–G4 remain unfinished.
@@ -133,7 +133,7 @@ Customer invoice/credit action inventory (active menu callers remain legacy):
 | Action / current caller | Repository evidence | Still required |
 |---|---|---|
 | Create / `SSInvoiceDialog` via `InvoiceService.create`; legacy credit dialogs via `SSDB.addCreditInvoice` | Explicit invoice factory/credit service plus `CustomerCreditDialogAdapter` and `SSCreditInvoiceDialog.normalizedDialog`: restricted date/amount preview/create, dedicated sessions, commit-confirmed callback | Production owner/bootstrap integration and general invoice creation adapter; explicit normalized source selection, credit routing and list refresh exist, but the legacy row editor is not the normalized request form |
-| Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Unbooked graph replacement, booked metadata and explicit booked-invoice credit creation | Unbooked financial editor adapter and production integration; restricted metadata adapter exists. Unsupported direct booked graph/correction-link editing stays refused |
+| Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Unbooked graph replacement, booked metadata and explicit booked-invoice credit creation | Full row/account/tax/currency editor and production integration; restricted metadata and unbooked date/quantity/price adapters exist. Unsupported direct booked graph/correction-link editing stays refused |
 | Delete / both document frames | `NormalizedCustomerDocumentService` detaches scoped orders and deletes the unbooked invoice graph atomically; payment/credit guards and ambiguous-link protection remain | Restricted preview/confirmation adapter and current-view refresh exist; production legacy screen/cache replacement remains. Booked invoices require financial correction rather than deletion |
 | Journal / `InvoiceService.planJournal` and `commitJournal` | `NormalizedCustomerJournalService` provides whole invoice/credit journal atomicity, stable-ID posting, stale-financial-plan rejection and caller-owned commit; created credits post through the same explicit service | Restricted explicit preview/confirmation adapter and current-view refresh exist; production integration and other document-family posting adapters remain. Unsupported voucher correction graphs stay a compatibility boundary |
 | Print/remind/copy/convert | Explicit metadata compare-and-set and reminder-count service; existing CLI PDF generation remains read-only | GUI print success callbacks, full interest-invoice generation and generated-document/copy actions; SQL metadata writes do not establish exactly-once external printing |
@@ -174,6 +174,11 @@ fail-closed repository boundaries, not a new claim of complete business validati
   inclusive range input and explicit confirmation, shared dedicated transaction gate,
   whole-journal atomic posting and current-context commit refresh. Changed dates/financial
   inputs or numbering require a new preview; uncertain commits block blind reposting.
+- [x] Add bounded unbooked invoice/credit date/due-date and existing-line quantity/price
+  editing: immutable source/patch values, full source-graph + rounding stale token, exact
+  decimal representability, stable stored row keys, fresh totals preview/confirmation and
+  narrow SQL updates preserving all other columns/snapshots/references. Booked edits and
+  structural row/account/tax/currency changes remain outside this restricted form.
 - [ ] Install bindings/views from production normalized application bootstrap, replace
   legacy screen/cache paths and remaining credit-frame/editor operations. Format-3 startup
   remains rejected; these restricted integration boundaries do not make the full credit

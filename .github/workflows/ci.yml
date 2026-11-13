@@ -77,9 +77,9 @@ jobs:
       shell: bash
       run: |
         if [ "$RUNNER_OS" = "Linux" ]; then
-          xvfb-run -a mvn -B test -Dawt.headless=false '-Dtest=CustomerCredit*Test,CustomerDocument*Test,CustomerJournal*Test'
+          xvfb-run -a mvn -B test -Dawt.headless=false '-Dtest=CustomerCredit*Test,CustomerDocument*Test,CustomerJournal*Test,CustomerFinancial*Test'
         else
-          mvn -B test -Dawt.headless=false '-Dtest=CustomerCredit*Test,CustomerDocument*Test,CustomerJournal*Test'
+          mvn -B test -Dawt.headless=false '-Dtest=CustomerCredit*Test,CustomerDocument*Test,CustomerJournal*Test,CustomerFinancial*Test'
         fi
 
     - name: Generate and compare PDF gallery

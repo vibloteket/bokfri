@@ -19,6 +19,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Test navigation parity across all static pages and the forum header, and validate both stylesheets in CI. Apply the updated forum header/CSS manually; no container rebuild or authentication changes.
 
 ### Infrastructure
+- Add bounded normalized unbooked invoice/credit date and existing-line quantity/price editing (#75):
+  immutable source tokens, exact decimal validation, totals preview and explicit confirmation, stable stored row keys,
+  and narrow atomic SQL updates preserving metadata, references and voucher snapshots. Full row creation/editing and
+  production normalized GUI activation remain separate; booked financial edits and format-3 startup stay disabled.
 
 - Add an explicit normalized credit-request GUI adapter and separate date/amount preview/create dialog entry point. Use dedicated sessions, read-only schema checks, a shared application gate, background JDBC work and commit-confirmed EDT refresh; prevent confirmed replay and block blind retries after uncertain commits. Preserve legacy editor/menu paths and the format-3 startup guard; application session/selection/menu wiring and other GUI adapters remain open (#75).
 - Add explicit normalized credit correction planning/creation for booked customer invoices, preserving the original financial graph and ledger. Revalidate source snapshots, available balance and numbering before atomic insertion; count prior credits/payments, reject over-crediting and unrepresentable rounding, and retain caller rollback/retry. Route normalized CLI credit validate/create through the service without changing input requirements or posting implicitly. Credit journal posting remains explicit; direct booked graph edits and GUI activation remain disabled (#75).

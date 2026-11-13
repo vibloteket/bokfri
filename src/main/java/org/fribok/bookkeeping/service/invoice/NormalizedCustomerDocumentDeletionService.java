@@ -57,10 +57,7 @@ public final class NormalizedCustomerDocumentDeletionService {
                 throw new SQLException("Ambiguous invoice number owns linked orders");
         }
         var writer = new CanonicalFingerprintWriter();
-        String prefix = kind == Kind.INVOICE ? "customer_invoice" : "customer_credit_invoice";
-        String owner = kind == Kind.INVOICE ? "invoice_id" : "credit_invoice_id";
-        signature(writer, prefix, "id", id);
-        for (String suffix : List.of("_address", "_default_account", "_row", "_voucher", "_voucher_row")) signature(writer, prefix + suffix, owner, id);
+        CustomerDocumentFingerprint.write(writer, connection, kind == Kind.CREDIT, id);
         writer.writeBoundary("orders"); for (long order : orders) writer.writeLong(order);
         return new Plan(company, kind, id, document.getNumber(), document.getCustomerName(), document.getLocalDate(), orders, writer.finish());
     }
@@ -89,28 +86,6 @@ public final class NormalizedCustomerDocumentDeletionService {
         try (var statement = connection.prepareStatement("SELECT COUNT(*) FROM " + table + " WHERE " + field + "=? AND " + scope)) {
             statement.setInt(1, number); statement.setInt(2, company);
             try (var rows = statement.executeQuery()) { rows.next(); return rows.getLong(1) > 0; }
-        }
-    }
-    private void signature(CanonicalFingerprintWriter writer, String table, String owner, long id) throws SQLException {
-        writer.writeBoundary(table);
-        // Sort per-row fingerprints to retain multiplicity without relying on JDBC row order.
-        try (var statement = connection.prepareStatement("SELECT * FROM " + table + " WHERE " + owner + "=?")) {
-            statement.setLong(1, id);
-            try (var rows = statement.executeQuery()) {
-                var metadata = rows.getMetaData(); var signatures = new java.util.ArrayList<String>();
-                while (rows.next()) {
-                    var row = new CanonicalFingerprintWriter();
-                    for (int i = 1; i <= metadata.getColumnCount(); i++) {
-                        int type = metadata.getColumnType(i);
-                        if (!List.of(Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT, Types.DECIMAL, Types.NUMERIC,
-                                Types.BOOLEAN, Types.BIT, Types.VARCHAR, Types.CHAR, Types.LONGVARCHAR, Types.DATE,
-                                Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE).contains(type)) throw new SQLException("Unsupported deletion SQL type " + type);
-                        row.writeString(metadata.getColumnName(i)).writeInteger(type).writeString(rows.getString(i));
-                    }
-                    signatures.add(row.finish());
-                }
-                java.util.Collections.sort(signatures); for (String row : signatures) writer.writeString(row);
-            }
         }
     }
 }

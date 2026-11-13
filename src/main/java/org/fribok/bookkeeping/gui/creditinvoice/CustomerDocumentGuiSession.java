@@ -30,7 +30,8 @@ public final class CustomerDocumentGuiSession implements AutoCloseable {
             int company, int year, Clock clock) {
         this.connections = Objects.requireNonNull(connections, "connections");
         this.gate = Objects.requireNonNull(gate, "shared transaction gate");
-        this.clock = Objects.requireNonNull(clock, "clock"); this.company = company; this.year = year;
+        this.clock = Objects.requireNonNull(clock, "clock");
+        this.company = company; this.year = year;
     }
 
     /** Explicit selected company migration identity. */
@@ -55,16 +56,30 @@ public final class CustomerDocumentGuiSession implements AutoCloseable {
     public Sources sources() throws SQLException {
         synchronized (gate) {
             try (Connection connection = open()) {
-                if (!connection.getAutoCommit()) throw new SQLException("GUI factory must supply a fresh session");
+                if (!connection.getAutoCommit())
+                    throw new SQLException("GUI factory must supply a fresh session");
                 connection.setAutoCommit(false);
                 try {
                     CustomerCreditDialogAdapter.validateNormalizedConnection(connection, clock);
                     var accounting = new NormalizedAccountingStore(connection, clock);
-                    var selectedCompany = accounting.getCompanies().stream().filter(c -> c.getId() == company)
-                            .findFirst().orElseThrow(() -> new SQLException("Selected company no longer exists"));
+                    var selectedCompany =
+                            accounting.getCompanies().stream()
+                                    .filter(c -> c.getId() == company)
+                                    .findFirst()
+                                    .orElseThrow(
+                                            () ->
+                                                    new SQLException(
+                                                            "Selected company no longer exists"));
                     accounting.setCurrentCompany(selectedCompany);
-                    var selectedYear = accounting.getYears().stream().filter(y -> y.getId() == year)
-                            .findFirst().orElseThrow(() -> new SQLException("Selected year does not belong to company"));
+                    var selectedYear =
+                            accounting.getYears().stream()
+                                    .filter(y -> y.getId() == year)
+                                    .findFirst()
+                                    .orElseThrow(
+                                            () ->
+                                                    new SQLException(
+                                                            "Selected year does not belong to"
+                                                                + " company"));
                     var stored = new NormalizedInvoiceStore(connection).listInvoices(company);
                     Map<Integer, Integer> counts = new HashMap<>();
                     for (var item : stored) counts.merge(item.document().getNumber(), 1, Integer::sum);
@@ -103,16 +118,30 @@ public final class CustomerDocumentGuiSession implements AutoCloseable {
     public Documents documents() throws SQLException {
         synchronized (gate) {
             try (Connection connection = open()) {
-                if (!connection.getAutoCommit()) throw new SQLException("GUI factory must supply a fresh session");
+                if (!connection.getAutoCommit())
+                    throw new SQLException("GUI factory must supply a fresh session");
                 connection.setAutoCommit(false);
                 try {
                     CustomerCreditDialogAdapter.validateNormalizedConnection(connection, clock);
                     var accounting = new NormalizedAccountingStore(connection, clock);
-                    var selectedCompany = accounting.getCompanies().stream().filter(c -> c.getId() == company)
-                            .findFirst().orElseThrow(() -> new SQLException("Selected company no longer exists"));
+                    var selectedCompany =
+                            accounting.getCompanies().stream()
+                                    .filter(c -> c.getId() == company)
+                                    .findFirst()
+                                    .orElseThrow(
+                                            () ->
+                                                    new SQLException(
+                                                            "Selected company no longer exists"));
                     accounting.setCurrentCompany(selectedCompany);
-                    var selectedYear = accounting.getYears().stream().filter(y -> y.getId() == year)
-                            .findFirst().orElseThrow(() -> new SQLException("Selected year does not belong to company"));
+                    var selectedYear =
+                            accounting.getYears().stream()
+                                    .filter(y -> y.getId() == year)
+                                    .findFirst()
+                                    .orElseThrow(
+                                            () ->
+                                                    new SQLException(
+                                                            "Selected year does not belong to"
+                                                                + " company"));
                     var store = new NormalizedInvoiceStore(connection);
                     var stored = store.listInvoices(company);
                     Map<Integer, Integer> counts = new HashMap<>();
@@ -153,6 +182,22 @@ public final class CustomerDocumentGuiSession implements AutoCloseable {
         return new Document(id, invoice.getNumber(), invoice.getLocalDate(), invoice.getCustomerName(),
                 invoice.getCurrency() == null ? null : invoice.getCurrency().getName(), total, balance,
                 invoice.isEntered(), crediting);
+    }
+
+    /**
+     * Binds bounded unbooked editing to this exact selection and stable identity.
+     *
+     * @param kind invoice or credit family
+     * @param id stable SQL document identity
+     * @return a fresh selection-bound draft adapter
+     * @throws SQLException if the selection was closed or replaced
+     */
+    public CustomerFinancialEditAdapter financialEdit(
+            org.fribok.bookkeeping.service.invoice.NormalizedCustomerFinancialEditService.Kind kind,
+            long id)
+            throws SQLException {
+        requireActive();
+        return new CustomerFinancialEditAdapter(this::open, gate, company, year, kind, id, clock);
     }
 
     /** Explicit whole-journal planning/posting for this exact company/year selection. */
