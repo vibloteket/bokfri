@@ -17,6 +17,7 @@ import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.FinancialValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAmounts;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAccounting;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.TaxValues;
 import se.swedsoft.bookkeeping.data.common.SSTaxCode;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 
@@ -62,7 +63,8 @@ public final class NormalizedCustomerFinancialEditService {
      * @param yearId explicit accounting year identity
      * @param accounts immutable selected-year account choices
      * @param taxes immutable stored document tax rates
-     * @param taxFree stored document tax-exempt flag
+     * @param taxFree effective stored document tax-exempt flag
+     * @param headerTax raw stored flag and nullable rates
      * @param kind document family
      * @param id stable SQL identity
      * @param number nullable business number
@@ -78,6 +80,7 @@ public final class NormalizedCustomerFinancialEditService {
             List<Account> accounts,
             List<Tax> taxes,
             boolean taxFree,
+            TaxValues headerTax,
             Kind kind,
             long id,
             Integer number,
@@ -190,7 +193,7 @@ public final class NormalizedCustomerFinancialEditService {
      * Revalidates the source and calculates a complete proposed patch without writes.
      *
      * @param expected original snapshot
-     * @param proposed dates, complete amount row-key set and optional existing-row detail/accounting patches
+     * @param proposed dates, complete amount row-key set and optional row/header-tax patches
      * @return opaque totals preview
      * @throws SQLException for storage errors or unsupported document projection
      * @throws IllegalArgumentException for stale or invalid inputs
@@ -202,6 +205,10 @@ public final class NormalizedCustomerFinancialEditService {
         var source = read(before.companyId(), before.yearId(), before.kind(), before.id());
         if (!expected.signature.equals(source.signature))
             throw new IllegalArgumentException("Financial source is stale; reload before editing");
+        var headerTax = proposed.tax() == null ? source.data.headerTax() : proposed.tax();
+        validateTaxChanges(source.data.headerTax(), headerTax);
+        source.document.setTaxFree(headerTax.taxFree());
+        source.document.setStoredTaxRates(headerTax.rate1(), headerTax.rate2(), headerTax.rate3());
         var indexed = indexed(proposed.rows());
         if (indexed.size() != source.data.lines().size())
             throw new IllegalArgumentException("Row insertion/removal is not supported");
@@ -237,15 +244,21 @@ public final class NormalizedCustomerFinancialEditService {
                                     && a.active() && !a.projectRequired() && !a.resultUnitRequired())))
                 throw new IllegalArgumentException("Sales account must be an active selected-year account within 3000..3999 without required dimensions");
             if (!Objects.equals(line.taxCode(), value.taxCode()) && value.taxCode() != null) {
-                var tax = source.data.taxes().stream().filter(t -> t.code().equals(value.taxCode())).findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Unknown stored tax code"));
-                if (tax.rate() == null || tax.rate().signum() < 0 || tax.rate().compareTo(BigDecimal.valueOf(100)) > 0)
+                var rate = taxRate(headerTax, value.taxCode());
+                if (!validRate(rate))
                     throw new IllegalArgumentException("Selected tax code requires a stored document rate within 0..100");
             }
             source.document.getRows().get(i).setAccountNr(value.account());
             source.document.getRows().get(i).setTaxCode(value.taxCode() == null ? null : SSTaxCode.valueOf(value.taxCode()));
         }
         if (!accounting.isEmpty()) throw new IllegalArgumentException("Foreign stored accounting row key");
+        if (!sameTax(source.data.headerTax(), headerTax) && !headerTax.taxFree()) {
+            for (var row : source.document.getRows()) {
+                if (row.getTaxCode() != null && row.getTaxCode() != SSTaxCode.TAXRATE_0
+                        && !validRate(taxRate(headerTax, row.getTaxCode().name())))
+                    throw new IllegalArgumentException("Taxable edited headers require present stored rates within 0..100 for all used VAT codes");
+            }
+        }
         return new Plan(
                 expected,
                 proposed,
@@ -295,7 +308,8 @@ public final class NormalizedCustomerFinancialEditService {
                                 || !Objects.equals(line.taxCode(), value.taxCode()));
                     }).map(line -> accountingPatch.get(line.rowNumber())).toList();
             var values = new FinancialValues(
-                    fresh.proposed.date(), fresh.proposed.dueDate(), changed, changedDetails, changedAccounting);
+                    fresh.proposed.date(), fresh.proposed.dueDate(), changed, changedDetails, changedAccounting,
+                    fresh.proposed.tax() != null && !sameTax(original.headerTax(), fresh.proposed.tax()) ? fresh.proposed.tax() : null);
             var store = new NormalizedInvoiceStore(connection);
             if (original.kind() == Kind.INVOICE)
                 store.updateInvoiceFinancialValues(original.companyId(), original.id(), values);
@@ -305,6 +319,9 @@ public final class NormalizedCustomerFinancialEditService {
                     || !Objects.equals(verified.values().dueDate(), fresh.proposed.dueDate())
                     || verified.total().compareTo(fresh.total) != 0)
                 throw new SQLException("Stored financial values differ from preview");
+            var expectedTax = fresh.proposed.tax() == null ? original.headerTax() : fresh.proposed.tax();
+            if (!sameTax(verified.headerTax(), expectedTax))
+                throw new SQLException("Stored header tax values differ from preview");
             var expectedDetails = new HashMap<Integer, LineDetails>();
             for (var row : original.lines())
                 expectedDetails.put(row.rowNumber(), new LineDetails(row.rowNumber(), row.description(), row.discount()));
@@ -364,7 +381,9 @@ public final class NormalizedCustomerFinancialEditService {
         var accounts = accountRows.stream().map(a -> new Account(a.getNumber(), a.getDescription(),
                 a.isActive(), a.isProjectRequired(), a.isResultUnitRequired()))
                 .sorted(java.util.Comparator.comparingInt(Account::number)).toList();
-        var rates = document.getStoredTaxRates();
+        var headerTax = (kind == Kind.INVOICE ? store.findInvoiceTaxValues(company, id)
+                : store.findCreditTaxValues(company, id)).orElseThrow(() -> new SQLException("Missing tax target"));
+        var rates = java.util.Arrays.asList(headerTax.rate1(), headerTax.rate2(), headerTax.rate3());
         var taxes = List.of(new Tax("TAXRATE_0", BigDecimal.ZERO), new Tax("TAXRATE_1", rates.get(0)),
                 new Tax("TAXRATE_2", rates.get(1)), new Tax("TAXRATE_3", rates.get(2)));
         boolean rounding = selected.isRoundingOff();
@@ -416,6 +435,7 @@ public final class NormalizedCustomerFinancialEditService {
                         accounts,
                         taxes,
                         document.getTaxFree(),
+                        headerTax,
                         kind,
                         id,
                         document.getNumber(),
@@ -459,6 +479,33 @@ public final class NormalizedCustomerFinancialEditService {
             if (map.put(row.rowNumber(), row) != null)
                 throw new IllegalArgumentException("Duplicate stored accounting row key");
         return map;
+    }
+
+    private static void validateTaxChanges(TaxValues before, TaxValues after) {
+        for (String code : List.of("TAXRATE_1", "TAXRATE_2", "TAXRATE_3")) {
+            var rate = taxRate(after, code);
+            if (!same(taxRate(before, code), rate) && rate != null && !validRate(rate))
+                throw new IllegalArgumentException("Changed stored VAT rates must be within 0..100");
+        }
+    }
+
+    private static BigDecimal taxRate(TaxValues tax, String code) {
+        return switch (code) {
+            case "TAXRATE_0" -> BigDecimal.ZERO;
+            case "TAXRATE_1" -> tax.rate1();
+            case "TAXRATE_2" -> tax.rate2();
+            case "TAXRATE_3" -> tax.rate3();
+            default -> throw new IllegalArgumentException("Unknown stored tax code");
+        };
+    }
+
+    private static boolean validRate(BigDecimal rate) {
+        return rate != null && rate.signum() >= 0 && rate.compareTo(BigDecimal.valueOf(100)) <= 0;
+    }
+
+    private static boolean sameTax(TaxValues a, TaxValues b) {
+        return a.taxFree() == b.taxFree() && same(a.rate1(), b.rate1())
+                && same(a.rate2(), b.rate2()) && same(a.rate3(), b.rate3());
     }
 
     private static boolean same(BigDecimal a, BigDecimal b) {

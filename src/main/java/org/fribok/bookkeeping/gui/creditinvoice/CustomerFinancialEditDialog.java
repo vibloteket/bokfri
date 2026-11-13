@@ -34,6 +34,7 @@ import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.FinancialValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAmounts;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAccounting;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.TaxValues;
 import org.fribok.bookkeeping.service.invoice.NormalizedCustomerFinancialEditService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 
@@ -46,6 +47,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
     private final JTextField date = new JTextField(10), due = new JTextField(10);
     private final JTextArea status = new JTextArea(4, 70);
     private final JTextArea accountingContext = new JTextArea(2, 70);
+    private final JComboBox<Boolean> taxFree = new JComboBox<>(new Boolean[] {Boolean.FALSE, Boolean.TRUE});
+    private final JTextField[] taxRates = {new JTextField(6), new JTextField(6), new JTextField(6)};
     private final JButton reload = new JButton(text("reload")),
             previewButton = new JButton(text("preview")),
             save = new JButton(text("save")),
@@ -115,8 +118,30 @@ public final class CustomerFinancialEditDialog extends JDialog {
         accountingContext.setEditable(false);
         accountingContext.setLineWrap(true);
         accountingContext.setWrapStyleWord(true);
+        JPanel taxHeader = new JPanel();
+        taxHeader.setName("financial-header-tax");
+        taxHeader.add(new JLabel(text("taxflag")));
+        taxFree.setName("financial-taxfree");
+        taxFree.setRenderer(new javax.swing.DefaultListCellRenderer() {
+            @Override
+            public java.awt.Component getListCellRendererComponent(javax.swing.JList<?> list, Object value,
+                    int index, boolean selected, boolean focus) {
+                return super.getListCellRendererComponent(list,
+                        text(Boolean.TRUE.equals(value) ? "exempt" : "taxable"),
+                        index, selected, focus);
+            }
+        });
+        taxHeader.add(taxFree);
+        for (int i = 0; i < taxRates.length; i++) {
+            taxRates[i].setName("financial-taxrate-" + (i + 1));
+            taxHeader.add(new JLabel("TAXRATE_" + (i + 1) + " (%)"));
+            taxHeader.add(taxRates[i]);
+        }
+        JPanel inputs = new JPanel(new BorderLayout());
+        inputs.add(header, BorderLayout.NORTH);
+        inputs.add(taxHeader);
         JPanel top = new JPanel(new BorderLayout());
-        top.add(header, BorderLayout.NORTH);
+        top.add(inputs, BorderLayout.NORTH);
         top.add(new JScrollPane(accountingContext));
         add(top, BorderLayout.NORTH);
         add(new JScrollPane(table));
@@ -194,6 +219,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
                 };
         date.getDocument().addDocumentListener(edits);
         due.getDocument().addDocumentListener(edits);
+        for (var rate : taxRates) rate.getDocument().addDocumentListener(edits);
+        taxFree.addActionListener(event -> changed());
         reload.addActionListener(event -> load());
         previewButton.addActionListener(event -> preview());
         save.addActionListener(event -> save());
@@ -239,6 +266,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         revision++;
         confirm.setSelected(false);
         if (!busy) status.setText(text("ready"));
+        table.repaint();
         controls();
     }
 
@@ -276,6 +304,11 @@ public final class CustomerFinancialEditDialog extends JDialog {
                             data.values().dueDate() == null
                                     ? ""
                                     : data.values().dueDate().toString());
+                    var storedTax = data.headerTax();
+                    taxFree.setSelectedItem(storedTax.taxFree());
+                    var rates = java.util.Arrays.asList(storedTax.rate1(), storedTax.rate2(), storedTax.rate3());
+                    for (int i = 0; i < taxRates.length; i++)
+                        taxRates[i].setText(rates.get(i) == null ? "" : rates.get(i).toPlainString());
                     lines.set(data.lines());
                     accountingContext.setText(text("accounts") + " " + data.yearId() + ": "
                             + data.accounts().stream().filter(a -> a.number() >= 3000 && a.number() <= 3999
@@ -315,7 +348,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
         try {
             values =
                     new FinancialValues(
-                            parse(date.getText()), parse(due.getText()), lines.values(), lines.details(), lines.accounting());
+                            parse(date.getText()), parse(due.getText()), lines.values(), lines.details(), lines.accounting(),
+                            new TaxValues((Boolean) taxFree.getSelectedItem(), parseRate(0), parseRate(1), parseRate(2)));
         } catch (RuntimeException error) {
             status.setText(text("invalid"));
             controls();
@@ -419,6 +453,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
         boolean active = !busy && !invalid && !adapter.isBlocked();
         date.setEnabled(active && loaded != null);
         due.setEnabled(active && loaded != null);
+        taxFree.setEnabled(active && loaded != null);
+        for (var rate : taxRates) rate.setEnabled(active && loaded != null);
         table.setEnabled(active && loaded != null);
         reload.setEnabled(active);
         previewButton.setEnabled(active && loaded != null);
@@ -429,9 +465,19 @@ public final class CustomerFinancialEditDialog extends JDialog {
 
     private String taxLabel(String code) {
         if (code == null) return text("absenttax");
-        var rate = loaded == null ? null : loaded.data().taxes().stream()
-                .filter(t -> t.code().equals(code)).findFirst().map(t -> t.rate()).orElse(null);
-        return code + " / " + (rate == null ? text("missingrate") : rate.stripTrailingZeros().toPlainString() + " %");
+        try {
+            var rate = code.equals("TAXRATE_0") ? BigDecimal.ZERO : parseRate(Integer.parseInt(code.substring(8)) - 1);
+            return code + " / " + (rate == null ? text("missingrate") : rate.stripTrailingZeros().toPlainString() + " %");
+        } catch (IllegalArgumentException error) {
+            return code + " / " + text("invalidrate");
+        }
+    }
+
+    private BigDecimal parseRate(int index) {
+        String value = taxRates[index].getText().trim();
+        var parsed = value.isEmpty() ? null : new BigDecimal(value.replace(',', '.'));
+        new LineAmounts(0, parsed, parsed);
+        return parsed;
     }
 
     private final class Lines extends AbstractTableModel {
