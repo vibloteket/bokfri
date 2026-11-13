@@ -1445,12 +1445,13 @@ mean SQL NULL, not a default date, price or zero; description NULL and empty str
 distinct. Numbers, customers, addresses, document/company currency codes, other tax/EU flags,
 product/unit snapshots, metadata, order/payment/credit links and
 stored voucher snapshots are not replaced. Booked documents are refused. New document
-creation and row insertion/deletion/reordering or other financial-field editing remain open.
+creation and row insertion/reordering or other financial-field editing remain open. Existing
+row removal is supported only through the explicit confirmed draft workflow below.
 
 `NormalizedCustomerFinancialEditService` loads immutable values and real persisted row keys
 (not list/display indexes), with an ephemeral token over all six source tables and the
 company rounding policy and explicitly selected year account-plan values (including active/required-
-dimension flags). It requires the complete unchanged amount row-key set, recomputes totals
+dimension flags). It requires the complete surviving amount row-key set, recomputes totals
 using explicit rounding, and rejects stale graphs, metadata or rounding context. The shared
 typed fingerprint helper preserves deletion's existing token semantics. Quantities and prices
 and discounts must fit DECIMAL(100,30) exactly; changed non-null discounts must be within
@@ -1502,6 +1503,17 @@ repair; this does not make every draft bookable. Company project/unit identity, 
 and project conclusion/date values are included in the source token. Catalogues from other
 companies do not affect the bound context.
 
+Optional immutable `removedRows` carries exact existing persisted row keys, not display
+indices. Existing 3–8 argument FinancialValues callers preserve row structure. The service
+rejects duplicate/foreign keys, amounts or patches targeting removed rows, and removing the
+final row; existing historical empty documents are not silently repaired. Preview removes
+rows only from a detached model, recalculates totals and lists the exact removal keys. The
+store deletes only those company-scoped rows under its savepoint; survivors retain every raw
+column and row number without graph replacement or renumbering. A late failure rolls back
+earlier deletes and financial edits while preserving pre-existing outer transaction work.
+The final row must instead use explicit document deletion with its separate reference/order
+guards. Row insertion and reordering are not introduced.
+
 Document totals retain document units. The additional accounting equivalent is document total
 times the stored positive rate, without additional rounding; missing rate/context is shown as
 unknown, not silently treated as 1 or SEK. This is not a promised journal amount: per-row
@@ -1520,7 +1532,10 @@ default/display decoding. Header changes invalidate confirmation and late previe
 just like row/date edits; reload restores stored values and unknown commits disable every new
 tax/exchange input. The exchange control shows readonly document-to-accounting currency units
 and a separately labelled unrounded equivalent in preview; the confirmation explicitly includes
-the stored exchange rate. Integer account and fixed-code VAT
+the stored exchange rate. A separate remove-draft-row action converts sorted selection to
+the model row key, invalidates old confirmation, and performs no SQL writes. Reload restores
+the original rows and clears pending removal keys. Preview and checkbox confirmation explicitly
+list the removed keys; the final row cannot be removed through this form. Integer account and fixed-code VAT
 editors never consult legacy selection or decode displayed percentages. A fresh totals preview and checkbox confirmation
 are required before save. Starting or committing a cell edit, changing a date, or reloading
 invalidates prior confirmation; invalid/inexact cell input refuses editor commit. Pending
@@ -1559,7 +1574,11 @@ regressions cover both kinds, all-SQL preservation excluding intended columns, n
 row keys, immutable company choices, required-account combinations, closed/foreign/missing
 assignment refusal, historical null/empty/closed preservation, catalogue/account staleness,
 late dimension-write rollback/retry, outer-work savepoints, uncertain commits and separate
-invoice/credit posting retaining required dimensions.
+invoice/credit posting retaining required dimensions. Row-removal regressions compare every
+SQL table excluding only intended deleted rows, preserve non-contiguous survivor keys and
+dimensions, prove preview/local draft changes are read-only, reject invalid/final-row requests,
+restore earlier deletes after a late FK failure, retain outer work, block unknown-commit retries
+and exercise real sorted view routes, reload and separate posting from surviving rows.
 These bounded editors do not establish full legacy financial editor or production
 format-3 GUI parity.
 

@@ -724,6 +724,11 @@ class CustomerFinancialEditAdapterTest {
 
     static Map<String, List<String>> snapshot(CustomerCreditGuiFixture f, Kind kind, long id,
             Set<Integer> keys, Set<String> allowedColumns, Set<String> allowedHeaderColumns) throws Exception {
+        return snapshot(f, kind, id, keys, allowedColumns, allowedHeaderColumns, Set.of());
+    }
+
+    static Map<String, List<String>> snapshot(CustomerCreditGuiFixture f, Kind kind, long id,
+            Set<Integer> keys, Set<String> allowedColumns, Set<String> allowedHeaderColumns, Set<Integer> excludedRows) throws Exception {
         Map<String, List<String>> result = new TreeMap<>();
         String target = kind == null ? "" : table(kind).toUpperCase(Locale.ROOT),
                 owner = kind == null ? "" : owner(kind).toUpperCase(Locale.ROOT);
@@ -736,6 +741,8 @@ class CustomerFinancialEditAdapterTest {
                         var values = s.executeQuery("SELECT * FROM " + name)) {
                     var m = values.getMetaData();
                     while (values.next()) {
+                        if (name.equals(target + "_ROW") && values.getLong(owner) == id
+                                && excludedRows.contains(values.getInt("ROW_NUMBER"))) continue;
                         StringBuilder row = new StringBuilder();
                         for (int i = 1; i <= m.getColumnCount(); i++) {
                             String column = m.getColumnName(i);
