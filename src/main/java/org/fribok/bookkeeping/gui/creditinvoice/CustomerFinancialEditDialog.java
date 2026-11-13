@@ -36,6 +36,7 @@ import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAccounting;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.TaxValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.ExchangeRateValues;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDimensions;
 import org.fribok.bookkeeping.service.invoice.NormalizedCustomerFinancialEditService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 
@@ -325,12 +326,18 @@ public final class CustomerFinancialEditDialog extends JDialog {
                     lines.set(data.lines());
                     accountingContext.setText(text("accounts") + " " + data.yearId() + ": "
                             + data.accounts().stream().filter(a -> a.number() >= 3000 && a.number() <= 3999
-                                    && a.active() && !a.projectRequired() && !a.resultUnitRequired())
-                                    .map(a -> a.number() + " " + (a.description() == null ? "" : a.description()))
+                                    && a.active())
+                                    .map(a -> a.number() + " " + (a.description() == null ? "" : a.description())
+                                            + (a.projectRequired() ? " [" + text("projectrequired") + "]" : "")
+                                            + (a.resultUnitRequired() ? " [" + text("unitrequired") + "]" : ""))
                                     .collect(java.util.stream.Collectors.joining(", "))
                             + "\n" + text("taxfree") + " " + data.taxFree() + " / "
                             + data.taxes().stream().map(t -> taxLabel(t.code()))
-                                    .collect(java.util.stream.Collectors.joining(", ")));
+                                    .collect(java.util.stream.Collectors.joining(", "))
+                            + "\n" + text("projects") + " " + data.projects().stream().filter(p -> !p.concluded())
+                                    .map(p -> p.number() + " " + (p.name() == null ? "" : p.name())).collect(java.util.stream.Collectors.joining(", "))
+                            + " / " + text("resultunits") + " " + data.resultUnits().stream()
+                                    .map(u -> u.number() + " " + (u.name() == null ? "" : u.name())).collect(java.util.stream.Collectors.joining(", ")));
                     status.setText(
                             text("ready")
                                     + " "
@@ -363,7 +370,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
                     new FinancialValues(
                             parse(date.getText()), parse(due.getText()), lines.values(), lines.details(), lines.accounting(),
                             new TaxValues((Boolean) taxFree.getSelectedItem(), parseRate(0), parseRate(1), parseRate(2)),
-                            new ExchangeRateValues(parseDecimal(exchangeRate.getText())));
+                            new ExchangeRateValues(parseDecimal(exchangeRate.getText())), lines.dimensions());
         } catch (RuntimeException error) {
             status.setText(text("invalid"));
             controls();
@@ -506,12 +513,15 @@ public final class CustomerFinancialEditDialog extends JDialog {
         private java.util.Map<Integer, LineAmounts> edited = new java.util.HashMap<>();
         private java.util.Map<Integer, LineDetails> detailEdits = new java.util.HashMap<>();
         private java.util.Map<Integer, LineAccounting> accountingEdits = new java.util.HashMap<>();
+        private java.util.Map<Integer, LineDimensions> dimensionEdits = new java.util.HashMap<>();
 
         void set(List<NormalizedCustomerFinancialEditService.Line> values) {
             original = List.copyOf(values);
             edited.clear();
             detailEdits.clear();
             accountingEdits.clear();
+            dimensionEdits.clear();
+            for (var row : original) dimensionEdits.put(row.rowNumber(), new LineDimensions(row.rowNumber(), row.project(), row.resultUnit()));
             for (var row : original)
                 accountingEdits.put(row.rowNumber(), new LineAccounting(row.rowNumber(), row.account(), row.taxCode()));
             for (var row : original)
@@ -535,17 +545,21 @@ public final class CustomerFinancialEditDialog extends JDialog {
             return original.stream().map(row -> accountingEdits.get(row.rowNumber())).toList();
         }
 
+        List<LineDimensions> dimensions() {
+            return original.stream().map(row -> dimensionEdits.get(row.rowNumber())).toList();
+        }
+
         public int getRowCount() {
             return original.size();
         }
 
         public int getColumnCount() {
-            return 7;
+            return 9;
         }
 
         public String getColumnName(int column) {
             return text(
-                    new String[] {"row", "description", "account", "quantity", "price", "discount", "taxcode"}[column]);
+                    new String[] {"row", "description", "account", "quantity", "price", "discount", "taxcode", "project", "resultunit"}[column]);
         }
 
         public Class<?> getColumnClass(int column) {
@@ -571,11 +585,19 @@ public final class CustomerFinancialEditDialog extends JDialog {
                 case 4 -> value.unitPrice();
                 case 5 -> detailEdits.get(base.rowNumber()).discount();
                 case 6 -> accountingEdits.get(base.rowNumber()).taxCode();
+                case 7 -> dimensionEdits.get(base.rowNumber()).project();
+                case 8 -> dimensionEdits.get(base.rowNumber()).resultUnit();
                 default -> throw new IndexOutOfBoundsException();
             };
         }
 
         public void setValueAt(Object value, int row, int column) {
+            if (column == 7 || column == 8) {
+                int key = original.get(row).rowNumber();var old = dimensionEdits.get(key);
+                String input = value == null || value.toString().isEmpty() ? null : value.toString();
+                dimensionEdits.put(key, new LineDimensions(key, column == 7 ? input : old.project(), column == 8 ? input : old.resultUnit()));
+                fireTableCellUpdated(row, column);changed();return;
+            }
             if (column == 2 || column == 6) {
                 int key = original.get(row).rowNumber();
                 var old = accountingEdits.get(key);
