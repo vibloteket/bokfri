@@ -1439,10 +1439,10 @@ other document-family posting adapters or full legacy financial-editor parity.
 `session.financialEdit(kind, sqlId)` binds `CustomerFinancialEditAdapter` to one explicit
 company/year/kind/stable identity. The restricted form changes invoice date, due date,
 document tax-exemption, its three stored VAT rates and the stored exchange rate,
-and descriptions, quantities/unit prices, discounts, sales accounts and VAT codes on existing
+and descriptions, quantities/unit prices, discounts, sales accounts, VAT codes, projects and result units on existing
 rows. Blank dates/amounts
 mean SQL NULL, not a default date, price or zero; description NULL and empty string remain
-distinct. Numbers, customers, addresses, document/company currency codes, other tax/EU flags, dimensions,
+distinct. Numbers, customers, addresses, document/company currency codes, other tax/EU flags,
 product/unit snapshots, metadata, order/payment/credit links and
 stored voucher snapshots are not replaced. Booked documents are refused. New document
 creation and row insertion/deletion/reordering or other financial-field editing remain open.
@@ -1466,8 +1466,8 @@ number-based retargeting occurs. Optional immutable `LineDetails` patches use pe
 omitted keys preserve their stored details, and existing amount-only callers remain unchanged.
 Optional `LineAccounting` patches likewise preserve omitted keys and use persisted enum names,
 not singleton-backed VAT display decoding. Non-null changed accounts must be active 3000–3999
-accounts in the explicit selected year without project/result-unit requirements. This bounded
-form refuses new assignments requiring dimension editing rather than silently adding dimensions.
+accounts in the explicit selected year. Required account dimensions are validated against
+the resulting proposed row, so account and dimension changes can be previewed together.
 Unchanged historical/missing account values are retained; an explicit blank clears an account
 in a draft and is not a claim that the draft can be posted. New non-null VAT-code selections
 other than zero require a present stored document rate within 0–100. Missing rates are never
@@ -1492,6 +1492,16 @@ retained without repair; clearing a present rate or introducing zero/negative is
 Company `currency_code` is the accounting currency (the legacy company panel labels it
 Redovisningsvaluta); it is read explicitly and added to the stale token. Catalogue exchange
 rates are not calculation inputs, so changing a catalogue default cannot replace a stored rate.
+Optional `LineDimensions` patches change only existing-row project_number/result_unit_number.
+Old 3–7 argument FinancialValues callers preserve dimensions. New non-null assignments must
+match exact company identities: projects must not be marked concluded and result units must
+exist. No trimming, name matching, singleton defaults or number guessing is used. Required
+account project/unit flags are enforced when account or dimensions change, against resulting
+row values. An unchanged historical row may retain null/empty/closed dimension values without
+repair; this does not make every draft bookable. Company project/unit identity, name, description
+and project conclusion/date values are included in the source token. Catalogues from other
+companies do not affect the bound context.
+
 Document totals retain document units. The additional accounting equivalent is document total
 times the stored positive rate, without additional rounding; missing rate/context is shown as
 unknown, not silently treated as 1 or SEK. This is not a promised journal amount: per-row
@@ -1504,7 +1514,7 @@ an assertion that every draft is bookable; posting still requires its own valida
 
 `CustomerFinancialEditDialog` loads off-EDT, shows readonly stored row keys and explicit
 selected-year account/stored-document tax context, and allows dates, descriptions, quantities,
-prices, discounts, accounts, VAT codes, exemption and stored VAT/exchange rates to be edited. Rate inputs
+prices, discounts, accounts, VAT codes, project/result-unit identities, exemption and stored VAT/exchange rates to be edited. Rate inputs
 accept exact nullable decimals; the VAT-code renderer reflects draft rates without legacy
 default/display decoding. Header changes invalidate confirmation and late preview generations
 just like row/date edits; reload restores stored values and unknown commits disable every new
@@ -1544,7 +1554,12 @@ edited rates. Exchange regressions cover both kinds, all-SQL preservation exclud
 currency_rate, unchanged currency/reference data, explicit/missing/same currency contexts,
 exact/positive bounds, raw historical preservation, source/base staleness versus irrelevant
 catalogue defaults, unrounded-equivalent disclosure, rollback/retry, outer-work savepoints,
-unknown commits, real view confirmation and separate balanced converted journals.
+unknown commits, real view confirmation and separate balanced converted journals. Dimension
+regressions cover both kinds, all-SQL preservation excluding intended columns, non-contiguous
+row keys, immutable company choices, required-account combinations, closed/foreign/missing
+assignment refusal, historical null/empty/closed preservation, catalogue/account staleness,
+late dimension-write rollback/retry, outer-work savepoints, uncertain commits and separate
+invoice/credit posting retaining required dimensions.
 These bounded editors do not establish full legacy financial editor or production
 format-3 GUI parity.
 

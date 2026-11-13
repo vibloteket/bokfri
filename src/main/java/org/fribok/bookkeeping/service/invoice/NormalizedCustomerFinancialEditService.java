@@ -19,6 +19,8 @@ import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAccounting;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.TaxValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.ExchangeRateValues;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDimensions;
+import org.fribok.bookkeeping.dataformat.NormalizedRegisterStore;
 import se.swedsoft.bookkeeping.data.common.SSTaxCode;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 
@@ -40,6 +42,8 @@ public final class NormalizedCustomerFinancialEditService {
      * @param unitPrice nullable exact unit price
      * @param discount nullable stored discount percentage
      * @param taxCode nullable persisted tax-code name
+     * @param project nullable raw project identity
+     * @param resultUnit nullable raw result-unit identity
      */
     public record Line(
             int rowNumber,
@@ -48,7 +52,10 @@ public final class NormalizedCustomerFinancialEditService {
             BigDecimal quantity,
             BigDecimal unitPrice,
             BigDecimal discount,
-            String taxCode) {}
+            String taxCode, String project, String resultUnit) {}
+
+    /** Immutable company-scoped dimension choice. */
+    public record Dimension(String number, String name, boolean concluded) {}
 
     /** Selected-year account choice; no legacy account lookup is needed. */
     public record Account(int number, String description, boolean active,
@@ -64,6 +71,8 @@ public final class NormalizedCustomerFinancialEditService {
      * @param yearId explicit accounting year identity
      * @param accounts immutable selected-year account choices
      * @param taxes immutable stored document tax rates
+     * @param projects immutable company projects
+     * @param resultUnits immutable company result units
      * @param taxFree effective stored document tax-exempt flag
      * @param headerTax raw stored flag and nullable rates
      * @param kind document family
@@ -83,6 +92,8 @@ public final class NormalizedCustomerFinancialEditService {
             int yearId,
             List<Account> accounts,
             List<Tax> taxes,
+            List<Dimension> projects,
+            List<Dimension> resultUnits,
             boolean taxFree,
             TaxValues headerTax,
             Kind kind,
@@ -100,6 +111,8 @@ public final class NormalizedCustomerFinancialEditService {
             lines = List.copyOf(lines);
             accounts = List.copyOf(accounts);
             taxes = List.copyOf(taxes);
+            projects = List.copyOf(projects);
+            resultUnits = List.copyOf(resultUnits);
         }
     }
 
@@ -263,8 +276,8 @@ public final class NormalizedCustomerFinancialEditService {
             if (!Objects.equals(line.account(), value.account()) && value.account() != null
                     && (value.account() < 3000 || value.account() > 3999
                             || source.data.accounts().stream().noneMatch(a -> a.number() == value.account()
-                                    && a.active() && !a.projectRequired() && !a.resultUnitRequired())))
-                throw new IllegalArgumentException("Sales account must be an active selected-year account within 3000..3999 without required dimensions");
+                                    && a.active())))
+                throw new IllegalArgumentException("Sales account must be an active selected-year account within 3000..3999");
             if (!Objects.equals(line.taxCode(), value.taxCode()) && value.taxCode() != null) {
                 var rate = taxRate(headerTax, value.taxCode());
                 if (!validRate(rate))
@@ -274,6 +287,30 @@ public final class NormalizedCustomerFinancialEditService {
             source.document.getRows().get(i).setTaxCode(value.taxCode() == null ? null : SSTaxCode.valueOf(value.taxCode()));
         }
         if (!accounting.isEmpty()) throw new IllegalArgumentException("Foreign stored accounting row key");
+        var dimensions = indexedDimensions(proposed.dimensions());
+        for (int i = 0; i < source.data.lines().size(); i++) {
+            var original = source.data.lines().get(i);
+            var row = source.document.getRows().get(i);
+            var value = dimensions.remove(original.rowNumber());
+            if (value != null) {
+                if (!Objects.equals(original.project(), value.project()) && value.project() != null
+                        && !validDimension(source.data.projects(), value.project()))
+                    throw new IllegalArgumentException("Project must be an open project in the document company");
+                if (!Objects.equals(original.resultUnit(), value.resultUnit()) && value.resultUnit() != null
+                        && !validDimension(source.data.resultUnits(), value.resultUnit()))
+                    throw new IllegalArgumentException("Result unit must exist in the document company");
+                row.setProjectNr(value.project());row.setResultUnitNr(value.resultUnit());
+            }
+            if (!Objects.equals(original.account(), row.getAccountNr())
+                    || !Objects.equals(original.project(), row.getProjectNr())
+                    || !Objects.equals(original.resultUnit(), row.getResultUnitNr())) {
+                var account = source.data.accounts().stream().filter(a -> Objects.equals(a.number(), row.getAccountNr())).findFirst();
+                if (account.isPresent() && ((account.get().projectRequired() && !validDimension(source.data.projects(), row.getProjectNr()))
+                        || (account.get().resultUnitRequired() && !validDimension(source.data.resultUnits(), row.getResultUnitNr()))))
+                    throw new IllegalArgumentException("Account requires valid company project/result-unit dimensions");
+            }
+        }
+        if (!dimensions.isEmpty()) throw new IllegalArgumentException("Foreign stored dimension row key");
         if (!sameTax(source.data.headerTax(), headerTax) && !headerTax.taxFree()) {
             for (var row : source.document.getRows()) {
                 if (row.getTaxCode() != null && row.getTaxCode() != SSTaxCode.TAXRATE_0
@@ -327,11 +364,16 @@ public final class NormalizedCustomerFinancialEditService {
                         return value != null && (!Objects.equals(line.account(), value.account())
                                 || !Objects.equals(line.taxCode(), value.taxCode()));
                     }).map(line -> accountingPatch.get(line.rowNumber())).toList();
+            var dimensionPatch = indexedDimensions(fresh.proposed.dimensions());
+            var changedDimensions = original.lines().stream().filter(line -> {
+                var value = dimensionPatch.get(line.rowNumber());
+                return value != null && (!Objects.equals(line.project(), value.project()) || !Objects.equals(line.resultUnit(), value.resultUnit()));
+            }).map(line -> dimensionPatch.get(line.rowNumber())).toList();
             var values = new FinancialValues(
                     fresh.proposed.date(), fresh.proposed.dueDate(), changed, changedDetails, changedAccounting,
                     fresh.proposed.tax() != null && !sameTax(original.headerTax(), fresh.proposed.tax()) ? fresh.proposed.tax() : null,
                     fresh.proposed.exchange() != null && !same(original.exchangeRate(), fresh.proposed.exchange().rate())
-                            ? fresh.proposed.exchange() : null);
+                            ? fresh.proposed.exchange() : null, changedDimensions);
             var store = new NormalizedInvoiceStore(connection);
             if (original.kind() == Kind.INVOICE)
                 store.updateInvoiceFinancialValues(original.companyId(), original.id(), values);
@@ -356,6 +398,9 @@ public final class NormalizedCustomerFinancialEditService {
             for (var row : original.lines())
                 expectedAccounting.put(row.rowNumber(), new LineAccounting(row.rowNumber(), row.account(), row.taxCode()));
             expectedAccounting.putAll(accountingPatch);
+            var expectedDimensions = new HashMap<Integer, LineDimensions>();
+            for (var row : original.lines()) expectedDimensions.put(row.rowNumber(), new LineDimensions(row.rowNumber(), row.project(), row.resultUnit()));
+            expectedDimensions.putAll(dimensionPatch);
             for (var row : verified.lines()) {
                 var wanted = proposed.get(row.rowNumber());
                 if (wanted == null
@@ -370,6 +415,9 @@ public final class NormalizedCustomerFinancialEditService {
                 if (entry == null || !Objects.equals(row.account(), entry.account())
                         || !Objects.equals(row.taxCode(), entry.taxCode()))
                     throw new SQLException("Stored line accounting differs from preview");
+                var dimension = expectedDimensions.get(row.rowNumber());
+                if (dimension == null || !Objects.equals(row.project(), dimension.project()) || !Objects.equals(row.resultUnit(), dimension.resultUnit()))
+                    throw new SQLException("Stored dimensions differ from preview");
             }
             connection.releaseSavepoint(point);
             return new Saved(
@@ -404,6 +452,11 @@ public final class NormalizedCustomerFinancialEditService {
         var selectedYear = accounting.getYears().stream().filter(y -> y.getId() == year)
                 .findFirst().orElseThrow(() -> new SQLException("Missing or foreign accounting year"));
         var accountRows = accounting.getAccounts(selectedYear);
+        var registers = new NormalizedRegisterStore(connection);
+        var projectRows = registers.getProjects(company);
+        var unitRows = registers.getResultUnits(company);
+        var projects = projectRows.stream().map(p -> new Dimension(p.getNumber(), p.getName(), p.getConcluded())).toList();
+        var units = unitRows.stream().map(u -> new Dimension(u.getNumber(), u.getName(), false)).toList();
         var accounts = accountRows.stream().map(a -> new Account(a.getNumber(), a.getDescription(),
                 a.isActive(), a.isProjectRequired(), a.isResultUnitRequired()))
                 .sorted(java.util.Comparator.comparingInt(Account::number)).toList();
@@ -427,7 +480,7 @@ public final class NormalizedCustomerFinancialEditService {
         List<Line> lines = new ArrayList<>();
         try (var statement =
                 connection.prepareStatement(
-                        "SELECT row_number,description,account_number,quantity,unit_price,discount,tax_code FROM "
+                        "SELECT row_number,description,account_number,quantity,unit_price,discount,tax_code,project_number,result_unit_number FROM "
                                 + table
                                 + " WHERE "
                                 + owner
@@ -445,7 +498,7 @@ public final class NormalizedCustomerFinancialEditService {
                                     rows.getBigDecimal(4),
                                     rows.getBigDecimal(5),
                                     rows.getBigDecimal(6),
-                                    rows.getString(7)));
+                                    rows.getString(7), rows.getString(8), rows.getString(9)));
             }
         }
         if (lines.size() != document.getRows().size())
@@ -470,6 +523,8 @@ public final class NormalizedCustomerFinancialEditService {
                         year,
                         accounts,
                         taxes,
+                        projects,
+                        units,
                         document.getTaxFree(),
                         headerTax,
                         kind,
@@ -491,6 +546,11 @@ public final class NormalizedCustomerFinancialEditService {
                     .writeBoolean(account.isActive()).writeBoolean(account.isProjectRequired())
                     .writeBoolean(account.isResultUnitRequired());
         }
+        for (var project : projectRows) writer.writeString(project.getNumber()).writeString(project.getName())
+                .writeString(project.getDescription()).writeBoolean(project.getConcluded())
+                .writeString(project.getLocalConcludedDate() == null ? null : project.getLocalConcludedDate().toString());
+        writer.writeBoundary("result_units");
+        for (var unit : unitRows) writer.writeString(unit.getNumber()).writeString(unit.getName()).writeString(unit.getDescription());
         CustomerDocumentFingerprint.write(writer, connection, kind == Kind.CREDIT, id);
         return new Source(document, data, rounding, writer.finish());
     }
@@ -516,6 +576,17 @@ public final class NormalizedCustomerFinancialEditService {
         for (var row : rows)
             if (map.put(row.rowNumber(), row) != null)
                 throw new IllegalArgumentException("Duplicate stored accounting row key");
+        return map;
+    }
+
+    private static boolean validDimension(List<Dimension> choices, String number) {
+        return number != null && !number.isBlank() && choices.stream().anyMatch(d -> d.number().equals(number) && !d.concluded());
+    }
+
+    private static Map<Integer, LineDimensions> indexedDimensions(List<LineDimensions> rows) {
+        Map<Integer, LineDimensions> map = new HashMap<>();
+        for (var row : rows) if (map.put(row.rowNumber(), row) != null)
+            throw new IllegalArgumentException("Duplicate stored dimension row key");
         return map;
     }
 

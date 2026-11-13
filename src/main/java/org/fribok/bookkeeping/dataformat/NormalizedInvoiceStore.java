@@ -355,6 +355,9 @@ public final class NormalizedInvoiceStore {
         }
     }
 
+    /** Optional persisted-row dimension patch; raw null/empty values remain distinct. */
+    public record LineDimensions(int rowNumber, String project, String resultUnit) {}
+
     /** Optional stored exchange-rate patch; no currency code or catalogue rate is changed. */
     public record ExchangeRateValues(java.math.BigDecimal rate) {
         /** Requires exact nullable storage; the service validates changed values and currency context. */
@@ -373,10 +376,16 @@ public final class NormalizedInvoiceStore {
      * @param accounting optional row account/tax patches; omitted keys remain unchanged
      * @param tax optional complete raw header-tax patch; null preserves all header tax columns
      * @param exchange optional stored-rate patch; null preserves the rate and all currency codes
+     * @param dimensions optional existing-row dimension patches; omitted keys are preserved
      */
     public record FinancialValues(
             LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details,
-            List<LineAccounting> accounting, TaxValues tax, ExchangeRateValues exchange) {
+            List<LineAccounting> accounting, TaxValues tax, ExchangeRateValues exchange, List<LineDimensions> dimensions) {
+        /** Preserves dimensions for existing exchange callers. */
+        public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details,
+                List<LineAccounting> accounting, TaxValues tax, ExchangeRateValues exchange) {
+            this(date, dueDate, rows, details, accounting, tax, exchange, List.of());
+        }
         /** Preserves the exchange rate for existing header-tax callers. */
         public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows,
                 List<LineDetails> details, List<LineAccounting> accounting, TaxValues tax) {
@@ -401,6 +410,7 @@ public final class NormalizedInvoiceStore {
             rows = List.copyOf(rows);
             details = List.copyOf(details);
             accounting = List.copyOf(accounting);
+            dimensions = List.copyOf(dimensions);
             requireSqlDate(date);
             requireSqlDate(dueDate);
         }
@@ -587,6 +597,17 @@ public final class NormalizedInvoiceStore {
                 statement.setInt(5, company);
                 if (statement.executeUpdate() != 1)
                     throw new SQLException("Missing or foreign stored accounting row key");
+            }
+        }
+        seen.clear();
+        for (var row : values.dimensions()) {
+            if (!seen.add(row.rowNumber())) throw new IllegalArgumentException("Duplicate stored dimension row key");
+            try (var statement = connection.prepareStatement("UPDATE " + kind.rowTable()
+                    + " SET project_number=?,result_unit_number=? WHERE " + kind.idColumn()
+                    + "=? AND row_number=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+                statement.setString(1, row.project());statement.setString(2, row.resultUnit());
+                statement.setLong(3, id);statement.setInt(4, row.rowNumber());statement.setInt(5, company);
+                if (statement.executeUpdate() != 1) throw new SQLException("Missing or foreign stored dimension row key");
             }
         }
     }
