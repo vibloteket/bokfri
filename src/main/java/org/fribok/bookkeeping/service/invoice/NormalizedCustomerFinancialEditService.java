@@ -15,6 +15,7 @@ import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.FinancialValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAmounts;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 
 /** Bounded unbooked editing; caller owns transaction, commit and exclusive application access. */
@@ -33,13 +34,15 @@ public final class NormalizedCustomerFinancialEditService {
      * @param account unchanged nullable account number
      * @param quantity nullable exact quantity
      * @param unitPrice nullable exact unit price
+     * @param discount nullable stored discount percentage
      */
     public record Line(
             int rowNumber,
             String description,
             Integer account,
             BigDecimal quantity,
-            BigDecimal unitPrice) {}
+            BigDecimal unitPrice,
+            BigDecimal discount) {}
 
     /**
      * Immutable original values; no hydrated domain objects escape.
@@ -165,7 +168,7 @@ public final class NormalizedCustomerFinancialEditService {
      * Revalidates the source and calculates a complete proposed patch without writes.
      *
      * @param expected original snapshot
-     * @param proposed dates and the complete unchanged stored row-key set
+     * @param proposed dates, complete amount row-key set and optional existing-row detail patches
      * @return opaque totals preview
      * @throws SQLException for storage errors or unsupported document projection
      * @throws IllegalArgumentException for stale or invalid inputs
@@ -189,6 +192,18 @@ public final class NormalizedCustomerFinancialEditService {
             source.document.getRows().get(i).setUnitprice(values.unitPrice());
         }
         if (!indexed.isEmpty()) throw new IllegalArgumentException("Foreign stored row key");
+        var details = indexedDetails(proposed.details());
+        for (int i = 0; i < source.data.lines().size(); i++) {
+            var line = source.data.lines().get(i);
+            var value = details.remove(line.rowNumber());
+            if (value == null) continue;
+            if (!same(line.discount(), value.discount()) && value.discount() != null
+                    && (value.discount().signum() < 0 || value.discount().compareTo(BigDecimal.valueOf(100)) > 0))
+                throw new IllegalArgumentException("Discount must be within 0..100");
+            source.document.getRows().get(i).setDescription(value.description());
+            source.document.getRows().get(i).setDiscount(value.discount());
+        }
+        if (!details.isEmpty()) throw new IllegalArgumentException("Foreign stored detail row key");
         return new Plan(
                 expected,
                 proposed,
@@ -223,8 +238,15 @@ public final class NormalizedCustomerFinancialEditService {
                                     })
                             .map(line -> proposed.get(line.rowNumber()))
                             .toList();
-            var values =
-                    new FinancialValues(fresh.proposed.date(), fresh.proposed.dueDate(), changed);
+            var detailPatch = indexedDetails(fresh.proposed.details());
+            List<LineDetails> changedDetails = original.lines().stream()
+                    .filter(line -> {
+                        var value = detailPatch.get(line.rowNumber());
+                        return value != null && (!Objects.equals(line.description(), value.description())
+                                || !same(line.discount(), value.discount()));
+                    }).map(line -> detailPatch.get(line.rowNumber())).toList();
+            var values = new FinancialValues(
+                    fresh.proposed.date(), fresh.proposed.dueDate(), changed, changedDetails);
             var store = new NormalizedInvoiceStore(connection);
             if (original.kind() == Kind.INVOICE)
                 store.updateInvoiceFinancialValues(original.companyId(), original.id(), values);
@@ -234,12 +256,20 @@ public final class NormalizedCustomerFinancialEditService {
                     || !Objects.equals(verified.values().dueDate(), fresh.proposed.dueDate())
                     || verified.total().compareTo(fresh.total) != 0)
                 throw new SQLException("Stored financial values differ from preview");
+            var expectedDetails = new HashMap<Integer, LineDetails>();
+            for (var row : original.lines())
+                expectedDetails.put(row.rowNumber(), new LineDetails(row.rowNumber(), row.description(), row.discount()));
+            expectedDetails.putAll(detailPatch);
             for (var row : verified.lines()) {
                 var wanted = proposed.get(row.rowNumber());
                 if (wanted == null
                         || !same(row.quantity(), wanted.quantity())
                         || !same(row.unitPrice(), wanted.unitPrice()))
                     throw new SQLException("Stored line values differ from preview");
+                var detail = expectedDetails.get(row.rowNumber());
+                if (detail == null || !Objects.equals(row.description(), detail.description())
+                        || !same(row.discount(), detail.discount()))
+                    throw new SQLException("Stored line details differ from preview");
             }
             connection.releaseSavepoint(point);
             return new Saved(
@@ -280,7 +310,7 @@ public final class NormalizedCustomerFinancialEditService {
         List<Line> lines = new ArrayList<>();
         try (var statement =
                 connection.prepareStatement(
-                        "SELECT row_number,description,account_number,quantity,unit_price FROM "
+                        "SELECT row_number,description,account_number,quantity,unit_price,discount FROM "
                                 + table
                                 + " WHERE "
                                 + owner
@@ -296,7 +326,8 @@ public final class NormalizedCustomerFinancialEditService {
                                     rows.getString(2),
                                     rows.getObject(3, Integer.class),
                                     rows.getBigDecimal(4),
-                                    rows.getBigDecimal(5)));
+                                    rows.getBigDecimal(5),
+                                    rows.getBigDecimal(6)));
             }
         }
         if (lines.size() != document.getRows().size())
@@ -336,6 +367,14 @@ public final class NormalizedCustomerFinancialEditService {
         for (var row : rows)
             if (map.put(row.rowNumber(), row) != null)
                 throw new IllegalArgumentException("Duplicate stored row key");
+        return map;
+    }
+
+    private static Map<Integer, LineDetails> indexedDetails(List<LineDetails> rows) {
+        Map<Integer, LineDetails> map = new HashMap<>();
+        for (var row : rows)
+            if (map.put(row.rowNumber(), row) != null)
+                throw new IllegalArgumentException("Duplicate stored detail row key");
         return map;
     }
 

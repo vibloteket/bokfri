@@ -31,6 +31,7 @@ import javax.swing.table.AbstractTableModel;
 
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.FinancialValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAmounts;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
 import org.fribok.bookkeeping.service.invoice.NormalizedCustomerFinancialEditService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 
@@ -282,7 +283,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         try {
             values =
                     new FinancialValues(
-                            parse(date.getText()), parse(due.getText()), lines.values());
+                            parse(date.getText()), parse(due.getText()), lines.values(), lines.details());
         } catch (RuntimeException error) {
             status.setText(text("invalid"));
             controls();
@@ -397,10 +398,14 @@ public final class CustomerFinancialEditDialog extends JDialog {
     private final class Lines extends AbstractTableModel {
         private List<NormalizedCustomerFinancialEditService.Line> original = List.of();
         private java.util.Map<Integer, LineAmounts> edited = new java.util.HashMap<>();
+        private java.util.Map<Integer, LineDetails> detailEdits = new java.util.HashMap<>();
 
         void set(List<NormalizedCustomerFinancialEditService.Line> values) {
             original = List.copyOf(values);
             edited.clear();
+            detailEdits.clear();
+            for (var row : original)
+                detailEdits.put(row.rowNumber(), new LineDetails(row.rowNumber(), row.description(), row.discount()));
             for (var row : original)
                 edited.put(
                         row.rowNumber(),
@@ -412,29 +417,33 @@ public final class CustomerFinancialEditDialog extends JDialog {
             return original.stream().map(row -> edited.get(row.rowNumber())).toList();
         }
 
+        List<LineDetails> details() {
+            return original.stream().map(row -> detailEdits.get(row.rowNumber())).toList();
+        }
+
         public int getRowCount() {
             return original.size();
         }
 
         public int getColumnCount() {
-            return 5;
+            return 6;
         }
 
         public String getColumnName(int column) {
             return text(
-                    new String[] {"row", "description", "account", "quantity", "price"}[column]);
+                    new String[] {"row", "description", "account", "quantity", "price", "discount"}[column]);
         }
 
         public Class<?> getColumnClass(int column) {
             return switch (column) {
                 case 0, 2 -> Integer.class;
-                case 3, 4 -> BigDecimal.class;
+                case 3, 4, 5 -> BigDecimal.class;
                 default -> String.class;
             };
         }
 
         public boolean isCellEditable(int row, int column) {
-            return column >= 3 && loaded != null && !busy && !invalid && !adapter.isBlocked();
+            return (column == 1 || column >= 3) && loaded != null && !busy && !invalid && !adapter.isBlocked();
         }
 
         public Object getValueAt(int row, int column) {
@@ -442,16 +451,25 @@ public final class CustomerFinancialEditDialog extends JDialog {
             var value = edited.get(base.rowNumber());
             return switch (column) {
                 case 0 -> base.rowNumber();
-                case 1 -> base.description();
+                case 1 -> detailEdits.get(base.rowNumber()).description();
                 case 2 -> base.account();
                 case 3 -> value.quantity();
                 case 4 -> value.unitPrice();
+                case 5 -> detailEdits.get(base.rowNumber()).discount();
                 default -> throw new IndexOutOfBoundsException();
             };
         }
 
         public void setValueAt(Object value, int row, int column) {
-            if (column != 3 && column != 4) throw new IllegalArgumentException("Read-only field");
+            if (column == 1) {
+                int key = original.get(row).rowNumber();
+                var old = detailEdits.get(key);
+                detailEdits.put(key, new LineDetails(key, value == null ? null : value.toString(), old.discount()));
+                fireTableCellUpdated(row, column);
+                changed();
+                return;
+            }
+            if (column != 3 && column != 4 && column != 5) throw new IllegalArgumentException("Read-only field");
             BigDecimal amount =
                     value == null
                             ? null
@@ -459,6 +477,13 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                     ? d
                                     : new BigDecimal(value.toString().replace(',', '.'));
             int key = original.get(row).rowNumber();
+            if (column == 5) {
+                var detail = detailEdits.get(key);
+                detailEdits.put(key, new LineDetails(key, detail.description(), amount));
+                fireTableCellUpdated(row, column);
+                changed();
+                return;
+            }
             var old = edited.get(key);
             edited.put(
                     key,

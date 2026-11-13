@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JTextArea;
 import javax.swing.JFrame;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
@@ -106,6 +107,9 @@ class CustomerFinancialEditDialogGuiTest {
                                             component(dialog, "financial-lines", JTable.class);
                                     assertFalse(rows.isCellEditable(0, 0));
                                     assertFalse(rows.isCellEditable(0, 2));
+                                    assertTrue(rows.isCellEditable(0, 1));
+                                    assertTrue(rows.isCellEditable(0, 5));
+                                    rows.setValueAt("New description åäö", 0, 1);
                                     assertTrue(rows.isCellEditable(0, 3));
                                     rows.setValueAt(new BigDecimal("2"), 0, 3);
                                     rows.setValueAt(new BigDecimal("12.5"), 0, 4);
@@ -123,13 +127,26 @@ class CustomerFinancialEditDialogGuiTest {
                                         assertFalse(
                                                 component(dialog, "financial-save", JButton.class)
                                                         .isEnabled()));
+                        SwingUtilities.invokeAndWait(() -> {
+                            component(dialog, "financial-confirm", JCheckBox.class).doClick();
+                            var rows = component(dialog, "financial-lines", JTable.class);
+                            assertTrue(rows.editCellAt(0, 5));
+                            assertFalse(component(dialog, "financial-confirm", JCheckBox.class).isSelected());
+                            assertFalse(component(dialog, "financial-save", JButton.class).isEnabled());
+                            ((JTextField) rows.getEditorComponent()).setText("20,0");
+                            component(dialog, "financial-preview", JButton.class).doClick();
+                        });
+                        previewed(dialog);
                         confirm(dialog);
                         CustomerCreditDialogAdapterTest.waitFor(
                                 () ->
                                         !dialog.isDisplayable()
-                                                && total(table, id).compareTo(new BigDecimal("25"))
+                                                && total(table, id).compareTo(new BigDecimal("20"))
                                                         == 0);
                         assertEquals(1, refreshes.get());
+                        var saved = session.financialEdit(kind, id).load();
+                        assertEquals("New description åäö", saved.data().lines().getFirst().description());
+                        assertEquals(0, new BigDecimal("20").compareTo(saved.data().lines().getFirst().discount()));
                         assertEquals(0, CustomerJournalAdapterTest.voucherCount(f));
                         assertTrue(
                                 new NormalizedInvoiceStore(f.anchor)
@@ -394,6 +411,49 @@ class CustomerFinancialEditDialogGuiTest {
                                                 .getRows()
                                                 .getFirst()
                                                 .getUnitprice()));
+            } finally {
+                SwingUtilities.invokeAndWait(dialog::dispose);
+                session.close();
+            }
+        }
+    }
+
+    @Test
+    void discountRangeAndPrecisionBlockConfirmationUntilValidFreshPreviewTest() throws Exception {
+        assumeFalse(GraphicsEnvironment.isHeadless());
+        try (var f = new CustomerCreditGuiFixture(); var ignored = new LegacyGuard()) {
+            long id = CustomerFinancialEditAdapterTest.target(f, Kind.INVOICE);
+            var session = new CustomerDocumentGuiSession(f::open, f.gate, 71, 11, CustomerCreditGuiFixture.CLOCK);
+            AtomicInteger callbacks = new AtomicInteger();
+            var dialog = create(session.financialEdit(Kind.INVOICE, id), saved -> callbacks.incrementAndGet());
+            try {
+                ready(dialog);
+                var rows = component(dialog, "financial-lines", JTable.class);
+                for (var invalid : java.util.List.of("-1", "100.001")) {
+                    SwingUtilities.invokeAndWait(() -> {
+                        rows.setValueAt(new BigDecimal(invalid), 0, 5);
+                        component(dialog, "financial-preview", JButton.class).doClick();
+                    });
+                    CustomerCreditDialogAdapterTest.waitFor(() -> component(dialog, "financial-status", JTextArea.class).getText().contains("0..100"));
+                    SwingUtilities.invokeAndWait(() -> {
+                        assertFalse(component(dialog, "financial-confirm", JCheckBox.class).isEnabled());
+                        assertFalse(component(dialog, "financial-save", JButton.class).isEnabled());
+                    });
+                }
+                SwingUtilities.invokeAndWait(() -> {
+                    assertTrue(rows.editCellAt(0, 5));
+                    ((JTextField) rows.getEditorComponent()).setText("1e-31");
+                    component(dialog, "financial-preview", JButton.class).doClick();
+                    assertTrue(rows.isEditing());
+                    assertFalse(component(dialog, "financial-confirm", JCheckBox.class).isEnabled());
+                    ((JTextField) rows.getEditorComponent()).setText("100");
+                    component(dialog, "financial-preview", JButton.class).doClick();
+                });
+                previewed(dialog);
+                confirm(dialog);
+                CustomerCreditDialogAdapterTest.waitFor(() -> !dialog.isDisplayable());
+                assertEquals(1, callbacks.get());
+                assertEquals(0, BigDecimal.ZERO.compareTo(session.financialEdit(Kind.INVOICE,id).load().data().total()));
             } finally {
                 SwingUtilities.invokeAndWait(dialog::dispose);
                 session.close();
