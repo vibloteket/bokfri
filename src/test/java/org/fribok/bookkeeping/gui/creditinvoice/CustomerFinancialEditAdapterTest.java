@@ -719,6 +719,11 @@ class CustomerFinancialEditAdapterTest {
 
     static Map<String, List<String>> snapshot(CustomerCreditGuiFixture f, Kind kind, long id,
             Set<Integer> keys, Set<String> allowedColumns) throws Exception {
+        return snapshot(f, kind, id, keys, allowedColumns, Set.of("INVOICE_DATE", "DUE_DATE"));
+    }
+
+    static Map<String, List<String>> snapshot(CustomerCreditGuiFixture f, Kind kind, long id,
+            Set<Integer> keys, Set<String> allowedColumns, Set<String> allowedHeaderColumns) throws Exception {
         Map<String, List<String>> result = new TreeMap<>();
         String target = kind == null ? "" : table(kind).toUpperCase(Locale.ROOT),
                 owner = kind == null ? "" : owner(kind).toUpperCase(Locale.ROOT);
@@ -736,7 +741,7 @@ class CustomerFinancialEditAdapterTest {
                             String column = m.getColumnName(i);
                             if (name.equals(target)
                                     && values.getLong("ID") == id
-                                    && Set.of("INVOICE_DATE", "DUE_DATE").contains(column))
+                                    && allowedHeaderColumns.contains(column))
                                 continue;
                             if (name.equals(target + "_ROW")
                                     && values.getLong(owner) == id

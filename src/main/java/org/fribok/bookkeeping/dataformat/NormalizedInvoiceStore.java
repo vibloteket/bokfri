@@ -338,17 +338,41 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Immutable dates and existing-row patches; other fields stay untouched.
+     * Raw stored header tax values. Nullable rates are never replaced by defaults.
+     *
+     * @param taxFree stored non-null exemption flag
+     * @param rate1 nullable exact stored rate for TAXRATE_1
+     * @param rate2 nullable exact stored rate for TAXRATE_2
+     * @param rate3 nullable exact stored rate for TAXRATE_3
+     */
+    public record TaxValues(boolean taxFree, java.math.BigDecimal rate1,
+            java.math.BigDecimal rate2, java.math.BigDecimal rate3) {
+        /** Validates exact storage; changed-value business rules belong to the service. */
+        public TaxValues {
+            requireExactAmount(rate1);
+            requireExactAmount(rate2);
+            requireExactAmount(rate3);
+        }
+    }
+
+    /**
+     * Immutable dates and existing-row/header-tax patches; other fields stay untouched.
      *
      * @param date nullable invoice date, within SQL DATE years 0001-9999
      * @param dueDate nullable due date, within SQL DATE years 0001-9999
      * @param rows row amount updates; empty means no amount changes at the store boundary
      * @param details optional row detail patches; omitted keys remain unchanged
      * @param accounting optional row account/tax patches; omitted keys remain unchanged
+     * @param tax optional complete raw header-tax patch; null preserves all header tax columns
      */
     public record FinancialValues(
             LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details,
-            List<LineAccounting> accounting) {
+            List<LineAccounting> accounting, TaxValues tax) {
+        /** Preserves header taxes for existing row-accounting callers. */
+        public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows,
+                List<LineDetails> details, List<LineAccounting> accounting) {
+            this(date, dueDate, rows, details, accounting, null);
+        }
         /** Preserves accounting fields for existing detail callers. */
         public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details) {
             this(date, dueDate, rows, details, List.of());
@@ -368,6 +392,29 @@ public final class NormalizedInvoiceStore {
         }
     }
 
+    /** Reads raw invoice tax values, including nullable rates, without defaults. */
+    public Optional<TaxValues> findInvoiceTaxValues(int company, long id) throws SQLException {
+        return readTaxValues(Kind.INVOICE, company, id);
+    }
+
+    /** Reads raw credit tax values without defaults. */
+    public Optional<TaxValues> findCreditTaxValues(int company, long id) throws SQLException {
+        return readTaxValues(Kind.CREDIT, company, id);
+    }
+
+    private Optional<TaxValues> readTaxValues(Kind kind, int company, long id) throws SQLException {
+        try (var statement = connection.prepareStatement("SELECT tax_free,tax_rate_1,tax_rate_2,tax_rate_3 FROM "
+                + kind.table + " WHERE id=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            statement.setLong(1, id);
+            statement.setInt(2, company);
+            try (var row = statement.executeQuery()) {
+                if (!row.next()) return Optional.empty();
+                return Optional.of(new TaxValues(row.getBoolean(1), row.getBigDecimal(2),
+                        row.getBigDecimal(3), row.getBigDecimal(4)));
+            }
+        }
+    }
+
     private static void requireExactAmount(java.math.BigDecimal value) {
         if (value == null) return;
         try {
@@ -384,7 +431,7 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Updates only unbooked invoice dates and supplied row amount/detail/accounting patches under a savepoint.
+     * Updates only unbooked invoice dates and supplied row/header-tax patches under a savepoint.
      *
      * @param company company migration identity
      * @param id stable SQL identity
@@ -401,7 +448,7 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Updates only unbooked credit dates and supplied row amount/detail/accounting patches under a savepoint.
+     * Updates only unbooked credit dates and supplied row/header-tax patches under a savepoint.
      *
      * @param company company migration identity
      * @param id stable SQL identity
@@ -433,6 +480,20 @@ public final class NormalizedInvoiceStore {
             statement.setInt(4, company);
             if (statement.executeUpdate() != 1)
                 throw new SQLException("Missing, foreign or booked document");
+        }
+        if (values.tax() != null) {
+            var tax = values.tax();
+            try (var statement = connection.prepareStatement("UPDATE " + kind.table
+                    + " SET tax_free=?,tax_rate_1=?,tax_rate_2=?,tax_rate_3=? WHERE id=? AND entered=FALSE"
+                    + " AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+                statement.setBoolean(1, tax.taxFree());
+                statement.setBigDecimal(2, tax.rate1());
+                statement.setBigDecimal(3, tax.rate2());
+                statement.setBigDecimal(4, tax.rate3());
+                statement.setLong(5, id);
+                statement.setInt(6, company);
+                if (statement.executeUpdate() != 1) throw new SQLException("Missing, foreign or booked tax target");
+            }
         }
         java.util.Set<Integer> seen = new java.util.HashSet<>();
         for (var row : values.rows()) {

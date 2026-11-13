@@ -1437,11 +1437,12 @@ other document-family posting adapters or full legacy financial-editor parity.
 ### Bounded unbooked financial editing
 
 `session.financialEdit(kind, sqlId)` binds `CustomerFinancialEditAdapter` to one explicit
-company/year/kind/stable identity. The restricted form changes only invoice date, due date,
+company/year/kind/stable identity. The restricted form changes invoice date, due date,
+document tax-exemption and its three stored VAT rates,
 and descriptions, quantities/unit prices, discounts, sales accounts and VAT codes on existing
 rows. Blank dates/amounts
 mean SQL NULL, not a default date, price or zero; description NULL and empty string remain
-distinct. Numbers, customers, addresses, currency/rates, header tax flags/rates, dimensions,
+distinct. Numbers, customers, addresses, currency/exchange rates, other tax/EU flags, dimensions,
 product/unit snapshots, metadata, order/payment/credit links and
 stored voucher snapshots are not replaced. Booked documents are refused. New document
 creation and row insertion/deletion/reordering or other financial-field editing remain open.
@@ -1471,16 +1472,29 @@ Unchanged historical/missing account values are retained; an explicit blank clea
 in a draft and is not a claim that the draft can be posted. New non-null VAT-code selections
 other than zero require a present stored document rate within 0–100. Missing rates are never
 filled from company or legacy defaults; unchanged historical codes/rates are preserved.
-The document tax-exempt flag remains unchanged and is shown alongside raw stored rate choices.
+The source document exemption flag and raw rates are shown separately from editable draft
+header fields. Optional immutable `TaxValues` patches contain the non-null exemption flag
+(schema `tax_free` is NOT NULL) and nullable exact rates. Existing row-only callers omit the
+patch and preserve all header tax columns. Changed non-null rates must be within 0–100;
+unchanged historical out-of-range rates remain preservable. For any changed taxable header,
+all VAT codes used by the resulting rows must have present bounded stored rates: clearing a
+used rate or removing exemption without one is refused, rather than calculating with implicit
+25/12/6 defaults. Unused slots may remain absent, and exempt drafts may retain absent rates.
+Unchanged historical taxable headers retain prior calculation semantics without storage repair.
+A simultaneous row-code/header patch validates against the proposed rates, not the old values.
 The service revalidates the source, applies those updates, and verifies persisted dates,
-amounts, descriptions, discounts, accounts, VAT codes and totals against the preview before the caller commits. Late failures restore both
+amounts, descriptions, discounts, accounts, VAT codes, raw header tax values and totals against the preview before the caller commits. Late failures restore both
 header and row changes. Existing unbooked voucher snapshots remain untouched until the
 separate journal workflow regenerates them from the edited rows. This is draft editing, not
 an assertion that every draft is bookable; posting still requires its own validated preview.
 
 `CustomerFinancialEditDialog` loads off-EDT, shows readonly stored row keys and explicit
 selected-year account/stored-document tax context, and allows dates, descriptions, quantities,
-prices, discounts, accounts and VAT codes to be edited. Integer account and fixed-code VAT
+prices, discounts, accounts, VAT codes, exemption and stored rates to be edited. Rate inputs
+accept exact nullable decimals; the VAT-code renderer reflects draft rates without legacy
+default/display decoding. Header changes invalidate confirmation and late preview generations
+just like row/date edits; reload restores stored values and unknown commits disable every new
+tax input. Integer account and fixed-code VAT
 editors never consult legacy selection or decode displayed percentages. A fresh totals preview and checkbox confirmation
 are required before save. Starting or committing a cell edit, changing a date, or reloading
 invalidates prior confirmation; invalid/inexact cell input refuses editor commit. Pending
@@ -1490,7 +1504,7 @@ context and only current-context confirmed success refreshes the view. Confirmed
 idempotent; unknown commit outcomes disable editing/reload/preview/save pending reconciliation.
 
 Tests compare every PUBLIC SQL table excluding only the intended target date and row amount
-and description/discount/account/VAT-code columns. They cover both kinds, non-contiguous row keys, NULL fields, metadata/reference/
+and description/discount/account/VAT-code/header-tax columns. They cover both kinds, non-contiguous row keys, NULL fields, metadata/reference/
 voucher preservation, exact decimal limits, stale graph/rounding inputs, bad row-key sets,
 booked/foreign/closed/format guards, partial-write rollback/retry, unknown commits on either
 side of durability and confirmed close failure. A separate journal test proves posting uses
@@ -1505,7 +1519,12 @@ Accounting regressions cover both document kinds, account-plan/rate staleness, i
 year/required-dimension account refusal, missing/out-of-range rate refusal, nullable historical
 values, late accounting failures restoring earlier date/amount/detail writes, local savepoint
 outer-work preservation, unknown commits, real cell editors and separate balanced posting to
-the new sales/VAT accounts. These bounded editors do not establish full legacy financial editor or production
+the new sales/VAT accounts. Header-tax regressions additionally verify all-SQL preservation
+excluding only four intended header columns, exact/range limits, zero/100 rates, exemption
+transitions, nullable/historical rate preservation, no-op and replay, simultaneous code/rate
+changes, stale header rejection, partial-write rollback/retry, outer-transaction preservation,
+unknown commits before/after durability and separate balanced invoice/credit posting using
+edited rates. These bounded editors do not establish full legacy financial editor or production
 format-3 GUI parity.
 
 ## Definition of done for issue #75
