@@ -355,8 +355,16 @@ public final class NormalizedInvoiceStore {
         }
     }
 
+    /** Optional stored exchange-rate patch; no currency code or catalogue rate is changed. */
+    public record ExchangeRateValues(java.math.BigDecimal rate) {
+        /** Requires exact nullable storage; the service validates changed values and currency context. */
+        public ExchangeRateValues {
+            requireExactAmount(rate);
+        }
+    }
+
     /**
-     * Immutable dates and existing-row/header-tax patches; other fields stay untouched.
+     * Immutable dates and existing-row/header-tax/exchange patches; other fields stay untouched.
      *
      * @param date nullable invoice date, within SQL DATE years 0001-9999
      * @param dueDate nullable due date, within SQL DATE years 0001-9999
@@ -364,10 +372,16 @@ public final class NormalizedInvoiceStore {
      * @param details optional row detail patches; omitted keys remain unchanged
      * @param accounting optional row account/tax patches; omitted keys remain unchanged
      * @param tax optional complete raw header-tax patch; null preserves all header tax columns
+     * @param exchange optional stored-rate patch; null preserves the rate and all currency codes
      */
     public record FinancialValues(
             LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details,
-            List<LineAccounting> accounting, TaxValues tax) {
+            List<LineAccounting> accounting, TaxValues tax, ExchangeRateValues exchange) {
+        /** Preserves the exchange rate for existing header-tax callers. */
+        public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows,
+                List<LineDetails> details, List<LineAccounting> accounting, TaxValues tax) {
+            this(date, dueDate, rows, details, accounting, tax, null);
+        }
         /** Preserves header taxes for existing row-accounting callers. */
         public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows,
                 List<LineDetails> details, List<LineAccounting> accounting) {
@@ -431,7 +445,7 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Updates only unbooked invoice dates and supplied row/header-tax patches under a savepoint.
+     * Updates only unbooked invoice dates and supplied row/tax/exchange patches under a savepoint.
      *
      * @param company company migration identity
      * @param id stable SQL identity
@@ -448,7 +462,7 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Updates only unbooked credit dates and supplied row/header-tax patches under a savepoint.
+     * Updates only unbooked credit dates and supplied row/tax/exchange patches under a savepoint.
      *
      * @param company company migration identity
      * @param id stable SQL identity
@@ -493,6 +507,16 @@ public final class NormalizedInvoiceStore {
                 statement.setLong(5, id);
                 statement.setInt(6, company);
                 if (statement.executeUpdate() != 1) throw new SQLException("Missing, foreign or booked tax target");
+            }
+        }
+        if (values.exchange() != null) {
+            try (var statement = connection.prepareStatement("UPDATE " + kind.table
+                    + " SET currency_rate=? WHERE id=? AND entered=FALSE"
+                    + " AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+                statement.setBigDecimal(1, values.exchange().rate());
+                statement.setLong(2, id);
+                statement.setInt(3, company);
+                if (statement.executeUpdate() != 1) throw new SQLException("Missing, foreign or booked exchange target");
             }
         }
         java.util.Set<Integer> seen = new java.util.HashSet<>();

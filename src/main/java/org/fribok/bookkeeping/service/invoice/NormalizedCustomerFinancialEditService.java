@@ -18,6 +18,7 @@ import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAmounts;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAccounting;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.TaxValues;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.ExchangeRateValues;
 import se.swedsoft.bookkeeping.data.common.SSTaxCode;
 import se.swedsoft.bookkeeping.data.SSInvoice;
 
@@ -70,6 +71,9 @@ public final class NormalizedCustomerFinancialEditService {
      * @param number nullable business number
      * @param customer nullable customer snapshot
      * @param currency nullable currency snapshot code
+     * @param baseCurrency nullable explicit company accounting currency code
+     * @param exchangeRate nullable raw stored document rate
+     * @param accountingEquivalent unrounded total times stored positive rate, or null for missing context
      * @param values original dates and complete row amounts
      * @param lines stored rows in key order
      * @param total original total with explicit company rounding
@@ -86,6 +90,9 @@ public final class NormalizedCustomerFinancialEditService {
             Integer number,
             String customer,
             String currency,
+            String baseCurrency,
+            BigDecimal exchangeRate,
+            BigDecimal accountingEquivalent,
             FinancialValues values,
             List<Line> lines,
             BigDecimal total) {
@@ -119,11 +126,13 @@ public final class NormalizedCustomerFinancialEditService {
         private final Snapshot snapshot;
         private final FinancialValues proposed;
         private final BigDecimal total;
+        private final BigDecimal accountingEquivalent;
 
-        private Plan(Snapshot snapshot, FinancialValues proposed, BigDecimal total) {
+        private Plan(Snapshot snapshot, FinancialValues proposed, BigDecimal total, BigDecimal accountingEquivalent) {
             this.snapshot = snapshot;
             this.proposed = proposed;
             this.total = total;
+            this.accountingEquivalent = accountingEquivalent;
         }
 
         /**
@@ -146,6 +155,9 @@ public final class NormalizedCustomerFinancialEditService {
         public BigDecimal total() {
             return total;
         }
+
+        /** @return unrounded document-total conversion, not a promised journal total */
+        public BigDecimal accountingEquivalent() { return accountingEquivalent; }
     }
 
     /**
@@ -193,7 +205,7 @@ public final class NormalizedCustomerFinancialEditService {
      * Revalidates the source and calculates a complete proposed patch without writes.
      *
      * @param expected original snapshot
-     * @param proposed dates, complete amount row-key set and optional row/header-tax patches
+     * @param proposed dates, complete amount row-key set and optional row/tax/exchange patches
      * @return opaque totals preview
      * @throws SQLException for storage errors or unsupported document projection
      * @throws IllegalArgumentException for stale or invalid inputs
@@ -209,6 +221,16 @@ public final class NormalizedCustomerFinancialEditService {
         validateTaxChanges(source.data.headerTax(), headerTax);
         source.document.setTaxFree(headerTax.taxFree());
         source.document.setStoredTaxRates(headerTax.rate1(), headerTax.rate2(), headerTax.rate3());
+        var exchangeRate = proposed.exchange() == null ? source.data.exchangeRate() : proposed.exchange().rate();
+        if (!same(source.data.exchangeRate(), exchangeRate)) {
+            if (exchangeRate == null || exchangeRate.signum() <= 0)
+                throw new IllegalArgumentException("Changed exchange rates must be explicit and positive");
+            if (!knownCode(source.data.currency()) || !knownCode(source.data.baseCurrency()))
+                throw new IllegalArgumentException("Exchange editing requires explicit document and company currency codes");
+            if (source.data.currency().equals(source.data.baseCurrency()) && exchangeRate.compareTo(BigDecimal.ONE) != 0)
+                throw new IllegalArgumentException("Identical document and accounting currencies require rate 1");
+        }
+        source.document.setCurrencyRate(exchangeRate);
         var indexed = indexed(proposed.rows());
         if (indexed.size() != source.data.lines().size())
             throw new IllegalArgumentException("Row insertion/removal is not supported");
@@ -259,11 +281,9 @@ public final class NormalizedCustomerFinancialEditService {
                     throw new IllegalArgumentException("Taxable edited headers require present stored rates within 0..100 for all used VAT codes");
             }
         }
-        return new Plan(
-                expected,
-                proposed,
-                se.swedsoft.bookkeeping.calc.math.SSSaleMath.getTotalSum(
-                        source.document, source.rounding));
+        var total = se.swedsoft.bookkeeping.calc.math.SSSaleMath.getTotalSum(source.document, source.rounding);
+        return new Plan(expected, proposed, total,
+                equivalent(total, exchangeRate, source.data.currency(), source.data.baseCurrency()));
     }
 
     /**
@@ -309,7 +329,9 @@ public final class NormalizedCustomerFinancialEditService {
                     }).map(line -> accountingPatch.get(line.rowNumber())).toList();
             var values = new FinancialValues(
                     fresh.proposed.date(), fresh.proposed.dueDate(), changed, changedDetails, changedAccounting,
-                    fresh.proposed.tax() != null && !sameTax(original.headerTax(), fresh.proposed.tax()) ? fresh.proposed.tax() : null);
+                    fresh.proposed.tax() != null && !sameTax(original.headerTax(), fresh.proposed.tax()) ? fresh.proposed.tax() : null,
+                    fresh.proposed.exchange() != null && !same(original.exchangeRate(), fresh.proposed.exchange().rate())
+                            ? fresh.proposed.exchange() : null);
             var store = new NormalizedInvoiceStore(connection);
             if (original.kind() == Kind.INVOICE)
                 store.updateInvoiceFinancialValues(original.companyId(), original.id(), values);
@@ -319,6 +341,10 @@ public final class NormalizedCustomerFinancialEditService {
                     || !Objects.equals(verified.values().dueDate(), fresh.proposed.dueDate())
                     || verified.total().compareTo(fresh.total) != 0)
                 throw new SQLException("Stored financial values differ from preview");
+            var expectedRate = fresh.proposed.exchange() == null ? original.exchangeRate() : fresh.proposed.exchange().rate();
+            if (!same(verified.exchangeRate(), expectedRate)
+                    || !same(verified.accountingEquivalent(), fresh.accountingEquivalent()))
+                throw new SQLException("Stored exchange values differ from preview");
             var expectedTax = fresh.proposed.tax() == null ? original.headerTax() : fresh.proposed.tax();
             if (!sameTax(verified.headerTax(), expectedTax))
                 throw new SQLException("Stored header tax values differ from preview");
@@ -387,6 +413,14 @@ public final class NormalizedCustomerFinancialEditService {
         var taxes = List.of(new Tax("TAXRATE_0", BigDecimal.ZERO), new Tax("TAXRATE_1", rates.get(0)),
                 new Tax("TAXRATE_2", rates.get(1)), new Tax("TAXRATE_3", rates.get(2)));
         boolean rounding = selected.isRoundingOff();
+        String baseCurrency;
+        try (var statement = connection.prepareStatement("SELECT currency_code FROM company WHERE legacy_id=?")) {
+            statement.setInt(1, company);
+            try (var row = statement.executeQuery()) {
+                if (!row.next()) throw new SQLException("Missing company currency context");
+                baseCurrency = row.getString(1);
+            }
+        }
         String table =
                 kind == Kind.INVOICE ? "customer_invoice_row" : "customer_credit_invoice_row";
         String owner = kind == Kind.INVOICE ? "invoice_id" : "credit_invoice_id";
@@ -428,6 +462,8 @@ public final class NormalizedCustomerFinancialEditService {
                                                         line.quantity(),
                                                         line.unitPrice()))
                                 .toList());
+        var documentCurrency = document.getCurrency() == null ? null : document.getCurrency().getName();
+        var total = se.swedsoft.bookkeeping.calc.math.SSSaleMath.getTotalSum(document, rounding);
         var data =
                 new Data(
                         company,
@@ -440,13 +476,15 @@ public final class NormalizedCustomerFinancialEditService {
                         id,
                         document.getNumber(),
                         document.getCustomerName(),
-                        document.getCurrency() == null ? null : document.getCurrency().getName(),
+                        documentCurrency,
+                        baseCurrency,
+                        document.getCurrencyRate(),
+                        equivalent(total, document.getCurrencyRate(), documentCurrency, baseCurrency),
                         values,
                         lines,
-                        se.swedsoft.bookkeeping.calc.math.SSSaleMath.getTotalSum(
-                                document, rounding));
+                        total);
         var writer = new CanonicalFingerprintWriter();
-        writer.writeInteger(company).writeInteger(year).writeBoolean(rounding);
+        writer.writeInteger(company).writeInteger(year).writeBoolean(rounding).writeString(baseCurrency);
         for (var account : accountRows.stream().sorted(java.util.Comparator.comparing(a -> a.getNumber())).toList()) {
             writer.writeInteger(account.getNumber()).writeString(account.getDescription())
                     .writeString(account.getSRUCode()).writeString(account.getVATCode()).writeString(account.getReportCode())
@@ -479,6 +517,13 @@ public final class NormalizedCustomerFinancialEditService {
             if (map.put(row.rowNumber(), row) != null)
                 throw new IllegalArgumentException("Duplicate stored accounting row key");
         return map;
+    }
+
+    private static boolean knownCode(String code) { return code != null && !code.isBlank(); }
+
+    private static BigDecimal equivalent(BigDecimal total, BigDecimal rate, String currency, String base) {
+        if (rate == null || rate.signum() <= 0 || !knownCode(currency) || !knownCode(base)) return null;
+        return total.multiply(rate);
     }
 
     private static void validateTaxChanges(TaxValues before, TaxValues after) {
