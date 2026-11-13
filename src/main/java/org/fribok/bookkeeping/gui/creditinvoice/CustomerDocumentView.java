@@ -20,14 +20,22 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
     private final Rows invoices = new Rows(false), credits = new Rows(true);
     private final JTable invoiceTable = new JTable(invoices), creditTable = new JTable(credits);
     private final JLabel context = new JLabel(), status = new JLabel();
-    private final JButton refresh = new JButton(text("refresh")), credit = new JButton(text("credit"));
-    private final JButton invoiceMetadata = new JButton(text("invoicemetadata")), creditMetadata = new JButton(text("creditmetadata"));
+    private final JButton refresh = new JButton(text("refresh")),
+            credit = new JButton(text("credit"));
+    private final JButton invoiceMetadata = new JButton(text("invoicemetadata")),
+            creditMetadata = new JButton(text("creditmetadata"));
     private final java.util.List<CustomerDocumentMetadataDialog> metadataDialogs = new java.util.ArrayList<>();
-    private final JButton invoiceDelete = new JButton(text("invoicedelete")), creditDelete = new JButton(text("creditdelete"));
+    private final JButton invoiceDelete = new JButton(text("invoicedelete")),
+            creditDelete = new JButton(text("creditdelete"));
     private final java.util.List<CustomerDocumentDeletionDialog> deletionDialogs = new java.util.ArrayList<>();
-    private final JButton invoiceJournal = new JButton(text("invoicejournal")), creditJournal = new JButton(text("creditjournal"));
+    private final JButton invoiceJournal = new JButton(text("invoicejournal")),
+            creditJournal = new JButton(text("creditjournal"));
     private final java.util.List<CustomerJournalDialog> journalDialogs = new java.util.ArrayList<>();
     private java.time.LocalDate yearFrom, yearTo;
+    private final JButton invoiceEdit = new JButton(text("invoiceedit")),
+            creditEdit = new JButton(text("creditedit"));
+    private final java.util.List<CustomerFinancialEditDialog> financialDialogs =
+            new java.util.ArrayList<>();
     private long revision;
     private boolean closed;
 
@@ -48,6 +56,12 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         actions.add(invoiceDelete); actions.add(creditDelete);
         invoiceJournal.setName("invoice-journal"); creditJournal.setName("credit-journal");
         actions.add(invoiceJournal); actions.add(creditJournal);
+        invoiceEdit.setName("invoice-edit");
+        creditEdit.setName("credit-edit");
+        actions.add(invoiceEdit);
+        actions.add(creditEdit);
+        invoiceEdit.addActionListener(event -> financial(false));
+        creditEdit.addActionListener(event -> financial(true));
         invoiceJournal.addActionListener(event -> journal(CustomerJournalAdapter.Kind.INVOICE));
         creditJournal.addActionListener(event -> journal(CustomerJournalAdapter.Kind.CREDIT));
         invoiceDelete.addActionListener(event -> deletion(false)); creditDelete.addActionListener(event -> deletion(true));
@@ -69,6 +83,7 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         for (var dialog : List.copyOf(metadataDialogs)) dialog.invalidateSelection();
         for (var dialog : List.copyOf(deletionDialogs)) dialog.invalidateSelection();
         for (var dialog : List.copyOf(journalDialogs)) dialog.invalidateSelection();
+        for (var dialog : List.copyOf(financialDialogs)) dialog.invalidateSelection();
         session = selected; revision++; yearFrom = null; yearTo = null;
         setTables(List.of(), List.of()); selectionEnablement();
         context.setText(text("loading")); refresh();
@@ -89,6 +104,8 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         creditDelete.setEnabled(active && creditTable.getSelectedRow() >= 0);
         invoiceJournal.setEnabled(active && yearFrom != null && yearTo != null);
         creditJournal.setEnabled(active && yearFrom != null && yearTo != null);
+        invoiceEdit.setEnabled(active && unbookedSelection(invoiceTable, invoices));
+        creditEdit.setEnabled(active && unbookedSelection(creditTable, credits));
     }
 
     private void metadata(boolean isCredit) {
@@ -152,6 +169,51 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         }
     }
 
+    private static boolean unbookedSelection(JTable table, Rows rows) {
+        int selected = table.getSelectedRow();
+        if (selected < 0 || selected >= table.getRowCount()) return false;
+        int model = table.convertRowIndexToModel(selected);
+        return model >= 0 && model < rows.values.size() && !rows.values.get(model).entered();
+    }
+
+    private void financial(boolean isCredit) {
+        requireEdt();
+        if (closed || !session.isActive()) return;
+        Long id = selection(isCredit ? creditTable : invoiceTable, isCredit ? credits : invoices);
+        if (id == null) return;
+        CustomerDocumentGuiSession selected = session;
+        try {
+            var kind =
+                    isCredit
+                            ? org.fribok.bookkeeping.service.invoice
+                                    .NormalizedCustomerFinancialEditService.Kind.CREDIT
+                            : org.fribok.bookkeeping.service.invoice
+                                    .NormalizedCustomerFinancialEditService.Kind.INVOICE;
+            var dialog =
+                    new CustomerFinancialEditDialog(
+                            owner,
+                            selected.financialEdit(kind, id),
+                            saved -> {
+                                if (!closed
+                                        && session == selected
+                                        && selected.isActive()
+                                        && saved.companyId() == selected.companyId()
+                                        && saved.yearId() == selected.yearId()) refresh();
+                            });
+            financialDialogs.add(dialog);
+            dialog.addWindowListener(
+                    new java.awt.event.WindowAdapter() {
+                        @Override
+                        public void windowClosed(java.awt.event.WindowEvent event) {
+                            financialDialogs.remove(dialog);
+                        }
+                    });
+            dialog.setVisible(true);
+        } catch (java.sql.SQLException failure) {
+            status.setText(MessageFormat.format(text("failed"), failure.getMessage()));
+        }
+    }
+
     /** Explicit reload; both tables are replaced from the same successful snapshot on the EDT. */
     public void refresh() {
         requireEdt();
@@ -161,26 +223,41 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         Long invoiceId = selection(invoiceTable, invoices), creditId = selection(creditTable, credits);
         status.setText(text("loading")); refresh.setEnabled(false);
         new SwingWorker<CustomerDocumentGuiSession.Documents, Void>() {
-            @Override protected CustomerDocumentGuiSession.Documents doInBackground() throws Exception {
+            @Override
+            protected CustomerDocumentGuiSession.Documents doInBackground() throws Exception {
                 return selected.documents();
             }
-            @Override protected void done() {
-                if (closed || request != revision || session != selected || !selected.isActive()) return;
+
+            @Override
+            protected void done() {
+                if (closed || request != revision || session != selected || !selected.isActive())
+                    return;
                 refresh.setEnabled(true);
                 try {
                     var snapshot = get();
                     setTables(snapshot.invoices(), snapshot.credits());
-                    yearFrom = snapshot.from(); yearTo = snapshot.to();
-                    restore(invoiceTable, invoices, invoiceId); restore(creditTable, credits, creditId); selectionEnablement();
-                    context.setText(MessageFormat.format(text("context"), snapshot.companyName(),
-                            Integer.toString(snapshot.companyId()), String.valueOf(snapshot.from()),
-                            String.valueOf(snapshot.to()), Integer.toString(snapshot.yearId())));
+                    yearFrom = snapshot.from();
+                    yearTo = snapshot.to();
+                    restore(invoiceTable, invoices, invoiceId);
+                    restore(creditTable, credits, creditId);
+                    selectionEnablement();
+                    context.setText(
+                            MessageFormat.format(
+                                    text("context"),
+                                    snapshot.companyName(),
+                                    Integer.toString(snapshot.companyId()),
+                                    String.valueOf(snapshot.from()),
+                                    String.valueOf(snapshot.to()),
+                                    Integer.toString(snapshot.yearId())));
                     status.setText(text("ready"));
                 } catch (InterruptedException interrupted) {
-                    Thread.currentThread().interrupt(); status.setText(text("interrupted"));
+                    Thread.currentThread().interrupt();
+                    status.setText(text("interrupted"));
                 } catch (ExecutionException failure) {
-                    // Retain the last confirmed table snapshot; never represent load failure as empty data.
-                    status.setText(MessageFormat.format(text("failed"), failure.getCause().getMessage()));
+                    // Retain the last confirmed table snapshot; never represent load failure as
+                    // empty data.
+                    status.setText(
+                            MessageFormat.format(text("failed"), failure.getCause().getMessage()));
                 }
             }
         }.execute();
@@ -192,6 +269,7 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         for (var dialog : List.copyOf(metadataDialogs)) dialog.invalidateSelection();
         for (var dialog : List.copyOf(deletionDialogs)) dialog.invalidateSelection();
         for (var dialog : List.copyOf(journalDialogs)) dialog.invalidateSelection();
+        for (var dialog : List.copyOf(financialDialogs)) dialog.invalidateSelection();
         CustomerCreditMenuBinding.closeIfInstalled(owner, session);
         setTables(List.of(), List.of()); refresh.setEnabled(false); credit.setEnabled(false); selectionEnablement();
         status.setText(text("closed"));
@@ -216,18 +294,26 @@ public final class CustomerDocumentView extends JPanel implements AutoCloseable 
         }
     }
     private static void requireEdt() {
-        if (!SwingUtilities.isEventDispatchThread()) throw new IllegalStateException("Document view requires the EDT");
+        if (!SwingUtilities.isEventDispatchThread())
+            throw new IllegalStateException("Document view requires the EDT");
     }
-    private static String text(String key) { return SSBundle.getBundle().getString("customer.documents." + key); }
+    private static String text(String key) {
+        return SSBundle.getBundle().getString("customer.documents." + key);
+    }
 
     private static final class Rows extends AbstractTableModel {
         private final boolean credit;
         private List<CustomerDocumentGuiSession.Document> values = List.of();
-        private final String[] columns = {"id", "number", "date", "customer", "currency", "total", "balance", "entered"};
+        private final String[] columns = {
+            "id", "number", "date", "customer", "currency", "total", "balance", "entered"
+        };
+
         Rows(boolean credit) { this.credit = credit; }
         public int getRowCount() { return values.size(); }
         public int getColumnCount() { return columns.length; }
-        public String getColumnName(int column) { return text(credit && column == 6 ? "crediting" : columns[column]); }
+        public String getColumnName(int column) {
+            return text(credit && column == 6 ? "crediting" : columns[column]);
+        }
         public Class<?> getColumnClass(int column) {
             return switch (column) {
                 case 0 -> Long.class;
