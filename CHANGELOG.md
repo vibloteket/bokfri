@@ -14,6 +14,7 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Added
 
+- Add explicit selected-year sales-account and stored-document VAT-code editing to the guarded normalized unbooked invoice/credit editor (#75), with fresh confirmation, account-plan staleness checks and narrow atomic updates. New assignments require active 3xxx accounts without required dimensions; missing stored VAT rates are never invented. Row structure, required-dimension editing, header tax/rate and currency editing, creation and production bootstrap remain separate work.
 - Extend the guarded normalized unbooked invoice/credit editor with existing-line descriptions and nullable discounts (#75), using fresh totals preview/confirmation and narrow atomic SQL updates. Historical null/empty descriptions and unchanged out-of-range discounts survive; changed discounts must be exact percentages within 0–100. Production format-3 GUI startup remains disabled.
 
 ### Website and forum

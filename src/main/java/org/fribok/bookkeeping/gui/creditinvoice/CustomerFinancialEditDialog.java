@@ -14,6 +14,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -32,6 +33,7 @@ import javax.swing.table.AbstractTableModel;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.FinancialValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAmounts;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAccounting;
 import org.fribok.bookkeeping.service.invoice.NormalizedCustomerFinancialEditService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 
@@ -43,6 +45,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
     private CustomerFinancialEditAdapter.Preview preview;
     private final JTextField date = new JTextField(10), due = new JTextField(10);
     private final JTextArea status = new JTextArea(4, 70);
+    private final JTextArea accountingContext = new JTextArea(2, 70);
     private final JButton reload = new JButton(text("reload")),
             previewButton = new JButton(text("preview")),
             save = new JButton(text("save")),
@@ -108,7 +111,14 @@ public final class CustomerFinancialEditDialog extends JDialog {
         JPanel bottom = new JPanel(new BorderLayout());
         bottom.add(status);
         bottom.add(actions, BorderLayout.SOUTH);
-        add(header, BorderLayout.NORTH);
+        accountingContext.setName("financial-accounting-context");
+        accountingContext.setEditable(false);
+        accountingContext.setLineWrap(true);
+        accountingContext.setWrapStyleWord(true);
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(header, BorderLayout.NORTH);
+        top.add(new JScrollPane(accountingContext));
+        add(top, BorderLayout.NORTH);
         add(new JScrollPane(table));
         add(bottom, BorderLayout.SOUTH);
         table.setAutoCreateRowSorter(true);
@@ -150,6 +160,19 @@ public final class CustomerFinancialEditDialog extends JDialog {
                         return parsed;
                     }
                 });
+        var taxCodes = new JComboBox<String>(new String[] {null, "TAXRATE_0", "TAXRATE_1", "TAXRATE_2", "TAXRATE_3"});
+        taxCodes.setRenderer(new javax.swing.DefaultListCellRenderer() {
+            @Override
+            public java.awt.Component getListCellRendererComponent(javax.swing.JList<?> list, Object value,
+                    int index, boolean selected, boolean focus) {
+                return super.getListCellRendererComponent(list, taxLabel((String) value), index, selected, focus);
+            }
+        });
+        table.getColumnModel().getColumn(6).setCellEditor(new DefaultCellEditor(taxCodes));
+        table.getColumnModel().getColumn(6).setCellRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            protected void setValue(Object value) { setText(taxLabel((String) value)); }
+        });
         table.addPropertyChangeListener(
                 "tableCellEditor",
                 event -> {
@@ -229,6 +252,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         loaded = null;
         changed();
         lines.set(List.of());
+        accountingContext.setText("");
         busy = true;
         status.setText(text("loading"));
         controls();
@@ -253,6 +277,14 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                     ? ""
                                     : data.values().dueDate().toString());
                     lines.set(data.lines());
+                    accountingContext.setText(text("accounts") + " " + data.yearId() + ": "
+                            + data.accounts().stream().filter(a -> a.number() >= 3000 && a.number() <= 3999
+                                    && a.active() && !a.projectRequired() && !a.resultUnitRequired())
+                                    .map(a -> a.number() + " " + (a.description() == null ? "" : a.description()))
+                                    .collect(java.util.stream.Collectors.joining(", "))
+                            + "\n" + text("taxfree") + " " + data.taxFree() + " / "
+                            + data.taxes().stream().map(t -> taxLabel(t.code()))
+                                    .collect(java.util.stream.Collectors.joining(", ")));
                     status.setText(
                             text("ready")
                                     + " "
@@ -283,7 +315,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         try {
             values =
                     new FinancialValues(
-                            parse(date.getText()), parse(due.getText()), lines.values(), lines.details());
+                            parse(date.getText()), parse(due.getText()), lines.values(), lines.details(), lines.accounting());
         } catch (RuntimeException error) {
             status.setText(text("invalid"));
             controls();
@@ -395,15 +427,26 @@ public final class CustomerFinancialEditDialog extends JDialog {
         cancel.setEnabled(!busy);
     }
 
+    private String taxLabel(String code) {
+        if (code == null) return text("absenttax");
+        var rate = loaded == null ? null : loaded.data().taxes().stream()
+                .filter(t -> t.code().equals(code)).findFirst().map(t -> t.rate()).orElse(null);
+        return code + " / " + (rate == null ? text("missingrate") : rate.stripTrailingZeros().toPlainString() + " %");
+    }
+
     private final class Lines extends AbstractTableModel {
         private List<NormalizedCustomerFinancialEditService.Line> original = List.of();
         private java.util.Map<Integer, LineAmounts> edited = new java.util.HashMap<>();
         private java.util.Map<Integer, LineDetails> detailEdits = new java.util.HashMap<>();
+        private java.util.Map<Integer, LineAccounting> accountingEdits = new java.util.HashMap<>();
 
         void set(List<NormalizedCustomerFinancialEditService.Line> values) {
             original = List.copyOf(values);
             edited.clear();
             detailEdits.clear();
+            accountingEdits.clear();
+            for (var row : original)
+                accountingEdits.put(row.rowNumber(), new LineAccounting(row.rowNumber(), row.account(), row.taxCode()));
             for (var row : original)
                 detailEdits.put(row.rowNumber(), new LineDetails(row.rowNumber(), row.description(), row.discount()));
             for (var row : original)
@@ -421,17 +464,21 @@ public final class CustomerFinancialEditDialog extends JDialog {
             return original.stream().map(row -> detailEdits.get(row.rowNumber())).toList();
         }
 
+        List<LineAccounting> accounting() {
+            return original.stream().map(row -> accountingEdits.get(row.rowNumber())).toList();
+        }
+
         public int getRowCount() {
             return original.size();
         }
 
         public int getColumnCount() {
-            return 6;
+            return 7;
         }
 
         public String getColumnName(int column) {
             return text(
-                    new String[] {"row", "description", "account", "quantity", "price", "discount"}[column]);
+                    new String[] {"row", "description", "account", "quantity", "price", "discount", "taxcode"}[column]);
         }
 
         public Class<?> getColumnClass(int column) {
@@ -443,7 +490,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         }
 
         public boolean isCellEditable(int row, int column) {
-            return (column == 1 || column >= 3) && loaded != null && !busy && !invalid && !adapter.isBlocked();
+            return column >= 1 && loaded != null && !busy && !invalid && !adapter.isBlocked();
         }
 
         public Object getValueAt(int row, int column) {
@@ -452,15 +499,28 @@ public final class CustomerFinancialEditDialog extends JDialog {
             return switch (column) {
                 case 0 -> base.rowNumber();
                 case 1 -> detailEdits.get(base.rowNumber()).description();
-                case 2 -> base.account();
+                case 2 -> accountingEdits.get(base.rowNumber()).account();
                 case 3 -> value.quantity();
                 case 4 -> value.unitPrice();
                 case 5 -> detailEdits.get(base.rowNumber()).discount();
+                case 6 -> accountingEdits.get(base.rowNumber()).taxCode();
                 default -> throw new IndexOutOfBoundsException();
             };
         }
 
         public void setValueAt(Object value, int row, int column) {
+            if (column == 2 || column == 6) {
+                int key = original.get(row).rowNumber();
+                var old = accountingEdits.get(key);
+                String input = value == null ? "" : value.toString().trim();
+                var next = column == 2
+                        ? new LineAccounting(key, input.isEmpty() ? null : Integer.valueOf(input), old.taxCode())
+                        : new LineAccounting(key, old.account(), input.isEmpty() ? null : input);
+                accountingEdits.put(key, next);
+                fireTableCellUpdated(row, column);
+                changed();
+                return;
+            }
             if (column == 1) {
                 int key = original.get(row).rowNumber();
                 var old = detailEdits.get(key);

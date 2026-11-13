@@ -1438,16 +1438,18 @@ other document-family posting adapters or full legacy financial-editor parity.
 
 `session.financialEdit(kind, sqlId)` binds `CustomerFinancialEditAdapter` to one explicit
 company/year/kind/stable identity. The restricted form changes only invoice date, due date,
-and descriptions, quantities/unit prices and discounts on existing rows. Blank dates/amounts
+and descriptions, quantities/unit prices, discounts, sales accounts and VAT codes on existing
+rows. Blank dates/amounts
 mean SQL NULL, not a default date, price or zero; description NULL and empty string remain
-distinct. Numbers, customers, addresses, currency/rates, accounts, taxes, dimensions,
+distinct. Numbers, customers, addresses, currency/rates, header tax flags/rates, dimensions,
 product/unit snapshots, metadata, order/payment/credit links and
 stored voucher snapshots are not replaced. Booked documents are refused. New document
 creation and row insertion/deletion/reordering or other financial-field editing remain open.
 
 `NormalizedCustomerFinancialEditService` loads immutable values and real persisted row keys
 (not list/display indexes), with an ephemeral token over all six source tables and the
-company rounding policy. It requires the complete unchanged row-key set, recomputes totals
+company rounding policy and explicitly selected year account-plan values (including active/required-
+dimension flags). It requires the complete unchanged amount row-key set, recomputes totals
 using explicit rounding, and rejects stale graphs, metadata or rounding context. The shared
 typed fingerprint helper preserves deletion's existing token semantics. Quantities and prices
 and discounts must fit DECIMAL(100,30) exactly; changed non-null discounts must be within
@@ -1458,17 +1460,28 @@ row writes when the numeric value is unchanged.
 
 The new `NormalizedInvoiceStore` narrow update methods use a local savepoint, company/SQL-ID
 scope and unbooked guard. They update only the two header date columns and changed existing
-rows' quantity/unit-price and/or description/discount columns; no graph reconstruction or
+rows' quantity/unit-price, description/discount and/or account-number/VAT-code columns; no graph reconstruction or
 number-based retargeting occurs. Optional immutable `LineDetails` patches use persisted keys;
 omitted keys preserve their stored details, and existing amount-only callers remain unchanged.
+Optional `LineAccounting` patches likewise preserve omitted keys and use persisted enum names,
+not singleton-backed VAT display decoding. Non-null changed accounts must be active 3000–3999
+accounts in the explicit selected year without project/result-unit requirements. This bounded
+form refuses new assignments requiring dimension editing rather than silently adding dimensions.
+Unchanged historical/missing account values are retained; an explicit blank clears an account
+in a draft and is not a claim that the draft can be posted. New non-null VAT-code selections
+other than zero require a present stored document rate within 0–100. Missing rates are never
+filled from company or legacy defaults; unchanged historical codes/rates are preserved.
+The document tax-exempt flag remains unchanged and is shown alongside raw stored rate choices.
 The service revalidates the source, applies those updates, and verifies persisted dates,
-amounts, descriptions, discounts and totals against the preview before the caller commits. Late failures restore both
+amounts, descriptions, discounts, accounts, VAT codes and totals against the preview before the caller commits. Late failures restore both
 header and row changes. Existing unbooked voucher snapshots remain untouched until the
 separate journal workflow regenerates them from the edited rows. This is draft editing, not
 an assertion that every draft is bookable; posting still requires its own validated preview.
 
-`CustomerFinancialEditDialog` loads off-EDT, shows readonly stored keys/accounts,
-and allows dates, descriptions, quantities, prices and discounts to be edited. A fresh totals preview and checkbox confirmation
+`CustomerFinancialEditDialog` loads off-EDT, shows readonly stored row keys and explicit
+selected-year account/stored-document tax context, and allows dates, descriptions, quantities,
+prices, discounts, accounts and VAT codes to be edited. Integer account and fixed-code VAT
+editors never consult legacy selection or decode displayed percentages. A fresh totals preview and checkbox confirmation
 are required before save. Starting or committing a cell edit, changing a date, or reloading
 invalidates prior confirmation; invalid/inexact cell input refuses editor commit. Pending
 preview results are generation-fenced. Reload explicitly discards the draft. Busy close/Escape/
@@ -1477,7 +1490,7 @@ context and only current-context confirmed success refreshes the view. Confirmed
 idempotent; unknown commit outcomes disable editing/reload/preview/save pending reconciliation.
 
 Tests compare every PUBLIC SQL table excluding only the intended target date and row amount
-and description/discount columns. They cover both kinds, non-contiguous row keys, NULL fields, metadata/reference/
+and description/discount/account/VAT-code columns. They cover both kinds, non-contiguous row keys, NULL fields, metadata/reference/
 voucher preservation, exact decimal limits, stale graph/rounding inputs, bad row-key sets,
 booked/foreign/closed/format guards, partial-write rollback/retry, unknown commits on either
 side of durability and confirmed close failure. A separate journal test proves posting uses
@@ -1488,7 +1501,11 @@ blocking. Description/discount regressions additionally cover nullable/empty tex
 0/100 percentage bounds, exact storage, duplicate/foreign detail keys, historical out-of-range
 preservation, partial detail failures rolling back earlier date/amount/detail writes while
 retaining outer-transaction work, replay/unknown commits and separate posting with new discounts.
-These bounded editors do not establish full legacy financial editor or production
+Accounting regressions cover both document kinds, account-plan/rate staleness, inactive/foreign-
+year/required-dimension account refusal, missing/out-of-range rate refusal, nullable historical
+values, late accounting failures restoring earlier date/amount/detail writes, local savepoint
+outer-work preservation, unknown commits, real cell editors and separate balanced posting to
+the new sales/VAT accounts. These bounded editors do not establish full legacy financial editor or production
 format-3 GUI parity.
 
 ## Definition of done for issue #75
