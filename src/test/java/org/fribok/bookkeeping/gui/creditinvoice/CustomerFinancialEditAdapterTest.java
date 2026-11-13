@@ -717,7 +717,7 @@ class CustomerFinancialEditAdapterTest {
         return snapshot(f, kind, id, keys, Set.of("QUANTITY", "UNIT_PRICE"));
     }
 
-    private static Map<String, List<String>> snapshot(CustomerCreditGuiFixture f, Kind kind, long id,
+    static Map<String, List<String>> snapshot(CustomerCreditGuiFixture f, Kind kind, long id,
             Set<Integer> keys, Set<String> allowedColumns) throws Exception {
         Map<String, List<String>> result = new TreeMap<>();
         String target = kind == null ? "" : table(kind).toUpperCase(Locale.ROOT),

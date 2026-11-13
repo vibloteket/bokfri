@@ -324,15 +324,35 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Immutable dates, existing-row amounts and optional line details; other fields stay untouched.
+     * Existing-row accounting patch; tax code is its persisted enum name, never a display label.
+     *
+     * @param rowNumber persisted row key
+     * @param account nullable account number; business validation belongs to the explicit-year service
+     * @param taxCode nullable persisted SSTaxCode name
+     */
+    public record LineAccounting(int rowNumber, Integer account, String taxCode) {
+        /** Rejects unknown codes without singleton-backed display decoding. */
+        public LineAccounting {
+            if (taxCode != null) SSTaxCode.valueOf(taxCode);
+        }
+    }
+
+    /**
+     * Immutable dates and existing-row patches; other fields stay untouched.
      *
      * @param date nullable invoice date, within SQL DATE years 0001-9999
      * @param dueDate nullable due date, within SQL DATE years 0001-9999
      * @param rows row amount updates; empty means no amount changes at the store boundary
      * @param details optional row detail patches; omitted keys remain unchanged
+     * @param accounting optional row account/tax patches; omitted keys remain unchanged
      */
     public record FinancialValues(
-            LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details) {
+            LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details,
+            List<LineAccounting> accounting) {
+        /** Preserves accounting fields for existing detail callers. */
+        public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details) {
+            this(date, dueDate, rows, details, List.of());
+        }
         /** Preserves descriptions and discounts for existing amount-only callers. */
         public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows) {
             this(date, dueDate, rows, List.of());
@@ -342,6 +362,7 @@ public final class NormalizedInvoiceStore {
         public FinancialValues {
             rows = List.copyOf(rows);
             details = List.copyOf(details);
+            accounting = List.copyOf(accounting);
             requireSqlDate(date);
             requireSqlDate(dueDate);
         }
@@ -363,7 +384,7 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Updates only unbooked invoice dates, existing-row amounts and supplied details under a savepoint.
+     * Updates only unbooked invoice dates and supplied row amount/detail/accounting patches under a savepoint.
      *
      * @param company company migration identity
      * @param id stable SQL identity
@@ -380,7 +401,7 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Updates only unbooked credit dates, existing-row amounts and supplied details under a savepoint.
+     * Updates only unbooked credit dates and supplied row amount/detail/accounting patches under a savepoint.
      *
      * @param company company migration identity
      * @param id stable SQL identity
@@ -464,6 +485,23 @@ public final class NormalizedInvoiceStore {
                 statement.setInt(4, row.rowNumber());
                 statement.setInt(5, company);
                 if (statement.executeUpdate() != 1) throw new SQLException("Missing or foreign stored detail row key");
+            }
+        }
+        seen.clear();
+        for (var row : values.accounting()) {
+            if (!seen.add(row.rowNumber()))
+                throw new IllegalArgumentException("Duplicate stored accounting row key");
+            try (var statement = connection.prepareStatement(
+                    "UPDATE " + kind.rowTable() + " SET account_number=?,tax_code=? WHERE "
+                    + kind.idColumn() + "=? AND row_number=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+                if (row.account() == null) statement.setNull(1, java.sql.Types.INTEGER);
+                else statement.setInt(1, row.account());
+                statement.setString(2, row.taxCode());
+                statement.setLong(3, id);
+                statement.setInt(4, row.rowNumber());
+                statement.setInt(5, company);
+                if (statement.executeUpdate() != 1)
+                    throw new SQLException("Missing or foreign stored accounting row key");
             }
         }
     }

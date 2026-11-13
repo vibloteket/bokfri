@@ -106,7 +106,7 @@ class CustomerFinancialEditDialogGuiTest {
                                     JTable rows =
                                             component(dialog, "financial-lines", JTable.class);
                                     assertFalse(rows.isCellEditable(0, 0));
-                                    assertFalse(rows.isCellEditable(0, 2));
+                                    assertTrue(rows.isCellEditable(0, 2));
                                     assertTrue(rows.isCellEditable(0, 1));
                                     assertTrue(rows.isCellEditable(0, 5));
                                     rows.setValueAt("New description åäö", 0, 1);

@@ -142,7 +142,7 @@ public final class CustomerFinancialEditAdapter {
                             new Loaded(
                                     this,
                                     new NormalizedCustomerFinancialEditService(c, clock)
-                                            .load(company, kind, id)));
+                                            .load(company, year, kind, id)));
         }
     }
 
