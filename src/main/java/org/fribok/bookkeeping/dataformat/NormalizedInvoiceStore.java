@@ -310,16 +310,38 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Immutable dates and existing-row amounts; all other fields remain untouched.
+     * Optional existing-row description/discount patch; raw nulls remain distinct.
+     *
+     * @param rowNumber persisted row key
+     * @param description nullable stored description
+     * @param discount nullable exact percentage; changed values must be within 0..100
+     */
+    public record LineDetails(int rowNumber, String description, java.math.BigDecimal discount) {
+        /** Validates exact decimal storage without rejecting historical out-of-range values. */
+        public LineDetails {
+            requireExactAmount(discount);
+        }
+    }
+
+    /**
+     * Immutable dates, existing-row amounts and optional line details; other fields stay untouched.
      *
      * @param date nullable invoice date, within SQL DATE years 0001-9999
      * @param dueDate nullable due date, within SQL DATE years 0001-9999
-     * @param rows row updates; empty means date-only editing
+     * @param rows row amount updates; empty means no amount changes at the store boundary
+     * @param details optional row detail patches; omitted keys remain unchanged
      */
-    public record FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows) {
+    public record FinancialValues(
+            LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details) {
+        /** Preserves descriptions and discounts for existing amount-only callers. */
+        public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows) {
+            this(date, dueDate, rows, List.of());
+        }
+
         /** Copies row updates and validates nullable SQL dates. */
         public FinancialValues {
             rows = List.copyOf(rows);
+            details = List.copyOf(details);
             requireSqlDate(date);
             requireSqlDate(dueDate);
         }
@@ -341,7 +363,7 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Updates only unbooked invoice dates and existing-row amounts under a local savepoint.
+     * Updates only unbooked invoice dates, existing-row amounts and supplied details under a savepoint.
      *
      * @param company company migration identity
      * @param id stable SQL identity
@@ -358,7 +380,7 @@ public final class NormalizedInvoiceStore {
     }
 
     /**
-     * Updates only unbooked credit dates and existing-row amounts under a local savepoint.
+     * Updates only unbooked credit dates, existing-row amounts and supplied details under a savepoint.
      *
      * @param company company migration identity
      * @param id stable SQL identity
@@ -410,6 +432,38 @@ public final class NormalizedInvoiceStore {
                 statement.setInt(5, company);
                 if (statement.executeUpdate() != 1)
                     throw new SQLException("Missing or foreign stored row key");
+            }
+        }
+        seen.clear();
+        for (var row : values.details()) {
+            if (!seen.add(row.rowNumber()))
+                throw new IllegalArgumentException("Duplicate stored detail row key");
+            // Read current discount so unchanged historical out-of-range values can survive.
+            try (var statement = connection.prepareStatement(
+                    "SELECT discount FROM " + kind.rowTable() + " WHERE " + kind.idColumn()
+                    + "=? AND row_number=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+                statement.setLong(1, id);
+                statement.setInt(2, row.rowNumber());
+                statement.setInt(3, company);
+                try (var current = statement.executeQuery()) {
+                    if (!current.next()) throw new SQLException("Missing or foreign stored detail row key");
+                    var before = current.getBigDecimal(1);
+                    var after = row.discount();
+                    boolean same = before == null ? after == null : after != null && before.compareTo(after) == 0;
+                    if (!same && after != null && (after.signum() < 0
+                            || after.compareTo(java.math.BigDecimal.valueOf(100)) > 0))
+                        throw new IllegalArgumentException("Discount must be within 0..100");
+                }
+            }
+            try (var statement = connection.prepareStatement(
+                    "UPDATE " + kind.rowTable() + " SET description=?,discount=? WHERE "
+                    + kind.idColumn() + "=? AND row_number=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+                statement.setString(1, row.description());
+                statement.setBigDecimal(2, row.discount());
+                statement.setLong(3, id);
+                statement.setInt(4, row.rowNumber());
+                statement.setInt(5, company);
+                if (statement.executeUpdate() != 1) throw new SQLException("Missing or foreign stored detail row key");
             }
         }
     }

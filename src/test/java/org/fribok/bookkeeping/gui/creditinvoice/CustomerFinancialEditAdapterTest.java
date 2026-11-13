@@ -29,6 +29,7 @@ import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.FinancialValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAmounts;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
 import org.fribok.bookkeeping.service.invoice.NormalizedCustomerFinancialEditService.Kind;
 import se.swedsoft.bookkeeping.data.base.SSSaleRow;
 
@@ -476,6 +477,200 @@ class CustomerFinancialEditAdapterTest {
         }
     }
 
+    @Test
+    void descriptionAndDiscountPreviewIsReadOnlyAndNarrowSavePreservesAllOtherColumnsTest() throws Exception {
+        for (var kind : Kind.values()) try (var f = new CustomerCreditGuiFixture()) {
+            long id = target(f, kind);
+            try (var sql = f.anchor.createStatement()) {
+                sql.executeUpdate("UPDATE " + table(kind) + "_row SET row_number=19,description=NULL,discount=NULL WHERE " + owner(kind) + "=" + id);
+            }
+            f.anchor.commit();
+            var editor = adapter(f, kind, id, f::open);
+            var loaded = editor.load();
+            assertNull(loaded.data().lines().getFirst().description());
+            assertNull(loaded.data().lines().getFirst().discount());
+            var before = snapshot(f, null, -1, Set.of());
+            var preserve = snapshot(f, kind, id, Set.of(19), Set.of("DESCRIPTION", "DISCOUNT", "QUANTITY", "UNIT_PRICE"));
+            f.anchor.rollback();
+            var amounts = change(loaded, new BigDecimal("2"), new BigDecimal("50"));
+            var values = new FinancialValues(amounts.date(), amounts.dueDate(), amounts.rows(),
+                    List.of(new LineDetails(19, "Ny beskrivning åäö / €", new BigDecimal("20"))));
+            var preview = editor.preview(loaded, values);
+            assertEquals(0, new BigDecimal("80").compareTo(preview.after()));
+            assertEquals(before, snapshot(f, null, -1, Set.of()));
+            f.anchor.rollback();
+            var saved = editor.save(preview);
+            assertSame(saved, editor.save(preview));
+            assertEquals(preserve, snapshot(f, kind, id, Set.of(19), Set.of("DESCRIPTION", "DISCOUNT", "QUANTITY", "UNIT_PRICE")));
+            f.anchor.rollback();
+            var fresh = adapter(f, kind, id, f::open).load();
+            assertEquals("Ny beskrivning åäö / €", fresh.data().lines().getFirst().description());
+            assertEquals(0, new BigDecimal("20").compareTo(fresh.data().lines().getFirst().discount()));
+            assertEquals(0, new BigDecimal("80").compareTo(fresh.data().total()));
+        }
+    }
+
+    @Test
+    void detailPatchesRejectForeignDuplicateInexactAndOutOfRangeInputsWithoutWritesTest() throws Exception {
+        try (var f = new CustomerCreditGuiFixture()) {
+            long id = target(f, Kind.INVOICE);
+            var editor = adapter(f, Kind.INVOICE, id, f::open);
+            var loaded = editor.load();
+            int key = loaded.data().lines().getFirst().rowNumber();
+            var before = snapshot(f, null, -1, Set.of());
+            f.anchor.rollback();
+            for (var details : List.of(
+                    List.of(new LineDetails(999, "foreign", BigDecimal.TEN)),
+                    List.of(new LineDetails(key, "a", null), new LineDetails(key, "b", null)),
+                    List.of(new LineDetails(key, "negative", new BigDecimal("-0.1"))),
+                    List.of(new LineDetails(key, "too much", new BigDecimal("100.0001"))))) {
+                var patch = new FinancialValues(loaded.data().values().date(), loaded.data().values().dueDate(),
+                        loaded.data().values().rows(), details);
+                assertThrows(IllegalArgumentException.class, () -> editor.preview(loaded, patch));
+            }
+            assertThrows(IllegalArgumentException.class, () -> new LineDetails(key, "precision", new BigDecimal("1e-31")));
+            assertThrows(IllegalArgumentException.class, () -> new LineDetails(key, "overflow", new BigDecimal("1e70")));
+            assertEquals(before, snapshot(f, null, -1, Set.of()));
+        }
+    }
+
+    @Test
+    void detailChangesInvalidateStalePreviewAndHistoricalDiscountCanBePreservedTest() throws Exception {
+        try (var f = new CustomerCreditGuiFixture()) {
+            long id = target(f, Kind.INVOICE);
+            try (var sql = f.anchor.createStatement()) {
+                sql.executeUpdate("UPDATE customer_invoice_row SET discount=120 WHERE invoice_id=" + id);
+            }
+            f.anchor.commit();
+            var editor = adapter(f, Kind.INVOICE, id, f::open);
+            var loaded = editor.load();
+            int key = loaded.data().lines().getFirst().rowNumber();
+            var unchangedDiscount = new FinancialValues(loaded.data().values().date(), loaded.data().values().dueDate(),
+                    loaded.data().values().rows(), List.of(new LineDetails(key, "Keep historical percentage", new BigDecimal("120"))));
+            editor.save(editor.preview(loaded, unchangedDiscount));
+            var second = editor.load();
+            var patch = new FinancialValues(second.data().values().date(), second.data().values().dueDate(),
+                    second.data().values().rows(), List.of(new LineDetails(key, "Replacement", BigDecimal.TEN)));
+            var preview = editor.preview(second, patch);
+            try (var sql = f.anchor.createStatement()) {
+                sql.executeUpdate("UPDATE customer_invoice_row SET description='External change' WHERE invoice_id=" + id);
+            }
+            f.anchor.commit();
+            assertThrows(IllegalArgumentException.class, () -> editor.save(preview));
+            assertFalse(editor.isBlocked());
+            assertEquals("External change", editor.load().data().lines().getFirst().description());
+        }
+    }
+
+    @Test
+    void lateDetailFailureRollsBackHeaderAmountsAndEarlierDetailsBeforeRetryTest() throws Exception {
+        for (var kind : Kind.values()) try (var f = new CustomerCreditGuiFixture()) {
+            long id = target(f, kind);
+            var store = new NormalizedInvoiceStore(f.anchor);
+            var source = kind == Kind.INVOICE ? store.findInvoice(71,id).orElseThrow().document()
+                    : store.findCreditInvoice(71,id).orElseThrow().document();
+            var extra = new SSSaleRow(); extra.setQuantity(1); extra.setUnitprice(BigDecimal.TEN);
+            source.getRows().add(extra);
+            if (kind == Kind.INVOICE) store.updateInvoice(71,id,source);
+            else store.updateCreditInvoice(71,id,(se.swedsoft.bookkeeping.data.SSCreditInvoice) source);
+            try (var sql = f.anchor.createStatement()) {
+                sql.executeUpdate("ALTER TABLE " + table(kind) + "_row ADD CONSTRAINT detail_failure CHECK(description IS NULL OR description<>'fail')");
+            }
+            f.anchor.commit();
+            var editor = adapter(f,kind,id,f::open);
+            var loaded = editor.load();
+            var amounts = change(loaded,new BigDecimal("2"),new BigDecimal("50"));
+            var details = List.of(new LineDetails(0,"first write",BigDecimal.TEN),new LineDetails(1,"fail",BigDecimal.TEN));
+            var preview = editor.preview(loaded,new FinancialValues(amounts.date(),amounts.dueDate(),amounts.rows(),details));
+            var before = snapshot(f,null,-1,Set.of()); f.anchor.rollback();
+            assertThrows(SQLException.class, () -> editor.save(preview));
+            assertFalse(editor.isBlocked());
+            assertEquals(before,snapshot(f,null,-1,Set.of())); f.anchor.rollback();
+            try (var sql = f.anchor.createStatement()) {
+                sql.executeUpdate("ALTER TABLE " + table(kind) + "_row DROP CONSTRAINT detail_failure");
+            }
+            f.anchor.commit();
+            assertEquals(0,new BigDecimal("99").compareTo(editor.save(preview).total()));
+        }
+    }
+
+    @Test
+    void nullableDetailDiscountAndEmptyDescriptionRemainDistinctAndSeparateJournalUsesDiscountTest() throws Exception {
+        try (var f = new CustomerCreditGuiFixture()) {
+            long id = target(f,Kind.INVOICE);
+            var editor = adapter(f,Kind.INVOICE,id,f::open);
+            var loaded = editor.load(); int key = loaded.data().lines().getFirst().rowNumber();
+            var amounts = change(loaded,new BigDecimal("2"),new BigDecimal("50"));
+            editor.save(editor.preview(loaded,new FinancialValues(amounts.date(),amounts.dueDate(),amounts.rows(),
+                    List.of(new LineDetails(key,"",null)))));
+            var empty = editor.load();
+            assertEquals("",empty.data().lines().getFirst().description());
+            assertNull(empty.data().lines().getFirst().discount());
+            editor.save(editor.preview(empty,new FinancialValues(empty.data().values().date(),empty.data().values().dueDate(),
+                    empty.data().values().rows(),List.of(new LineDetails(key,null,new BigDecimal("25"))))));
+            var latest = editor.load(); assertNull(latest.data().lines().getFirst().description());
+            f.anchor.rollback();
+            var journal = new CustomerJournalAdapter(f::open,f.gate,71,11,CustomerJournalAdapter.Kind.INVOICE,CustomerCreditGuiFixture.CLOCK);
+            var preview = journal.preview(CustomerJournalAdapterTest.FROM,CustomerJournalAdapterTest.TO);
+            assertEquals(0,new BigDecimal("75").compareTo(preview.summary().debit()));
+            journal.post(preview);
+        }
+    }
+
+    @Test
+    void localStoreSavepointRollsBackPartialDetailWritesWithoutDiscardingOuterTransactionTest() throws Exception {
+        for (var kind : Kind.values()) try (var f = new CustomerCreditGuiFixture()) {
+            long id = target(f,kind);
+            var editor = adapter(f,kind,id,f::open);
+            var loaded = editor.load();
+            int key = loaded.data().lines().getFirst().rowNumber();
+            try (var sql = f.anchor.createStatement()) {
+                sql.executeUpdate("UPDATE " + table(kind) + " SET ocr_number='outer work' WHERE id="+id);
+            }
+            var before = snapshot(f,null,-1,Set.of());
+            var store = new NormalizedInvoiceStore(f.anchor);
+            for (var details : List.of(
+                    List.of(new LineDetails(key,"first",BigDecimal.TEN),new LineDetails(key,"duplicate",null)),
+                    List.of(new LineDetails(key,"first",BigDecimal.TEN),new LineDetails(999,"foreign",null)),
+                    List.of(new LineDetails(key,"first",new BigDecimal("101"))))) {
+                var patch = new FinancialValues(LocalDate.of(2026,11,13),null,List.of(new LineAmounts(key,new BigDecimal("7"),BigDecimal.TEN)),details);
+                assertThrows(Exception.class, () -> {
+                    if (kind == Kind.INVOICE) store.updateInvoiceFinancialValues(71,id,patch);
+                    else store.updateCreditFinancialValues(71,id,patch);
+                });
+                assertEquals(before,snapshot(f,null,-1,Set.of()));
+            }
+            f.anchor.rollback();
+        }
+    }
+
+    @Test
+    void unknownDetailCommitBlocksBlindRetryRegardlessOfDurabilityTest() throws Exception {
+        for (boolean durable : List.of(false,true)) try (var f = new CustomerCreditGuiFixture()) {
+            long id = target(f,Kind.INVOICE);
+            var editor = adapter(f,Kind.INVOICE,id,() -> {
+                var c = f.open();
+                return wrap(c,(method,args) -> {
+                    if (method.getName().equals("commit")) {
+                        if (durable) c.commit();
+                        throw new SQLException("Unknown detail commit");
+                    }
+                    return invoke(c,method,args);
+                });
+            });
+            var loaded = editor.load(); var original=loaded.data().lines().getFirst();
+            var preview=editor.preview(loaded,new FinancialValues(loaded.data().values().date(),loaded.data().values().dueDate(),
+                    loaded.data().values().rows(),List.of(new LineDetails(original.rowNumber(),"uncertain edit",BigDecimal.TEN))));
+            assertThrows(SQLException.class,()->editor.save(preview));
+            assertTrue(editor.isBlocked());
+            assertThrows(SQLException.class,()->editor.save(preview));
+            var reopened=adapter(f,Kind.INVOICE,id,f::open).load().data().lines().getFirst();
+            assertEquals(durable?"uncertain edit":original.description(),reopened.description());
+            if (durable) assertEquals(0, BigDecimal.TEN.compareTo(reopened.discount()));
+            else assertEquals(original.discount(), reopened.discount());
+        }
+    }
+
     static long target(CustomerCreditGuiFixture f, Kind kind) throws Exception {
         if (kind == Kind.INVOICE) return CustomerDocumentDeletionAdapterTest.unbooked(f, 5);
         var creator = f.adapter();
@@ -519,6 +714,11 @@ class CustomerFinancialEditAdapterTest {
 
     static Map<String, List<String>> snapshot(
             CustomerCreditGuiFixture f, Kind kind, long id, Set<Integer> keys) throws Exception {
+        return snapshot(f, kind, id, keys, Set.of("QUANTITY", "UNIT_PRICE"));
+    }
+
+    private static Map<String, List<String>> snapshot(CustomerCreditGuiFixture f, Kind kind, long id,
+            Set<Integer> keys, Set<String> allowedColumns) throws Exception {
         Map<String, List<String>> result = new TreeMap<>();
         String target = kind == null ? "" : table(kind).toUpperCase(Locale.ROOT),
                 owner = kind == null ? "" : owner(kind).toUpperCase(Locale.ROOT);
@@ -541,7 +741,7 @@ class CustomerFinancialEditAdapterTest {
                             if (name.equals(target + "_ROW")
                                     && values.getLong(owner) == id
                                     && keys.contains(values.getInt("ROW_NUMBER"))
-                                    && Set.of("QUANTITY", "UNIT_PRICE").contains(column)) continue;
+                                    && allowedColumns.contains(column)) continue;
                             String value = values.getString(i);
                             row.append(column)
                                     .append(':')

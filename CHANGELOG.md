@@ -12,6 +12,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Added
+
+- Extend the guarded normalized unbooked invoice/credit editor with existing-line descriptions and nullable discounts (#75), using fresh totals preview/confirmation and narrow atomic SQL updates. Historical null/empty descriptions and unchanged out-of-range discounts survive; changed discounts must be exact percentages within 0–100. Production format-3 GUI startup remains disabled.
+
 ### Website and forum
 - Keep the website header width consistent between the short download page and longer pages by always reserving vertical scrollbar space.
 - Add Forum to the shared navigation on every website/help page and in the forum header, with matching narrow-screen spacing and keyboard focus styling.
