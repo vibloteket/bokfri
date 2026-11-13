@@ -35,6 +35,7 @@ import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAmounts;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAccounting;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.TaxValues;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.ExchangeRateValues;
 import org.fribok.bookkeeping.service.invoice.NormalizedCustomerFinancialEditService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 
@@ -49,6 +50,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
     private final JTextArea accountingContext = new JTextArea(2, 70);
     private final JComboBox<Boolean> taxFree = new JComboBox<>(new Boolean[] {Boolean.FALSE, Boolean.TRUE});
     private final JTextField[] taxRates = {new JTextField(6), new JTextField(6), new JTextField(6)};
+    private final JTextField exchangeRate = new JTextField(10);
+    private final JLabel exchangeContext = new JLabel();
     private final JButton reload = new JButton(text("reload")),
             previewButton = new JButton(text("preview")),
             save = new JButton(text("save")),
@@ -140,6 +143,13 @@ public final class CustomerFinancialEditDialog extends JDialog {
         JPanel inputs = new JPanel(new BorderLayout());
         inputs.add(header, BorderLayout.NORTH);
         inputs.add(taxHeader);
+        JPanel exchangeHeader = new JPanel();
+        exchangeRate.setName("financial-exchange-rate");
+        exchangeContext.setName("financial-exchange-context");
+        exchangeHeader.add(new JLabel(text("exchangerate")));
+        exchangeHeader.add(exchangeRate);
+        exchangeHeader.add(exchangeContext);
+        inputs.add(exchangeHeader, BorderLayout.SOUTH);
         JPanel top = new JPanel(new BorderLayout());
         top.add(inputs, BorderLayout.NORTH);
         top.add(new JScrollPane(accountingContext));
@@ -220,6 +230,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         date.getDocument().addDocumentListener(edits);
         due.getDocument().addDocumentListener(edits);
         for (var rate : taxRates) rate.getDocument().addDocumentListener(edits);
+        exchangeRate.getDocument().addDocumentListener(edits);
         taxFree.addActionListener(event -> changed());
         reload.addActionListener(event -> load());
         previewButton.addActionListener(event -> preview());
@@ -304,6 +315,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
                             data.values().dueDate() == null
                                     ? ""
                                     : data.values().dueDate().toString());
+                    exchangeRate.setText(data.exchangeRate() == null ? "" : data.exchangeRate().toPlainString());
+                    exchangeContext.setText(unit(data.currency()) + " -> " + unit(data.baseCurrency()) + " / " + text("readonlycodes"));
                     var storedTax = data.headerTax();
                     taxFree.setSelectedItem(storedTax.taxFree());
                     var rates = java.util.Arrays.asList(storedTax.rate1(), storedTax.rate2(), storedTax.rate3());
@@ -349,7 +362,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
             values =
                     new FinancialValues(
                             parse(date.getText()), parse(due.getText()), lines.values(), lines.details(), lines.accounting(),
-                            new TaxValues((Boolean) taxFree.getSelectedItem(), parseRate(0), parseRate(1), parseRate(2)));
+                            new TaxValues((Boolean) taxFree.getSelectedItem(), parseRate(0), parseRate(1), parseRate(2)),
+                            new ExchangeRateValues(parseDecimal(exchangeRate.getText())));
         } catch (RuntimeException error) {
             status.setText(text("invalid"));
             controls();
@@ -385,9 +399,10 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                     + " -> "
                                     + preview.after().toPlainString()
                                     + " "
-                                    + (loaded.data().currency() == null
-                                            ? ""
-                                            : loaded.data().currency()));
+                                    + unit(loaded.data().currency())
+                                    + "\n" + text("equivalent") + " " + amount(preview.beforeAccounting())
+                                    + " -> " + amount(preview.afterAccounting()) + " " + unit(loaded.data().baseCurrency())
+                                    + ". " + text("equivalentnote"));
                 } catch (InterruptedException error) {
                     Thread.currentThread().interrupt();
                     status.setText(text("failed"));
@@ -453,6 +468,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         boolean active = !busy && !invalid && !adapter.isBlocked();
         date.setEnabled(active && loaded != null);
         due.setEnabled(active && loaded != null);
+        exchangeRate.setEnabled(active && loaded != null);
         taxFree.setEnabled(active && loaded != null);
         for (var rate : taxRates) rate.setEnabled(active && loaded != null);
         table.setEnabled(active && loaded != null);
@@ -473,8 +489,13 @@ public final class CustomerFinancialEditDialog extends JDialog {
         }
     }
 
-    private BigDecimal parseRate(int index) {
-        String value = taxRates[index].getText().trim();
+    private BigDecimal parseRate(int index) { return parseDecimal(taxRates[index].getText()); }
+
+    private static String unit(String code) { return code == null || code.isBlank() ? text("unknowncurrency") : code; }
+    private static String amount(BigDecimal value) { return value == null ? text("unknownequivalent") : value.stripTrailingZeros().toPlainString(); }
+
+    private static BigDecimal parseDecimal(String text) {
+        String value = text.trim();
         var parsed = value.isEmpty() ? null : new BigDecimal(value.replace(',', '.'));
         new LineAmounts(0, parsed, parsed);
         return parsed;

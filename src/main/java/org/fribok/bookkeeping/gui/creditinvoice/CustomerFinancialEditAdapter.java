@@ -70,9 +70,13 @@ public final class CustomerFinancialEditAdapter {
             return plan.total();
         }
 
-        /**
-         * @return immutable proposed dates and row amounts
-         */
+        /** @return original unrounded accounting equivalent or null when unknown */
+        public BigDecimal beforeAccounting() { return plan.original().accountingEquivalent(); }
+
+        /** @return proposed unrounded accounting equivalent, not a promised posting total */
+        public BigDecimal afterAccounting() { return plan.accountingEquivalent(); }
+
+        /** @return immutable proposed dates and optional financial patches */
         public FinancialValues values() {
             return plan.proposed();
         }

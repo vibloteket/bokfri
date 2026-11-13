@@ -1438,11 +1438,11 @@ other document-family posting adapters or full legacy financial-editor parity.
 
 `session.financialEdit(kind, sqlId)` binds `CustomerFinancialEditAdapter` to one explicit
 company/year/kind/stable identity. The restricted form changes invoice date, due date,
-document tax-exemption and its three stored VAT rates,
+document tax-exemption, its three stored VAT rates and the stored exchange rate,
 and descriptions, quantities/unit prices, discounts, sales accounts and VAT codes on existing
 rows. Blank dates/amounts
 mean SQL NULL, not a default date, price or zero; description NULL and empty string remain
-distinct. Numbers, customers, addresses, currency/exchange rates, other tax/EU flags, dimensions,
+distinct. Numbers, customers, addresses, document/company currency codes, other tax/EU flags, dimensions,
 product/unit snapshots, metadata, order/payment/credit links and
 stored voucher snapshots are not replaced. Booked documents are refused. New document
 creation and row insertion/deletion/reordering or other financial-field editing remain open.
@@ -1482,19 +1482,35 @@ used rate or removing exemption without one is refused, rather than calculating 
 25/12/6 defaults. Unused slots may remain absent, and exempt drafts may retain absent rates.
 Unchanged historical taxable headers retain prior calculation semantics without storage repair.
 A simultaneous row-code/header patch validates against the proposed rates, not the old values.
+
+Optional `ExchangeRateValues` patches change only the stored `currency_rate`, never currency
+codes, catalogue rates, linked documents/payments, row prices or amounts. Existing 3–6 argument
+`FinancialValues` constructors preserve the rate. Changed rates must fit DECIMAL(100,30)
+exactly, be explicit and positive, and have present document/company currency codes; identical
+codes require a changed rate of 1. Unchanged historical null/zero/negative/non-unit rates are
+retained without repair; clearing a present rate or introducing zero/negative is refused.
+Company `currency_code` is the accounting currency (the legacy company panel labels it
+Redovisningsvaluta); it is read explicitly and added to the stale token. Catalogue exchange
+rates are not calculation inputs, so changing a catalogue default cannot replace a stored rate.
+Document totals retain document units. The additional accounting equivalent is document total
+times the stored positive rate, without additional rounding; missing rate/context is shown as
+unknown, not silently treated as 1 or SEK. This is not a promised journal amount: per-row
+conversion/rounding and bookability are independently validated by separate journal preview.
 The service revalidates the source, applies those updates, and verifies persisted dates,
-amounts, descriptions, discounts, accounts, VAT codes, raw header tax values and totals against the preview before the caller commits. Late failures restore both
+amounts, descriptions, discounts, accounts, VAT codes, raw header tax/exchange values and totals against the preview before the caller commits. Late failures restore both
 header and row changes. Existing unbooked voucher snapshots remain untouched until the
 separate journal workflow regenerates them from the edited rows. This is draft editing, not
 an assertion that every draft is bookable; posting still requires its own validated preview.
 
 `CustomerFinancialEditDialog` loads off-EDT, shows readonly stored row keys and explicit
 selected-year account/stored-document tax context, and allows dates, descriptions, quantities,
-prices, discounts, accounts, VAT codes, exemption and stored rates to be edited. Rate inputs
+prices, discounts, accounts, VAT codes, exemption and stored VAT/exchange rates to be edited. Rate inputs
 accept exact nullable decimals; the VAT-code renderer reflects draft rates without legacy
 default/display decoding. Header changes invalidate confirmation and late preview generations
 just like row/date edits; reload restores stored values and unknown commits disable every new
-tax input. Integer account and fixed-code VAT
+tax/exchange input. The exchange control shows readonly document-to-accounting currency units
+and a separately labelled unrounded equivalent in preview; the confirmation explicitly includes
+the stored exchange rate. Integer account and fixed-code VAT
 editors never consult legacy selection or decode displayed percentages. A fresh totals preview and checkbox confirmation
 are required before save. Starting or committing a cell edit, changing a date, or reloading
 invalidates prior confirmation; invalid/inexact cell input refuses editor commit. Pending
@@ -1524,7 +1540,12 @@ excluding only four intended header columns, exact/range limits, zero/100 rates,
 transitions, nullable/historical rate preservation, no-op and replay, simultaneous code/rate
 changes, stale header rejection, partial-write rollback/retry, outer-transaction preservation,
 unknown commits before/after durability and separate balanced invoice/credit posting using
-edited rates. These bounded editors do not establish full legacy financial editor or production
+edited rates. Exchange regressions cover both kinds, all-SQL preservation excluding only
+currency_rate, unchanged currency/reference data, explicit/missing/same currency contexts,
+exact/positive bounds, raw historical preservation, source/base staleness versus irrelevant
+catalogue defaults, unrounded-equivalent disclosure, rollback/retry, outer-work savepoints,
+unknown commits, real view confirmation and separate balanced converted journals.
+These bounded editors do not establish full legacy financial editor or production
 format-3 GUI parity.
 
 ## Definition of done for issue #75
