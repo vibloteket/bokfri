@@ -58,6 +58,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
             save = new JButton(text("save")),
             cancel = new JButton(text("cancel"));
     private final JCheckBox confirm = new JCheckBox(text("confirm"));
+    private final JButton removeRow = new JButton(text("removerow"));
     private final Lines lines = new Lines();
     private final JTable table = new JTable(lines);
     private boolean busy, invalid;
@@ -101,6 +102,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         save.setName("financial-save");
         cancel.setName("financial-cancel");
         confirm.setName("financial-confirm");
+        removeRow.setName("financial-remove-row");
         JPanel header = new JPanel();
         header.add(new JLabel(text("date")));
         header.add(date);
@@ -109,15 +111,17 @@ public final class CustomerFinancialEditDialog extends JDialog {
         JPanel actions = new JPanel();
         actions.add(reload);
         actions.add(previewButton);
-        actions.add(confirm);
         actions.add(save);
         actions.add(cancel);
         status.setEditable(false);
         status.setLineWrap(true);
         status.setWrapStyleWord(true);
         JPanel bottom = new JPanel(new BorderLayout());
-        bottom.add(status);
-        bottom.add(actions, BorderLayout.SOUTH);
+        bottom.add(new JScrollPane(status));
+        JPanel confirmationAndActions = new JPanel(new BorderLayout());
+        confirmationAndActions.add(confirm, BorderLayout.NORTH);
+        confirmationAndActions.add(actions, BorderLayout.SOUTH);
+        bottom.add(confirmationAndActions, BorderLayout.SOUTH);
         accountingContext.setName("financial-accounting-context");
         accountingContext.setEditable(false);
         accountingContext.setLineWrap(true);
@@ -155,7 +159,10 @@ public final class CustomerFinancialEditDialog extends JDialog {
         top.add(inputs, BorderLayout.NORTH);
         top.add(new JScrollPane(accountingContext));
         add(top, BorderLayout.NORTH);
-        add(new JScrollPane(table));
+        JPanel rowPanel = new JPanel(new BorderLayout());
+        JPanel rowActions = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEADING));
+        rowActions.add(removeRow);rowPanel.add(rowActions, BorderLayout.NORTH);rowPanel.add(new JScrollPane(table));
+        add(rowPanel);
         add(bottom, BorderLayout.SOUTH);
         table.setAutoCreateRowSorter(true);
         table.setDefaultRenderer(
@@ -233,6 +240,12 @@ public final class CustomerFinancialEditDialog extends JDialog {
         for (var rate : taxRates) rate.getDocument().addDocumentListener(edits);
         exchangeRate.getDocument().addDocumentListener(edits);
         taxFree.addActionListener(event -> changed());
+        removeRow.addActionListener(event -> {
+            if (busy || invalid || loaded == null || adapter.isBlocked() || lines.getRowCount() <= 1 || !finishEdit()) return;
+            int selected = table.getSelectedRow();
+            if (selected >= 0) { lines.remove(table.convertRowIndexToModel(selected));changed(); }
+        });
+        table.getSelectionModel().addListSelectionListener(event -> controls());
         reload.addActionListener(event -> load());
         previewButton.addActionListener(event -> preview());
         save.addActionListener(event -> save());
@@ -370,7 +383,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
                     new FinancialValues(
                             parse(date.getText()), parse(due.getText()), lines.values(), lines.details(), lines.accounting(),
                             new TaxValues((Boolean) taxFree.getSelectedItem(), parseRate(0), parseRate(1), parseRate(2)),
-                            new ExchangeRateValues(parseDecimal(exchangeRate.getText())), lines.dimensions());
+                            new ExchangeRateValues(parseDecimal(exchangeRate.getText())), lines.dimensions(), lines.removedRows());
         } catch (RuntimeException error) {
             status.setText(text("invalid"));
             controls();
@@ -400,8 +413,9 @@ public final class CustomerFinancialEditDialog extends JDialog {
                 try {
                     preview = get();
                     status.setText(
-                            text("totals")
-                                    + " "
+                            (preview.values().removedRows().isEmpty() ? "" : text("removedrows") + " "
+                                    + preview.values().removedRows() + "\n")
+                                    + text("totals") + " "
                                     + preview.before().toPlainString()
                                     + " -> "
                                     + preview.after().toPlainString()
@@ -410,6 +424,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                     + "\n" + text("equivalent") + " " + amount(preview.beforeAccounting())
                                     + " -> " + amount(preview.afterAccounting()) + " " + unit(loaded.data().baseCurrency())
                                     + ". " + text("equivalentnote"));
+                    status.setCaretPosition(0);
                 } catch (InterruptedException error) {
                     Thread.currentThread().interrupt();
                     status.setText(text("failed"));
@@ -480,6 +495,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         for (var rate : taxRates) rate.setEnabled(active && loaded != null);
         table.setEnabled(active && loaded != null);
         reload.setEnabled(active);
+        removeRow.setEnabled(active && loaded != null && lines.getRowCount() > 1 && table.getSelectedRow() >= 0);
         previewButton.setEnabled(active && loaded != null);
         confirm.setEnabled(active && preview != null);
         save.setEnabled(active && preview != null && confirm.isSelected());
@@ -510,6 +526,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
 
     private final class Lines extends AbstractTableModel {
         private List<NormalizedCustomerFinancialEditService.Line> original = List.of();
+        private final java.util.Set<Integer> removed = new java.util.LinkedHashSet<>();
         private java.util.Map<Integer, LineAmounts> edited = new java.util.HashMap<>();
         private java.util.Map<Integer, LineDetails> detailEdits = new java.util.HashMap<>();
         private java.util.Map<Integer, LineAccounting> accountingEdits = new java.util.HashMap<>();
@@ -517,6 +534,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
 
         void set(List<NormalizedCustomerFinancialEditService.Line> values) {
             original = List.copyOf(values);
+            removed.clear();
             edited.clear();
             detailEdits.clear();
             accountingEdits.clear();
@@ -547,6 +565,15 @@ public final class CustomerFinancialEditDialog extends JDialog {
 
         List<LineDimensions> dimensions() {
             return original.stream().map(row -> dimensionEdits.get(row.rowNumber())).toList();
+        }
+
+        List<Integer> removedRows() { return List.copyOf(removed); }
+
+        void remove(int index) {
+            int key = original.get(index).rowNumber();
+            var remaining = new java.util.ArrayList<>(original);remaining.remove(index);original = List.copyOf(remaining);
+            edited.remove(key);detailEdits.remove(key);accountingEdits.remove(key);dimensionEdits.remove(key);removed.add(key);
+            fireTableDataChanged();
         }
 
         public int getRowCount() {

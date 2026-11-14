@@ -119,7 +119,7 @@ source/fixture evidence and an acceptance test.
   connect the GUI workflows. Repository-local savepoints alone do not prove
   whole-workflow atomicity.
 
-**Next implementation slices:** general document creation, row structure, remaining tax flags and currency-code/reference
+**Next implementation slices:** general document creation, row insertion/reordering, remaining tax flags and currency-code/reference
 editing, remaining document-family workflows, and explicit production ownership/bootstrap
 only once the cutover gates are met. The restricted normalized view supports credit requests,
 metadata editing, bounded unbooked dates and existing-row amount/detail/account/VAT-code editing, confirmed unbooked deletion
@@ -133,7 +133,7 @@ Customer invoice/credit action inventory (active menu callers remain legacy):
 | Action / current caller | Repository evidence | Still required |
 |---|---|---|
 | Create / `SSInvoiceDialog` via `InvoiceService.create`; legacy credit dialogs via `SSDB.addCreditInvoice` | Explicit invoice factory/credit service plus `CustomerCreditDialogAdapter` and `SSCreditInvoiceDialog.normalizedDialog`: restricted date/amount preview/create, dedicated sessions, commit-confirmed callback | Production owner/bootstrap integration and general invoice creation adapter; explicit normalized source selection, credit routing and list refresh exist, but the legacy row editor is not the normalized request form |
-| Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Unbooked graph replacement, booked metadata and explicit booked-invoice credit creation | Row structure, remaining tax flags, currency-code/reference workflows and production integration; restricted metadata, unbooked dates, tax-exemption/stored VAT/exchange rates and existing-row amount/detail/account/VAT-code adapters exist. Unsupported direct booked graph/correction-link editing stays refused |
+| Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Unbooked graph replacement, booked metadata and explicit booked-invoice credit creation | Row insertion/reordering, remaining tax flags, currency-code/reference workflows and production integration; restricted metadata, unbooked dates, tax-exemption/stored VAT/exchange rates and existing-row amount/detail/account/VAT-code adapters exist. Unsupported direct booked graph/correction-link editing stays refused |
 | Delete / both document frames | `NormalizedCustomerDocumentService` detaches scoped orders and deletes the unbooked invoice graph atomically; payment/credit guards and ambiguous-link protection remain | Restricted preview/confirmation adapter and current-view refresh exist; production legacy screen/cache replacement remains. Booked invoices require financial correction rather than deletion |
 | Journal / `InvoiceService.planJournal` and `commitJournal` | `NormalizedCustomerJournalService` provides whole invoice/credit journal atomicity, stable-ID posting, stale-financial-plan rejection and caller-owned commit; created credits post through the same explicit service | Restricted explicit preview/confirmation adapter and current-view refresh exist; production integration and other document-family posting adapters remain. Unsupported voucher correction graphs stay a compatibility boundary |
 | Print/remind/copy/convert | Explicit metadata compare-and-set and reminder-count service; existing CLI PDF generation remains read-only | GUI print success callbacks, full interest-invoice generation and generated-document/copy actions; SQL metadata writes do not establish exactly-once external printing |
@@ -208,6 +208,11 @@ fail-closed repository boundaries, not a new claim of complete business validati
   Unchanged historical/null/empty/closed values are preserved without repair. Source tokens
   include dimension catalogues; narrow updates, rollback/retry, real-display confirmation and
   separate dimension-preserving invoice/credit posting are tested. Row structure stays separate.
+- [x] Add explicit existing-row removal from the unbooked invoice/credit draft editor:
+  stable removed-key/totals preview, fresh confirmation, surviving-key preservation without
+  renumbering, stale-source protection and atomic rollback/retry after a late delete failure.
+  Reload discards local removals. The final row requires the existing explicit document-delete
+  workflow rather than silently creating an empty document. Row insertion/reordering remain open.
 - [ ] Install bindings/views from production normalized application bootstrap, replace
   legacy screen/cache paths and remaining credit-frame/editor operations. Format-3 startup
   remains rejected; these restricted integration boundaries do not make the full credit

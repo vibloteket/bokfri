@@ -230,6 +230,18 @@ public final class NormalizedCustomerFinancialEditService {
         var source = read(before.companyId(), before.yearId(), before.kind(), before.id());
         if (!expected.signature.equals(source.signature))
             throw new IllegalArgumentException("Financial source is stale; reload before editing");
+        var lines = new ArrayList<>(source.data.lines());
+        var removed = new java.util.HashSet<Integer>();
+        var originalKeys = lines.stream().map(Line::rowNumber).collect(java.util.stream.Collectors.toSet());
+        for (int key : proposed.removedRows()) {
+            if (!removed.add(key)) throw new IllegalArgumentException("Duplicate removed row key");
+            if (!originalKeys.contains(key)) throw new IllegalArgumentException("Missing or foreign removed row key");
+        }
+        for (int i = lines.size() - 1; i >= 0; i--) {
+            if (removed.contains(lines.get(i).rowNumber())) { lines.remove(i);source.document.getRows().remove(i); }
+        }
+        if (!removed.isEmpty() && lines.isEmpty())
+            throw new IllegalArgumentException("Cannot remove the final row; use explicit document deletion instead");
         var headerTax = proposed.tax() == null ? source.data.headerTax() : proposed.tax();
         validateTaxChanges(source.data.headerTax(), headerTax);
         source.document.setTaxFree(headerTax.taxFree());
@@ -245,10 +257,10 @@ public final class NormalizedCustomerFinancialEditService {
         }
         source.document.setCurrencyRate(exchangeRate);
         var indexed = indexed(proposed.rows());
-        if (indexed.size() != source.data.lines().size())
-            throw new IllegalArgumentException("Row insertion/removal is not supported");
-        for (int i = 0; i < source.data.lines().size(); i++) {
-            var line = source.data.lines().get(i);
+        if (indexed.size() != lines.size())
+            throw new IllegalArgumentException("Amounts must match the complete surviving stored row-key set");
+        for (int i = 0; i < lines.size(); i++) {
+            var line = lines.get(i);
             var values = indexed.remove(line.rowNumber());
             if (values == null)
                 throw new IllegalArgumentException("Missing/foreign stored row key");
@@ -257,8 +269,8 @@ public final class NormalizedCustomerFinancialEditService {
         }
         if (!indexed.isEmpty()) throw new IllegalArgumentException("Foreign stored row key");
         var details = indexedDetails(proposed.details());
-        for (int i = 0; i < source.data.lines().size(); i++) {
-            var line = source.data.lines().get(i);
+        for (int i = 0; i < lines.size(); i++) {
+            var line = lines.get(i);
             var value = details.remove(line.rowNumber());
             if (value == null) continue;
             if (!same(line.discount(), value.discount()) && value.discount() != null
@@ -269,8 +281,8 @@ public final class NormalizedCustomerFinancialEditService {
         }
         if (!details.isEmpty()) throw new IllegalArgumentException("Foreign stored detail row key");
         var accounting = indexedAccounting(proposed.accounting());
-        for (int i = 0; i < source.data.lines().size(); i++) {
-            var line = source.data.lines().get(i);
+        for (int i = 0; i < lines.size(); i++) {
+            var line = lines.get(i);
             var value = accounting.remove(line.rowNumber());
             if (value == null) continue;
             if (!Objects.equals(line.account(), value.account()) && value.account() != null
@@ -288,8 +300,8 @@ public final class NormalizedCustomerFinancialEditService {
         }
         if (!accounting.isEmpty()) throw new IllegalArgumentException("Foreign stored accounting row key");
         var dimensions = indexedDimensions(proposed.dimensions());
-        for (int i = 0; i < source.data.lines().size(); i++) {
-            var original = source.data.lines().get(i);
+        for (int i = 0; i < lines.size(); i++) {
+            var original = lines.get(i);
             var row = source.document.getRows().get(i);
             var value = dimensions.remove(original.rowNumber());
             if (value != null) {
@@ -345,8 +357,8 @@ public final class NormalizedCustomerFinancialEditService {
                             .filter(
                                     line -> {
                                         var value = proposed.get(line.rowNumber());
-                                        return !same(line.quantity(), value.quantity())
-                                                || !same(line.unitPrice(), value.unitPrice());
+                                        return value != null && (!same(line.quantity(), value.quantity())
+                                                || !same(line.unitPrice(), value.unitPrice()));
                                     })
                             .map(line -> proposed.get(line.rowNumber()))
                             .toList();
@@ -373,7 +385,7 @@ public final class NormalizedCustomerFinancialEditService {
                     fresh.proposed.date(), fresh.proposed.dueDate(), changed, changedDetails, changedAccounting,
                     fresh.proposed.tax() != null && !sameTax(original.headerTax(), fresh.proposed.tax()) ? fresh.proposed.tax() : null,
                     fresh.proposed.exchange() != null && !same(original.exchangeRate(), fresh.proposed.exchange().rate())
-                            ? fresh.proposed.exchange() : null, changedDimensions);
+                            ? fresh.proposed.exchange() : null, changedDimensions, fresh.proposed.removedRows());
             var store = new NormalizedInvoiceStore(connection);
             if (original.kind() == Kind.INVOICE)
                 store.updateInvoiceFinancialValues(original.companyId(), original.id(), values);
@@ -383,6 +395,8 @@ public final class NormalizedCustomerFinancialEditService {
                     || !Objects.equals(verified.values().dueDate(), fresh.proposed.dueDate())
                     || verified.total().compareTo(fresh.total) != 0)
                 throw new SQLException("Stored financial values differ from preview");
+            var actualKeys = verified.lines().stream().map(Line::rowNumber).collect(java.util.stream.Collectors.toSet());
+            if (!actualKeys.equals(proposed.keySet())) throw new SQLException("Stored surviving row keys differ from preview");
             var expectedRate = fresh.proposed.exchange() == null ? original.exchangeRate() : fresh.proposed.exchange().rate();
             if (!same(verified.exchangeRate(), expectedRate)
                     || !same(verified.accountingEquivalent(), fresh.accountingEquivalent()))

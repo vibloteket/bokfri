@@ -371,16 +371,22 @@ public final class NormalizedInvoiceStore {
      *
      * @param date nullable invoice date, within SQL DATE years 0001-9999
      * @param dueDate nullable due date, within SQL DATE years 0001-9999
-     * @param rows row amount updates; empty means no amount changes at the store boundary
+     * @param rows surviving row amount updates; empty means no amount changes at the store boundary
      * @param details optional row detail patches; omitted keys remain unchanged
      * @param accounting optional row account/tax patches; omitted keys remain unchanged
      * @param tax optional complete raw header-tax patch; null preserves all header tax columns
      * @param exchange optional stored-rate patch; null preserves the rate and all currency codes
      * @param dimensions optional existing-row dimension patches; omitted keys are preserved
+     * @param removedRows explicit existing row keys to remove; never renumbers survivors
      */
     public record FinancialValues(
             LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details,
-            List<LineAccounting> accounting, TaxValues tax, ExchangeRateValues exchange, List<LineDimensions> dimensions) {
+            List<LineAccounting> accounting, TaxValues tax, ExchangeRateValues exchange, List<LineDimensions> dimensions, List<Integer> removedRows) {
+        /** Preserves row structure for existing dimension callers. */
+        public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details,
+                List<LineAccounting> accounting, TaxValues tax, ExchangeRateValues exchange, List<LineDimensions> dimensions) {
+            this(date, dueDate, rows, details, accounting, tax, exchange, dimensions, List.of());
+        }
         /** Preserves dimensions for existing exchange callers. */
         public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details,
                 List<LineAccounting> accounting, TaxValues tax, ExchangeRateValues exchange) {
@@ -411,6 +417,7 @@ public final class NormalizedInvoiceStore {
             details = List.copyOf(details);
             accounting = List.copyOf(accounting);
             dimensions = List.copyOf(dimensions);
+            removedRows = List.copyOf(removedRows);
             requireSqlDate(date);
             requireSqlDate(dueDate);
         }
@@ -608,6 +615,15 @@ public final class NormalizedInvoiceStore {
                 statement.setString(1, row.project());statement.setString(2, row.resultUnit());
                 statement.setLong(3, id);statement.setInt(4, row.rowNumber());statement.setInt(5, company);
                 if (statement.executeUpdate() != 1) throw new SQLException("Missing or foreign stored dimension row key");
+            }
+        }
+        seen.clear();
+        for (int row : values.removedRows()) {
+            if (!seen.add(row)) throw new IllegalArgumentException("Duplicate removed row key");
+            try (var statement = connection.prepareStatement("DELETE FROM " + kind.rowTable() + " WHERE "
+                    + kind.idColumn() + "=? AND row_number=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+                statement.setLong(1, id);statement.setInt(2, row);statement.setInt(3, company);
+                if (statement.executeUpdate() != 1) throw new SQLException("Missing or foreign removed row key");
             }
         }
     }
