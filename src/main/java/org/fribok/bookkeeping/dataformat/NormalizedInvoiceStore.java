@@ -355,7 +355,10 @@ public final class NormalizedInvoiceStore {
         }
     }
 
-    /** Explicit new manual row. Product and unit snapshots are deliberately absent. */
+    /**
+     * Explicit new row; optional product identity/unit are snapshots, never implicit financial
+     * defaults.
+     */
     public record ManualLine(
             int rowNumber,
             String description,
@@ -365,13 +368,52 @@ public final class NormalizedInvoiceStore {
             Integer account,
             String taxCode,
             String project,
-            String resultUnit) {
+            String resultUnit,
+            ProductLink product) {
+        /** Creates an unlinked manual row, preserving the original API. */
+        public ManualLine(
+                int rowNumber,
+                String description,
+                java.math.BigDecimal quantity,
+                java.math.BigDecimal unitPrice,
+                java.math.BigDecimal discount,
+                Integer account,
+                String taxCode,
+                String project,
+                String resultUnit) {
+            this(
+                    rowNumber,
+                    description,
+                    quantity,
+                    unitPrice,
+                    discount,
+                    account,
+                    taxCode,
+                    project,
+                    resultUnit,
+                    null);
+        }
+
         /** Checks exact storage and persisted tax-code names without inventing defaults. */
         public ManualLine {
             requireExactAmount(quantity);
             requireExactAmount(unitPrice);
             requireExactAmount(discount);
             if (taxCode != null) SSTaxCode.valueOf(taxCode);
+        }
+    }
+
+    /**
+     * Selected company product identity and exact unit snapshot for a new row, never price
+     * defaults.
+     */
+    public record ProductLink(long id, String number, String unit) {
+        /** Rejects unpersisted identities and unusable new references. */
+        public ProductLink {
+            if (id < 0 || number == null || number.isBlank()) {
+                throw new IllegalArgumentException(
+                        "A selected product requires a stored ID and number");
+            }
         }
     }
 
@@ -398,7 +440,7 @@ public final class NormalizedInvoiceStore {
      * @param exchange optional stored-rate patch; null preserves the rate and all currency codes
      * @param dimensions optional existing-row dimension patches; omitted keys are preserved
      * @param removedRows explicit existing row keys to remove; never renumbers survivors
-     * @param addedRows explicit new manual rows with fresh keys above the original maximum
+     * @param addedRows explicit new rows with fresh keys above the original maximum
      */
     public record FinancialValues(
             LocalDate date,
@@ -725,6 +767,23 @@ public final class NormalizedInvoiceStore {
         for (var row : values.addedRows()) {
             if (!seen.add(row.rowNumber()))
                 throw new IllegalArgumentException("Duplicate added row key");
+            if (row.product() != null) {
+                var link = row.product();
+                try (var selected =
+                        connection.prepareStatement(
+                                "SELECT number,unit_name FROM product WHERE id=? AND"
+                                    + " company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+                    selected.setLong(1, link.id());
+                    selected.setInt(2, company);
+                    try (var product = selected.executeQuery()) {
+                        if (!product.next()
+                                || !Objects.equals(product.getString(1), link.number())
+                                || !Objects.equals(product.getString(2), link.unit())) {
+                            throw new SQLException("Missing, foreign or changed product snapshot");
+                        }
+                    }
+                }
+            }
             try (var statement =
                     connection.prepareStatement(
                             "INSERT INTO "
@@ -732,20 +791,22 @@ public final class NormalizedInvoiceStore {
                                     + " ("
                                     + kind.idColumn()
                                     + ",company_id,row_number,product_number,description,unit_price,quantity,unit_name,discount,tax_code,account_number,project_number,result_unit_number)"
-                                    + " SELECT ?,id,?,NULL,?,?,?,NULL,?,?,?,?,? FROM company WHERE"
+                                    + " SELECT ?,id,?,?,?,?,?,?,?,?,?,?,? FROM company WHERE"
                                     + " legacy_id=?")) {
                 statement.setLong(1, id);
                 statement.setInt(2, row.rowNumber());
-                statement.setString(3, row.description());
-                statement.setBigDecimal(4, row.unitPrice());
-                statement.setBigDecimal(5, row.quantity());
-                statement.setBigDecimal(6, row.discount());
-                statement.setString(7, row.taxCode());
-                if (row.account() == null) statement.setNull(8, java.sql.Types.INTEGER);
-                else statement.setInt(8, row.account());
-                statement.setString(9, row.project());
-                statement.setString(10, row.resultUnit());
-                statement.setInt(11, company);
+                statement.setString(3, row.product() == null ? null : row.product().number());
+                statement.setString(4, row.description());
+                statement.setBigDecimal(5, row.unitPrice());
+                statement.setBigDecimal(6, row.quantity());
+                statement.setString(7, row.product() == null ? null : row.product().unit());
+                statement.setBigDecimal(8, row.discount());
+                statement.setString(9, row.taxCode());
+                if (row.account() == null) statement.setNull(10, java.sql.Types.INTEGER);
+                else statement.setInt(10, row.account());
+                statement.setString(11, row.project());
+                statement.setString(12, row.resultUnit());
+                statement.setInt(13, company);
                 if (statement.executeUpdate() != 1)
                     throw new SQLException("Missing company for added row");
             }

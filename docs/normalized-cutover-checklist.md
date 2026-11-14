@@ -222,7 +222,17 @@ fail-closed repository boundaries, not a new claim of complete business validati
   final existing row, but an empty result is refused. Savepoint rollback covers earlier edits
   and partial inserts; source/catalogue checks and uncertain-commit blocking still apply.
   Both invoice/credit view routes and separate journal dimension groups are tested.
-  Product-linked insertion, row reordering and general document creation remain separate.
+  Product-linked insertion is bounded below; row reordering and creation remain separate.
+- [x] Add explicit company-product selection for new rows, snapshotting the selected number/unit
+  and an editable description while keeping price/account/VAT/dimensions explicit. No catalogue
+  price, currency conversion or legacy accounting defaults are used. Missing, foreign, expired,
+  duplicate-number and compound products are refused; existing product/unit snapshots are
+  read-only and preserved. Product catalogue context participates in stale checks; preview lists
+  new product references and the unchanged document stock flag. Stock-bearing inserted rows and
+  changed existing stock quantities require exact 32-bit integers; unchanged historical values
+  are preserved. Store-level scope checks, atomic partial-insert rollback, uncertain-commit
+  blocking, both GUI routes and separate dimension-preserving posting are tested.
+  Compound expansion, row reordering, general creation and production bootstrap remain open.
 - [ ] Install bindings/views from production normalized application bootstrap, replace
   legacy screen/cache paths and remaining credit-frame/editor operations. Format-3 startup
   remains rejected; these restricted integration boundaries do not make the full credit
