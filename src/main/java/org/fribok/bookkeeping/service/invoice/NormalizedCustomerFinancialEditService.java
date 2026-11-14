@@ -44,6 +44,8 @@ public final class NormalizedCustomerFinancialEditService {
      * @param taxCode nullable persisted tax-code name
      * @param project nullable raw project identity
      * @param resultUnit nullable raw result-unit identity
+     * @param productNumber nullable stored product-number snapshot
+     * @param unit nullable stored unit-name snapshot
      */
     public record Line(
             int rowNumber,
@@ -52,7 +54,36 @@ public final class NormalizedCustomerFinancialEditService {
             BigDecimal quantity,
             BigDecimal unitPrice,
             BigDecimal discount,
-            String taxCode, String project, String resultUnit) {}
+            String taxCode,
+            String project,
+            String resultUnit,
+            String productNumber,
+            String unit) {
+        /** Preserves callers constructing unlinked rows. */
+        public Line(
+                int rowNumber,
+                String description,
+                Integer account,
+                BigDecimal quantity,
+                BigDecimal unitPrice,
+                BigDecimal discount,
+                String taxCode,
+                String project,
+                String resultUnit) {
+            this(
+                    rowNumber,
+                    description,
+                    account,
+                    quantity,
+                    unitPrice,
+                    discount,
+                    taxCode,
+                    project,
+                    resultUnit,
+                    null,
+                    null);
+        }
+    }
 
     /** Immutable company-scoped dimension choice. */
     public record Dimension(String number, String name, boolean concluded) {}
@@ -65,6 +96,24 @@ public final class NormalizedCustomerFinancialEditService {
     public record Tax(String code, BigDecimal rate) {}
 
     /**
+     * Company-scoped catalogue snapshot; ambiguous, expired or compound products are not
+     * selectable.
+     */
+    public record Product(
+            long id,
+            String number,
+            String description,
+            String unit,
+            boolean stockGoods,
+            boolean compound,
+            boolean selectable) {
+        @Override
+        public String toString() {
+            return number + " / " + (description == null ? "" : description);
+        }
+    }
+
+    /**
      * Immutable original values; no hydrated domain objects escape.
      *
      * @param companyId company migration identity
@@ -73,6 +122,8 @@ public final class NormalizedCustomerFinancialEditService {
      * @param taxes immutable stored document tax rates
      * @param projects immutable company projects
      * @param resultUnits immutable company result units
+     * @param products immutable company product choices with explicit eligibility
+     * @param stockInfluencing stored document stock flag, never changed by this editor
      * @param taxFree effective stored document tax-exempt flag
      * @param headerTax raw stored flag and nullable rates
      * @param kind document family
@@ -82,7 +133,8 @@ public final class NormalizedCustomerFinancialEditService {
      * @param currency nullable currency snapshot code
      * @param baseCurrency nullable explicit company accounting currency code
      * @param exchangeRate nullable raw stored document rate
-     * @param accountingEquivalent unrounded total times stored positive rate, or null for missing context
+     * @param accountingEquivalent unrounded total times stored positive rate, or null for missing
+     *     context
      * @param values original dates and complete row amounts
      * @param lines stored rows in key order
      * @param total original total with explicit company rounding
@@ -94,6 +146,8 @@ public final class NormalizedCustomerFinancialEditService {
             List<Tax> taxes,
             List<Dimension> projects,
             List<Dimension> resultUnits,
+            List<Product> products,
+            boolean stockInfluencing,
             boolean taxFree,
             TaxValues headerTax,
             Kind kind,
@@ -113,6 +167,7 @@ public final class NormalizedCustomerFinancialEditService {
             taxes = List.copyOf(taxes);
             projects = List.copyOf(projects);
             resultUnits = List.copyOf(resultUnits);
+            products = List.copyOf(products);
         }
     }
 
@@ -271,6 +326,16 @@ public final class NormalizedCustomerFinancialEditService {
             var values = indexed.remove(line.rowNumber());
             if (values == null)
                 throw new IllegalArgumentException("Missing/foreign stored row key");
+            if (source.data.stockInfluencing()
+                    && !same(line.quantity(), values.quantity())
+                    && values.quantity() != null
+                    && source.data.products().stream()
+                            .anyMatch(
+                                    p ->
+                                            Objects.equals(p.number(), line.productNumber())
+                                                    && (p.stockGoods() || p.compound()))) {
+                requireStockQuantity(values.quantity());
+            }
             source.document.getRows().get(i).setQuantity(values.quantity());
             source.document.getRows().get(i).setUnitprice(values.unitPrice());
         }
@@ -484,7 +549,13 @@ public final class NormalizedCustomerFinancialEditService {
                             || !Objects.equals(row.account(), inserted.account())
                             || !Objects.equals(row.taxCode(), inserted.taxCode())
                             || !Objects.equals(row.project(), inserted.project())
-                            || !Objects.equals(row.resultUnit(), inserted.resultUnit()))
+                            || !Objects.equals(row.resultUnit(), inserted.resultUnit())
+                            || !Objects.equals(
+                                    row.productNumber(),
+                                    inserted.product() == null ? null : inserted.product().number())
+                            || !Objects.equals(
+                                    row.unit(),
+                                    inserted.product() == null ? null : inserted.product().unit()))
                         throw new SQLException("Stored new manual row differs from preview");
                     continue;
                 }
@@ -549,6 +620,35 @@ public final class NormalizedCustomerFinancialEditService {
         var accounts = accountRows.stream().map(a -> new Account(a.getNumber(), a.getDescription(),
                 a.isActive(), a.isProjectRequired(), a.isResultUnitRequired()))
                 .sorted(java.util.Comparator.comparingInt(Account::number)).toList();
+        List<Product> products = new ArrayList<>();
+        try (var statement =
+                connection.prepareStatement(
+                        "SELECT"
+                            + " p.id,p.number,p.description,p.unit_name,p.stock_goods,p.expired,(SELECT"
+                            + " COUNT(*) FROM product q WHERE q.company_id=p.company_id AND"
+                            + " q.number=p.number),(SELECT COUNT(*) FROM product_component r WHERE"
+                            + " r.product_id=p.id) FROM product p WHERE p.company_id=(SELECT id"
+                            + " FROM company WHERE legacy_id=?) ORDER BY p.id")) {
+            statement.setInt(1, company);
+            try (var rows = statement.executeQuery()) {
+                while (rows.next()) {
+                    String number = rows.getString(2);
+                    products.add(
+                            new Product(
+                                    rows.getLong(1),
+                                    number,
+                                    rows.getString(3),
+                                    rows.getString(4),
+                                    rows.getBoolean(5),
+                                    rows.getInt(8) != 0,
+                                    !rows.getBoolean(6)
+                                            && number != null
+                                            && !number.isBlank()
+                                            && rows.getInt(7) == 1
+                                            && rows.getInt(8) == 0));
+                }
+            }
+        }
         var headerTax =
                 (kind == Kind.INVOICE
                                 ? store.findInvoiceTaxValues(company, id)
@@ -579,7 +679,7 @@ public final class NormalizedCustomerFinancialEditService {
         try (var statement =
                 connection.prepareStatement(
                         "SELECT"
-                            + " row_number,description,account_number,quantity,unit_price,discount,tax_code,project_number,result_unit_number"
+                            + " row_number,description,account_number,quantity,unit_price,discount,tax_code,project_number,result_unit_number,product_number,unit_name"
                             + " FROM "
                                 + table
                                 + " WHERE "
@@ -598,7 +698,11 @@ public final class NormalizedCustomerFinancialEditService {
                                     rows.getBigDecimal(4),
                                     rows.getBigDecimal(5),
                                     rows.getBigDecimal(6),
-                                    rows.getString(7), rows.getString(8), rows.getString(9)));
+                                    rows.getString(7),
+                                    rows.getString(8),
+                                    rows.getString(9),
+                                    rows.getString(10),
+                                    rows.getString(11)));
             }
         }
         if (lines.size() != document.getRows().size())
@@ -625,6 +729,8 @@ public final class NormalizedCustomerFinancialEditService {
                         taxes,
                         projects,
                         units,
+                        products,
+                        ((SSInvoice) document).isStockInfluencing(),
                         document.getTaxFree(),
                         headerTax,
                         kind,
@@ -634,7 +740,8 @@ public final class NormalizedCustomerFinancialEditService {
                         documentCurrency,
                         baseCurrency,
                         document.getCurrencyRate(),
-                        equivalent(total, document.getCurrencyRate(), documentCurrency, baseCurrency),
+                        equivalent(
+                                total, document.getCurrencyRate(), documentCurrency, baseCurrency),
                         values,
                         lines,
                         total);
@@ -651,6 +758,16 @@ public final class NormalizedCustomerFinancialEditService {
                 .writeString(project.getLocalConcludedDate() == null ? null : project.getLocalConcludedDate().toString());
         writer.writeBoundary("result_units");
         for (var unit : unitRows) writer.writeString(unit.getNumber()).writeString(unit.getName()).writeString(unit.getDescription());
+        writer.writeBoundary("product_selection_context");
+        for (var product : products) {
+            writer.writeString(Long.toString(product.id()))
+                    .writeString(product.number())
+                    .writeString(product.description())
+                    .writeString(product.unit())
+                    .writeBoolean(product.stockGoods())
+                    .writeBoolean(product.compound())
+                    .writeBoolean(product.selectable());
+        }
         CustomerDocumentFingerprint.write(writer, connection, kind == Kind.CREDIT, id);
         return new Source(document, data, rounding, writer.finish());
     }
@@ -677,6 +794,15 @@ public final class NormalizedCustomerFinancialEditService {
             if (map.put(row.rowNumber(), row) != null)
                 throw new IllegalArgumentException("Duplicate stored accounting row key");
         return map;
+    }
+
+    private static void requireStockQuantity(BigDecimal quantity) {
+        try {
+            quantity.intValueExact();
+        } catch (ArithmeticException invalid) {
+            throw new IllegalArgumentException(
+                    "Stock product quantity must be an exact 32-bit integer", invalid);
+        }
     }
 
     private static se.swedsoft.bookkeeping.data.base.SSSaleRow manualRow(
@@ -718,9 +844,33 @@ public final class NormalizedCustomerFinancialEditService {
                 || (account.resultUnitRequired()
                         && !validDimension(data.resultUnits(), value.resultUnit())))
             throw new IllegalArgumentException("New manual row requires valid company dimensions");
+        if (value.product() != null) {
+            var link = value.product();
+            var product =
+                    data.products().stream()
+                            .filter(p -> p.id() == link.id())
+                            .findFirst()
+                            .orElseThrow(
+                                    () ->
+                                            new IllegalArgumentException(
+                                                    "Missing or foreign product"));
+            if (!product.selectable()
+                    || !Objects.equals(product.number(), link.number())
+                    || !Objects.equals(product.unit(), link.unit())) {
+                throw new IllegalArgumentException(
+                        "Product identity/unit changed or is not selectable");
+            }
+            if (data.stockInfluencing() && product.stockGoods()) {
+                requireStockQuantity(value.quantity());
+            }
+        }
         var row = new se.swedsoft.bookkeeping.data.base.SSSaleRow();
-        row.setProductNr(null);
-        row.setUnit(null);
+        row.setProductNr(value.product() == null ? null : value.product().number());
+        row.setUnit(
+                value.product() == null || value.product().unit() == null
+                        ? null
+                        : new se.swedsoft.bookkeeping.data.common.SSUnit(
+                                value.product().unit(), null));
         row.setDescription(value.description());
         row.setQuantity(value.quantity());
         row.setUnitprice(value.unitPrice());
