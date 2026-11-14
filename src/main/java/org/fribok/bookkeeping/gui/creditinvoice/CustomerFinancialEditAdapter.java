@@ -70,6 +70,23 @@ public final class CustomerFinancialEditAdapter {
             return plan.total();
         }
 
+        /**
+         * @return original raw document currency code
+         */
+        public String beforeCurrency() {
+            return plan.original().currency();
+        }
+
+        /**
+         * @return proposed raw document currency code, never a catalogue/default conversion
+         */
+        public String afterCurrency() {
+            return plan.proposed().exchange() == null
+                            || plan.proposed().exchange().currency() == null
+                    ? plan.original().currency()
+                    : plan.proposed().exchange().currency();
+        }
+
         /** @return original unrounded accounting equivalent or null when unknown */
         public BigDecimal beforeAccounting() { return plan.original().accountingEquivalent(); }
 

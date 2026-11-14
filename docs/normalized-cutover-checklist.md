@@ -119,11 +119,12 @@ source/fixture evidence and an acceptance test.
   connect the GUI workflows. Repository-local savepoints alone do not prove
   whole-workflow atomicity.
 
-**Next implementation slices:** general document creation, row insertion/reordering, remaining tax flags and currency-code/reference
-editing, remaining document-family workflows, and explicit production ownership/bootstrap
+**Next implementation slices:** general document creation, compound-product expansion/row reordering,
+remaining tax flags and linked-reference workflows, remaining document-family workflows, and explicit production ownership/bootstrap
 only once the cutover gates are met. The restricted normalized view supports credit requests,
-metadata editing, bounded unbooked dates and existing-row amount/detail/account/VAT-code editing, confirmed unbooked deletion
-and explicit customer journal posting, with headless and real-display tests. Production application menus remain legacy;
+metadata editing, bounded unbooked financial/header/dimension editing, manual/product row insertion/removal,
+guarded unreferenced currency-code changes, confirmed unbooked deletion and explicit customer journal posting,
+with headless and real-display tests. Production application menus remain legacy;
 only the explicit owner-scoped credit actions and restricted view use these adapters. Do not
 remove the format-3 startup guard merely to reach them. General booked graph/correction-link editing remains rejected;
 this is not complete legacy GUI parity, and G1–G4 remain unfinished.
@@ -133,7 +134,7 @@ Customer invoice/credit action inventory (active menu callers remain legacy):
 | Action / current caller | Repository evidence | Still required |
 |---|---|---|
 | Create / `SSInvoiceDialog` via `InvoiceService.create`; legacy credit dialogs via `SSDB.addCreditInvoice` | Explicit invoice factory/credit service plus `CustomerCreditDialogAdapter` and `SSCreditInvoiceDialog.normalizedDialog`: restricted date/amount preview/create, dedicated sessions, commit-confirmed callback | Production owner/bootstrap integration and general invoice creation adapter; explicit normalized source selection, credit routing and list refresh exist, but the legacy row editor is not the normalized request form |
-| Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Unbooked graph replacement, booked metadata and explicit booked-invoice credit creation | Row insertion/reordering, remaining tax flags, currency-code/reference workflows and production integration; restricted metadata, unbooked dates, tax-exemption/stored VAT/exchange rates and existing-row amount/detail/account/VAT-code adapters exist. Unsupported direct booked graph/correction-link editing stays refused |
+| Edit / `SSInvoiceDialog` via `InvoiceService.update`; `SSCreditInvoiceDialog` via `SSDB.updateCreditInvoice` | Unbooked graph replacement, booked metadata and explicit booked-invoice credit creation | Compound expansion/row reordering, remaining tax flags, linked-reference workflows and production integration; restricted metadata, unbooked financial/tax/dimension editing, manual/product insertion/removal and guarded unreferenced currency changes exist. Unsupported direct booked graph/correction-link editing stays refused |
 | Delete / both document frames | `NormalizedCustomerDocumentService` detaches scoped orders and deletes the unbooked invoice graph atomically; payment/credit guards and ambiguous-link protection remain | Restricted preview/confirmation adapter and current-view refresh exist; production legacy screen/cache replacement remains. Booked invoices require financial correction rather than deletion |
 | Journal / `InvoiceService.planJournal` and `commitJournal` | `NormalizedCustomerJournalService` provides whole invoice/credit journal atomicity, stable-ID posting, stale-financial-plan rejection and caller-owned commit; created credits post through the same explicit service | Restricted explicit preview/confirmation adapter and current-view refresh exist; production integration and other document-family posting adapters remain. Unsupported voucher correction graphs stay a compatibility boundary |
 | Print/remind/copy/convert | Explicit metadata compare-and-set and reminder-count service; existing CLI PDF generation remains read-only | GUI print success callbacks, full interest-invoice generation and generated-document/copy actions; SQL metadata writes do not establish exactly-once external printing |
@@ -201,7 +202,8 @@ fail-closed repository boundaries, not a new claim of complete business validati
   unrounded converted-total preview with separate journal-rounding warning, source/base-code
   stale tokens, one-column atomic update and real-display confirmation. Nullable/historical
   stored rates remain preservable when unchanged; catalogue rates/defaults are not used.
-  Currency-code/reference changes, row structure and general creation remain separate work.
+  Guarded unreferenced code changes are covered below; linked-reference workflows, row reordering
+  and general creation remain separate work.
 - [x] Add company-scoped project/result-unit editing on existing unbooked rows and allow
   required sales accounts when the proposed row supplies valid required dimensions. New
   projects must not be marked concluded; new result units must belong to the company.
@@ -233,6 +235,17 @@ fail-closed repository boundaries, not a new claim of complete business validati
   are preserved. Store-level scope checks, atomic partial-insert rollback, uncertain-commit
   blocking, both GUI routes and separate dimension-preserving posting are tested.
   Compound expansion, row reordering, general creation and production bootstrap remain open.
+- [x] Add guarded document currency-code changes with explicit positive stored rate, same-code
+  rate-1 guard and read-only company currency. The combo retains the raw current code (including
+  null/blank history) and never selects a default; choosing another code clears the rate for fresh
+  entry. Preview labels both old/new document units, unrounded base equivalent and no repricing.
+  Only uniquely numbered, unreferenced documents can change code: payments, credit/order links,
+  source-linked credit corrections and unresolved order-number snapshots are refused. Null/blank
+  order snapshots and the exact legacy no-orders marker are recognized as empty, not parsed.
+  Reference guards run at preview and save; catalogue-code/base changes invalidate previews,
+  while unused catalogue rates are never read. Narrow code/rate writes, late-failure rollback,
+  unknown commits, foreign reference isolation and both real-display refresh routes are tested.
+  This does not implement broader linked-reference changes or production cutover.
 - [ ] Install bindings/views from production normalized application bootstrap, replace
   legacy screen/cache paths and remaining credit-frame/editor operations. Format-3 startup
   remains rejected; these restricted integration boundaries do not make the full credit

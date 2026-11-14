@@ -122,6 +122,7 @@ public final class NormalizedCustomerFinancialEditService {
      * @param taxes immutable stored document tax rates
      * @param projects immutable company projects
      * @param resultUnits immutable company result units
+     * @param currencies immutable catalogue codes; catalogue/default rates are never read
      * @param products immutable company product choices with explicit eligibility
      * @param stockInfluencing stored document stock flag, never changed by this editor
      * @param taxFree effective stored document tax-exempt flag
@@ -147,6 +148,7 @@ public final class NormalizedCustomerFinancialEditService {
             List<Dimension> projects,
             List<Dimension> resultUnits,
             List<Product> products,
+            List<String> currencies,
             boolean stockInfluencing,
             boolean taxFree,
             TaxValues headerTax,
@@ -168,6 +170,7 @@ public final class NormalizedCustomerFinancialEditService {
             projects = List.copyOf(projects);
             resultUnits = List.copyOf(resultUnits);
             products = List.copyOf(products);
+            currencies = List.copyOf(currencies);
         }
     }
 
@@ -304,17 +307,41 @@ public final class NormalizedCustomerFinancialEditService {
         source.document.setTaxFree(headerTax.taxFree());
         source.document.setStoredTaxRates(headerTax.rate1(), headerTax.rate2(), headerTax.rate3());
         var exchangeRate = proposed.exchange() == null ? source.data.exchangeRate() : proposed.exchange().rate();
-        if (!same(source.data.exchangeRate(), exchangeRate)) {
+        String currency =
+                proposed.exchange() == null || proposed.exchange().currency() == null
+                        ? source.data.currency()
+                        : proposed.exchange().currency();
+        boolean currencyChanged = !Objects.equals(currency, source.data.currency());
+        if (currencyChanged
+                && (!knownCode(currency) || !source.data.currencies().contains(currency))) {
+            throw new IllegalArgumentException(
+                    "Changed currency must be an explicit catalogue code");
+        }
+        if (currencyChanged || !same(source.data.exchangeRate(), exchangeRate)) {
             if (exchangeRate == null || exchangeRate.signum() <= 0)
                 throw new IllegalArgumentException(
                         "Changed exchange rates must be explicit and positive");
-            if (!knownCode(source.data.currency()) || !knownCode(source.data.baseCurrency()))
+            if (!knownCode(currency) || !knownCode(source.data.baseCurrency())) {
                 throw new IllegalArgumentException(
                         "Exchange editing requires explicit document and company currency codes");
-            if (source.data.currency().equals(source.data.baseCurrency())
-                    && exchangeRate.compareTo(BigDecimal.ONE) != 0)
+            }
+            if (currency.equals(source.data.baseCurrency())
+                    && exchangeRate.compareTo(BigDecimal.ONE) != 0) {
                 throw new IllegalArgumentException(
                         "Identical document and accounting currencies require rate 1");
+            }
+        }
+        if (currencyChanged) {
+            var store = new NormalizedInvoiceStore(connection);
+            if (source.data.kind() == Kind.INVOICE) {
+                store.validateInvoiceCurrencyChange(
+                        source.data.companyId(), source.data.id(), proposed.exchange());
+            } else {
+                store.validateCreditCurrencyChange(
+                        source.data.companyId(), source.data.id(), proposed.exchange());
+            }
+            source.document.setCurrency(
+                    new se.swedsoft.bookkeeping.data.common.SSCurrency(currency, null));
         }
         source.document.setCurrencyRate(exchangeRate);
         var indexed = indexed(proposed.rows());
@@ -433,8 +460,11 @@ public final class NormalizedCustomerFinancialEditService {
             }
         }
         var total = se.swedsoft.bookkeeping.calc.math.SSSaleMath.getTotalSum(source.document, source.rounding);
-        return new Plan(expected, proposed, total,
-                equivalent(total, exchangeRate, source.data.currency(), source.data.baseCurrency()));
+        return new Plan(
+                expected,
+                proposed,
+                total,
+                equivalent(total, exchangeRate, currency, source.data.baseCurrency()));
     }
 
     /**
@@ -495,9 +525,15 @@ public final class NormalizedCustomerFinancialEditService {
                                     ? fresh.proposed.tax()
                                     : null,
                             fresh.proposed.exchange() != null
-                                            && !same(
-                                                    original.exchangeRate(),
-                                                    fresh.proposed.exchange().rate())
+                                            && (!same(
+                                                            original.exchangeRate(),
+                                                            fresh.proposed.exchange().rate())
+                                                    || (fresh.proposed.exchange().currency() != null
+                                                            && !Objects.equals(
+                                                                    original.currency(),
+                                                                    fresh.proposed
+                                                                            .exchange()
+                                                                            .currency())))
                                     ? fresh.proposed.exchange()
                                     : null,
                             changedDimensions,
@@ -522,9 +558,16 @@ public final class NormalizedCustomerFinancialEditService {
             if (!actualKeys.equals(expectedKeys))
                 throw new SQLException("Stored row keys differ from preview");
             var expectedRate = fresh.proposed.exchange() == null ? original.exchangeRate() : fresh.proposed.exchange().rate();
-            if (!same(verified.exchangeRate(), expectedRate)
-                    || !same(verified.accountingEquivalent(), fresh.accountingEquivalent()))
+            var expectedCurrency =
+                    fresh.proposed.exchange() == null
+                                    || fresh.proposed.exchange().currency() == null
+                            ? original.currency()
+                            : fresh.proposed.exchange().currency();
+            if (!Objects.equals(verified.currency(), expectedCurrency)
+                    || !same(verified.exchangeRate(), expectedRate)
+                    || !same(verified.accountingEquivalent(), fresh.accountingEquivalent())) {
                 throw new SQLException("Stored exchange values differ from preview");
+            }
             var expectedTax = fresh.proposed.tax() == null ? original.headerTax() : fresh.proposed.tax();
             if (!sameTax(verified.headerTax(), expectedTax))
                 throw new SQLException("Stored header tax values differ from preview");
@@ -661,6 +704,12 @@ public final class NormalizedCustomerFinancialEditService {
                         new Tax("TAXRATE_1", rates.get(0)),
                         new Tax("TAXRATE_2", rates.get(1)),
                         new Tax("TAXRATE_3", rates.get(2)));
+        List<String> currencies = new ArrayList<>();
+        try (var statement =
+                        connection.prepareStatement("SELECT code FROM currency ORDER BY code");
+                var rows = statement.executeQuery()) {
+            while (rows.next()) currencies.add(rows.getString(1));
+        }
         boolean rounding = selected.isRoundingOff();
         String baseCurrency;
         try (var statement =
@@ -730,6 +779,7 @@ public final class NormalizedCustomerFinancialEditService {
                         projects,
                         units,
                         products,
+                        currencies,
                         ((SSInvoice) document).isStockInfluencing(),
                         document.getTaxFree(),
                         headerTax,
@@ -758,6 +808,8 @@ public final class NormalizedCustomerFinancialEditService {
                 .writeString(project.getLocalConcludedDate() == null ? null : project.getLocalConcludedDate().toString());
         writer.writeBoundary("result_units");
         for (var unit : unitRows) writer.writeString(unit.getNumber()).writeString(unit.getName()).writeString(unit.getDescription());
+        writer.writeBoundary("currency_codes");
+        for (String code : currencies) writer.writeString(code);
         writer.writeBoundary("product_selection_context");
         for (var product : products) {
             writer.writeString(Long.toString(product.id()))
