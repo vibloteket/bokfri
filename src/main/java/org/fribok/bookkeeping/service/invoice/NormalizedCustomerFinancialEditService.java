@@ -18,8 +18,8 @@ import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAmounts;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDetails;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAccounting;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.TaxValues;
-import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.ExchangeRateValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDimensions;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.ManualLine;
 import org.fribok.bookkeeping.dataformat.NormalizedRegisterStore;
 import se.swedsoft.bookkeeping.data.common.SSTaxCode;
 import se.swedsoft.bookkeeping.data.SSInvoice;
@@ -235,13 +235,15 @@ public final class NormalizedCustomerFinancialEditService {
         var originalKeys = lines.stream().map(Line::rowNumber).collect(java.util.stream.Collectors.toSet());
         for (int key : proposed.removedRows()) {
             if (!removed.add(key)) throw new IllegalArgumentException("Duplicate removed row key");
-            if (!originalKeys.contains(key)) throw new IllegalArgumentException("Missing or foreign removed row key");
+            if (!originalKeys.contains(key))
+                throw new IllegalArgumentException("Missing or foreign removed row key");
         }
         for (int i = lines.size() - 1; i >= 0; i--) {
             if (removed.contains(lines.get(i).rowNumber())) { lines.remove(i);source.document.getRows().remove(i); }
         }
-        if (!removed.isEmpty() && lines.isEmpty())
-            throw new IllegalArgumentException("Cannot remove the final row; use explicit document deletion instead");
+        if (!removed.isEmpty() && lines.isEmpty() && proposed.addedRows().isEmpty())
+            throw new IllegalArgumentException(
+                    "Cannot remove the final row; use explicit document deletion instead");
         var headerTax = proposed.tax() == null ? source.data.headerTax() : proposed.tax();
         validateTaxChanges(source.data.headerTax(), headerTax);
         source.document.setTaxFree(headerTax.taxFree());
@@ -249,16 +251,21 @@ public final class NormalizedCustomerFinancialEditService {
         var exchangeRate = proposed.exchange() == null ? source.data.exchangeRate() : proposed.exchange().rate();
         if (!same(source.data.exchangeRate(), exchangeRate)) {
             if (exchangeRate == null || exchangeRate.signum() <= 0)
-                throw new IllegalArgumentException("Changed exchange rates must be explicit and positive");
+                throw new IllegalArgumentException(
+                        "Changed exchange rates must be explicit and positive");
             if (!knownCode(source.data.currency()) || !knownCode(source.data.baseCurrency()))
-                throw new IllegalArgumentException("Exchange editing requires explicit document and company currency codes");
-            if (source.data.currency().equals(source.data.baseCurrency()) && exchangeRate.compareTo(BigDecimal.ONE) != 0)
-                throw new IllegalArgumentException("Identical document and accounting currencies require rate 1");
+                throw new IllegalArgumentException(
+                        "Exchange editing requires explicit document and company currency codes");
+            if (source.data.currency().equals(source.data.baseCurrency())
+                    && exchangeRate.compareTo(BigDecimal.ONE) != 0)
+                throw new IllegalArgumentException(
+                        "Identical document and accounting currencies require rate 1");
         }
         source.document.setCurrencyRate(exchangeRate);
         var indexed = indexed(proposed.rows());
         if (indexed.size() != lines.size())
-            throw new IllegalArgumentException("Amounts must match the complete surviving stored row-key set");
+            throw new IllegalArgumentException(
+                    "Amounts must match the complete surviving stored row-key set");
         for (int i = 0; i < lines.size(); i++) {
             var line = lines.get(i);
             var values = indexed.remove(line.rowNumber());
@@ -285,49 +292,79 @@ public final class NormalizedCustomerFinancialEditService {
             var line = lines.get(i);
             var value = accounting.remove(line.rowNumber());
             if (value == null) continue;
-            if (!Objects.equals(line.account(), value.account()) && value.account() != null
-                    && (value.account() < 3000 || value.account() > 3999
-                            || source.data.accounts().stream().noneMatch(a -> a.number() == value.account()
-                                    && a.active())))
-                throw new IllegalArgumentException("Sales account must be an active selected-year account within 3000..3999");
+            if (!Objects.equals(line.account(), value.account())
+                    && value.account() != null
+                    && (value.account() < 3000
+                            || value.account() > 3999
+                            || source.data.accounts().stream()
+                                    .noneMatch(a -> a.number() == value.account() && a.active())))
+                throw new IllegalArgumentException(
+                        "Sales account must be an active selected-year account within 3000..3999");
             if (!Objects.equals(line.taxCode(), value.taxCode()) && value.taxCode() != null) {
                 var rate = taxRate(headerTax, value.taxCode());
                 if (!validRate(rate))
-                    throw new IllegalArgumentException("Selected tax code requires a stored document rate within 0..100");
+                    throw new IllegalArgumentException(
+                            "Selected tax code requires a stored document rate within 0..100");
             }
             source.document.getRows().get(i).setAccountNr(value.account());
             source.document.getRows().get(i).setTaxCode(value.taxCode() == null ? null : SSTaxCode.valueOf(value.taxCode()));
         }
-        if (!accounting.isEmpty()) throw new IllegalArgumentException("Foreign stored accounting row key");
+        if (!accounting.isEmpty())
+            throw new IllegalArgumentException("Foreign stored accounting row key");
         var dimensions = indexedDimensions(proposed.dimensions());
         for (int i = 0; i < lines.size(); i++) {
             var original = lines.get(i);
             var row = source.document.getRows().get(i);
             var value = dimensions.remove(original.rowNumber());
             if (value != null) {
-                if (!Objects.equals(original.project(), value.project()) && value.project() != null
+                if (!Objects.equals(original.project(), value.project())
+                        && value.project() != null
                         && !validDimension(source.data.projects(), value.project()))
-                    throw new IllegalArgumentException("Project must be an open project in the document company");
-                if (!Objects.equals(original.resultUnit(), value.resultUnit()) && value.resultUnit() != null
+                    throw new IllegalArgumentException(
+                            "Project must be an open project in the document company");
+                if (!Objects.equals(original.resultUnit(), value.resultUnit())
+                        && value.resultUnit() != null
                         && !validDimension(source.data.resultUnits(), value.resultUnit()))
-                    throw new IllegalArgumentException("Result unit must exist in the document company");
+                    throw new IllegalArgumentException(
+                            "Result unit must exist in the document company");
                 row.setProjectNr(value.project());row.setResultUnitNr(value.resultUnit());
             }
             if (!Objects.equals(original.account(), row.getAccountNr())
                     || !Objects.equals(original.project(), row.getProjectNr())
                     || !Objects.equals(original.resultUnit(), row.getResultUnitNr())) {
                 var account = source.data.accounts().stream().filter(a -> Objects.equals(a.number(), row.getAccountNr())).findFirst();
-                if (account.isPresent() && ((account.get().projectRequired() && !validDimension(source.data.projects(), row.getProjectNr()))
-                        || (account.get().resultUnitRequired() && !validDimension(source.data.resultUnits(), row.getResultUnitNr()))))
-                    throw new IllegalArgumentException("Account requires valid company project/result-unit dimensions");
+                if (account.isPresent()
+                        && ((account.get().projectRequired()
+                                        && !validDimension(
+                                                source.data.projects(), row.getProjectNr()))
+                                || (account.get().resultUnitRequired()
+                                        && !validDimension(
+                                                source.data.resultUnits(), row.getResultUnitNr()))))
+                    throw new IllegalArgumentException(
+                            "Account requires valid company project/result-unit dimensions");
             }
         }
-        if (!dimensions.isEmpty()) throw new IllegalArgumentException("Foreign stored dimension row key");
+        if (!dimensions.isEmpty())
+            throw new IllegalArgumentException("Foreign stored dimension row key");
+        int maximum =
+                Math.max(
+                        -1,
+                        source.data.lines().stream().mapToInt(Line::rowNumber).max().orElse(-1));
+        var addedKeys = new java.util.HashSet<Integer>();
+        for (var row : proposed.addedRows()) {
+            if (row.rowNumber() <= maximum || !addedKeys.add(row.rowNumber()))
+                throw new IllegalArgumentException(
+                        "Added rows require distinct fresh keys above the source maximum");
+            source.document.getRows().add(manualRow(source.data, headerTax, row));
+        }
         if (!sameTax(source.data.headerTax(), headerTax) && !headerTax.taxFree()) {
             for (var row : source.document.getRows()) {
-                if (row.getTaxCode() != null && row.getTaxCode() != SSTaxCode.TAXRATE_0
+                if (row.getTaxCode() != null
+                        && row.getTaxCode() != SSTaxCode.TAXRATE_0
                         && !validRate(taxRate(headerTax, row.getTaxCode().name())))
-                    throw new IllegalArgumentException("Taxable edited headers require present stored rates within 0..100 for all used VAT codes");
+                    throw new IllegalArgumentException(
+                            "Taxable edited headers require present stored rates within 0..100 for"
+                                + " all used VAT codes");
             }
         }
         var total = se.swedsoft.bookkeeping.calc.math.SSSaleMath.getTotalSum(source.document, source.rounding);
@@ -381,11 +418,26 @@ public final class NormalizedCustomerFinancialEditService {
                 var value = dimensionPatch.get(line.rowNumber());
                 return value != null && (!Objects.equals(line.project(), value.project()) || !Objects.equals(line.resultUnit(), value.resultUnit()));
             }).map(line -> dimensionPatch.get(line.rowNumber())).toList();
-            var values = new FinancialValues(
-                    fresh.proposed.date(), fresh.proposed.dueDate(), changed, changedDetails, changedAccounting,
-                    fresh.proposed.tax() != null && !sameTax(original.headerTax(), fresh.proposed.tax()) ? fresh.proposed.tax() : null,
-                    fresh.proposed.exchange() != null && !same(original.exchangeRate(), fresh.proposed.exchange().rate())
-                            ? fresh.proposed.exchange() : null, changedDimensions, fresh.proposed.removedRows());
+            var values =
+                    new FinancialValues(
+                            fresh.proposed.date(),
+                            fresh.proposed.dueDate(),
+                            changed,
+                            changedDetails,
+                            changedAccounting,
+                            fresh.proposed.tax() != null
+                                            && !sameTax(original.headerTax(), fresh.proposed.tax())
+                                    ? fresh.proposed.tax()
+                                    : null,
+                            fresh.proposed.exchange() != null
+                                            && !same(
+                                                    original.exchangeRate(),
+                                                    fresh.proposed.exchange().rate())
+                                    ? fresh.proposed.exchange()
+                                    : null,
+                            changedDimensions,
+                            fresh.proposed.removedRows(),
+                            fresh.proposed.addedRows());
             var store = new NormalizedInvoiceStore(connection);
             if (original.kind() == Kind.INVOICE)
                 store.updateInvoiceFinancialValues(original.companyId(), original.id(), values);
@@ -396,7 +448,14 @@ public final class NormalizedCustomerFinancialEditService {
                     || verified.total().compareTo(fresh.total) != 0)
                 throw new SQLException("Stored financial values differ from preview");
             var actualKeys = verified.lines().stream().map(Line::rowNumber).collect(java.util.stream.Collectors.toSet());
-            if (!actualKeys.equals(proposed.keySet())) throw new SQLException("Stored surviving row keys differ from preview");
+            var expectedKeys = new java.util.HashSet<>(proposed.keySet());
+            var added = new HashMap<Integer, ManualLine>();
+            for (var row : fresh.proposed.addedRows()) {
+                expectedKeys.add(row.rowNumber());
+                added.put(row.rowNumber(), row);
+            }
+            if (!actualKeys.equals(expectedKeys))
+                throw new SQLException("Stored row keys differ from preview");
             var expectedRate = fresh.proposed.exchange() == null ? original.exchangeRate() : fresh.proposed.exchange().rate();
             if (!same(verified.exchangeRate(), expectedRate)
                     || !same(verified.accountingEquivalent(), fresh.accountingEquivalent()))
@@ -416,6 +475,19 @@ public final class NormalizedCustomerFinancialEditService {
             for (var row : original.lines()) expectedDimensions.put(row.rowNumber(), new LineDimensions(row.rowNumber(), row.project(), row.resultUnit()));
             expectedDimensions.putAll(dimensionPatch);
             for (var row : verified.lines()) {
+                var inserted = added.get(row.rowNumber());
+                if (inserted != null) {
+                    if (!Objects.equals(row.description(), inserted.description())
+                            || !same(row.quantity(), inserted.quantity())
+                            || !same(row.unitPrice(), inserted.unitPrice())
+                            || !same(row.discount(), inserted.discount())
+                            || !Objects.equals(row.account(), inserted.account())
+                            || !Objects.equals(row.taxCode(), inserted.taxCode())
+                            || !Objects.equals(row.project(), inserted.project())
+                            || !Objects.equals(row.resultUnit(), inserted.resultUnit()))
+                        throw new SQLException("Stored new manual row differs from preview");
+                    continue;
+                }
                 var wanted = proposed.get(row.rowNumber());
                 if (wanted == null
                         || !same(row.quantity(), wanted.quantity())
@@ -463,8 +535,11 @@ public final class NormalizedCustomerFinancialEditService {
         var selected = accounting.getCompanies().stream().filter(c -> c.getId() == company)
                 .findFirst().orElseThrow(() -> new SQLException("Missing company"));
         accounting.setCurrentCompany(selected);
-        var selectedYear = accounting.getYears().stream().filter(y -> y.getId() == year)
-                .findFirst().orElseThrow(() -> new SQLException("Missing or foreign accounting year"));
+        var selectedYear =
+                accounting.getYears().stream()
+                        .filter(y -> y.getId() == year)
+                        .findFirst()
+                        .orElseThrow(() -> new SQLException("Missing or foreign accounting year"));
         var accountRows = accounting.getAccounts(selectedYear);
         var registers = new NormalizedRegisterStore(connection);
         var projectRows = registers.getProjects(company);
@@ -474,14 +549,23 @@ public final class NormalizedCustomerFinancialEditService {
         var accounts = accountRows.stream().map(a -> new Account(a.getNumber(), a.getDescription(),
                 a.isActive(), a.isProjectRequired(), a.isResultUnitRequired()))
                 .sorted(java.util.Comparator.comparingInt(Account::number)).toList();
-        var headerTax = (kind == Kind.INVOICE ? store.findInvoiceTaxValues(company, id)
-                : store.findCreditTaxValues(company, id)).orElseThrow(() -> new SQLException("Missing tax target"));
+        var headerTax =
+                (kind == Kind.INVOICE
+                                ? store.findInvoiceTaxValues(company, id)
+                                : store.findCreditTaxValues(company, id))
+                        .orElseThrow(() -> new SQLException("Missing tax target"));
         var rates = java.util.Arrays.asList(headerTax.rate1(), headerTax.rate2(), headerTax.rate3());
-        var taxes = List.of(new Tax("TAXRATE_0", BigDecimal.ZERO), new Tax("TAXRATE_1", rates.get(0)),
-                new Tax("TAXRATE_2", rates.get(1)), new Tax("TAXRATE_3", rates.get(2)));
+        var taxes =
+                List.of(
+                        new Tax("TAXRATE_0", BigDecimal.ZERO),
+                        new Tax("TAXRATE_1", rates.get(0)),
+                        new Tax("TAXRATE_2", rates.get(1)),
+                        new Tax("TAXRATE_3", rates.get(2)));
         boolean rounding = selected.isRoundingOff();
         String baseCurrency;
-        try (var statement = connection.prepareStatement("SELECT currency_code FROM company WHERE legacy_id=?")) {
+        try (var statement =
+                connection.prepareStatement(
+                        "SELECT currency_code FROM company WHERE legacy_id=?")) {
             statement.setInt(1, company);
             try (var row = statement.executeQuery()) {
                 if (!row.next()) throw new SQLException("Missing company currency context");
@@ -494,7 +578,9 @@ public final class NormalizedCustomerFinancialEditService {
         List<Line> lines = new ArrayList<>();
         try (var statement =
                 connection.prepareStatement(
-                        "SELECT row_number,description,account_number,quantity,unit_price,discount,tax_code,project_number,result_unit_number FROM "
+                        "SELECT"
+                            + " row_number,description,account_number,quantity,unit_price,discount,tax_code,project_number,result_unit_number"
+                            + " FROM "
                                 + table
                                 + " WHERE "
                                 + owner
@@ -593,6 +679,59 @@ public final class NormalizedCustomerFinancialEditService {
         return map;
     }
 
+    private static se.swedsoft.bookkeeping.data.base.SSSaleRow manualRow(
+            Data data, TaxValues tax, ManualLine value) {
+        if (value.description() == null || value.description().isBlank())
+            throw new IllegalArgumentException("New manual rows require a description");
+        if (value.quantity() == null
+                || value.quantity().signum() <= 0
+                || value.unitPrice() == null
+                || value.unitPrice().signum() < 0)
+            throw new IllegalArgumentException(
+                    "New manual rows require positive quantity and non-negative price");
+        if (value.discount() != null
+                && (value.discount().signum() < 0
+                        || value.discount().compareTo(BigDecimal.valueOf(100)) > 0))
+            throw new IllegalArgumentException("New manual row discount must be within 0..100");
+        var account =
+                data.accounts().stream()
+                        .filter(
+                                a ->
+                                        Objects.equals(a.number(), value.account())
+                                                && a.active()
+                                                && a.number() >= 3000
+                                                && a.number() <= 3999)
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "New manual rows require an active selected-year"
+                                                    + " sales account"));
+        if (value.taxCode() == null || !validRate(taxRate(tax, value.taxCode())))
+            throw new IllegalArgumentException(
+                    "New manual rows require an explicit VAT code with a present bounded stored"
+                        + " rate");
+        if ((value.project() != null && !validDimension(data.projects(), value.project()))
+                || (value.resultUnit() != null
+                        && !validDimension(data.resultUnits(), value.resultUnit()))
+                || (account.projectRequired() && !validDimension(data.projects(), value.project()))
+                || (account.resultUnitRequired()
+                        && !validDimension(data.resultUnits(), value.resultUnit())))
+            throw new IllegalArgumentException("New manual row requires valid company dimensions");
+        var row = new se.swedsoft.bookkeeping.data.base.SSSaleRow();
+        row.setProductNr(null);
+        row.setUnit(null);
+        row.setDescription(value.description());
+        row.setQuantity(value.quantity());
+        row.setUnitprice(value.unitPrice());
+        row.setDiscount(value.discount());
+        row.setAccountNr(value.account());
+        row.setTaxCode(SSTaxCode.valueOf(value.taxCode()));
+        row.setProjectNr(value.project());
+        row.setResultUnitNr(value.resultUnit());
+        return row;
+    }
+
     private static boolean validDimension(List<Dimension> choices, String number) {
         return number != null && !number.isBlank() && choices.stream().anyMatch(d -> d.number().equals(number) && !d.concluded());
     }
@@ -615,7 +754,8 @@ public final class NormalizedCustomerFinancialEditService {
         for (String code : List.of("TAXRATE_1", "TAXRATE_2", "TAXRATE_3")) {
             var rate = taxRate(after, code);
             if (!same(taxRate(before, code), rate) && rate != null && !validRate(rate))
-                throw new IllegalArgumentException("Changed stored VAT rates must be within 0..100");
+                throw new IllegalArgumentException(
+                        "Changed stored VAT rates must be within 0..100");
         }
     }
 

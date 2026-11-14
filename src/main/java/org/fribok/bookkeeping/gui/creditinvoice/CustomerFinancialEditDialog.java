@@ -37,6 +37,7 @@ import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineAccounting;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.TaxValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.ExchangeRateValues;
 import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.LineDimensions;
+import org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.ManualLine;
 import org.fribok.bookkeeping.service.invoice.NormalizedCustomerFinancialEditService;
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 
@@ -59,6 +60,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
             cancel = new JButton(text("cancel"));
     private final JCheckBox confirm = new JCheckBox(text("confirm"));
     private final JButton removeRow = new JButton(text("removerow"));
+    private final JButton addRow = new JButton(text("addrow"));
     private final Lines lines = new Lines();
     private final JTable table = new JTable(lines);
     private boolean busy, invalid;
@@ -103,6 +105,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         cancel.setName("financial-cancel");
         confirm.setName("financial-confirm");
         removeRow.setName("financial-remove-row");
+        addRow.setName("financial-add-row");
         JPanel header = new JPanel();
         header.add(new JLabel(text("date")));
         header.add(date);
@@ -161,7 +164,10 @@ public final class CustomerFinancialEditDialog extends JDialog {
         add(top, BorderLayout.NORTH);
         JPanel rowPanel = new JPanel(new BorderLayout());
         JPanel rowActions = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEADING));
-        rowActions.add(removeRow);rowPanel.add(rowActions, BorderLayout.NORTH);rowPanel.add(new JScrollPane(table));
+        rowActions.add(addRow);
+        rowActions.add(removeRow);
+        rowPanel.add(rowActions, BorderLayout.NORTH);
+        rowPanel.add(new JScrollPane(table));
         add(rowPanel);
         add(bottom, BorderLayout.SOUTH);
         table.setAutoCreateRowSorter(true);
@@ -203,7 +209,9 @@ public final class CustomerFinancialEditDialog extends JDialog {
                         return parsed;
                     }
                 });
-        var taxCodes = new JComboBox<String>(new String[] {null, "TAXRATE_0", "TAXRATE_1", "TAXRATE_2", "TAXRATE_3"});
+        var taxCodes =
+                new JComboBox<String>(
+                        new String[] {null, "TAXRATE_0", "TAXRATE_1", "TAXRATE_2", "TAXRATE_3"});
         taxCodes.setRenderer(new javax.swing.DefaultListCellRenderer() {
             @Override
             public java.awt.Component getListCellRendererComponent(javax.swing.JList<?> list, Object value,
@@ -240,11 +248,29 @@ public final class CustomerFinancialEditDialog extends JDialog {
         for (var rate : taxRates) rate.getDocument().addDocumentListener(edits);
         exchangeRate.getDocument().addDocumentListener(edits);
         taxFree.addActionListener(event -> changed());
-        removeRow.addActionListener(event -> {
-            if (busy || invalid || loaded == null || adapter.isBlocked() || lines.getRowCount() <= 1 || !finishEdit()) return;
-            int selected = table.getSelectedRow();
-            if (selected >= 0) { lines.remove(table.convertRowIndexToModel(selected));changed(); }
-        });
+        removeRow.addActionListener(
+                event -> {
+                    if (busy || invalid || loaded == null || adapter.isBlocked() || !finishEdit())
+                        return;
+                    int selected = table.getSelectedRow();
+                    if (selected >= 0 && lines.canRemove(table.convertRowIndexToModel(selected))) {
+                        lines.remove(table.convertRowIndexToModel(selected));
+                        changed();
+                    }
+                });
+        addRow.addActionListener(
+                event -> {
+                    if (busy
+                            || invalid
+                            || loaded == null
+                            || adapter.isBlocked()
+                            || !lines.canAdd()
+                            || !finishEdit()) return;
+                    int index = lines.add();
+                    changed();
+                    int view = table.convertRowIndexToView(index);
+                    if (view >= 0) table.setRowSelectionInterval(view, view);
+                });
         table.getSelectionModel().addListSelectionListener(event -> controls());
         reload.addActionListener(event -> load());
         previewButton.addActionListener(event -> preview());
@@ -329,28 +355,87 @@ public final class CustomerFinancialEditDialog extends JDialog {
                             data.values().dueDate() == null
                                     ? ""
                                     : data.values().dueDate().toString());
-                    exchangeRate.setText(data.exchangeRate() == null ? "" : data.exchangeRate().toPlainString());
-                    exchangeContext.setText(unit(data.currency()) + " -> " + unit(data.baseCurrency()) + " / " + text("readonlycodes"));
+                    exchangeRate.setText(
+                            data.exchangeRate() == null ? "" : data.exchangeRate().toPlainString());
+                    exchangeContext.setText(
+                            unit(data.currency())
+                                    + " -> "
+                                    + unit(data.baseCurrency())
+                                    + " / "
+                                    + text("readonlycodes"));
                     var storedTax = data.headerTax();
                     taxFree.setSelectedItem(storedTax.taxFree());
-                    var rates = java.util.Arrays.asList(storedTax.rate1(), storedTax.rate2(), storedTax.rate3());
+                    var rates =
+                            java.util.Arrays.asList(
+                                    storedTax.rate1(), storedTax.rate2(), storedTax.rate3());
                     for (int i = 0; i < taxRates.length; i++)
-                        taxRates[i].setText(rates.get(i) == null ? "" : rates.get(i).toPlainString());
+                        taxRates[i].setText(
+                                rates.get(i) == null ? "" : rates.get(i).toPlainString());
                     lines.set(data.lines());
-                    accountingContext.setText(text("accounts") + " " + data.yearId() + ": "
-                            + data.accounts().stream().filter(a -> a.number() >= 3000 && a.number() <= 3999
-                                    && a.active())
-                                    .map(a -> a.number() + " " + (a.description() == null ? "" : a.description())
-                                            + (a.projectRequired() ? " [" + text("projectrequired") + "]" : "")
-                                            + (a.resultUnitRequired() ? " [" + text("unitrequired") + "]" : ""))
-                                    .collect(java.util.stream.Collectors.joining(", "))
-                            + "\n" + text("taxfree") + " " + data.taxFree() + " / "
-                            + data.taxes().stream().map(t -> taxLabel(t.code()))
-                                    .collect(java.util.stream.Collectors.joining(", "))
-                            + "\n" + text("projects") + " " + data.projects().stream().filter(p -> !p.concluded())
-                                    .map(p -> p.number() + " " + (p.name() == null ? "" : p.name())).collect(java.util.stream.Collectors.joining(", "))
-                            + " / " + text("resultunits") + " " + data.resultUnits().stream()
-                                    .map(u -> u.number() + " " + (u.name() == null ? "" : u.name())).collect(java.util.stream.Collectors.joining(", ")));
+                    accountingContext.setText(
+                            text("accounts")
+                                    + " "
+                                    + data.yearId()
+                                    + ": "
+                                    + data.accounts().stream()
+                                            .filter(
+                                                    a ->
+                                                            a.number() >= 3000
+                                                                    && a.number() <= 3999
+                                                                    && a.active())
+                                            .map(
+                                                    a ->
+                                                            a.number()
+                                                                    + " "
+                                                                    + (a.description() == null
+                                                                            ? ""
+                                                                            : a.description())
+                                                                    + (a.projectRequired()
+                                                                            ? " ["
+                                                                                    + text(
+                                                                                            "projectrequired")
+                                                                                    + "]"
+                                                                            : "")
+                                                                    + (a.resultUnitRequired()
+                                                                            ? " ["
+                                                                                    + text(
+                                                                                            "unitrequired")
+                                                                                    + "]"
+                                                                            : ""))
+                                            .collect(java.util.stream.Collectors.joining(", "))
+                                    + "\n"
+                                    + text("taxfree")
+                                    + " "
+                                    + data.taxFree()
+                                    + " / "
+                                    + data.taxes().stream()
+                                            .map(t -> taxLabel(t.code()))
+                                            .collect(java.util.stream.Collectors.joining(", "))
+                                    + "\n"
+                                    + text("projects")
+                                    + " "
+                                    + data.projects().stream()
+                                            .filter(p -> !p.concluded())
+                                            .map(
+                                                    p ->
+                                                            p.number()
+                                                                    + " "
+                                                                    + (p.name() == null
+                                                                            ? ""
+                                                                            : p.name()))
+                                            .collect(java.util.stream.Collectors.joining(", "))
+                                    + " / "
+                                    + text("resultunits")
+                                    + " "
+                                    + data.resultUnits().stream()
+                                            .map(
+                                                    u ->
+                                                            u.number()
+                                                                    + " "
+                                                                    + (u.name() == null
+                                                                            ? ""
+                                                                            : u.name()))
+                                            .collect(java.util.stream.Collectors.joining(", ")));
                     status.setText(
                             text("ready")
                                     + " "
@@ -381,9 +466,20 @@ public final class CustomerFinancialEditDialog extends JDialog {
         try {
             values =
                     new FinancialValues(
-                            parse(date.getText()), parse(due.getText()), lines.values(), lines.details(), lines.accounting(),
-                            new TaxValues((Boolean) taxFree.getSelectedItem(), parseRate(0), parseRate(1), parseRate(2)),
-                            new ExchangeRateValues(parseDecimal(exchangeRate.getText())), lines.dimensions(), lines.removedRows());
+                            parse(date.getText()),
+                            parse(due.getText()),
+                            lines.values(),
+                            lines.details(),
+                            lines.accounting(),
+                            new TaxValues(
+                                    (Boolean) taxFree.getSelectedItem(),
+                                    parseRate(0),
+                                    parseRate(1),
+                                    parseRate(2)),
+                            new ExchangeRateValues(parseDecimal(exchangeRate.getText())),
+                            lines.dimensions(),
+                            lines.removedRows(),
+                            lines.addedRows());
         } catch (RuntimeException error) {
             status.setText(text("invalid"));
             controls();
@@ -413,17 +509,37 @@ public final class CustomerFinancialEditDialog extends JDialog {
                 try {
                     preview = get();
                     status.setText(
-                            (preview.values().removedRows().isEmpty() ? "" : text("removedrows") + " "
-                                    + preview.values().removedRows() + "\n")
-                                    + text("totals") + " "
+                            (preview.values().addedRows().isEmpty()
+                                            ? ""
+                                            : text("addedrows")
+                                                    + " "
+                                                    + preview.values().addedRows().stream()
+                                                            .map(ManualLine::rowNumber)
+                                                            .toList()
+                                                    + "\n")
+                                    + (preview.values().removedRows().isEmpty()
+                                            ? ""
+                                            : text("removedrows")
+                                                    + " "
+                                                    + preview.values().removedRows()
+                                                    + "\n")
+                                    + text("totals")
+                                    + " "
                                     + preview.before().toPlainString()
                                     + " -> "
                                     + preview.after().toPlainString()
                                     + " "
                                     + unit(loaded.data().currency())
-                                    + "\n" + text("equivalent") + " " + amount(preview.beforeAccounting())
-                                    + " -> " + amount(preview.afterAccounting()) + " " + unit(loaded.data().baseCurrency())
-                                    + ". " + text("equivalentnote"));
+                                    + "\n"
+                                    + text("equivalent")
+                                    + " "
+                                    + amount(preview.beforeAccounting())
+                                    + " -> "
+                                    + amount(preview.afterAccounting())
+                                    + " "
+                                    + unit(loaded.data().baseCurrency())
+                                    + ". "
+                                    + text("equivalentnote"));
                     status.setCaretPosition(0);
                 } catch (InterruptedException error) {
                     Thread.currentThread().interrupt();
@@ -495,7 +611,12 @@ public final class CustomerFinancialEditDialog extends JDialog {
         for (var rate : taxRates) rate.setEnabled(active && loaded != null);
         table.setEnabled(active && loaded != null);
         reload.setEnabled(active);
-        removeRow.setEnabled(active && loaded != null && lines.getRowCount() > 1 && table.getSelectedRow() >= 0);
+        removeRow.setEnabled(
+                active
+                        && loaded != null
+                        && table.getSelectedRow() >= 0
+                        && lines.canRemove(table.convertRowIndexToModel(table.getSelectedRow())));
+        addRow.setEnabled(active && loaded != null && lines.canAdd());
         previewButton.setEnabled(active && loaded != null);
         confirm.setEnabled(active && preview != null);
         save.setEnabled(active && preview != null && confirm.isSelected());
@@ -505,8 +626,15 @@ public final class CustomerFinancialEditDialog extends JDialog {
     private String taxLabel(String code) {
         if (code == null) return text("absenttax");
         try {
-            var rate = code.equals("TAXRATE_0") ? BigDecimal.ZERO : parseRate(Integer.parseInt(code.substring(8)) - 1);
-            return code + " / " + (rate == null ? text("missingrate") : rate.stripTrailingZeros().toPlainString() + " %");
+            var rate =
+                    code.equals("TAXRATE_0")
+                            ? BigDecimal.ZERO
+                            : parseRate(Integer.parseInt(code.substring(8)) - 1);
+            return code
+                    + " / "
+                    + (rate == null
+                            ? text("missingrate")
+                            : rate.stripTrailingZeros().toPlainString() + " %");
         } catch (IllegalArgumentException error) {
             return code + " / " + text("invalidrate");
         }
@@ -514,8 +642,14 @@ public final class CustomerFinancialEditDialog extends JDialog {
 
     private BigDecimal parseRate(int index) { return parseDecimal(taxRates[index].getText()); }
 
-    private static String unit(String code) { return code == null || code.isBlank() ? text("unknowncurrency") : code; }
-    private static String amount(BigDecimal value) { return value == null ? text("unknownequivalent") : value.stripTrailingZeros().toPlainString(); }
+    private static String unit(String code) {
+        return code == null || code.isBlank() ? text("unknowncurrency") : code;
+    }
+    private static String amount(BigDecimal value) {
+        return value == null
+                ? text("unknownequivalent")
+                : value.stripTrailingZeros().toPlainString();
+    }
 
     private static BigDecimal parseDecimal(String text) {
         String value = text.trim();
@@ -527,6 +661,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
     private final class Lines extends AbstractTableModel {
         private List<NormalizedCustomerFinancialEditService.Line> original = List.of();
         private final java.util.Set<Integer> removed = new java.util.LinkedHashSet<>();
+        private final java.util.Set<Integer> added = new java.util.LinkedHashSet<>();
+        private long nextKey;
         private java.util.Map<Integer, LineAmounts> edited = new java.util.HashMap<>();
         private java.util.Map<Integer, LineDetails> detailEdits = new java.util.HashMap<>();
         private java.util.Map<Integer, LineAccounting> accountingEdits = new java.util.HashMap<>();
@@ -535,6 +671,19 @@ public final class CustomerFinancialEditDialog extends JDialog {
         void set(List<NormalizedCustomerFinancialEditService.Line> values) {
             original = List.copyOf(values);
             removed.clear();
+            added.clear();
+            nextKey =
+                    (long)
+                                    Math.max(
+                                            -1,
+                                            values.stream()
+                                                    .mapToInt(
+                                                            NormalizedCustomerFinancialEditService
+                                                                            .Line
+                                                                    ::rowNumber)
+                                                    .max()
+                                                    .orElse(-1))
+                            + 1;
             edited.clear();
             detailEdits.clear();
             accountingEdits.clear();
@@ -552,19 +701,87 @@ public final class CustomerFinancialEditDialog extends JDialog {
         }
 
         List<LineAmounts> values() {
-            return original.stream().map(row -> edited.get(row.rowNumber())).toList();
+            return original.stream()
+                    .filter(row -> !added.contains(row.rowNumber()))
+                    .map(row -> edited.get(row.rowNumber()))
+                    .toList();
         }
 
         List<LineDetails> details() {
-            return original.stream().map(row -> detailEdits.get(row.rowNumber())).toList();
+            return original.stream()
+                    .filter(row -> !added.contains(row.rowNumber()))
+                    .map(row -> detailEdits.get(row.rowNumber()))
+                    .toList();
         }
 
         List<LineAccounting> accounting() {
-            return original.stream().map(row -> accountingEdits.get(row.rowNumber())).toList();
+            return original.stream()
+                    .filter(row -> !added.contains(row.rowNumber()))
+                    .map(row -> accountingEdits.get(row.rowNumber()))
+                    .toList();
         }
 
         List<LineDimensions> dimensions() {
-            return original.stream().map(row -> dimensionEdits.get(row.rowNumber())).toList();
+            return original.stream()
+                    .filter(row -> !added.contains(row.rowNumber()))
+                    .map(row -> dimensionEdits.get(row.rowNumber()))
+                    .toList();
+        }
+
+        boolean canAdd() {
+            return nextKey <= Integer.MAX_VALUE;
+        }
+
+        boolean canRemove(int index) {
+            return original.size() > 1 || added.contains(original.get(index).rowNumber());
+        }
+
+        int add() {
+            int key = Math.toIntExact(nextKey++);
+            var copy = new java.util.ArrayList<>(original);
+            copy.add(
+                    new NormalizedCustomerFinancialEditService.Line(
+                            key,
+                            "",
+                            null,
+                            BigDecimal.ONE,
+                            BigDecimal.ZERO,
+                            null,
+                            "TAXRATE_0",
+                            null,
+                            null));
+            original = List.copyOf(copy);
+            added.add(key);
+            edited.put(key, new LineAmounts(key, BigDecimal.ONE, BigDecimal.ZERO));
+            detailEdits.put(key, new LineDetails(key, "", null));
+            accountingEdits.put(key, new LineAccounting(key, null, "TAXRATE_0"));
+            dimensionEdits.put(key, new LineDimensions(key, null, null));
+            fireTableDataChanged();
+            return original.size() - 1;
+        }
+
+        List<ManualLine> addedRows() {
+            return original.stream()
+                    .filter(row -> added.contains(row.rowNumber()))
+                    .map(
+                            row -> {
+                                int key = row.rowNumber();
+                                var amount = edited.get(key);
+                                var detail = detailEdits.get(key);
+                                var account = accountingEdits.get(key);
+                                var dimension = dimensionEdits.get(key);
+                                return new ManualLine(
+                                        key,
+                                        detail.description(),
+                                        amount.quantity(),
+                                        amount.unitPrice(),
+                                        detail.discount(),
+                                        account.account(),
+                                        account.taxCode(),
+                                        dimension.project(),
+                                        dimension.resultUnit());
+                            })
+                    .toList();
         }
 
         List<Integer> removedRows() { return List.copyOf(removed); }
@@ -572,7 +789,11 @@ public final class CustomerFinancialEditDialog extends JDialog {
         void remove(int index) {
             int key = original.get(index).rowNumber();
             var remaining = new java.util.ArrayList<>(original);remaining.remove(index);original = List.copyOf(remaining);
-            edited.remove(key);detailEdits.remove(key);accountingEdits.remove(key);dimensionEdits.remove(key);removed.add(key);
+            edited.remove(key);
+            detailEdits.remove(key);
+            accountingEdits.remove(key);
+            dimensionEdits.remove(key);
+            if (!added.remove(key)) removed.add(key);
             fireTableDataChanged();
         }
 
@@ -586,7 +807,18 @@ public final class CustomerFinancialEditDialog extends JDialog {
 
         public String getColumnName(int column) {
             return text(
-                    new String[] {"row", "description", "account", "quantity", "price", "discount", "taxcode", "project", "resultunit"}[column]);
+                    new String[] {
+                                "row",
+                                "description",
+                                "account",
+                                "quantity",
+                                "price",
+                                "discount",
+                                "taxcode",
+                                "project",
+                                "resultunit"
+                            }
+                            [column]);
         }
 
         public Class<?> getColumnClass(int column) {
@@ -645,7 +877,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
                 changed();
                 return;
             }
-            if (column != 3 && column != 4 && column != 5) throw new IllegalArgumentException("Read-only field");
+            if (column != 3 && column != 4 && column != 5)
+                throw new IllegalArgumentException("Read-only field");
             BigDecimal amount =
                     value == null
                             ? null

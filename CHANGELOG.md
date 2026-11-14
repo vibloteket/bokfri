@@ -115,6 +115,14 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Keep keyboard focus in searchable dropdown fields when account and other suggestion lists open, including on macOS. Preserve mouse selection, scrolling, dropdown buttons and add/edit/delete menus; add cross-platform GUI regression tests and opt-in, metadata-only focus diagnostics with a legacy comparison mode.
 
 ### Changed
+- Add explicit manual-row insertion to the guarded normalized customer invoice/credit
+  financial editor (#75). New rows require description, quantity, price, active selected-year
+  sales account, explicit stored VAT code/rate and valid company-scoped dimensions.
+  Preview lists new stored keys and totals; any draft edit invalidates confirmation.
+  Inserts preserve surviving row keys, product/address snapshots and draft vouchers,
+  share the existing savepoint, and block blind retries after uncertain commits.
+  Product-linked insertion, reordering, general creation and production bootstrap remain
+  separate work; format-3 GUI startup stays disabled.
 - Normalized storage now supports supplier invoice and credit-invoice list PDF exports with explicit company headers and stored row snapshots; preserves supplier tax/rounding totals, local-currency conversion, and legacy GUI constructors.
 
 - Fixed the SIE import voucher-number existence check: an empty `Optional` no longer counts

@@ -212,7 +212,17 @@ fail-closed repository boundaries, not a new claim of complete business validati
   stable removed-key/totals preview, fresh confirmation, surviving-key preservation without
   renumbering, stale-source protection and atomic rollback/retry after a late delete failure.
   Reload discards local removals. The final row requires the existing explicit document-delete
-  workflow rather than silently creating an empty document. Row insertion/reordering remain open.
+  workflow rather than silently creating an empty document (unless explicitly replaced below).
+- [x] Add explicit manual-row insertion to that financial form. New rows require description,
+  positive exact quantity, nonnegative price, optional 0..100 discount, active selected-year
+  3xxx account, stored document VAT code/rate and company-scoped required dimensions.
+  New keys exceed the original maximum; surviving keys and raw snapshots are not rewritten.
+  Added keys and totals require fresh preview/confirmation; reload discards local additions.
+  Removing a local addition does not delete SQL data. A replacement row permits removing the
+  final existing row, but an empty result is refused. Savepoint rollback covers earlier edits
+  and partial inserts; source/catalogue checks and uncertain-commit blocking still apply.
+  Both invoice/credit view routes and separate journal dimension groups are tested.
+  Product-linked insertion, row reordering and general document creation remain separate.
 - [ ] Install bindings/views from production normalized application bootstrap, replace
   legacy screen/cache paths and remaining credit-frame/editor operations. Format-3 startup
   remains rejected; these restricted integration boundaries do not make the full credit

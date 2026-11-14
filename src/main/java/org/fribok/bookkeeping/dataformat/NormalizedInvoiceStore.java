@@ -355,6 +355,26 @@ public final class NormalizedInvoiceStore {
         }
     }
 
+    /** Explicit new manual row. Product and unit snapshots are deliberately absent. */
+    public record ManualLine(
+            int rowNumber,
+            String description,
+            java.math.BigDecimal quantity,
+            java.math.BigDecimal unitPrice,
+            java.math.BigDecimal discount,
+            Integer account,
+            String taxCode,
+            String project,
+            String resultUnit) {
+        /** Checks exact storage and persisted tax-code names without inventing defaults. */
+        public ManualLine {
+            requireExactAmount(quantity);
+            requireExactAmount(unitPrice);
+            requireExactAmount(discount);
+            if (taxCode != null) SSTaxCode.valueOf(taxCode);
+        }
+    }
+
     /** Optional persisted-row dimension patch; raw null/empty values remain distinct. */
     public record LineDimensions(int rowNumber, String project, String resultUnit) {}
 
@@ -378,10 +398,43 @@ public final class NormalizedInvoiceStore {
      * @param exchange optional stored-rate patch; null preserves the rate and all currency codes
      * @param dimensions optional existing-row dimension patches; omitted keys are preserved
      * @param removedRows explicit existing row keys to remove; never renumbers survivors
+     * @param addedRows explicit new manual rows with fresh keys above the original maximum
      */
     public record FinancialValues(
-            LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details,
-            List<LineAccounting> accounting, TaxValues tax, ExchangeRateValues exchange, List<LineDimensions> dimensions, List<Integer> removedRows) {
+            LocalDate date,
+            LocalDate dueDate,
+            List<LineAmounts> rows,
+            List<LineDetails> details,
+            List<LineAccounting> accounting,
+            TaxValues tax,
+            ExchangeRateValues exchange,
+            List<LineDimensions> dimensions,
+            List<Integer> removedRows,
+            List<ManualLine> addedRows) {
+        /** Preserves row insertion for existing removal callers. */
+        public FinancialValues(
+                LocalDate date,
+                LocalDate dueDate,
+                List<LineAmounts> rows,
+                List<LineDetails> details,
+                List<LineAccounting> accounting,
+                TaxValues tax,
+                ExchangeRateValues exchange,
+                List<LineDimensions> dimensions,
+                List<Integer> removedRows) {
+            this(
+                    date,
+                    dueDate,
+                    rows,
+                    details,
+                    accounting,
+                    tax,
+                    exchange,
+                    dimensions,
+                    removedRows,
+                    List.of());
+        }
+
         /** Preserves row structure for existing dimension callers. */
         public FinancialValues(LocalDate date, LocalDate dueDate, List<LineAmounts> rows, List<LineDetails> details,
                 List<LineAccounting> accounting, TaxValues tax, ExchangeRateValues exchange, List<LineDimensions> dimensions) {
@@ -418,6 +471,7 @@ public final class NormalizedInvoiceStore {
             accounting = List.copyOf(accounting);
             dimensions = List.copyOf(dimensions);
             removedRows = List.copyOf(removedRows);
+            addedRows = List.copyOf(addedRows);
             requireSqlDate(date);
             requireSqlDate(dueDate);
         }
@@ -434,8 +488,12 @@ public final class NormalizedInvoiceStore {
     }
 
     private Optional<TaxValues> readTaxValues(Kind kind, int company, long id) throws SQLException {
-        try (var statement = connection.prepareStatement("SELECT tax_free,tax_rate_1,tax_rate_2,tax_rate_3 FROM "
-                + kind.table + " WHERE id=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+        try (var statement =
+                connection.prepareStatement(
+                        "SELECT tax_free,tax_rate_1,tax_rate_2,tax_rate_3 FROM "
+                                + kind.table
+                                + " WHERE id=? AND company_id=(SELECT id FROM company WHERE"
+                                + " legacy_id=?)")) {
             statement.setLong(1, id);
             statement.setInt(2, company);
             try (var row = statement.executeQuery()) {
@@ -514,16 +572,21 @@ public final class NormalizedInvoiceStore {
         }
         if (values.tax() != null) {
             var tax = values.tax();
-            try (var statement = connection.prepareStatement("UPDATE " + kind.table
-                    + " SET tax_free=?,tax_rate_1=?,tax_rate_2=?,tax_rate_3=? WHERE id=? AND entered=FALSE"
-                    + " AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            try (var statement =
+                    connection.prepareStatement(
+                            "UPDATE "
+                                    + kind.table
+                                    + " SET tax_free=?,tax_rate_1=?,tax_rate_2=?,tax_rate_3=? WHERE"
+                                    + " id=? AND entered=FALSE AND company_id=(SELECT id FROM"
+                                    + " company WHERE legacy_id=?)")) {
                 statement.setBoolean(1, tax.taxFree());
                 statement.setBigDecimal(2, tax.rate1());
                 statement.setBigDecimal(3, tax.rate2());
                 statement.setBigDecimal(4, tax.rate3());
                 statement.setLong(5, id);
                 statement.setInt(6, company);
-                if (statement.executeUpdate() != 1) throw new SQLException("Missing, foreign or booked tax target");
+                if (statement.executeUpdate() != 1)
+                    throw new SQLException("Missing, foreign or booked tax target");
             }
         }
         if (values.exchange() != null) {
@@ -533,7 +596,8 @@ public final class NormalizedInvoiceStore {
                 statement.setBigDecimal(1, values.exchange().rate());
                 statement.setLong(2, id);
                 statement.setInt(3, company);
-                if (statement.executeUpdate() != 1) throw new SQLException("Missing, foreign or booked exchange target");
+                if (statement.executeUpdate() != 1)
+                    throw new SQLException("Missing, foreign or booked exchange target");
             }
         }
         java.util.Set<Integer> seen = new java.util.HashSet<>();
@@ -562,14 +626,20 @@ public final class NormalizedInvoiceStore {
             if (!seen.add(row.rowNumber()))
                 throw new IllegalArgumentException("Duplicate stored detail row key");
             // Read current discount so unchanged historical out-of-range values can survive.
-            try (var statement = connection.prepareStatement(
-                    "SELECT discount FROM " + kind.rowTable() + " WHERE " + kind.idColumn()
-                    + "=? AND row_number=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            try (var statement =
+                    connection.prepareStatement(
+                            "SELECT discount FROM "
+                                    + kind.rowTable()
+                                    + " WHERE "
+                                    + kind.idColumn()
+                                    + "=? AND row_number=? AND company_id=(SELECT id FROM company"
+                                    + " WHERE legacy_id=?)")) {
                 statement.setLong(1, id);
                 statement.setInt(2, row.rowNumber());
                 statement.setInt(3, company);
                 try (var current = statement.executeQuery()) {
-                    if (!current.next()) throw new SQLException("Missing or foreign stored detail row key");
+                    if (!current.next())
+                        throw new SQLException("Missing or foreign stored detail row key");
                     var before = current.getBigDecimal(1);
                     var after = row.discount();
                     boolean same = before == null ? after == null : after != null && before.compareTo(after) == 0;
@@ -578,24 +648,35 @@ public final class NormalizedInvoiceStore {
                         throw new IllegalArgumentException("Discount must be within 0..100");
                 }
             }
-            try (var statement = connection.prepareStatement(
-                    "UPDATE " + kind.rowTable() + " SET description=?,discount=? WHERE "
-                    + kind.idColumn() + "=? AND row_number=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            try (var statement =
+                    connection.prepareStatement(
+                            "UPDATE "
+                                    + kind.rowTable()
+                                    + " SET description=?,discount=? WHERE "
+                                    + kind.idColumn()
+                                    + "=? AND row_number=? AND company_id=(SELECT id FROM company"
+                                    + " WHERE legacy_id=?)")) {
                 statement.setString(1, row.description());
                 statement.setBigDecimal(2, row.discount());
                 statement.setLong(3, id);
                 statement.setInt(4, row.rowNumber());
                 statement.setInt(5, company);
-                if (statement.executeUpdate() != 1) throw new SQLException("Missing or foreign stored detail row key");
+                if (statement.executeUpdate() != 1)
+                    throw new SQLException("Missing or foreign stored detail row key");
             }
         }
         seen.clear();
         for (var row : values.accounting()) {
             if (!seen.add(row.rowNumber()))
                 throw new IllegalArgumentException("Duplicate stored accounting row key");
-            try (var statement = connection.prepareStatement(
-                    "UPDATE " + kind.rowTable() + " SET account_number=?,tax_code=? WHERE "
-                    + kind.idColumn() + "=? AND row_number=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            try (var statement =
+                    connection.prepareStatement(
+                            "UPDATE "
+                                    + kind.rowTable()
+                                    + " SET account_number=?,tax_code=? WHERE "
+                                    + kind.idColumn()
+                                    + "=? AND row_number=? AND company_id=(SELECT id FROM company"
+                                    + " WHERE legacy_id=?)")) {
                 if (row.account() == null) statement.setNull(1, java.sql.Types.INTEGER);
                 else statement.setInt(1, row.account());
                 statement.setString(2, row.taxCode());
@@ -608,22 +689,65 @@ public final class NormalizedInvoiceStore {
         }
         seen.clear();
         for (var row : values.dimensions()) {
-            if (!seen.add(row.rowNumber())) throw new IllegalArgumentException("Duplicate stored dimension row key");
-            try (var statement = connection.prepareStatement("UPDATE " + kind.rowTable()
-                    + " SET project_number=?,result_unit_number=? WHERE " + kind.idColumn()
-                    + "=? AND row_number=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            if (!seen.add(row.rowNumber()))
+                throw new IllegalArgumentException("Duplicate stored dimension row key");
+            try (var statement =
+                    connection.prepareStatement(
+                            "UPDATE "
+                                    + kind.rowTable()
+                                    + " SET project_number=?,result_unit_number=? WHERE "
+                                    + kind.idColumn()
+                                    + "=? AND row_number=? AND company_id=(SELECT id FROM company"
+                                    + " WHERE legacy_id=?)")) {
                 statement.setString(1, row.project());statement.setString(2, row.resultUnit());
                 statement.setLong(3, id);statement.setInt(4, row.rowNumber());statement.setInt(5, company);
-                if (statement.executeUpdate() != 1) throw new SQLException("Missing or foreign stored dimension row key");
+                if (statement.executeUpdate() != 1)
+                    throw new SQLException("Missing or foreign stored dimension row key");
             }
         }
         seen.clear();
         for (int row : values.removedRows()) {
             if (!seen.add(row)) throw new IllegalArgumentException("Duplicate removed row key");
-            try (var statement = connection.prepareStatement("DELETE FROM " + kind.rowTable() + " WHERE "
-                    + kind.idColumn() + "=? AND row_number=? AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            try (var statement =
+                    connection.prepareStatement(
+                            "DELETE FROM "
+                                    + kind.rowTable()
+                                    + " WHERE "
+                                    + kind.idColumn()
+                                    + "=? AND row_number=? AND company_id=(SELECT id FROM company"
+                                    + " WHERE legacy_id=?)")) {
                 statement.setLong(1, id);statement.setInt(2, row);statement.setInt(3, company);
-                if (statement.executeUpdate() != 1) throw new SQLException("Missing or foreign removed row key");
+                if (statement.executeUpdate() != 1)
+                    throw new SQLException("Missing or foreign removed row key");
+            }
+        }
+        seen.clear();
+        for (var row : values.addedRows()) {
+            if (!seen.add(row.rowNumber()))
+                throw new IllegalArgumentException("Duplicate added row key");
+            try (var statement =
+                    connection.prepareStatement(
+                            "INSERT INTO "
+                                    + kind.rowTable()
+                                    + " ("
+                                    + kind.idColumn()
+                                    + ",company_id,row_number,product_number,description,unit_price,quantity,unit_name,discount,tax_code,account_number,project_number,result_unit_number)"
+                                    + " SELECT ?,id,?,NULL,?,?,?,NULL,?,?,?,?,? FROM company WHERE"
+                                    + " legacy_id=?")) {
+                statement.setLong(1, id);
+                statement.setInt(2, row.rowNumber());
+                statement.setString(3, row.description());
+                statement.setBigDecimal(4, row.unitPrice());
+                statement.setBigDecimal(5, row.quantity());
+                statement.setBigDecimal(6, row.discount());
+                statement.setString(7, row.taxCode());
+                if (row.account() == null) statement.setNull(8, java.sql.Types.INTEGER);
+                else statement.setInt(8, row.account());
+                statement.setString(9, row.project());
+                statement.setString(10, row.resultUnit());
+                statement.setInt(11, company);
+                if (statement.executeUpdate() != 1)
+                    throw new SQLException("Missing company for added row");
             }
         }
     }
