@@ -61,6 +61,9 @@ public final class CustomerFinancialEditDialog extends JDialog {
     private final JCheckBox confirm = new JCheckBox(text("confirm"));
     private final JButton removeRow = new JButton(text("removerow"));
     private final JButton addRow = new JButton(text("addrow"));
+    private final JButton addProduct = new JButton(text("addproduct"));
+    private final JComboBox<NormalizedCustomerFinancialEditService.Product> products =
+            new JComboBox<>();
     private final Lines lines = new Lines();
     private final JTable table = new JTable(lines);
     private boolean busy, invalid;
@@ -165,6 +168,29 @@ public final class CustomerFinancialEditDialog extends JDialog {
         JPanel rowPanel = new JPanel(new BorderLayout());
         JPanel rowActions = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEADING));
         rowActions.add(addRow);
+        products.setName("financial-products");
+        products.setPreferredSize(new java.awt.Dimension(260, 28));
+        products.setRenderer(
+                new javax.swing.DefaultListCellRenderer() {
+                    @Override
+                    public java.awt.Component getListCellRendererComponent(
+                            javax.swing.JList<?> list,
+                            Object value,
+                            int index,
+                            boolean selected,
+                            boolean focus) {
+                        return super.getListCellRendererComponent(
+                                list,
+                                value == null ? text("chooseproduct") : value,
+                                index,
+                                selected,
+                                focus);
+                    }
+                });
+        products.addActionListener(event -> controls());
+        rowActions.add(products);
+        addProduct.setName("financial-add-product");
+        rowActions.add(addProduct);
         rowActions.add(removeRow);
         rowPanel.add(rowActions, BorderLayout.NORTH);
         rowPanel.add(new JScrollPane(table));
@@ -271,6 +297,23 @@ public final class CustomerFinancialEditDialog extends JDialog {
                     int view = table.convertRowIndexToView(index);
                     if (view >= 0) table.setRowSelectionInterval(view, view);
                 });
+        addProduct.addActionListener(
+                event -> {
+                    if (busy
+                            || invalid
+                            || loaded == null
+                            || adapter.isBlocked()
+                            || !lines.canAdd()
+                            || !(products.getSelectedItem()
+                                    instanceof
+                                    NormalizedCustomerFinancialEditService.Product product)
+                            || !product.selectable()
+                            || !finishEdit()) return;
+                    int index = lines.add(product);
+                    changed();
+                    int view = table.convertRowIndexToView(index);
+                    if (view >= 0) table.setRowSelectionInterval(view, view);
+                });
         table.getSelectionModel().addListSelectionListener(event -> controls());
         reload.addActionListener(event -> load());
         previewButton.addActionListener(event -> preview());
@@ -331,6 +374,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         loaded = null;
         changed();
         lines.set(List.of());
+        products.setModel(new javax.swing.DefaultComboBoxModel<>());
         accountingContext.setText("");
         busy = true;
         status.setText(text("loading"));
@@ -372,6 +416,14 @@ public final class CustomerFinancialEditDialog extends JDialog {
                         taxRates[i].setText(
                                 rates.get(i) == null ? "" : rates.get(i).toPlainString());
                     lines.set(data.lines());
+                    var choices =
+                            new javax.swing.DefaultComboBoxModel<
+                                    NormalizedCustomerFinancialEditService.Product>();
+                    choices.addElement(null);
+                    data.products().stream()
+                            .filter(NormalizedCustomerFinancialEditService.Product::selectable)
+                            .forEach(choices::addElement);
+                    products.setModel(choices);
                     accountingContext.setText(
                             text("accounts")
                                     + " "
@@ -411,6 +463,12 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                     + data.taxes().stream()
                                             .map(t -> taxLabel(t.code()))
                                             .collect(java.util.stream.Collectors.joining(", "))
+                                    + "\n"
+                                    + text("productnote")
+                                    + " / "
+                                    + text("stockinfluencing")
+                                    + " "
+                                    + data.stockInfluencing()
                                     + "\n"
                                     + text("projects")
                                     + " "
@@ -540,6 +598,29 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                     + unit(loaded.data().baseCurrency())
                                     + ". "
                                     + text("equivalentnote"));
+                    String productSummary =
+                            preview.values().addedRows().stream()
+                                    .filter(r -> r.product() != null)
+                                    .map(
+                                            r ->
+                                                    r.rowNumber()
+                                                            + ": "
+                                                            + r.product().number()
+                                                            + " / "
+                                                            + text("productunit")
+                                                            + " "
+                                                            + String.valueOf(r.product().unit()))
+                                    .collect(java.util.stream.Collectors.joining("\n"));
+                    if (!productSummary.isEmpty()) {
+                        status.setText(
+                                productSummary
+                                        + "\n"
+                                        + text("stockinfluencing")
+                                        + " "
+                                        + loaded.data().stockInfluencing()
+                                        + "\n"
+                                        + status.getText());
+                    }
                     status.setCaretPosition(0);
                 } catch (InterruptedException error) {
                     Thread.currentThread().interrupt();
@@ -617,6 +698,9 @@ public final class CustomerFinancialEditDialog extends JDialog {
                         && table.getSelectedRow() >= 0
                         && lines.canRemove(table.convertRowIndexToModel(table.getSelectedRow())));
         addRow.setEnabled(active && loaded != null && lines.canAdd());
+        products.setEnabled(active && loaded != null);
+        addProduct.setEnabled(
+                active && loaded != null && lines.canAdd() && products.getSelectedItem() != null);
         previewButton.setEnabled(active && loaded != null);
         confirm.setEnabled(active && preview != null);
         save.setEnabled(active && preview != null && confirm.isSelected());
@@ -663,6 +747,10 @@ public final class CustomerFinancialEditDialog extends JDialog {
         private final java.util.Set<Integer> removed = new java.util.LinkedHashSet<>();
         private final java.util.Set<Integer> added = new java.util.LinkedHashSet<>();
         private long nextKey;
+        private final java.util.Map<
+                        Integer,
+                        org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.ProductLink>
+                productLinks = new java.util.HashMap<>();
         private java.util.Map<Integer, LineAmounts> edited = new java.util.HashMap<>();
         private java.util.Map<Integer, LineDetails> detailEdits = new java.util.HashMap<>();
         private java.util.Map<Integer, LineAccounting> accountingEdits = new java.util.HashMap<>();
@@ -672,6 +760,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
             original = List.copyOf(values);
             removed.clear();
             added.clear();
+            productLinks.clear();
             nextKey =
                     (long)
                                     Math.max(
@@ -737,24 +826,40 @@ public final class CustomerFinancialEditDialog extends JDialog {
         }
 
         int add() {
+            return add(null);
+        }
+
+        int add(NormalizedCustomerFinancialEditService.Product product) {
             int key = Math.toIntExact(nextKey++);
             var copy = new java.util.ArrayList<>(original);
             copy.add(
                     new NormalizedCustomerFinancialEditService.Line(
                             key,
-                            "",
+                            product == null ? "" : product.description(),
                             null,
                             BigDecimal.ONE,
-                            BigDecimal.ZERO,
+                            product == null ? BigDecimal.ZERO : null,
                             null,
-                            "TAXRATE_0",
+                            product == null ? "TAXRATE_0" : null,
                             null,
-                            null));
+                            null,
+                            product == null ? null : product.number(),
+                            product == null ? null : product.unit()));
             original = List.copyOf(copy);
             added.add(key);
-            edited.put(key, new LineAmounts(key, BigDecimal.ONE, BigDecimal.ZERO));
-            detailEdits.put(key, new LineDetails(key, "", null));
-            accountingEdits.put(key, new LineAccounting(key, null, "TAXRATE_0"));
+            if (product != null) {
+                productLinks.put(
+                        key,
+                        new org.fribok.bookkeeping.dataformat.NormalizedInvoiceStore.ProductLink(
+                                product.id(), product.number(), product.unit()));
+            }
+            edited.put(
+                    key,
+                    new LineAmounts(key, BigDecimal.ONE, product == null ? BigDecimal.ZERO : null));
+            detailEdits.put(
+                    key, new LineDetails(key, product == null ? "" : product.description(), null));
+            accountingEdits.put(
+                    key, new LineAccounting(key, null, product == null ? "TAXRATE_0" : null));
             dimensionEdits.put(key, new LineDimensions(key, null, null));
             fireTableDataChanged();
             return original.size() - 1;
@@ -779,7 +884,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                         account.account(),
                                         account.taxCode(),
                                         dimension.project(),
-                                        dimension.resultUnit());
+                                        dimension.resultUnit(),
+                                        productLinks.get(key));
                             })
                     .toList();
         }
@@ -793,6 +899,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
             detailEdits.remove(key);
             accountingEdits.remove(key);
             dimensionEdits.remove(key);
+            productLinks.remove(key);
             if (!added.remove(key)) removed.add(key);
             fireTableDataChanged();
         }
@@ -802,7 +909,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         }
 
         public int getColumnCount() {
-            return 9;
+            return 11;
         }
 
         public String getColumnName(int column) {
@@ -816,7 +923,9 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                 "discount",
                                 "taxcode",
                                 "project",
-                                "resultunit"
+                                "resultunit",
+                                "productnumber",
+                                "productunit"
                             }
                             [column]);
         }
@@ -830,7 +939,12 @@ public final class CustomerFinancialEditDialog extends JDialog {
         }
 
         public boolean isCellEditable(int row, int column) {
-            return column >= 1 && loaded != null && !busy && !invalid && !adapter.isBlocked();
+            return column >= 1
+                    && column <= 8
+                    && loaded != null
+                    && !busy
+                    && !invalid
+                    && !adapter.isBlocked();
         }
 
         public Object getValueAt(int row, int column) {
@@ -846,6 +960,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
                 case 6 -> accountingEdits.get(base.rowNumber()).taxCode();
                 case 7 -> dimensionEdits.get(base.rowNumber()).project();
                 case 8 -> dimensionEdits.get(base.rowNumber()).resultUnit();
+                case 9 -> base.productNumber();
+                case 10 -> base.unit();
                 default -> throw new IndexOutOfBoundsException();
             };
         }

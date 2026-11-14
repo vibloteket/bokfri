@@ -115,6 +115,16 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Keep keyboard focus in searchable dropdown fields when account and other suggestion lists open, including on macOS. Preserve mouse selection, scrolling, dropdown buttons and add/edit/delete menus; add cross-platform GUI regression tests and opt-in, metadata-only focus diagnostics with a legacy comparison mode.
 
 ### Changed
+- Add guarded company-product row insertion to the normalized customer invoice/credit
+  financial editor (#75). Selected product identity/unit and editable description are
+  snapshotted; price, sales account and VAT stay explicit, with no catalogue price/currency
+  or accounting-default lookup. Missing, foreign, expired, ambiguous and compound products
+  are refused. Product/unit columns are read-only; fresh preview shows product references
+  and the unchanged document stock flag. Stock-bearing quantities require exact integers,
+  including subsequent quantity edits; unchanged historical values remain preservable.
+  Insertions share the existing atomic edit/delete transaction and uncertain-commit guard.
+  Compound products, row reordering, creation and production bootstrap remain separate;
+  format-3 GUI startup stays disabled.
 - Add explicit manual-row insertion to the guarded normalized customer invoice/credit
   financial editor (#75). New rows require description, quantity, price, active selected-year
   sales account, explicit stored VAT code/rate and valid company-scoped dimensions.
