@@ -644,6 +644,21 @@ public final class NormalizedSupplierInvoiceStore {
                 });
     }
 
+    /** Read-only deletion eligibility check; does not delete, detach, migrate or allocate numbers. */
+    public void validateSupplierInvoiceDeletion(int company, long id) throws SQLException {
+        requireDeletable(Kind.INVOICE, company, id);
+    }
+
+    /** Read-only credit deletion eligibility check using exactly the actual deletion policy. */
+    public void validateSupplierCreditInvoiceDeletion(int company, long id) throws SQLException {
+        requireDeletable(Kind.CREDIT, company, id);
+    }
+
+    private void requireDeletable(Kind kind, int company, long id) throws SQLException {
+        var old = editable(kind, company, id);
+        requireUnreferenced(kind, company, old.number());
+    }
+
     private record Identity(Integer number, Integer crediting) {}
 
     private Identity editable(Kind kind, int company, long id) throws SQLException {
@@ -717,8 +732,7 @@ public final class NormalizedSupplierInvoiceStore {
     }
 
     private void delete(Kind kind, int company, long id) throws SQLException {
-        var old = editable(kind, company, id);
-        requireUnreferenced(kind, company, old.number());
+        requireDeletable(kind, company, id);
         deleteChildren(kind, id);
         try (var statement =
                 connection.prepareStatement(
