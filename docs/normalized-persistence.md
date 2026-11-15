@@ -714,6 +714,32 @@ amounts, null dates/rates/amounts, voucher references/dimensions, caller list pr
 header maxima and empty/populated PDFs. Assembled/packaged smoke creates fresh normalized
 supplier invoices/partial credits and exports both preview and commit journals.
 
+**Stable-ID supplier document repository completion (G1, V21).**
+`NormalizedSupplierInvoiceStore` now exposes typed list/find and identity-returning inserts,
+plus explicit unbooked snapshot replacement/deletion. Header SQL/legacy identities and company
+numbering floors survive replacement; child positions represent the explicitly supplied order.
+Caller-owned transactions and local savepoints protect partial inserts, graph replacement,
+deletion and entered-state primitives. The store neither commits nor closes connections;
+application-level exclusion and whole-journal ownership remain the caller's responsibility.
+
+Replacement/deletion refuse booked or bank-exported records. Supplier invoices consumed by
+company-scoped outpayments, supplier credits or purchase orders cannot be silently rewritten
+or deleted; new-number collisions/reserved references are refused too. Credit source links
+cannot be retargeted by graph editing. Explicit detachment/correction workflows remain future
+work. Null account entries and raw nullable tax/rounding totals use stored-value accessors,
+not legacy getters that invent zero/current-company defaults. Absent vouchers and empty maps
+remain absent/empty; main-voucher replacement during posting preserves manual corrections.
+Unsupported subtypes/correction-linked voucher graphs and inexact decimal/date inputs fail
+rather than being flattened or rounded.
+
+V21 widens only `supplier_invoice_voucher_row.edited_at` and its supplier-credit counterpart
+from the old six-digit SQL timestamp precision to nine digits. Existing V20 values are
+preserved; this cannot reconstruct nanoseconds already lost by older writes. Tests cover
+V20 upgrade preservation, full SQL no-op replacement, nullable snapshots, late failures and
+retry, company/reference isolation, counter floors, stock changes and two file reopens.
+Supplier GUI/bootstrap integration and complete posting/credit/correction workflows remain
+separate; format-3 production GUI startup is still disabled.
+
 Customer invoice/credit register PDFs (`invoice list --output` and
 `credit-invoice list --output`) use explicit company-wide headers (last voucher zero),
 company rounding and stored sale-row snapshots for both outer and nested printers.

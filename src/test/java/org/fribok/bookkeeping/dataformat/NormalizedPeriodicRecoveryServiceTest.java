@@ -307,7 +307,7 @@ class NormalizedPeriodicRecoveryServiceTest {
                 for (String table : List.of("periodic_invoice_added_state", "periodic_invoice_voucher_row",
                         "periodic_invoice_voucher", "periodic_invoice_default_account", "periodic_invoice_address",
                         "periodic_invoice_snapshot")) statement.executeUpdate("DROP TABLE " + table);
-                statement.executeUpdate("DELETE FROM bokfri_schema_history WHERE version=20");
+                statement.executeUpdate("DELETE FROM bokfri_schema_history WHERE version>=20");
                 for (String table : List.of("periodic_invoice_instance_row", "periodic_invoice_instance",
                         "periodic_invoice_template_row")) statement.executeUpdate("DELETE FROM " + table
                         + " WHERE periodic_invoice_id<>" + selected);
