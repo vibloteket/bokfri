@@ -54,6 +54,8 @@ public final class CustomerFinancialEditDialog extends JDialog {
     private final JTextField[] taxRates = {new JTextField(6), new JTextField(6), new JTextField(6)};
     private final JTextField exchangeRate = new JTextField(10);
     private final JLabel exchangeContext = new JLabel();
+    private final JComboBox<String> currency = new JComboBox<>();
+    private String displayedCurrency;
     private final JButton reload = new JButton(text("reload")),
             previewButton = new JButton(text("preview")),
             save = new JButton(text("save")),
@@ -157,6 +159,28 @@ public final class CustomerFinancialEditDialog extends JDialog {
         JPanel exchangeHeader = new JPanel();
         exchangeRate.setName("financial-exchange-rate");
         exchangeContext.setName("financial-exchange-context");
+        currency.setName("financial-currency");
+        currency.setRenderer(
+                new javax.swing.DefaultListCellRenderer() {
+                    @Override
+                    public java.awt.Component getListCellRendererComponent(
+                            javax.swing.JList<?> list,
+                            Object value,
+                            int index,
+                            boolean selected,
+                            boolean focus) {
+                        return super.getListCellRendererComponent(
+                                list,
+                                value == null || value.toString().isBlank()
+                                        ? text("preservecurrency")
+                                        : value,
+                                index,
+                                selected,
+                                focus);
+                    }
+                });
+        exchangeHeader.add(new JLabel(text("documentcurrency")));
+        exchangeHeader.add(currency);
         exchangeHeader.add(new JLabel(text("exchangerate")));
         exchangeHeader.add(exchangeRate);
         exchangeHeader.add(exchangeContext);
@@ -273,6 +297,18 @@ public final class CustomerFinancialEditDialog extends JDialog {
         due.getDocument().addDocumentListener(edits);
         for (var rate : taxRates) rate.getDocument().addDocumentListener(edits);
         exchangeRate.getDocument().addDocumentListener(edits);
+        currency.addActionListener(
+                event -> {
+                    String selected = (String) currency.getSelectedItem();
+                    if (!busy
+                            && loaded != null
+                            && !java.util.Objects.equals(displayedCurrency, selected)) {
+                        exchangeRate.setText("");
+                    }
+                    displayedCurrency = selected;
+                    exchangeLabel();
+                    changed();
+                });
         taxFree.addActionListener(event -> changed());
         removeRow.addActionListener(
                 event -> {
@@ -375,6 +411,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         changed();
         lines.set(List.of());
         products.setModel(new javax.swing.DefaultComboBoxModel<>());
+        currency.setModel(new javax.swing.DefaultComboBoxModel<>());
         accountingContext.setText("");
         busy = true;
         status.setText(text("loading"));
@@ -399,14 +436,22 @@ public final class CustomerFinancialEditDialog extends JDialog {
                             data.values().dueDate() == null
                                     ? ""
                                     : data.values().dueDate().toString());
+                    var codes = new javax.swing.DefaultComboBoxModel<String>();
+                    // Always include the raw current value, even a historical blank code.
+                    codes.addElement(data.currency());
+                    data.currencies().stream()
+                            .filter(
+                                    code ->
+                                            !code.isBlank()
+                                                    && !java.util.Objects.equals(
+                                                            code, data.currency()))
+                            .forEach(codes::addElement);
+                    currency.setModel(codes);
+                    currency.setSelectedItem(data.currency());
+                    displayedCurrency = data.currency();
                     exchangeRate.setText(
                             data.exchangeRate() == null ? "" : data.exchangeRate().toPlainString());
-                    exchangeContext.setText(
-                            unit(data.currency())
-                                    + " -> "
-                                    + unit(data.baseCurrency())
-                                    + " / "
-                                    + text("readonlycodes"));
+                    exchangeLabel();
                     var storedTax = data.headerTax();
                     taxFree.setSelectedItem(storedTax.taxFree());
                     var rates =
@@ -534,7 +579,9 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                     parseRate(0),
                                     parseRate(1),
                                     parseRate(2)),
-                            new ExchangeRateValues(parseDecimal(exchangeRate.getText())),
+                            new ExchangeRateValues(
+                                    parseDecimal(exchangeRate.getText()),
+                                    (String) currency.getSelectedItem()),
                             lines.dimensions(),
                             lines.removedRows(),
                             lines.addedRows());
@@ -584,10 +631,14 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                     + text("totals")
                                     + " "
                                     + preview.before().toPlainString()
-                                    + " -> "
+                                    + (java.util.Objects.equals(
+                                                    preview.beforeCurrency(),
+                                                    preview.afterCurrency())
+                                            ? " -> "
+                                            : " " + unit(preview.beforeCurrency()) + " -> ")
                                     + preview.after().toPlainString()
                                     + " "
-                                    + unit(loaded.data().currency())
+                                    + unit(preview.afterCurrency())
                                     + "\n"
                                     + text("equivalent")
                                     + " "
@@ -620,6 +671,10 @@ public final class CustomerFinancialEditDialog extends JDialog {
                                         + loaded.data().stockInfluencing()
                                         + "\n"
                                         + status.getText());
+                    }
+                    if (!java.util.Objects.equals(
+                            preview.beforeCurrency(), preview.afterCurrency())) {
+                        status.setText(text("currencywarning") + "\n" + status.getText());
                     }
                     status.setCaretPosition(0);
                 } catch (InterruptedException error) {
@@ -688,6 +743,7 @@ public final class CustomerFinancialEditDialog extends JDialog {
         date.setEnabled(active && loaded != null);
         due.setEnabled(active && loaded != null);
         exchangeRate.setEnabled(active && loaded != null);
+        currency.setEnabled(active && loaded != null);
         taxFree.setEnabled(active && loaded != null);
         for (var rate : taxRates) rate.setEnabled(active && loaded != null);
         table.setEnabled(active && loaded != null);
@@ -705,6 +761,15 @@ public final class CustomerFinancialEditDialog extends JDialog {
         confirm.setEnabled(active && preview != null);
         save.setEnabled(active && preview != null && confirm.isSelected());
         cancel.setEnabled(!busy);
+    }
+
+    private void exchangeLabel() {
+        exchangeContext.setText(
+                unit((String) currency.getSelectedItem())
+                        + " -> "
+                        + unit(loaded == null ? null : loaded.data().baseCurrency())
+                        + " / "
+                        + text("readonlybasecurrency"));
     }
 
     private String taxLabel(String code) {

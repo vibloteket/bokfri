@@ -420,8 +420,13 @@ public final class NormalizedInvoiceStore {
     /** Optional persisted-row dimension patch; raw null/empty values remain distinct. */
     public record LineDimensions(int rowNumber, String project, String resultUnit) {}
 
-    /** Optional stored exchange-rate patch; no currency code or catalogue rate is changed. */
-    public record ExchangeRateValues(java.math.BigDecimal rate) {
+    /** Explicit stored rate and optional document code; null code preserves the original code. */
+    public record ExchangeRateValues(java.math.BigDecimal rate, String currency) {
+        /** Preserves the original stored-rate-only API; no catalogue/default rate is read. */
+        public ExchangeRateValues(java.math.BigDecimal rate) {
+            this(rate, null);
+        }
+
         /** Requires exact nullable storage; the service validates changed values and currency context. */
         public ExchangeRateValues {
             requireExactAmount(rate);
@@ -437,7 +442,8 @@ public final class NormalizedInvoiceStore {
      * @param details optional row detail patches; omitted keys remain unchanged
      * @param accounting optional row account/tax patches; omitted keys remain unchanged
      * @param tax optional complete raw header-tax patch; null preserves all header tax columns
-     * @param exchange optional stored-rate patch; null preserves the rate and all currency codes
+     * @param exchange optional explicit stored rate/code; null preserves both, null patch code
+     *     preserves code
      * @param dimensions optional existing-row dimension patches; omitted keys are preserved
      * @param removedRows explicit existing row keys to remove; never renumbers survivors
      * @param addedRows explicit new rows with fresh keys above the original maximum
@@ -632,14 +638,37 @@ public final class NormalizedInvoiceStore {
             }
         }
         if (values.exchange() != null) {
-            try (var statement = connection.prepareStatement("UPDATE " + kind.table
-                    + " SET currency_rate=? WHERE id=? AND entered=FALSE"
-                    + " AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+            boolean codeChanged = validateCurrencyChange(kind, company, id, values.exchange());
+            if (codeChanged) {
+                try (var statement =
+                        connection.prepareStatement(
+                                "UPDATE "
+                                        + kind.table
+                                        + " SET currency_code=?,currency_rate=? WHERE id=? AND"
+                                        + " entered=FALSE AND company_id=(SELECT id FROM company"
+                                        + " WHERE legacy_id=?)")) {
+                    statement.setString(1, values.exchange().currency());
+                    statement.setBigDecimal(2, values.exchange().rate());
+                    statement.setLong(3, id);
+                    statement.setInt(4, company);
+                    if (statement.executeUpdate() != 1) {
+                        throw new SQLException("Missing, foreign or booked currency target");
+                    }
+                }
+            } else {
+                try (var statement =
+                        connection.prepareStatement(
+                                "UPDATE "
+                                        + kind.table
+                                        + " SET currency_rate=? WHERE id=? AND entered=FALSE AND"
+                                        + " company_id=(SELECT id FROM company WHERE"
+                                        + " legacy_id=?)")) {
                 statement.setBigDecimal(1, values.exchange().rate());
                 statement.setLong(2, id);
                 statement.setInt(3, company);
                 if (statement.executeUpdate() != 1)
                     throw new SQLException("Missing, foreign or booked exchange target");
+            }
             }
         }
         java.util.Set<Integer> seen = new java.util.HashSet<>();
@@ -1022,6 +1051,107 @@ public final class NormalizedInvoiceStore {
                 statement.executeUpdate();
             }
         }
+    }
+
+    /**
+     * Validates a proposed invoice currency change without writing; rate-only patches retain their
+     * old contract. Caller retains transaction/connection and exclusive application access.
+     *
+     * @param company company migration identity
+     * @param id stable SQL invoice identity
+     * @param values explicit rate and optional code
+     * @return whether the proposed code differs from the stored code
+     * @throws SQLException for missing/foreign/booked targets, invalid context or references
+     */
+    public boolean validateInvoiceCurrencyChange(int company, long id, ExchangeRateValues values)
+            throws SQLException {
+        return validateCurrencyChange(Kind.INVOICE, company, id, values);
+    }
+
+    /**
+     * Validates a proposed credit currency change without writing; linked corrections cannot be
+     * relabelled. Caller retains transaction/connection and exclusive application access.
+     *
+     * @param company company migration identity
+     * @param id stable SQL credit identity
+     * @param values explicit rate and optional code
+     * @return whether the proposed code differs from the stored code
+     * @throws SQLException for missing/foreign/booked targets, invalid context or references
+     */
+    public boolean validateCreditCurrencyChange(int company, long id, ExchangeRateValues values)
+            throws SQLException {
+        return validateCurrencyChange(Kind.CREDIT, company, id, values);
+    }
+
+    private boolean validateCurrencyChange(
+            Kind kind, int company, long id, ExchangeRateValues values) throws SQLException {
+        Objects.requireNonNull(values, "values");
+        var identity = editableIdentity(kind, company, id);
+        String code = values.currency();
+        if (code == null) return false;
+        try (var statement =
+                connection.prepareStatement(
+                        "SELECT currency_code,order_numbers,"
+                                + (kind == Kind.CREDIT
+                                        ? "crediting_invoice_number"
+                                        : "CAST(NULL AS INTEGER)")
+                                + " FROM "
+                                + kind.table
+                                + " WHERE id=? AND company_id=(SELECT id FROM company WHERE"
+                                + " legacy_id=?)")) {
+            statement.setLong(1, id);
+            statement.setInt(2, company);
+            try (var row = statement.executeQuery()) {
+                if (!row.next()) throw new SQLException("Missing currency target");
+                if (Objects.equals(code, row.getString(1))) return false;
+                if (identity.number() == null) {
+                    throw new SQLException("Currency changes require a numbered document");
+                }
+                if (row.getObject(3) != null) {
+                    throw new SQLException("Credit currency is referenced by its source invoice");
+                }
+                String orders = row.getString(2);
+                // The only recognized nonblank empty-order marker comes from the legacy SSInvoice
+                // constructor.
+                if (orders != null
+                        && !orders.isBlank()
+                        && !orders.equals("Fakturan har inga ordrar")) {
+                    throw new SQLException(
+                            "Currency change has unresolved stored order references");
+                }
+            }
+        }
+        if (code.isBlank() || values.rate() == null || values.rate().signum() <= 0) {
+            throw new SQLException("Changed currency requires an explicit code and positive rate");
+        }
+        try (var statement =
+                connection.prepareStatement("SELECT code FROM currency WHERE code=?")) {
+            statement.setString(1, code);
+            try (var row = statement.executeQuery()) {
+                if (!row.next() || !code.equals(row.getString(1))) {
+                    throw new SQLException("Missing selected currency code");
+                }
+            }
+        }
+        try (var statement =
+                connection.prepareStatement(
+                        "SELECT currency_code FROM company WHERE legacy_id=?")) {
+            statement.setInt(1, company);
+            try (var row = statement.executeQuery()) {
+                if (!row.next() || row.getString(1) == null || row.getString(1).isBlank()) {
+                    throw new SQLException(
+                            "Currency changes require explicit company currency context");
+                }
+                if (code.equals(row.getString(1))
+                        && values.rate().compareTo(java.math.BigDecimal.ONE) != 0) {
+                    throw new SQLException(
+                            "Identical document and accounting currencies require rate 1");
+                }
+            }
+        }
+        requireAvailableNumber(kind, company, identity.number(), id);
+        requireUnreferenced(kind, company, identity.number());
+        return true;
     }
 
     private void requireUnreferenced(Kind kind, int companyLegacyId, Integer number) throws SQLException {

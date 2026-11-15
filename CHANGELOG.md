@@ -115,6 +115,15 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Keep keyboard focus in searchable dropdown fields when account and other suggestion lists open, including on macOS. Preserve mouse selection, scrolling, dropdown buttons and add/edit/delete menus; add cross-platform GUI regression tests and opt-in, metadata-only focus diagnostics with a legacy comparison mode.
 
 ### Changed
+- Add guarded document currency-code changes to the normalized unbooked customer
+  invoice/credit editor (#75): explicit catalogue choice, fresh rate entry, old/new-unit
+  totals preview and a no-repricing warning. Only uniquely numbered, unreferenced documents
+  may change code; payment/credit/order references, linked credit corrections and unresolved
+  order snapshots are refused. Company currency remains read-only; catalogue rates are not
+  copied. Narrow code/rate updates share existing rollback and uncertain-commit guards;
+  unchanged historical missing/blank codes and rates remain preservable without defaults.
+  Broader linked-reference workflows, creation and production bootstrap remain separate;
+  format-3 GUI startup stays disabled.
 - Add guarded company-product row insertion to the normalized customer invoice/credit
   financial editor (#75). Selected product identity/unit and editable description are
   snapshotted; price, sales account and VAT stay explicit, with no catalogue price/currency
