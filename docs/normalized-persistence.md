@@ -775,8 +775,27 @@ Tests cover both families, immutable/no-write previews, foreign/stale tokens, ro
 current-schema refusal, the shared gate, cancellation, stale asynchronous results, selection
 replacement, uncertain outcomes before/after durability, and post-commit cleanup/callback errors.
 
-This is an explicit adapter/dialog boundary only: supplier menu routing, document-view integration,
-editing/deletion GUI, production bootstrap, booked-document correction and linked-document
+`SupplierDocumentGuiSession.documents()` loads both company-wide supplier document families in
+one read-only transaction. Year selection supplies the posting context, not a document-date filter.
+Unique invoice numbers receive balances from company-scoped credits/outpayments; duplicate or
+missing numbers retain distinct SQL identities and have no invented balance. Raw nullable snapshots
+are not rewritten. `SupplierDocumentView` presents these immutable snapshots in sortable read-only
+tables, preserving selected SQL identities rather than row positions. Confirmed journal callbacks
+reload both tables together only for the still-current session. Failed reloads retain the last
+confirmed snapshot but disable posting actions until a successful reload. Replacement/closure clears
+old rows/dates immediately and discards late loads and callbacks; uncertain posting disables the view
+and menu actions rather than attempting to resolve or retry durability.
+
+`SupplierDocumentMenuBinding` installs an explicit owner/session/view binding; both real supplier
+main-menu actions route to the corresponding view tab before any legacy frame/cache lookup. Menu
+enablement follows the installed selection rather than legacy company/year events, including menu
+items whose Swing popup is not yet realized. Listeners follow owner/component ownership and detach
+on removal/disposal. Unbound owners retain the exact legacy route and enablement; closed or blocked
+installed owners keep a consumed marker and never fall back. The XML menu loader exposes an
+independent action-to-item lookup so optional/missing Name attributes do not conflate these controls.
+No automatic normalized GUI selection/bootstrap is introduced.
+
+Supplier editing/deletion GUI, production bootstrap, booked-document correction and linked-document
 detachment remain separate. Format-3 production GUI startup is still disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and

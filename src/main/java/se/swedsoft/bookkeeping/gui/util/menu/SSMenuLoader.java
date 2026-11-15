@@ -30,6 +30,7 @@ public class SSMenuLoader {    private static final Logger LOG = LoggerFactory.g
     private Map<String, JMenuBar > iMenuBars;
     private Map<String, JMenu    > iMenus;
     private Map<String, JMenuItem> iMenuItems;
+    private final Map<String, JMenuItem> itemsByAction = new HashMap<>();
 
     private Map<String, List<ActionListener>> iActions;
 
@@ -55,6 +56,7 @@ public class SSMenuLoader {    private static final Logger LOG = LoggerFactory.g
         iMenuBars.clear();
         iMenus.clear();
         iMenuItems.clear();
+        itemsByAction.clear();
 
         XMLReader iReader;
 
@@ -96,6 +98,11 @@ public class SSMenuLoader {    private static final Logger LOG = LoggerFactory.g
      */
     public JMenu getMenu(String pName) {
         return iMenus.get(pName);
+    }
+
+    /** Returns the XML action's menu item, independently of an optional Name attribute. */
+    public JMenuItem getMenuItemForAction(String action) {
+        return itemsByAction.get(action);
     }
 
     /**
@@ -247,6 +254,9 @@ public class SSMenuLoader {    private static final Logger LOG = LoggerFactory.g
 
             iMenuItem.setName(iName);
             iMenuItem.addActionListener(createActionListener(iAction));
+            if (iAction != null) {
+                itemsByAction.put(iAction, iMenuItem);
+            }
 
             if (iBundle == null) {
                 iMenuItem.setText(iText);

@@ -397,11 +397,31 @@ public class SSMainMenu {    private static final Logger LOG = LoggerFactory.get
 
         // Leverantörsfaktura
         // *****************************
-        iMenuLoader.addActionListener("salemenu.supplierinvoice", e -> SSSupplierInvoiceFrame.showFrame(iMainFrame, 880, 600));
+        iMenuLoader.addActionListener("salemenu.supplierinvoice", e ->
+                org.fribok.bookkeeping.gui.supplierinvoice.SupplierDocumentMenuBinding.route(
+                        iMainFrame,
+                        org.fribok.bookkeeping.gui.supplierinvoice.SupplierJournalAdapter.Kind.INVOICE,
+                        () -> SSSupplierInvoiceFrame.showFrame(iMainFrame, 880, 600)));
+
 
         // Leverantörskreditfaktura
         // *****************************
-        iMenuLoader.addActionListener("salemenu.suppliercreditinvoice", e -> SSSupplierCreditInvoiceFrame.showFrame(iMainFrame, 880, 600));
+        iMenuLoader.addActionListener("salemenu.suppliercreditinvoice", e ->
+                org.fribok.bookkeeping.gui.supplierinvoice.SupplierDocumentMenuBinding.route(
+                        iMainFrame,
+                        org.fribok.bookkeeping.gui.supplierinvoice.SupplierJournalAdapter.Kind.CREDIT,
+                        () -> SSSupplierCreditInvoiceFrame.showFrame(iMainFrame, 880, 600)));
+        Runnable bindSupplierMenus = () -> {
+            org.fribok.bookkeeping.gui.supplierinvoice.SupplierDocumentMenuBinding.bindMenuButton(
+                    iMainFrame, iMenuLoader.getMenuItemForAction("salemenu.supplierinvoice"));
+            org.fribok.bookkeeping.gui.supplierinvoice.SupplierDocumentMenuBinding.bindMenuButton(
+                    iMainFrame, iMenuLoader.getMenuItemForAction("salemenu.suppliercreditinvoice"));
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            bindSupplierMenus.run();
+        } else {
+            SwingUtilities.invokeLater(bindSupplierMenus);
+        }
 
     }
 
