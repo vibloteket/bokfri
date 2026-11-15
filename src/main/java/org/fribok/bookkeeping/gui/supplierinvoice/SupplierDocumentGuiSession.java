@@ -2,18 +2,27 @@ package org.fribok.bookkeeping.gui.supplierinvoice;
 
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
+import org.fribok.bookkeeping.dataformat.NormalizedOutpaymentStore;
 import org.fribok.bookkeeping.dataformat.NormalizedSchemaMigrations;
+import org.fribok.bookkeeping.dataformat.NormalizedSupplierInvoiceStore;
 import org.fribok.bookkeeping.dataformat.SchemaMigrationRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import se.swedsoft.bookkeeping.calc.math.SSSupplierInvoiceMath;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
 import se.swedsoft.bookkeeping.data.SSNewCompany;
+import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -88,6 +97,110 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
                                 selectedYear.getLocalTo()));
     }
 
+    /** Immutable company-wide supplier document presentation, keyed only by stable SQL identity. */
+    public record Document(
+            long id,
+            Integer number,
+            LocalDate date,
+            String supplier,
+            String currency,
+            BigDecimal total,
+            BigDecimal balance,
+            boolean entered,
+            boolean bankExported,
+            Integer creditingNumber) {}
+
+    /**
+     * Both document families from one selected-company read transaction; year supplies posting
+     * context.
+     */
+    public record Documents(
+            int companyId,
+            int yearId,
+            String companyName,
+            LocalDate from,
+            LocalDate to,
+            List<Document> invoices,
+            List<Document> credits) {
+        public Documents {
+            invoices = List.copyOf(invoices);
+            credits = List.copyOf(credits);
+        }
+    }
+
+    /**
+     * Loads company-wide invoice/credit tables without legacy caches or stored-selection changes.
+     * Ambiguous or absent invoice numbers have no balance: payments/credits cannot safely be
+     * assigned.
+     */
+    public Documents documents() throws SQLException {
+        return run(
+                false,
+                (connection, selected, selectedYear) -> {
+                    var store = new NormalizedSupplierInvoiceStore(connection);
+                    var payments = new NormalizedOutpaymentStore(connection);
+                    var stored = store.listSupplierInvoices(company);
+                    Map<Integer, Integer> counts = new HashMap<>();
+                    for (var item : stored) {
+                        counts.merge(item.document().getNumber(), 1, Integer::sum);
+                    }
+                    List<Document> invoices = new ArrayList<>();
+                    List<Document> credits = new ArrayList<>();
+                    for (var item : stored) {
+                        var invoice = item.document();
+                        BigDecimal total = SSSupplierInvoiceMath.getTotalSum(invoice);
+                        BigDecimal balance = null;
+                        if (invoice.getNumber() != null && counts.get(invoice.getNumber()) == 1) {
+                            balance =
+                                    total.subtract(
+                                                    store.supplierCreditInvoiceSum(
+                                                            company, invoice.getNumber()))
+                                            .subtract(
+                                                    payments.outpaymentSum(
+                                                            company, invoice.getNumber()));
+                        }
+                        invoices.add(document(item.id(), invoice, total, balance, null));
+                    }
+                    for (var item : store.listSupplierCreditInvoices(company)) {
+                        var credit = item.document();
+                        credits.add(
+                                document(
+                                        item.id(),
+                                        credit,
+                                        SSSupplierInvoiceMath.getTotalSum(credit),
+                                        null,
+                                        credit.getCreditingNr()));
+                    }
+                    return new Documents(
+                            company,
+                            year,
+                            selected.getName(),
+                            selectedYear.getLocalFrom(),
+                            selectedYear.getLocalTo(),
+                            invoices,
+                            credits);
+                });
+    }
+
+    private static Document document(
+            long id,
+            SSSupplierInvoice invoice,
+            BigDecimal total,
+            BigDecimal balance,
+            Integer crediting) {
+        return new Document(
+                id,
+                invoice.getNumber(),
+                invoice.getLocalDate(),
+                invoice.getSupplierName(),
+                invoice.getCurrency() == null ? null : invoice.getCurrency().getName(),
+                total,
+                balance,
+                invoice.isEntered(),
+                invoice.isBGCEntered(),
+                crediting);
+    }
+
     /** Leases invoice or credit journal planning/posting for this exact selection. */
     public SupplierJournalAdapter journal(SupplierJournalAdapter.Kind kind) throws SQLException {
         requireAvailable();
@@ -101,7 +214,7 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
         if (blocked) {
             throw new SQLException(
                     "Previous commit outcome is unknown; refresh the application context before"
-                        + " another request");
+                            + " another request");
         }
     }
 
@@ -145,7 +258,7 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
                                         () ->
                                                 new SQLException(
                                                         "Selected year does not belong to"
-                                                            + " company"));
+                                                                + " company"));
                 T result = work.run(connection, selected, selectedYear);
                 if (write) {
                     // Once accepted, this write remains bound to the original identities even if
@@ -180,7 +293,7 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
                     } else if (committed) {
                         LOG.warn(
                                 "Supplier journal committed but session close failed; do not"
-                                    + " repost",
+                                        + " repost",
                                 close);
                     } else {
                         throw close;
@@ -203,7 +316,7 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
             if (installed.size() != migrations.size() || !installed.contains(21)) {
                 throw new SQLException(
                         "Supplier dialog requires the complete current normalized schema, including"
-                            + " V21");
+                                + " V21");
             }
         } catch (java.io.IOException resources) {
             throw new SQLException("Cannot verify packaged normalized schema resources", resources);
