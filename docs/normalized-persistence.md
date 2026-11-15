@@ -756,8 +756,28 @@ company/date, including a detached default-account map. This avoids legacy const
 and missing supplier control accounts; persisted documents are never backfilled. Packaged CLI
 smoke covers both supplier journal families after normalization, preview/no-write, commit/reopen
 and stable empty-selection errors.
-Supplier GUI/bootstrap, booked-document correction and linked-document detachment remain
-separate; format-3 production GUI startup is still disabled.
+The explicit supplier journal GUI slice consists of `SupplierDocumentGuiSession`,
+`SupplierJournalAdapter` and `SupplierJournalDialog`. An immutable company/year binding uses
+the application-owned writer gate and a fresh dedicated auto-commit connection for each action.
+It verifies format 3 and the complete installed schema/checksums (including V21) without migration,
+resolves the selected company/year, rolls previews back, and commits posting once. Closing the
+selection invalidates future leases/requests, never shuts down the database, and does not cancel
+accepted writes against their original identities. An uncertain commit blocks both journal
+families and all new requests in that selection; an externally refreshed context is required.
+Post-commit connection-close or refresh-callback failure is never presented as a retryable write.
+
+The dialog shows immutable stable-ID document rows, proposed journal/voucher allocation, voucher
+rows/dimension codes and debit/credit totals. It requires explicit preview and confirmation;
+date changes discard the preview/confirmation. Database work runs off the EDT; controls are
+locked during work. Selection invalidation suppresses stale refresh callbacks while allowing an
+accepted post to finish. No legacy objects/caches, table positions or stored selection are used.
+Tests cover both families, immutable/no-write previews, foreign/stale tokens, rollback/retry,
+current-schema refusal, the shared gate, cancellation, stale asynchronous results, selection
+replacement, uncertain outcomes before/after durability, and post-commit cleanup/callback errors.
+
+This is an explicit adapter/dialog boundary only: supplier menu routing, document-view integration,
+editing/deletion GUI, production bootstrap, booked-document correction and linked-document
+detachment remain separate. Format-3 production GUI startup is still disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and
 `credit-invoice list --output`) use explicit company-wide headers (last voucher zero),
