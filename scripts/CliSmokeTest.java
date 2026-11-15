@@ -313,6 +313,18 @@ public final class CliSmokeTest {
         runNormalizedPaymentJournalPdfFlow(temporary, company, year);
         runNormalizedInvoiceJournalPdfFlow(temporary, company, year);
         runNormalizedReminderPdfFlow(temporary, company, year);
+        cli("company", "use", company).success();
+        cli("year", "use", year).success();
+        runSupplierInvoiceFlow(temporary);
+        runSupplierCreditInvoiceFlow(temporary);
+        String supplierDate = firstString(cli("--format", "json", "supplier-invoice", "show",
+                Files.readString(temporary.resolve("supplier-invoice-number.txt"))).stdout, "date");
+        for (String family : List.of("supplier-invoice", "supplier-credit-invoice")) {
+            Result empty = cli("--format", "json", family, "journal", "--from", supplierDate, "--to", supplierDate);
+            require(empty.exitCode != 0 && empty.stderr.contains(family.equals("supplier-invoice")
+                    ? "SUPPLIER_INVOICE_JOURNAL_EMPTY" : "SUPPLIER_CREDIT_INVOICE_JOURNAL_EMPTY"),
+                    "normalized supplier journal lacks stable empty-selection error");
+        }
     }
 
     private static void runNormalizedInvoiceJournalPdfFlow(Path temporary, String company, String year)
@@ -679,13 +691,16 @@ public final class CliSmokeTest {
                 StandardCharsets.UTF_8);
         cli("--format", "json", "supplier-credit-invoice", "validate", "--file",
                 input.toString()).success();
+        Result beforeDryRun = cli("--format", "json", "supplier-credit-invoice", "list");
+        beforeDryRun.success();
         Result dryRun = cli("--format", "json", "supplier-credit-invoice", "create",
                 "--dry-run", "--file", input.toString());
         dryRun.success();
         int number = firstInt(dryRun.stdout, "number");
         Result afterDryRun = cli("--format", "json", "supplier-credit-invoice", "list");
         afterDryRun.success();
-        require(afterDryRun.stdout.contains("\"supplierCreditInvoices\":[]"),
+        require(Pattern.compile("\\\"number\\\"\\s*:").matcher(afterDryRun.stdout).results().count()
+                        == Pattern.compile("\\\"number\\\"\\s*:").matcher(beforeDryRun.stdout).results().count(),
                 "supplier credit dry run persisted data");
         Result create = cli("--format", "json", "supplier-credit-invoice", "create",
                 "--file", input.toString());
@@ -712,6 +727,9 @@ public final class CliSmokeTest {
         commit.success();
         require(commit.stdout.contains("\"committed\":true"),
                 "supplier credit journal did not commit");
+        Result afterCommit = cli("--format", "json", "supplier-credit-invoice", "show", Integer.toString(number));
+        afterCommit.success();
+        require(afterCommit.stdout.contains("\"entered\":true"), "supplier credit was not marked entered");
     }
 
     private static void runOutpaymentFlow(Path temporary) throws Exception {

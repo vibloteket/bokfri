@@ -1,6 +1,7 @@
 package org.fribok.bookkeeping.cli;
 
 import org.fribok.bookkeeping.service.invoice.NormalizedCustomerJournalService;
+import org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierJournalService;
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
 import org.fribok.bookkeeping.dataformat.HsqlEngineMigrationService;
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
@@ -575,6 +576,38 @@ public final class BokfriRuntime implements AutoCloseable {
             throw new SQLException("Journal plan does not match current selection");
         }
         var posted = new NormalizedCustomerJournalService(
+                connection, Clock.systemUTC()).post(plan);
+        try {
+            connection.commit();
+        } catch (SQLException failure) {
+            try { connection.rollback(); }
+            catch (SQLException rollback) { failure.addSuppressed(rollback); }
+            throw failure;
+        }
+        return posted;
+    }
+
+    /** Plans a normalized supplier journal without legacy globals or SQL writes. */
+    public NormalizedSupplierJournalService.Plan planSupplierJournal(
+            boolean credit, java.time.LocalDate from, java.time.LocalDate to) throws SQLException {
+        SSNewCompany company = requireCurrentCompany();
+        SSNewAccountingYear year = normalizedStore().getCurrentYear();
+        if (year == null) throw new SQLException("No selected accounting year");
+        var service = new NormalizedSupplierJournalService(
+                connection, Clock.systemUTC());
+        return credit ? service.planCredits(company.getId(), year.getId(), from, to)
+                : service.planInvoices(company.getId(), year.getId(), from, to);
+    }
+
+    /** Posts and commits a validated normalized supplier journal as one application operation. */
+    public NormalizedSupplierJournalService.Posted commitSupplierJournal(
+            NormalizedSupplierJournalService.Plan plan) throws SQLException {
+        if (plan.companyId() != requireCurrentCompany().getId()
+                || normalizedStore().getCurrentYear() == null
+                || plan.yearId() != normalizedStore().getCurrentYear().getId()) {
+            throw new SQLException("Journal plan does not match current selection");
+        }
+        var posted = new NormalizedSupplierJournalService(
                 connection, Clock.systemUTC()).post(plan);
         try {
             connection.commit();

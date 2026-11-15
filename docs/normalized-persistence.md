@@ -737,7 +737,26 @@ from the old six-digit SQL timestamp precision to nine digits. Existing V20 valu
 preserved; this cannot reconstruct nanoseconds already lost by older writes. Tests cover
 V20 upgrade preservation, full SQL no-op replacement, nullable snapshots, late failures and
 retry, company/reference isolation, counter floors, stock changes and two file reopens.
-Supplier GUI/bootstrap integration and complete posting/credit/correction workflows remain
+`NormalizedSupplierJournalService` now plans and atomically posts supplier invoice/credit
+journals using stable SQL identities, explicit year accounts/projects/result units and a
+caller-owned transaction. A fresh plan must match the preview's selected identities,
+generated accounting snapshots, journal counter and next voucher number. Each document and
+the combined journal must balance; absent/ambiguous document numbers and missing purchase
+accounts fail closed. Undated documents remain outside supplier journal selection.
+
+A local savepoint covers all main snapshots, entered flags, ledger rows and the journal
+counter, preserving earlier caller work on failure and retaining manual corrections and
+non-posting metadata. Mutable preview objects are never used as posting inputs. The normalized
+CLI uses this service and commits once; commit failures trigger rollback. Application-level
+exclusive ownership remains required; this is not a concurrent number allocator. Tests include
+late document/ledger/counter failures, retry, stale previews, corrections with nanosecond audit
+metadata, company isolation and two real-file reopens.
+New normalized CLI supplier invoices use `SupplierInvoiceFactory` with the explicitly selected
+company/date, including a detached default-account map. This avoids legacy constructor lookups
+and missing supplier control accounts; persisted documents are never backfilled. Packaged CLI
+smoke covers both supplier journal families after normalization, preview/no-write, commit/reopen
+and stable empty-selection errors.
+Supplier GUI/bootstrap, booked-document correction and linked-document detachment remain
 separate; format-3 production GUI startup is still disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and

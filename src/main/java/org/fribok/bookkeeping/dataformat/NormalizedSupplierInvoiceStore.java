@@ -1,10 +1,20 @@
 package org.fribok.bookkeeping.dataformat;
 
+import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
+import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
+import se.swedsoft.bookkeeping.data.SSSupplierInvoiceRow;
+import se.swedsoft.bookkeeping.data.SSVoucher;
+import se.swedsoft.bookkeeping.data.SSVoucherRow;
+import se.swedsoft.bookkeeping.data.common.SSCurrency;
+import se.swedsoft.bookkeeping.data.common.SSDefaultAccount;
+import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
+import se.swedsoft.bookkeeping.data.common.SSUnit;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Savepoint;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -14,16 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-
-import se.swedsoft.bookkeeping.data.common.SSCurrency;
-import se.swedsoft.bookkeeping.data.common.SSDefaultAccount;
-import se.swedsoft.bookkeeping.data.common.SSPaymentTerm;
-import se.swedsoft.bookkeeping.data.common.SSUnit;
-import se.swedsoft.bookkeeping.data.SSSupplierCreditInvoice;
-import se.swedsoft.bookkeeping.data.SSSupplierInvoice;
-import se.swedsoft.bookkeeping.data.SSSupplierInvoiceRow;
-import se.swedsoft.bookkeeping.data.SSVoucher;
-import se.swedsoft.bookkeeping.data.SSVoucherRow;
 
 /**
  * SSDB-shaped reads/writes over the normalized supplier invoice and supplier credit invoice tables,
@@ -159,34 +159,68 @@ public final class NormalizedSupplierInvoiceStore {
                 });
     }
 
-    private void markEntered(Kind kind, int companyLegacyId, int number, SSVoucher voucher)
-            throws SQLException {
-        validateVoucher(voucher);
-        long id;
-        try (PreparedStatement statement =
-                connection.prepareStatement(
-                        "UPDATE "
-                                + kind.table
-                                + " SET entered=true WHERE number=? "
-                                + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
-            statement.setInt(1, number);
-            statement.setInt(2, companyLegacyId);
-            if (statement.executeUpdate() != 1) {
-                throw new SQLException(
-                        "No " + kind.table + " " + number + " for company " + companyLegacyId);
-            }
-        }
+    private long resolveNumber(Kind kind, int company, int number) throws SQLException {
         try (PreparedStatement statement =
                 connection.prepareStatement(
                         "SELECT id FROM "
                                 + kind.table
-                                + " WHERE number=? "
-                                + "AND company_id=(SELECT id FROM company WHERE legacy_id=?)")) {
+                                + " WHERE number=? AND company_id=(SELECT id FROM company WHERE"
+                                + " legacy_id=?)")) {
             statement.setInt(1, number);
-            statement.setInt(2, companyLegacyId);
+            statement.setInt(2, company);
             try (ResultSet result = statement.executeQuery()) {
-                result.next();
-                id = result.getLong(1);
+                if (!result.next()) {
+                    throw new SQLException("Missing " + kind.table + " " + number);
+                }
+                long id = result.getLong(1);
+                if (result.next()) {
+                    throw new SQLException("Ambiguous " + kind.table + " " + number);
+                }
+                return id;
+            }
+        }
+    }
+
+    private void markEntered(Kind kind, int companyLegacyId, int number, SSVoucher voucher)
+            throws SQLException {
+        long id = resolveNumber(kind, companyLegacyId, number);
+        markEnteredById(kind, companyLegacyId, id, voucher);
+    }
+
+    /** Books exactly one unentered supplier invoice by its company-scoped SQL identity. */
+    public void markSupplierInvoiceEnteredById(int company, long id, SSVoucher voucher)
+            throws SQLException {
+        atomic(
+                () -> {
+                    markEnteredById(Kind.INVOICE, company, id, voucher);
+                    return null;
+                });
+    }
+
+    /** Books exactly one unentered supplier credit by its company-scoped SQL identity. */
+    public void markSupplierCreditInvoiceEnteredById(int company, long id, SSVoucher voucher)
+            throws SQLException {
+        atomic(
+                () -> {
+                    markEnteredById(Kind.CREDIT, company, id, voucher);
+                    return null;
+                });
+    }
+
+    private void markEnteredById(Kind kind, int company, long id, SSVoucher voucher)
+            throws SQLException {
+        validateVoucher(voucher);
+        try (PreparedStatement statement =
+                connection.prepareStatement(
+                        "UPDATE "
+                                + kind.table
+                                + " SET entered=true WHERE id=? AND (entered=false OR entered IS"
+                                + " NULL) AND company_id=(SELECT id FROM company WHERE"
+                                + " legacy_id=?)")) {
+            statement.setLong(1, id);
+            statement.setInt(2, company);
+            if (statement.executeUpdate() != 1) {
+                throw new SQLException("Missing or already entered " + kind.table + " " + id);
             }
         }
         try (PreparedStatement statement =
@@ -428,8 +462,7 @@ public final class NormalizedSupplierInvoiceStore {
                                 + creditColumn
                                 + "invoice_date,due_date,payment_term_name,supplier_number,supplier_name,"
                                 + "reference_number,currency_code,currency_rate,tax_sum,rounding_sum,"
-                                + "entered,bgc_entered,stock_influencing)"
-                                + " SELECT ?,id,"
+                                + "entered,bgc_entered,stock_influencing) SELECT ?,id,"
                                 + repeat("?,", 13 + (kind == Kind.CREDIT ? 1 : 0))
                                 + "? FROM company WHERE legacy_id=?",
                         Statement.RETURN_GENERATED_KEYS)) {
