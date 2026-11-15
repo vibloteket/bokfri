@@ -197,7 +197,11 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
     public void doAutoIncrecement() {
         List<SSSupplierInvoice> iInvoices = SSDB.getInstance().getSupplierInvoices();
 
-        int iMax = SSDB.getInstance().getAutoIncrement().orElse(new SSAutoIncrement()).getNumber("supplierinvoice");
+        int iMax =
+                SSDB.getInstance()
+                        .getAutoIncrement()
+                        .orElse(new SSAutoIncrement())
+                        .getNumber("supplierinvoice");
 
         for (SSSupplierInvoice iSupplierInvoice : iInvoices) {
             if (iSupplierInvoice.iNumber > iMax) {
@@ -391,9 +395,13 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
     // //////////////////////////////////////////////////
 
     /**
-     *
-     * @return
+     * @return nullable stored tax total without applying the legacy zero default
      */
+    public BigDecimal getStoredTaxSum() {
+        return iTaxSum;
+    }
+
+    /** Legacy effective tax total; typed persistence uses the raw stored accessor. */
     public BigDecimal getTaxSum() {
         if (iTaxSum == null) {
             iTaxSum = new BigDecimal(0);
@@ -408,6 +416,13 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
      */
     public void setTaxSum(BigDecimal iTaxSum) {
         this.iTaxSum = iTaxSum;
+    }
+
+    /**
+     * @return nullable stored rounding total without applying the legacy zero default
+     */
+    public BigDecimal getStoredRoundingSum() {
+        return iRoundingSum;
     }
 
     public BigDecimal getRoundingSum() {
@@ -522,8 +537,15 @@ public class SSSupplierInvoice implements SSTableSearchable, Serializable {
     // //////////////////////////////////////////////////
 
     /**
-     *
-     * @return
+     * @return raw stored account map, possibly null, without legacy current-company lookup
+     */
+    public Map<SSDefaultAccount, Integer> getStoredDefaultAccounts() {
+        return iDefaultAccounts;
+    }
+
+    /**
+     * Returns defaults with the legacy current-company fallback; typed persistence uses the raw
+     * getter.
      */
     public Map<SSDefaultAccount, Integer> getDefaultAccounts() {
         if (iDefaultAccounts == null) {

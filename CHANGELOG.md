@@ -115,6 +115,15 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Keep keyboard focus in searchable dropdown fields when account and other suggestion lists open, including on macOS. Preserve mouse selection, scrolling, dropdown buttons and add/edit/delete menus; add cross-platform GUI regression tests and opt-in, metadata-only focus diagnostics with a legacy comparison mode.
 
 ### Changed
+- Add stable-ID normalized supplier invoice/credit list/find/edit/delete operations (#75),
+  with caller-owned savepoints for inserts, replacements, deletion and booking primitives.
+  Preserve raw nullable accounts/tax/rounding, ordered rows, both voucher snapshots and
+  company counters without legacy defaults. Reject booked/bank-exported graph editing,
+  consumed invoice references and credit-source retargeting; do not detach purchase orders
+  implicitly. Booking now replaces only the main voucher, retaining manual corrections.
+  Schema V21 widens supplier voucher edit timestamps to nanosecond precision without
+  rewriting their values. Supplier GUI/workflow cutover remains separate and format-3
+  GUI startup stays disabled.
 - Add guarded document currency-code changes to the normalized unbooked customer
   invoice/credit editor (#75): explicit catalogue choice, fresh rate entry, old/new-unit
   totals preview and a no-repricing warning. Only uniquely numbered, unreferenced documents

@@ -80,7 +80,8 @@ class NormalizedAccountingCoreSchemaTest {
     void appliesPackagedSchemaAndRoundTripsCoreTypes() throws Exception {
         try (Connection connection = connection()) {
             assertThat(migrate(connection))
-                    .containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
+                    .containsExactly(
+                            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
             assertThat(migrate(connection)).isEmpty();
 
             long company = insertCompany(connection, 7, null);

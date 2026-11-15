@@ -48,7 +48,7 @@ private conversion helpers and demo-only inserts do not establish editing suppor
 | Shared lookups, projects, result units | Register store: lookup/dimension reads and dimension-set replacement | Complete GUI-required edit/delete/create operations and reference validation |
 | Voucher templates and automatic distributions | Accounting store: template read/add; schema/converters preserve both domains | Template edit/delete and automatic-distribution runtime operations; calculation/GUI parity |
 | Customer invoices and credits | Stable-ID unbooked CRUD; booked metadata; atomic order detachment/deletion, journal posting and booked-invoice credit creation services; CLI/PDF workflows | Unsupported direct booked/correction graphs, complete interest/copy/convert operations and GUI adapters |
-| Supplier invoices and credits | `NormalizedSupplierInvoiceStore`: read/add, numbering, sums and entered-state marking | General edit/delete and complete GUI booking/credit/correction workflows |
+| Supplier invoices and credits | `NormalizedSupplierInvoiceStore`: stable-ID list/find/add/update/delete, exact nullable snapshots, savepoints, numbering/sums and entered-state primitives; V21 supplier voucher nanoseconds | Linked invoice workflows/order detachment, booked/bank-exported corrections, whole-workflow posting ownership and GUI integration; local primitives do not establish complete booking parity |
 | Inpayments and outpayments | Respective stores: read/add, numbering and entered-state marking; explicit voucher calculations | General edit/delete, payment differences, correction and GUI posting transactions |
 | Periodic invoices | V20 complete snapshots/fingerprints for supported graphs; V19 recovery | Typed load/edit/delete/generation service and GUI integration; unsupported graphs below |
 | Orders and quotations | `NormalizedSaleDocumentStore`: list/find/add/update/delete with stable SQL identities and savepoints | GUI adapters, numbering/copy/conversion-to-invoice behavior and transaction tests |
@@ -106,6 +106,16 @@ source/fixture evidence and an acceptance test.
   identity, source/balance/number revalidation, available-balance reservation and
   atomic credit graph insertion without rewriting the booked original or ledger.
   Credit posting remains a separate explicit customer journal transaction.
+- [x] Add bounded supplier invoice/credit stable-ID snapshot replacement and deletion, with
+  atomic inserts, updates, deletes and booking primitives. Require caller-owned transactions;
+  preserve header identities/legacy IDs, raw nullable accounts/totals, ordered rows, main/manual
+  vouchers, dimensions, flags and counters. Booked/bank-exported graph edits, referenced
+  supplier invoice mutation/deletion and credit-source retargeting remain refused. Purchase
+  orders/payments/credits are not silently detached or rewritten. Booking replaces only the
+  main voucher, preserving the existing manual correction snapshot. V21 widens only supplier
+  voucher timestamps to nine fractional digits; upgrade-value preservation, nanosecond
+  round-trip, rollback/retry, stock effects and two real file reopens are tested. This is G1
+  repository coverage, not supplier GUI integration or whole-journal transaction ownership.
 - [ ] Implement remaining typed operations, including unsupported direct booked
   financial/correction graphs, payment/register edit/delete, periodic generation/
   editing, own reports and helper/lookup/budget workflows from the action inventory.

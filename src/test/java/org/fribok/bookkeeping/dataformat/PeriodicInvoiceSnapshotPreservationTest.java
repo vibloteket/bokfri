@@ -186,7 +186,7 @@ class PeriodicInvoiceSnapshotPreservationTest {
         }
         try (Connection normalized = database(20)) {
             try (var statement = normalized.createStatement()) {
-                statement.executeUpdate("DELETE FROM bokfri_schema_history WHERE version=20");
+                statement.executeUpdate("DELETE FROM bokfri_schema_history WHERE version>=20");
             }
             assertRecoveryRequired(normalized);
         }
