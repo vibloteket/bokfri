@@ -56,6 +56,11 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
     private final JButton creditTaxRounding =
             new JButton(SSBundle.getBundle().getString("supplier.taxrounding.actioncredit"));
     private final List<SupplierTaxRoundingDialog> taxRoundingDialogs = new ArrayList<>();
+    private final List<SupplierExchangeRateDialog> exchangeRateDialogs = new ArrayList<>();
+    private final JButton invoiceExchangeRate =
+            new JButton(SSBundle.getBundle().getString("supplier.exchange.actioninvoice"));
+    private final JButton creditExchangeRate =
+            new JButton(SSBundle.getBundle().getString("supplier.exchange.actioncredit"));
     private final List<SupplierRowAmountsDialog> amountDialogs = new ArrayList<>();
     private final List<SupplierDocumentMetadataDialog> metadataDialogs = new ArrayList<>();
     private final List<SupplierDocumentDeletionDialog> deletions = new ArrayList<>();
@@ -122,6 +127,10 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         creditTaxRounding.setName("supplier-credit-tax-rounding");
         actions.add(invoiceTaxRounding);
         actions.add(creditTaxRounding);
+        invoiceExchangeRate.setName("supplier-invoice-exchange-rate");
+        creditExchangeRate.setName("supplier-credit-exchange-rate");
+        actions.add(invoiceExchangeRate);
+        actions.add(creditExchangeRate);
         JPanel bottom = new JPanel(new BorderLayout());
         bottom.add(status);
         bottom.add(actions, BorderLayout.SOUTH);
@@ -137,6 +146,8 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         creditDates.addActionListener(event -> dates(true));
         invoiceTaxRounding.addActionListener(event -> taxRounding(false));
         creditTaxRounding.addActionListener(event -> taxRounding(true));
+        invoiceExchangeRate.addActionListener(event -> exchangeRate(false));
+        creditExchangeRate.addActionListener(event -> exchangeRate(true));
         invoiceMetadata.addActionListener(event -> metadata(false));
         creditMetadata.addActionListener(event -> metadata(true));
         invoiceDelete.addActionListener(event -> deletion(false));
@@ -192,6 +203,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(taxRoundingDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(exchangeRateDialogs)) {
             dialog.invalidateSelection();
         }
         if (previous != null) {
@@ -573,6 +587,57 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         }
     }
 
+    private void exchangeRate(boolean credit) {
+        requireEdt();
+        JTable table = credit ? creditTable : invoiceTable;
+        Rows rows = credit ? credits : invoices;
+        if (closed
+                || loading
+                || !loaded
+                || !session.isActive()
+                || session.isBlocked()
+                || !unbookedUnexportedSelection(table, rows)) {
+            return;
+        }
+        Long id = selection(table, rows);
+        var selected = session;
+        try {
+            var kind =
+                    credit
+                            ? org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierExchangeRateService.Kind.CREDIT
+                            : org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierExchangeRateService.Kind.INVOICE;
+            var dialog =
+                    new SupplierExchangeRateDialog(
+                            owner,
+                            selected.exchangeRate(kind, id),
+                            saved -> {
+                                if (!closed
+                                        && session == selected
+                                        && selected.isActive()
+                                        && !selected.isBlocked()
+                                        && saved.companyId() == selected.companyId()
+                                        && saved.yearId() == selected.yearId()) {
+                                    refresh();
+                                }
+                            });
+            exchangeRateDialogs.add(dialog);
+            dialog.addWindowListener(
+                    new WindowAdapter() {
+                        @Override
+                        public void windowClosed(WindowEvent event) {
+                            exchangeRateDialogs.remove(dialog);
+                            controls();
+                        }
+                    });
+            dialog.setVisible(true);
+        } catch (java.sql.SQLException failure) {
+            status.setText(MessageFormat.format(text("failed"), failure.getMessage()));
+            controls();
+        }
+    }
+
     private static boolean unbookedUnexportedSelection(JTable table, Rows rows) {
         int selected = table.getSelectedRow();
         if (selected < 0 || selected >= table.getRowCount()) {
@@ -627,6 +692,13 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
                         && unbookedUnexportedSelection(invoiceTable, invoices));
         creditTaxRounding.setEnabled(
                 active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
+        invoiceExchangeRate.setEnabled(
+                active
+                        && !loading
+                        && loaded
+                        && unbookedUnexportedSelection(invoiceTable, invoices));
+        creditExchangeRate.setEnabled(
+                active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
         if (!closed && session != null && session.isBlocked()) {
             status.setText(text("uncertain"));
         }
@@ -661,6 +733,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(taxRoundingDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(exchangeRateDialogs)) {
             dialog.invalidateSelection();
         }
         session.close();
