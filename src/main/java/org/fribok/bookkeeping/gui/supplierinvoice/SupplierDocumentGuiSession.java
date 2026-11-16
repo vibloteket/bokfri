@@ -201,6 +201,18 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
                 crediting);
     }
 
+    /**
+     * Leases existing-row amount editing for this exact selection, family and stable SQL identity.
+     */
+    public SupplierRowAmountsAdapter rowAmounts(
+            org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierRowAmountsService.Kind
+                    kind,
+            long id)
+            throws SQLException {
+        requireAvailable();
+        return new SupplierRowAmountsAdapter(this, kind, id);
+    }
+
     /** Leases bounded metadata editing for this exact selection, family and stable SQL identity. */
     public SupplierDocumentMetadataAdapter metadata(
             org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDocumentMetadataService

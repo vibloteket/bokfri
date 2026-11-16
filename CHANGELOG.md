@@ -120,6 +120,7 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 - Keep keyboard focus in searchable dropdown fields when account and other suggestion lists open, including on macOS. Preserve mouse selection, scrolling, dropdown buttons and add/edit/delete menus; add cross-platform GUI regression tests and opt-in, metadata-only focus diagnostics with a legacy comparison mode.
 
 ### Changed
+- Added guarded existing-row quantity, unit-price and freight editing for normalized supplier invoices/credits (#75), with exact before/after previews, fresh confirmation, complete-source/reference guards and amount-column-only writes. Stored VAT/rounding/rate, accounting dimensions and correction snapshots remain untouched; freight does not enter legacy payable totals. Broader editing and production GUI bootstrap remain separate.
 - Add stable-ID normalized supplier invoice/credit list/find/edit/delete operations (#75),
   with caller-owned savepoints for inserts, replacements, deletion and booking primitives.
   Preserve raw nullable accounts/tax/rounding, ordered rows, both voucher snapshots and

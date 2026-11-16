@@ -832,8 +832,27 @@ same-session commit. The existing shared supplier gate/unknown-outcome blocker a
 confirmed replay is permitted only with the same submitted values. Cancellation, selection replacement,
 accepted original-context saves, and post-commit cleanup/notification follow the same guarded contract.
 
-Broader supplier financial editing, production bootstrap, booked-document correction and linked-document
-detachment remain separate. Format-3 production GUI startup is still disabled.
+Existing supplier-row quantity, unit price and per-unit freight editing is available through
+`NormalizedSupplierRowAmountsService` and `SupplierRowAmountsAdapter/Dialog`. Both supplier document
+families use stable persisted row keys (including gaps), complete-source fingerprints, live unbooked /
+unexported / unlinked guards and savepoint-protected updates of only changed amount columns. No row
+insertion/deletion/reordering, product change, automatic repricing or supplier replacement is performed.
+Changed rows require a positive integer quantity, non-negative price/freight and exact DECIMAL(100,30)
+values/totals; real edits require a positive stored exchange rate. NULL freight is explicit blank input.
+Unchanged historical NULL/negative rows and numerically equal decimal scales are not rewritten.
+
+Preview shows exact row changes and before/after net, payable and unrounded accounting equivalent.
+Stored VAT, rounding and currency/rate remain untouched: tax is NOT recalculated. Freight retains legacy
+semantics (excluded from payable, potentially relevant to product purchase valuation). Quantity edits
+can affect stock totals; no product price or stock flag is changed. Voucher/correction snapshots,
+accounts, dimensions and all other SQL tables are preserved. Confirmation is invalidated by any draft
+edit; failed/stale database operations require reload. Both sorted view routes refresh only after a
+confirmed same-session save. Selection replacement suppresses refresh while an already accepted write
+may finish in its original context. Unknown commits block all supplier actions; confirmed replay and
+post-commit callback/close failures never repeat writes.
+
+Broader supplier financial/header editing, row creation/removal, production bootstrap, booked-document
+correction and linked-document detachment remain separate. Format-3 production GUI startup is disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and
 `credit-invoice list --output`) use explicit company-wide headers (last voucher zero),
