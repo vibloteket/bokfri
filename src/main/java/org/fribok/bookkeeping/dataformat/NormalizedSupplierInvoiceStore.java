@@ -644,17 +644,27 @@ public final class NormalizedSupplierInvoiceStore {
                 });
     }
 
+    /** Read-only eligibility for bounded unbooked, unexported and unlinked supplier invoice edits. */
+    public void validateSupplierInvoiceEditing(int company, long id) throws SQLException {
+        requireUnlinkedEditable(Kind.INVOICE, company, id);
+    }
+
+    /** Read-only eligibility for bounded unbooked and unexported supplier credit edits. */
+    public void validateSupplierCreditInvoiceEditing(int company, long id) throws SQLException {
+        requireUnlinkedEditable(Kind.CREDIT, company, id);
+    }
+
     /** Read-only deletion eligibility check; does not delete, detach, migrate or allocate numbers. */
     public void validateSupplierInvoiceDeletion(int company, long id) throws SQLException {
-        requireDeletable(Kind.INVOICE, company, id);
+        requireUnlinkedEditable(Kind.INVOICE, company, id);
     }
 
     /** Read-only credit deletion eligibility check using exactly the actual deletion policy. */
     public void validateSupplierCreditInvoiceDeletion(int company, long id) throws SQLException {
-        requireDeletable(Kind.CREDIT, company, id);
+        requireUnlinkedEditable(Kind.CREDIT, company, id);
     }
 
-    private void requireDeletable(Kind kind, int company, long id) throws SQLException {
+    private void requireUnlinkedEditable(Kind kind, int company, long id) throws SQLException {
         var old = editable(kind, company, id);
         requireUnreferenced(kind, company, old.number());
     }
@@ -732,7 +742,7 @@ public final class NormalizedSupplierInvoiceStore {
     }
 
     private void delete(Kind kind, int company, long id) throws SQLException {
-        requireDeletable(kind, company, id);
+        requireUnlinkedEditable(kind, company, id);
         deleteChildren(kind, id);
         try (var statement =
                 connection.prepareStatement(

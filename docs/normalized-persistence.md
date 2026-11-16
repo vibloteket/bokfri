@@ -814,7 +814,25 @@ SQL IDs, and reloads both document families only after a confirmed same-session 
 replacing the selection invalidates pending previews and callbacks without cancelling accepted
 original-context writes. Post-commit close/notification failure is never a retryable deletion.
 
-Supplier editing GUI, production bootstrap, booked-document correction and linked-document
+Bounded supplier metadata editing is now available through `NormalizedSupplierDocumentMetadataService`
+and `SupplierDocumentMetadataAdapter/Dialog`: only the stored supplier display name and invoice
+reference may change. The service reads raw header strings without domain hydration, captures the
+complete SQL source token, and rechecks current unbooked/unexported/unlinked eligibility before a
+savepoint-protected narrow UPDATE of only changed columns. Supplier identity, business numbers,
+dates, currency/rate, tax, totals, rows, stock flags, voucher/correction snapshots and counters are
+never rewritten. Links added after loading refuse the save; no detachment or reference retargeting
+is performed. Changed non-null strings must fit 255 characters and contain no control characters;
+unchanged historical strings bypass normalization/repair, including null, blank and whitespace.
+
+The editor uses explicit NULL controls, explicit Save, and reload-with-discard. It tracks actual form
+edits so untouched historical newlines remain raw SQL values even when JTextField normalizes their
+visual representation. A stale/failed save requires a fresh load. Both sortable view routes bind
+stable SQL identities, disable booked/exported row actions, and refresh only after confirmed
+same-session commit. The existing shared supplier gate/unknown-outcome blocker also covers metadata;
+confirmed replay is permitted only with the same submitted values. Cancellation, selection replacement,
+accepted original-context saves, and post-commit cleanup/notification follow the same guarded contract.
+
+Broader supplier financial editing, production bootstrap, booked-document correction and linked-document
 detachment remain separate. Format-3 production GUI startup is still disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and
