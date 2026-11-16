@@ -44,6 +44,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
     private final JButton creditDelete = new JButton(text("deletecredit"));
     private final JButton invoiceMetadata = new JButton(text("metadatainvoice"));
     private final JButton creditMetadata = new JButton(text("metadatacredit"));
+    private final JButton invoiceAmounts = new JButton(text("amountsinvoice"));
+    private final JButton creditAmounts = new JButton(text("amountscredit"));
+    private final List<SupplierRowAmountsDialog> amountDialogs = new ArrayList<>();
     private final List<SupplierDocumentMetadataDialog> metadataDialogs = new ArrayList<>();
     private final List<SupplierDocumentDeletionDialog> deletions = new ArrayList<>();
     private final List<SupplierJournalDialog> dialogs = new ArrayList<>();
@@ -97,6 +100,10 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         creditMetadata.setName("supplier-credit-metadata");
         actions.add(invoiceMetadata);
         actions.add(creditMetadata);
+        invoiceAmounts.setName("supplier-invoice-amounts");
+        creditAmounts.setName("supplier-credit-amounts");
+        actions.add(invoiceAmounts);
+        actions.add(creditAmounts);
         JPanel bottom = new JPanel(new BorderLayout());
         bottom.add(status);
         bottom.add(actions, BorderLayout.SOUTH);
@@ -106,6 +113,8 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         refresh.addActionListener(event -> refresh());
         invoiceJournal.addActionListener(event -> journal(SupplierJournalAdapter.Kind.INVOICE));
         creditJournal.addActionListener(event -> journal(SupplierJournalAdapter.Kind.CREDIT));
+        invoiceAmounts.addActionListener(event -> rowAmounts(false));
+        creditAmounts.addActionListener(event -> rowAmounts(true));
         invoiceMetadata.addActionListener(event -> metadata(false));
         creditMetadata.addActionListener(event -> metadata(true));
         invoiceDelete.addActionListener(event -> deletion(false));
@@ -152,6 +161,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(metadataDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(amountDialogs)) {
             dialog.invalidateSelection();
         }
         if (previous != null) {
@@ -380,6 +392,57 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         }
     }
 
+    private void rowAmounts(boolean credit) {
+        requireEdt();
+        JTable table = credit ? creditTable : invoiceTable;
+        Rows rows = credit ? credits : invoices;
+        if (closed
+                || loading
+                || !loaded
+                || !session.isActive()
+                || session.isBlocked()
+                || !unbookedUnexportedSelection(table, rows)) {
+            return;
+        }
+        Long id = selection(table, rows);
+        var selected = session;
+        try {
+            var kind =
+                    credit
+                            ? org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierRowAmountsService.Kind.CREDIT
+                            : org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierRowAmountsService.Kind.INVOICE;
+            var dialog =
+                    new SupplierRowAmountsDialog(
+                            owner,
+                            selected.rowAmounts(kind, id),
+                            saved -> {
+                                if (!closed
+                                        && session == selected
+                                        && selected.isActive()
+                                        && !selected.isBlocked()
+                                        && saved.companyId() == selected.companyId()
+                                        && saved.yearId() == selected.yearId()) {
+                                    refresh();
+                                }
+                            });
+            amountDialogs.add(dialog);
+            dialog.addWindowListener(
+                    new WindowAdapter() {
+                        @Override
+                        public void windowClosed(WindowEvent event) {
+                            amountDialogs.remove(dialog);
+                            controls();
+                        }
+                    });
+            dialog.setVisible(true);
+        } catch (java.sql.SQLException failure) {
+            status.setText(MessageFormat.format(text("failed"), failure.getMessage()));
+            controls();
+        }
+    }
+
     private static boolean unbookedUnexportedSelection(JTable table, Rows rows) {
         int selected = table.getSelectedRow();
         if (selected < 0 || selected >= table.getRowCount()) {
@@ -413,6 +476,13 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
                         && unbookedUnexportedSelection(invoiceTable, invoices));
         creditMetadata.setEnabled(
                 active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
+        invoiceAmounts.setEnabled(
+                active
+                        && !loading
+                        && loaded
+                        && unbookedUnexportedSelection(invoiceTable, invoices));
+        creditAmounts.setEnabled(
+                active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
         if (!closed && session != null && session.isBlocked()) {
             status.setText(text("uncertain"));
         }
@@ -438,6 +508,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(metadataDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(amountDialogs)) {
             dialog.invalidateSelection();
         }
         session.close();
