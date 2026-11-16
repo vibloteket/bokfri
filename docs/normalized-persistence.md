@@ -795,7 +795,26 @@ installed owners keep a consumed marker and never fall back. The XML menu loader
 independent action-to-item lookup so optional/missing Name attributes do not conflate these controls.
 No automatic normalized GUI selection/bootstrap is introduced.
 
-Supplier editing/deletion GUI, production bootstrap, booked-document correction and linked-document
+Supplier deletion now has an explicit confirmed workflow. The store exposes read-only eligibility
+checks using exactly the same policy as actual deletion. `NormalizedSupplierDocumentDeletionService`
+previews immutable company/family/SQL-ID, stored number/party/date/currency, business total and stock
+influence, then fingerprints every header, default-account, ordered-row and main/correction voucher
+value, including nullable values and nanosecond audit timestamps. Execution requires a caller-owned
+transaction and revalidates the full source and all current reference guards under a savepoint.
+Booked/bank-exported targets and invoices linked to company-scoped payments, credits or purchase
+orders are refused, including links added after preview. Nothing is detached; counters and unrelated
+SQL tables are not changed. Failed deletion restores child snapshots and preserves earlier caller work.
+
+`SupplierDocumentDeletionAdapter` leases the existing dedicated-session/shared-gate boundary and
+commits once; confirmed replay performs no second write. Its unknown-commit flag is shared with all
+supplier deletion/journal requests. The dialog requires eligibility preview and explicit confirmation,
+shows the exact stable target and stock warning, and resets confirmation after stale/failed writes.
+The view enables deletion only for selected unbooked/non-bank-exported rows, resolves sorted rows to
+SQL IDs, and reloads both document families only after a confirmed same-session commit. Closing or
+replacing the selection invalidates pending previews and callbacks without cancelling accepted
+original-context writes. Post-commit close/notification failure is never a retryable deletion.
+
+Supplier editing GUI, production bootstrap, booked-document correction and linked-document
 detachment remain separate. Format-3 production GUI startup is still disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and

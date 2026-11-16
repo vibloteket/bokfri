@@ -201,6 +201,17 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
                 crediting);
     }
 
+    /** Leases confirmed deletion for this exact selection, family and stable SQL identity. */
+    public SupplierDocumentDeletionAdapter deletion(
+            org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDocumentDeletionService
+                            .Kind
+                    kind,
+            long id)
+            throws SQLException {
+        requireAvailable();
+        return new SupplierDocumentDeletionAdapter(this, kind, id);
+    }
+
     /** Leases invoice or credit journal planning/posting for this exact selection. */
     public SupplierJournalAdapter journal(SupplierJournalAdapter.Kind kind) throws SQLException {
         requireAvailable();
@@ -292,8 +303,8 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
                         failure.addSuppressed(close);
                     } else if (committed) {
                         LOG.warn(
-                                "Supplier journal committed but session close failed; do not"
-                                        + " repost",
+                                "Supplier document change committed but session close failed; do"
+                                    + " not retry",
                                 close);
                     } else {
                         throw close;
