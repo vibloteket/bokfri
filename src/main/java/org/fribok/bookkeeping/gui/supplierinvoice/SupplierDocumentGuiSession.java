@@ -201,6 +201,17 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
                 crediting);
     }
 
+    /** Leases bounded metadata editing for this exact selection, family and stable SQL identity. */
+    public SupplierDocumentMetadataAdapter metadata(
+            org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDocumentMetadataService
+                            .Kind
+                    kind,
+            long id)
+            throws SQLException {
+        requireAvailable();
+        return new SupplierDocumentMetadataAdapter(this, kind, id);
+    }
+
     /** Leases confirmed deletion for this exact selection, family and stable SQL identity. */
     public SupplierDocumentDeletionAdapter deletion(
             org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDocumentDeletionService
@@ -304,7 +315,7 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
                     } else if (committed) {
                         LOG.warn(
                                 "Supplier document change committed but session close failed; do"
-                                    + " not retry",
+                                        + " not retry",
                                 close);
                     } else {
                         throw close;

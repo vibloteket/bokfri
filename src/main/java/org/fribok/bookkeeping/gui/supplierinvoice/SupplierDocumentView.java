@@ -42,6 +42,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
     private final JButton creditJournal = new JButton(text("creditjournal"));
     private final JButton invoiceDelete = new JButton(text("deleteinvoice"));
     private final JButton creditDelete = new JButton(text("deletecredit"));
+    private final JButton invoiceMetadata = new JButton(text("metadatainvoice"));
+    private final JButton creditMetadata = new JButton(text("metadatacredit"));
+    private final List<SupplierDocumentMetadataDialog> metadataDialogs = new ArrayList<>();
     private final List<SupplierDocumentDeletionDialog> deletions = new ArrayList<>();
     private final List<SupplierJournalDialog> dialogs = new ArrayList<>();
     private final WindowAdapter ownerClosed =
@@ -82,7 +85,7 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         refresh.setName("supplier-document-refresh");
         invoiceJournal.setName("supplier-invoice-journal");
         creditJournal.setName("supplier-credit-journal");
-        JPanel actions = new JPanel();
+        JPanel actions = new JPanel(new java.awt.GridLayout(0, 4, 8, 4));
         actions.add(refresh);
         actions.add(invoiceJournal);
         actions.add(creditJournal);
@@ -90,6 +93,10 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         creditDelete.setName("supplier-credit-delete");
         actions.add(invoiceDelete);
         actions.add(creditDelete);
+        invoiceMetadata.setName("supplier-invoice-metadata");
+        creditMetadata.setName("supplier-credit-metadata");
+        actions.add(invoiceMetadata);
+        actions.add(creditMetadata);
         JPanel bottom = new JPanel(new BorderLayout());
         bottom.add(status);
         bottom.add(actions, BorderLayout.SOUTH);
@@ -99,6 +106,8 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         refresh.addActionListener(event -> refresh());
         invoiceJournal.addActionListener(event -> journal(SupplierJournalAdapter.Kind.INVOICE));
         creditJournal.addActionListener(event -> journal(SupplierJournalAdapter.Kind.CREDIT));
+        invoiceMetadata.addActionListener(event -> metadata(false));
+        creditMetadata.addActionListener(event -> metadata(true));
         invoiceDelete.addActionListener(event -> deletion(false));
         creditDelete.addActionListener(event -> deletion(true));
         invoiceTable.getSelectionModel().addListSelectionListener(event -> controls());
@@ -140,6 +149,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(deletions)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(metadataDialogs)) {
             dialog.invalidateSelection();
         }
         if (previous != null) {
@@ -275,7 +287,7 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
                 || !loaded
                 || !session.isActive()
                 || session.isBlocked()
-                || !deletableSelection(table, rows)) {
+                || !unbookedUnexportedSelection(table, rows)) {
             return;
         }
         Long id = selection(table, rows);
@@ -317,7 +329,58 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         }
     }
 
-    private static boolean deletableSelection(JTable table, Rows rows) {
+    private void metadata(boolean credit) {
+        requireEdt();
+        JTable table = credit ? creditTable : invoiceTable;
+        Rows rows = credit ? credits : invoices;
+        if (closed
+                || loading
+                || !loaded
+                || !session.isActive()
+                || session.isBlocked()
+                || !unbookedUnexportedSelection(table, rows)) {
+            return;
+        }
+        Long id = selection(table, rows);
+        var selected = session;
+        try {
+            var kind =
+                    credit
+                            ? org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierDocumentMetadataService.Kind.CREDIT
+                            : org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierDocumentMetadataService.Kind.INVOICE;
+            var dialog =
+                    new SupplierDocumentMetadataDialog(
+                            owner,
+                            selected.metadata(kind, id),
+                            saved -> {
+                                if (!closed
+                                        && session == selected
+                                        && selected.isActive()
+                                        && !selected.isBlocked()
+                                        && saved.companyId() == selected.companyId()
+                                        && saved.yearId() == selected.yearId()) {
+                                    refresh();
+                                }
+                            });
+            metadataDialogs.add(dialog);
+            dialog.addWindowListener(
+                    new WindowAdapter() {
+                        @Override
+                        public void windowClosed(WindowEvent event) {
+                            metadataDialogs.remove(dialog);
+                            controls();
+                        }
+                    });
+            dialog.setVisible(true);
+        } catch (java.sql.SQLException failure) {
+            status.setText(MessageFormat.format(text("failed"), failure.getMessage()));
+            controls();
+        }
+    }
+
+    private static boolean unbookedUnexportedSelection(JTable table, Rows rows) {
         int selected = table.getSelectedRow();
         if (selected < 0 || selected >= table.getRowCount()) {
             return false;
@@ -337,9 +400,19 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
                 active && !loading && loaded && yearFrom != null && yearTo != null);
         creditJournal.setEnabled(invoiceJournal.isEnabled());
         invoiceDelete.setEnabled(
-                active && !loading && loaded && deletableSelection(invoiceTable, invoices));
+                active
+                        && !loading
+                        && loaded
+                        && unbookedUnexportedSelection(invoiceTable, invoices));
         creditDelete.setEnabled(
-                active && !loading && loaded && deletableSelection(creditTable, credits));
+                active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
+        invoiceMetadata.setEnabled(
+                active
+                        && !loading
+                        && loaded
+                        && unbookedUnexportedSelection(invoiceTable, invoices));
+        creditMetadata.setEnabled(
+                active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
         if (!closed && session != null && session.isBlocked()) {
             status.setText(text("uncertain"));
         }
@@ -362,6 +435,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(deletions)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(metadataDialogs)) {
             dialog.invalidateSelection();
         }
         session.close();
