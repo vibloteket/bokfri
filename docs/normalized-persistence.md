@@ -873,8 +873,37 @@ after confirmed same-session save. Unknown durability blocks the whole supplier 
 original-context writes, selection replacement, confirmed replay and post-commit callback/close
 failures retain the existing guarded lifecycle.
 
-Broader supplier financial/header editing, row creation/removal, production bootstrap, booked-document
-correction and linked-document detachment remain separate. Format-3 production GUI startup is disabled.
+Explicit stored supplier VAT-total and rounding editing is available through
+`NormalizedSupplierTaxRoundingService` and `SupplierTaxRoundingAdapter/Dialog`. The service reads
+raw nullable header amounts and row quantity/price pairs without invoking legacy defaulting getters.
+Net retains legacy semantics (sum complete quantity/price pairs, excluding per-unit freight); payable
+is net plus stored VAT plus rounding, with NULL contributing zero in arithmetic but remaining NULL in
+storage. Preview shows exact old/new nullable amounts, unchanged net/currency/rate, payable and the
+unrounded accounting equivalent. VAT is never recalculated from row rates/codes and prices are never
+recomputed. Blank input explicitly proposes NULL, not a stored zero.
+
+The complete SQL source token and current unbooked/unexported/unlinked guards are rechecked before
+preview/confirm. Only changed `tax_sum`/`rounding_sum` columns are written under a local savepoint;
+rows, stock flags/quantities, prices, dates, currency/rate, accounts/dimensions, counters and stored
+voucher/correction snapshots stay untouched. Numerically equal decimal scales and raw historical
+NULL/negative no-ops issue no UPDATE. Changed non-null VAT must be non-negative; rounding is signed.
+Changed fields and net/payable must fit DECIMAL(100,30) exactly, a positive stored exchange rate is
+required for real edits, and a real edit may not produce a negative payable. There is no silent
+rounding, sign repair or new-rate fallback. Unchanged historical invalid values are not normalized.
+The journal service retains responsibility for its account/year/balance requirements: this editor
+does not invent VAT or rounding account defaults.
+
+Both sorted view routes show explicit fresh confirmation after preview. Draft edits invalidate the
+checkbox, failed/stale database work requires reload, and reload/cancel discard unsaved drafts.
+Confirmed same-session saves refresh the view; the shared supplier unknown-outcome blocker covers
+this route too. Confirmed replay, accepted original-context saves/replacement callback fencing and
+post-commit callback/close failures never cause a second write. Tests compare all unrelated SQL,
+verify unchanged stock and balanced invoice/credit journals for positive and negative rounding, and
+reject journal previews captured before the amount change.
+
+Broader supplier financial/header editing (including currency/rate), row creation/removal, production
+bootstrap, booked-document correction and linked-document detachment remain separate. Format-3
+production GUI startup is disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and
 `credit-invoice list --output`) use explicit company-wide headers (last voucher zero),

@@ -51,6 +51,11 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
     private final JButton creditDates =
             new JButton(SSBundle.getBundle().getString("supplier.dates.actioncredit"));
     private final List<SupplierDatesDialog> dateDialogs = new ArrayList<>();
+    private final JButton invoiceTaxRounding =
+            new JButton(SSBundle.getBundle().getString("supplier.taxrounding.actioninvoice"));
+    private final JButton creditTaxRounding =
+            new JButton(SSBundle.getBundle().getString("supplier.taxrounding.actioncredit"));
+    private final List<SupplierTaxRoundingDialog> taxRoundingDialogs = new ArrayList<>();
     private final List<SupplierRowAmountsDialog> amountDialogs = new ArrayList<>();
     private final List<SupplierDocumentMetadataDialog> metadataDialogs = new ArrayList<>();
     private final List<SupplierDocumentDeletionDialog> deletions = new ArrayList<>();
@@ -113,6 +118,10 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         creditDates.setName("supplier-credit-dates");
         actions.add(invoiceDates);
         actions.add(creditDates);
+        invoiceTaxRounding.setName("supplier-invoice-tax-rounding");
+        creditTaxRounding.setName("supplier-credit-tax-rounding");
+        actions.add(invoiceTaxRounding);
+        actions.add(creditTaxRounding);
         JPanel bottom = new JPanel(new BorderLayout());
         bottom.add(status);
         bottom.add(actions, BorderLayout.SOUTH);
@@ -126,6 +135,8 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         creditAmounts.addActionListener(event -> rowAmounts(true));
         invoiceDates.addActionListener(event -> dates(false));
         creditDates.addActionListener(event -> dates(true));
+        invoiceTaxRounding.addActionListener(event -> taxRounding(false));
+        creditTaxRounding.addActionListener(event -> taxRounding(true));
         invoiceMetadata.addActionListener(event -> metadata(false));
         creditMetadata.addActionListener(event -> metadata(true));
         invoiceDelete.addActionListener(event -> deletion(false));
@@ -178,6 +189,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(dateDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(taxRoundingDialogs)) {
             dialog.invalidateSelection();
         }
         if (previous != null) {
@@ -508,6 +522,57 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         }
     }
 
+    private void taxRounding(boolean credit) {
+        requireEdt();
+        JTable table = credit ? creditTable : invoiceTable;
+        Rows rows = credit ? credits : invoices;
+        if (closed
+                || loading
+                || !loaded
+                || !session.isActive()
+                || session.isBlocked()
+                || !unbookedUnexportedSelection(table, rows)) {
+            return;
+        }
+        Long id = selection(table, rows);
+        var selected = session;
+        try {
+            var kind =
+                    credit
+                            ? org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierTaxRoundingService.Kind.CREDIT
+                            : org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierTaxRoundingService.Kind.INVOICE;
+            var dialog =
+                    new SupplierTaxRoundingDialog(
+                            owner,
+                            selected.taxRounding(kind, id),
+                            saved -> {
+                                if (!closed
+                                        && session == selected
+                                        && selected.isActive()
+                                        && !selected.isBlocked()
+                                        && saved.companyId() == selected.companyId()
+                                        && saved.yearId() == selected.yearId()) {
+                                    refresh();
+                                }
+                            });
+            taxRoundingDialogs.add(dialog);
+            dialog.addWindowListener(
+                    new WindowAdapter() {
+                        @Override
+                        public void windowClosed(WindowEvent event) {
+                            taxRoundingDialogs.remove(dialog);
+                            controls();
+                        }
+                    });
+            dialog.setVisible(true);
+        } catch (java.sql.SQLException failure) {
+            status.setText(MessageFormat.format(text("failed"), failure.getMessage()));
+            controls();
+        }
+    }
+
     private static boolean unbookedUnexportedSelection(JTable table, Rows rows) {
         int selected = table.getSelectedRow();
         if (selected < 0 || selected >= table.getRowCount()) {
@@ -555,6 +620,13 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
                         && unbookedUnexportedSelection(invoiceTable, invoices));
         creditDates.setEnabled(
                 active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
+        invoiceTaxRounding.setEnabled(
+                active
+                        && !loading
+                        && loaded
+                        && unbookedUnexportedSelection(invoiceTable, invoices));
+        creditTaxRounding.setEnabled(
+                active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
         if (!closed && session != null && session.isBlocked()) {
             status.setText(text("uncertain"));
         }
@@ -586,6 +658,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(dateDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(taxRoundingDialogs)) {
             dialog.invalidateSelection();
         }
         session.close();

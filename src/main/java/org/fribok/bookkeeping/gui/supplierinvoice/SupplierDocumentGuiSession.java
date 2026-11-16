@@ -222,6 +222,16 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
         return new SupplierDatesAdapter(this, kind, id);
     }
 
+    /** Leases explicit supplier VAT/rounding editing for this selection and SQL identity. */
+    public SupplierTaxRoundingAdapter taxRounding(
+            org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierTaxRoundingService.Kind
+                    kind,
+            long id)
+            throws SQLException {
+        requireAvailable();
+        return new SupplierTaxRoundingAdapter(this, kind, id);
+    }
+
     /** Leases bounded metadata editing for this exact selection, family and stable SQL identity. */
     public SupplierDocumentMetadataAdapter metadata(
             org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDocumentMetadataService
