@@ -851,6 +851,28 @@ confirmed same-session save. Selection replacement suppresses refresh while an a
 may finish in its original context. Unknown commits block all supplier actions; confirmed replay and
 post-commit callback/close failures never repeat writes.
 
+Explicit supplier invoice/due-date editing is available through `NormalizedSupplierDatesService`
+and `SupplierDatesAdapter/Dialog`. The same complete-source fingerprint, current unbooked/unexported/
+unlinked guards, dedicated selection-bound session, shared writer gate and savepoint transaction
+contract apply. Both stored dates are read directly as SQL DATE/LocalDate without domain defaults or
+legacy singleton access. Preview and confirmation are read/source bound and show the exact old/new
+date pair. Only changed `invoice_date`/`due_date` columns are written. Payment-term snapshots, voucher
+and correction dates, money, tax, currency/rate, rows, dimensions, flags and counters are not rewritten.
+
+A real date edit requires two explicit dates in years 0001..9999, with due date on/after invoice date
+(the supplier validator's date-pair rule). There is no due-date recalculation from payment terms and
+no automatic date, business-number or accounting-year adjustment. Historical NULL/reversed dates can
+be loaded and confirmed unchanged without repair; blank date input means NULL. The company-wide
+unbooked register may contain dates outside the selected year: editing does not silently move the
+accounting-year context. The journal service still enforces its own selected-year/range rules. Date
+changes alter journal selection and dated reports and invalidate previously previewed journals;
+all-time stock quantities and stored voucher/correction snapshots are unchanged. UI edits invalidate
+confirmation; invalid ISO input cannot save, and failed/stale database operations require reload.
+Both sorted view routes disable booked/exported rows, discard drafts on reload/cancel and refresh only
+after confirmed same-session save. Unknown durability blocks the whole supplier selection; accepted
+original-context writes, selection replacement, confirmed replay and post-commit callback/close
+failures retain the existing guarded lifecycle.
+
 Broader supplier financial/header editing, row creation/removal, production bootstrap, booked-document
 correction and linked-document detachment remain separate. Format-3 production GUI startup is disabled.
 
