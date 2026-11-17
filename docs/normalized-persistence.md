@@ -958,9 +958,40 @@ supplier lifecycle. Tests include independent code-only/rate-only/both-column SQ
 amounts/stock, historical NULL selection, no automatic base-currency rate, and balanced invoice/credit
 journals after currency changes with subunit and larger explicit rates.
 
-Broader supplier header editing (supplier identity/payment terms), row creation/removal, production
-bootstrap, booked-document correction and linked-document detachment remain separate. Format-3
-production GUI startup is disabled.
+Existing supplier-row descriptions use the separate `RowValue`/`RowSnapshot`/`RowPlan` workflow
+in `NormalizedSupplierDocumentMetadataService`, with `loadRows`, `previewRows` and `confirmRows`
+and `SupplierRowDescriptionAdapter/Dialog`. The header metadata API is unchanged. Presentation reuses
+the immutable raw row projection, never defaulting domain getters. Stable stored row keys, including
+gaps, bind every proposal; missing/duplicate/foreign keys and insertion/removal are refused. Input
+order never reorders persisted rows. The full document token (including audit nanoseconds and every
+financial snapshot) and current unbooked/unexported/unlinked eligibility are rechecked before preview
+and confirm. A caller-owned local savepoint protects all changed rows; only their `description`
+columns are written, retaining earlier caller work after a late failure.
+
+Changed descriptions must contain nonblank text, at most 4096 characters, without ISO control
+characters. Leading/trailing spaces are not trimmed. Unchanged historical NULL/blank/control strings
+are neither repaired nor rewritten, including no-op confirmation; no-op requests still recheck full
+source and current eligibility. Nonfinancial description edits do not require inventing/fixing
+unrelated rates, VAT, prices, accounts or dates. Row identities/products/units, all monetary fields,
+stock quantities/flags, dimensions/accounts, counters and voucher/correction snapshots stay unchanged.
+
+The table edits descriptions only; all other row columns are read-only. Rendering quotes literal
+strings and escapes historical controls, preventing Swing HTML interpretation. A dedicated cell
+editor tracks actual text edits: opening/closing an untouched JTextField returns the original raw
+string, including NULL and newlines that Swing may visually normalize. Preview shows exact escaped
+old/new descriptions; those display quotes/escapes are never parsed back into stored data. Draft
+changes reset confirmation; reload/cancel discard both committed drafts and active cell-editor text.
+Both sorted view routes target SQL IDs, refresh only after confirmed same-session commit, and retain
+the shared uncertain-commit/replay/selection-replacement/accepted-original-context lifecycle.
+
+Descriptions do not change stock or accounting totals. Journal tokens bind generated accounting
+semantics: a nonfinancial description edit can leave an otherwise identical journal preview valid.
+Posting reloads current documents and preserves the fresh descriptions rather than replaying old
+presentation snapshots; tests verify balanced unchanged totals and retained edited text after posting.
+
+Broader supplier headers (supplier identity/payment terms), row accounts/dimensions and insertion/
+removal, production bootstrap, booked-document correction and linked-document detachment remain
+separate. Format-3 production GUI startup is disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and
 `credit-invoice list --output`) use explicit company-wide headers (last voucher zero),
