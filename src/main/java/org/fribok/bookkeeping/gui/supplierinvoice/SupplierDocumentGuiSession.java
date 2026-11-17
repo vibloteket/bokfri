@@ -213,6 +213,17 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
         return new SupplierRowAmountsAdapter(this, kind, id);
     }
 
+    /** Leases description-only editing for existing supplier rows in this exact selection. */
+    public SupplierRowDescriptionAdapter rowDescriptions(
+            org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDocumentMetadataService
+                            .Kind
+                    kind,
+            long id)
+            throws SQLException {
+        requireAvailable();
+        return new SupplierRowDescriptionAdapter(this, kind, id);
+    }
+
     /** Leases explicit supplier header date editing for this exact selection and SQL identity. */
     public SupplierDatesAdapter dates(
             org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDatesService.Kind kind,
