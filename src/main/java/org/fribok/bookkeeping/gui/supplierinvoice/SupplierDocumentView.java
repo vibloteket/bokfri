@@ -57,6 +57,11 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             new JButton(SSBundle.getBundle().getString("supplier.taxrounding.actioncredit"));
     private final List<SupplierTaxRoundingDialog> taxRoundingDialogs = new ArrayList<>();
     private final List<SupplierExchangeRateDialog> exchangeRateDialogs = new ArrayList<>();
+    private final List<SupplierCurrencyDialog> currencyDialogs = new ArrayList<>();
+    private final JButton invoiceCurrency =
+            new JButton(SSBundle.getBundle().getString("supplier.currency.actioninvoice"));
+    private final JButton creditCurrency =
+            new JButton(SSBundle.getBundle().getString("supplier.currency.actioncredit"));
     private final JButton invoiceExchangeRate =
             new JButton(SSBundle.getBundle().getString("supplier.exchange.actioninvoice"));
     private final JButton creditExchangeRate =
@@ -131,6 +136,10 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         creditExchangeRate.setName("supplier-credit-exchange-rate");
         actions.add(invoiceExchangeRate);
         actions.add(creditExchangeRate);
+        invoiceCurrency.setName("supplier-invoice-currency");
+        creditCurrency.setName("supplier-credit-currency");
+        actions.add(invoiceCurrency);
+        actions.add(creditCurrency);
         JPanel bottom = new JPanel(new BorderLayout());
         bottom.add(status);
         bottom.add(actions, BorderLayout.SOUTH);
@@ -148,6 +157,8 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         creditTaxRounding.addActionListener(event -> taxRounding(true));
         invoiceExchangeRate.addActionListener(event -> exchangeRate(false));
         creditExchangeRate.addActionListener(event -> exchangeRate(true));
+        invoiceCurrency.addActionListener(event -> currency(false));
+        creditCurrency.addActionListener(event -> currency(true));
         invoiceMetadata.addActionListener(event -> metadata(false));
         creditMetadata.addActionListener(event -> metadata(true));
         invoiceDelete.addActionListener(event -> deletion(false));
@@ -206,6 +217,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(exchangeRateDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(currencyDialogs)) {
             dialog.invalidateSelection();
         }
         if (previous != null) {
@@ -638,6 +652,57 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         }
     }
 
+    private void currency(boolean credit) {
+        requireEdt();
+        JTable table = credit ? creditTable : invoiceTable;
+        Rows rows = credit ? credits : invoices;
+        if (closed
+                || loading
+                || !loaded
+                || !session.isActive()
+                || session.isBlocked()
+                || !unbookedUnexportedSelection(table, rows)) {
+            return;
+        }
+        Long id = selection(table, rows);
+        var selected = session;
+        try {
+            var kind =
+                    credit
+                            ? org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierExchangeRateService.Kind.CREDIT
+                            : org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierExchangeRateService.Kind.INVOICE;
+            var dialog =
+                    new SupplierCurrencyDialog(
+                            owner,
+                            selected.currency(kind, id),
+                            saved -> {
+                                if (!closed
+                                        && session == selected
+                                        && selected.isActive()
+                                        && !selected.isBlocked()
+                                        && saved.companyId() == selected.companyId()
+                                        && saved.yearId() == selected.yearId()) {
+                                    refresh();
+                                }
+                            });
+            currencyDialogs.add(dialog);
+            dialog.addWindowListener(
+                    new WindowAdapter() {
+                        @Override
+                        public void windowClosed(WindowEvent event) {
+                            currencyDialogs.remove(dialog);
+                            controls();
+                        }
+                    });
+            dialog.setVisible(true);
+        } catch (java.sql.SQLException failure) {
+            status.setText(MessageFormat.format(text("failed"), failure.getMessage()));
+            controls();
+        }
+    }
+
     private static boolean unbookedUnexportedSelection(JTable table, Rows rows) {
         int selected = table.getSelectedRow();
         if (selected < 0 || selected >= table.getRowCount()) {
@@ -699,6 +764,13 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
                         && unbookedUnexportedSelection(invoiceTable, invoices));
         creditExchangeRate.setEnabled(
                 active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
+        invoiceCurrency.setEnabled(
+                active
+                        && !loading
+                        && loaded
+                        && unbookedUnexportedSelection(invoiceTable, invoices));
+        creditCurrency.setEnabled(
+                active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
         if (!closed && session != null && session.isBlocked()) {
             status.setText(text("uncertain"));
         }
@@ -736,6 +808,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(exchangeRateDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(currencyDialogs)) {
             dialog.invalidateSelection();
         }
         session.close();

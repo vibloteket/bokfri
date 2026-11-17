@@ -243,6 +243,17 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
         return new SupplierExchangeRateAdapter(this, kind, id);
     }
 
+    /** Leases explicit supplier currency-code/rate editing for this selection and SQL identity. */
+    public SupplierCurrencyAdapter currency(
+            org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierExchangeRateService
+                            .Kind
+                    kind,
+            long id)
+            throws SQLException {
+        requireAvailable();
+        return new SupplierCurrencyAdapter(this, kind, id);
+    }
+
     /** Leases bounded metadata editing for this exact selection, family and stable SQL identity. */
     public SupplierDocumentMetadataAdapter metadata(
             org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDocumentMetadataService

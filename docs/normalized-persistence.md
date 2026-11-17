@@ -929,9 +929,38 @@ same-currency and missing-code rules, company-currency staleness, ignored catalo
 boundaries/unrounded products, unchanged stock and balanced invoice/credit journals at both subunit
 and larger direct multipliers.
 
-Broader supplier header editing (including currency codes), row creation/removal, production bootstrap,
-booked-document correction and linked-document detachment remain separate. Format-3 production GUI
-startup is disabled.
+Explicit supplier currency-code changes use the separate `CurrencyValues`/`CurrencyPlan` workflow
+in `NormalizedSupplierExchangeRateService`, with `SupplierCurrencyAdapter/Dialog`. The rate-only
+API and its single-column contract are unchanged. The new editor loads an immutable list of catalogue
+codes only (not descriptions/default rates) into a non-editable choice control, retaining a distinct
+historical NULL choice instead of silently selecting the first catalogue entry. Choosing any code,
+including the company currency, never sets a rate automatically. The user must confirm an explicit
+code/rate pair; a real change requires an exact live catalogue code, explicit positive exact rate,
+known company currency, rate one for identical currencies and a representable non-negative accounting
+equivalent. SQL padded/case aliases are not accepted as exact codes. Historical NULL/invalid rate
+pairs and numeric scale-only no-ops remain untouched without repair or UPDATE.
+
+This is deliberate reinterpretation of the same numeric amounts in the newly selected currency,
+NOT currency conversion: the dialog states this in its preview and confirmation. Only requested
+`currency_code` and/or `currency_rate` columns are written under the caller-owned savepoint.
+Numeric net/VAT/rounding/payable, rows/prices, stock, dates, accounts/dimensions, flags/counters and
+stored voucher/correction snapshots remain byte-for-byte/SQL-value unchanged. No catalogue exchange
+rate, supplier default or automatic repricing is consulted. The existing complete-document plus
+company-currency fingerprint and live unbooked/unexported/unlinked guards cover both preview and
+save. Catalogue descriptions/default-rate changes do not alter the proposed pair; removing a chosen
+but still unreferenced target code before confirmation refuses the save.
+
+Both sorted view routes bind stable IDs, refresh only after confirmed same-session commit and fence
+replaced selections. Any draft selection/rate change resets confirmation; reload/cancel discard both
+fields. Failed/stale database work requires reload, and shared unknown-outcome blocking, confirmed
+replay, accepted original-context saves and post-commit cleanup/callback failures follow the existing
+supplier lifecycle. Tests include independent code-only/rate-only/both-column SQL, unchanged numeric
+amounts/stock, historical NULL selection, no automatic base-currency rate, and balanced invoice/credit
+journals after currency changes with subunit and larger explicit rates.
+
+Broader supplier header editing (supplier identity/payment terms), row creation/removal, production
+bootstrap, booked-document correction and linked-document detachment remain separate. Format-3
+production GUI startup is disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and
 `credit-invoice list --output`) use explicit company-wide headers (last voucher zero),
