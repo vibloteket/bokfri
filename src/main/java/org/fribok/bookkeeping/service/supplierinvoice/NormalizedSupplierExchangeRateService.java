@@ -8,10 +8,13 @@ import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Savepoint;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
- * Explicit stored exchange rate only; caller owns transaction, commit and exclusive writer gate.
+ * Explicit stored exchange-rate and currency-code workflows; caller owns transaction, commit and
+ * exclusive writer gate.
  */
 public final class NormalizedSupplierExchangeRateService {
     /** Supplier invoice or credit family. */
@@ -220,6 +223,176 @@ public final class NormalizedSupplierExchangeRateService {
                     statement.setInt(3, fresh.source.companyId());
                     if (statement.executeUpdate() != 1) {
                         throw new SQLException("Missing or foreign supplier rate target");
+                    }
+                }
+            }
+            connection.releaseSavepoint(savepoint);
+            return new Updated(fresh.source.companyId(), fresh.source.kind, fresh.source.id());
+        } catch (SQLException | RuntimeException | Error failure) {
+            try {
+                connection.rollback(savepoint);
+            } catch (SQLException rollback) {
+                failure.addSuppressed(rollback);
+            }
+            throw failure;
+        }
+    }
+
+    /** Explicit code and direct rate together; no catalogue defaults or implicit rate changes. */
+    public record CurrencyValues(String currency, BigDecimal rate) {}
+
+    /** Separate source-bound token for currency editing; the rate-only API remains unchanged. */
+    public static final class CurrencyPlan {
+        private final Snapshot source;
+        private final CurrencyValues after;
+
+        private CurrencyPlan(Snapshot source, CurrencyValues after) {
+            this.source = source;
+            this.after = after;
+        }
+
+        public Snapshot source() {
+            return source;
+        }
+
+        public CurrencyValues before() {
+            return new CurrencyValues(source.currency(), source.values().rate());
+        }
+
+        public CurrencyValues after() {
+            return after;
+        }
+
+        public boolean changed() {
+            return !Objects.equals(before().currency(), after.currency())
+                    || !equal(before().rate(), after.rate());
+        }
+
+        public Totals beforeTotals() {
+            return source.totals();
+        }
+
+        public Totals afterTotals() {
+            var before = source.totals();
+            return new Totals(
+                    before.net(),
+                    before.tax(),
+                    before.rounding(),
+                    before.payable(),
+                    after.rate() == null ? null : before.payable().multiply(after.rate()));
+        }
+    }
+
+    /**
+     * Immutable catalogue code choices only; descriptions and default exchange rates are not read.
+     */
+    public List<String> currencyCodes() throws SQLException {
+        List<String> codes = new ArrayList<>();
+        try (var statement = connection.createStatement();
+                var rows = statement.executeQuery("SELECT code FROM currency ORDER BY code")) {
+            while (rows.next()) {
+                codes.add(rows.getString(1));
+            }
+        }
+        return List.copyOf(codes);
+    }
+
+    /**
+     * Rechecks full source/company currency and validates the explicit code/rate without writes.
+     */
+    public CurrencyPlan previewCurrency(Snapshot expected, CurrencyValues proposed)
+            throws SQLException {
+        Objects.requireNonNull(expected, "snapshot");
+        Objects.requireNonNull(proposed, "currency and rate");
+        var fresh = load(expected.companyId(), expected.kind, expected.id());
+        if (!fresh.signature.equals(expected.signature)) {
+            throw new SQLException("Stale supplier currency, rate or company currency; reload");
+        }
+        var plan = new CurrencyPlan(expected, proposed);
+        if (plan.changed()) {
+            String code = proposed.currency();
+            if (code == null
+                    || code.isBlank()
+                    || code.length() > 255
+                    || code.codePoints().anyMatch(Character::isISOControl)) {
+                throw new IllegalArgumentException(
+                        "An explicit valid catalogue currency code is required");
+            }
+            try (var statement =
+                    connection.prepareStatement("SELECT code FROM currency WHERE code=?")) {
+                statement.setString(1, code);
+                try (var row = statement.executeQuery()) {
+                    if (!row.next() || !code.equals(row.getString(1))) {
+                        throw new IllegalArgumentException(
+                                "Unknown or non-exact catalogue currency code");
+                    }
+                }
+            }
+            if (proposed.rate() == null || proposed.rate().signum() <= 0) {
+                throw new IllegalArgumentException(
+                        "An explicit positive exchange rate is required");
+            }
+            exact(proposed.rate());
+            if (expected.companyCurrency == null || expected.companyCurrency.isBlank()) {
+                throw new IllegalArgumentException("A stored company currency code is required");
+            }
+            if (code.equals(expected.companyCurrency)
+                    && proposed.rate().compareTo(BigDecimal.ONE) != 0) {
+                throw new IllegalArgumentException(
+                        "Same-currency documents require exchange rate one");
+            }
+            var equivalent = plan.afterTotals().accountingEquivalent();
+            if (equivalent.signum() < 0) {
+                throw new IllegalArgumentException(
+                        "Currency editing cannot produce a negative accounting equivalent");
+            }
+            exact(equivalent.setScale(2, RoundingMode.HALF_UP));
+        }
+        return plan;
+    }
+
+    /**
+     * Updates only explicitly changed code/rate columns; never rewrites document monetary values.
+     */
+    public Updated confirmCurrency(CurrencyPlan expected) throws SQLException {
+        Objects.requireNonNull(expected, "plan");
+        if (connection.getAutoCommit()) {
+            throw new SQLException("Currency editing requires a caller-owned transaction");
+        }
+        Savepoint savepoint = connection.setSavepoint();
+        try {
+            var fresh = previewCurrency(expected.source, expected.after);
+            boolean currency = !Objects.equals(fresh.before().currency(), fresh.after.currency());
+            boolean rate = !equal(fresh.before().rate(), fresh.after.rate());
+            List<String> columns = new ArrayList<>();
+            if (currency) {
+                columns.add("currency_code=?");
+            }
+            if (rate) {
+                columns.add("currency_rate=?");
+            }
+            if (!columns.isEmpty()) {
+                try (var statement =
+                        connection.prepareStatement(
+                                "UPDATE "
+                                        + (fresh.source.kind == Kind.CREDIT
+                                                ? "supplier_credit_invoice"
+                                                : "supplier_invoice")
+                                        + " SET "
+                                        + String.join(",", columns)
+                                        + " WHERE id=? AND company_id=(SELECT id FROM company WHERE"
+                                        + " legacy_id=?)")) {
+                    int parameter = 1;
+                    if (currency) {
+                        statement.setString(parameter++, fresh.after.currency());
+                    }
+                    if (rate) {
+                        statement.setBigDecimal(parameter++, fresh.after.rate());
+                    }
+                    statement.setLong(parameter++, fresh.source.id());
+                    statement.setInt(parameter, fresh.source.companyId());
+                    if (statement.executeUpdate() != 1) {
+                        throw new SQLException("Missing or foreign supplier currency target");
                     }
                 }
             }
