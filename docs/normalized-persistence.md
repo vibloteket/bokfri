@@ -901,9 +901,37 @@ post-commit callback/close failures never cause a second write. Tests compare al
 verify unchanged stock and balanced invoice/credit journals for positive and negative rounding, and
 reject journal previews captured before the amount change.
 
-Broader supplier financial/header editing (including currency/rate), row creation/removal, production
-bootstrap, booked-document correction and linked-document detachment remain separate. Format-3
-production GUI startup is disabled.
+Explicit stored supplier exchange-rate editing is available through
+`NormalizedSupplierExchangeRateService` and `SupplierExchangeRateAdapter/Dialog`. It reuses the raw
+supplier amount projection for unchanged net, VAT, rounding and payable, without domain hydration.
+The requested rate is a direct multiplier: preview shows the exact unrounded payable-times-rate
+accounting equivalent, never an inverted or catalogue-derived rate. Only `currency_rate` is updated;
+document/company currency codes, amounts, rows, stock, dates, accounts/dimensions, flags/counters and
+voucher/correction snapshots are not rewritten. This is not a currency-code replacement or repricing
+workflow. Journal posting regenerates its own voucher and retains its year/account/balance checks.
+
+A real edit requires an explicit positive exact DECIMAL(100,30) rate and nonblank stored document
+and company currency codes; identical codes require rate one. It refuses a negative accounting
+equivalent or an equivalent whose two-decimal accounting value exceeds DECIMAL(100,30). Preview
+retains the unrounded product, including more than 30 fractional places when multiplication produces
+them; no product is written into the document. Historical NULL/zero/negative rates and numeric
+scale-only no-ops are preserved without UPDATE or default repair. Catalogue descriptions/default
+rates do not participate in the calculation. The complete document source fingerprint also binds the
+company currency code; changing that code invalidates an existing rate preview even if the document
+itself is untouched. Current unbooked/unexported/unlinked eligibility is checked at load, preview and
+save under the shared writer gate/caller-owned savepoint transaction.
+
+Both sorted view routes require fresh preview/confirmation and reload after stale/failed database
+work. Draft edits reset the checkbox; cancel/reload discard drafts. Shared unknown-commit blocking,
+confirmed replay, selection replacement and accepted original-context saves, and post-commit
+callback/close-failure handling follow the other supplier editors. Tests cover raw preservation,
+same-currency and missing-code rules, company-currency staleness, ignored catalogue rates, exact
+boundaries/unrounded products, unchanged stock and balanced invoice/credit journals at both subunit
+and larger direct multipliers.
+
+Broader supplier header editing (including currency codes), row creation/removal, production bootstrap,
+booked-document correction and linked-document detachment remain separate. Format-3 production GUI
+startup is disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and
 `credit-invoice list --output`) use explicit company-wide headers (last voucher zero),
