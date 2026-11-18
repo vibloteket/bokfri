@@ -224,6 +224,17 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
         return new SupplierRowDescriptionAdapter(this, kind, id);
     }
 
+    /** Leases row allocation editing with this selected year and company catalogue. */
+    public SupplierRowAccountingAdapter rowAccounting(
+            org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDocumentMetadataService
+                            .Kind
+                    kind,
+            long id)
+            throws SQLException {
+        requireAvailable();
+        return new SupplierRowAccountingAdapter(this, kind, id);
+    }
+
     /** Leases explicit supplier header date editing for this exact selection and SQL identity. */
     public SupplierDatesAdapter dates(
             org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDatesService.Kind kind,

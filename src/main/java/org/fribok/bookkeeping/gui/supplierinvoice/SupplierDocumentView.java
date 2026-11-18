@@ -68,6 +68,11 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             new JButton(SSBundle.getBundle().getString("supplier.exchange.actioncredit"));
     private final List<SupplierRowAmountsDialog> amountDialogs = new ArrayList<>();
     private final List<SupplierRowDescriptionDialog> rowDescriptionDialogs = new ArrayList<>();
+    private final List<SupplierRowAccountingDialog> rowAccountingDialogs = new ArrayList<>();
+    private final JButton invoiceRowAccounting =
+            new JButton(SSBundle.getBundle().getString("supplier.rowaccounting.actioninvoice"));
+    private final JButton creditRowAccounting =
+            new JButton(SSBundle.getBundle().getString("supplier.rowaccounting.actioncredit"));
     private final JButton invoiceRowDescriptions =
             new JButton(SSBundle.getBundle().getString("supplier.rowdescription.actioninvoice"));
     private final JButton creditRowDescriptions =
@@ -133,6 +138,10 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         creditRowDescriptions.setName("supplier-credit-row-descriptions");
         actions.add(invoiceRowDescriptions);
         actions.add(creditRowDescriptions);
+        invoiceRowAccounting.setName("supplier-invoice-row-accounting");
+        creditRowAccounting.setName("supplier-credit-row-accounting");
+        actions.add(invoiceRowAccounting);
+        actions.add(creditRowAccounting);
         invoiceDates.setName("supplier-invoice-dates");
         creditDates.setName("supplier-credit-dates");
         actions.add(invoiceDates);
@@ -162,6 +171,8 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         creditAmounts.addActionListener(event -> rowAmounts(true));
         invoiceRowDescriptions.addActionListener(event -> rowDescriptions(false));
         creditRowDescriptions.addActionListener(event -> rowDescriptions(true));
+        invoiceRowAccounting.addActionListener(event -> rowAccounting(false));
+        creditRowAccounting.addActionListener(event -> rowAccounting(true));
         invoiceDates.addActionListener(event -> dates(false));
         creditDates.addActionListener(event -> dates(true));
         invoiceTaxRounding.addActionListener(event -> taxRounding(false));
@@ -222,6 +233,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(rowDescriptionDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(rowAccountingDialogs)) {
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(dateDialogs)) {
@@ -564,6 +578,57 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         }
     }
 
+    private void rowAccounting(boolean credit) {
+        requireEdt();
+        JTable table = credit ? creditTable : invoiceTable;
+        Rows rows = credit ? credits : invoices;
+        if (closed
+                || loading
+                || !loaded
+                || !session.isActive()
+                || session.isBlocked()
+                || !unbookedUnexportedSelection(table, rows)) {
+            return;
+        }
+        Long id = selection(table, rows);
+        var selected = session;
+        try {
+            var kind =
+                    credit
+                            ? org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierDocumentMetadataService.Kind.CREDIT
+                            : org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierDocumentMetadataService.Kind.INVOICE;
+            var dialog =
+                    new SupplierRowAccountingDialog(
+                            owner,
+                            selected.rowAccounting(kind, id),
+                            saved -> {
+                                if (!closed
+                                        && session == selected
+                                        && selected.isActive()
+                                        && !selected.isBlocked()
+                                        && saved.companyId() == selected.companyId()
+                                        && saved.yearId() == selected.yearId()) {
+                                    refresh();
+                                }
+                            });
+            rowAccountingDialogs.add(dialog);
+            dialog.addWindowListener(
+                    new WindowAdapter() {
+                        @Override
+                        public void windowClosed(WindowEvent event) {
+                            rowAccountingDialogs.remove(dialog);
+                            controls();
+                        }
+                    });
+            dialog.setVisible(true);
+        } catch (java.sql.SQLException failure) {
+            status.setText(MessageFormat.format(text("failed"), failure.getMessage()));
+            controls();
+        }
+    }
+
     private void dates(boolean credit) {
         requireEdt();
         JTable table = credit ? creditTable : invoiceTable;
@@ -815,6 +880,13 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
                         && unbookedUnexportedSelection(invoiceTable, invoices));
         creditRowDescriptions.setEnabled(
                 active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
+        invoiceRowAccounting.setEnabled(
+                active
+                        && !loading
+                        && loaded
+                        && unbookedUnexportedSelection(invoiceTable, invoices));
+        creditRowAccounting.setEnabled(
+                active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
         invoiceDates.setEnabled(
                 active
                         && !loading
@@ -874,6 +946,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(rowDescriptionDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(rowAccountingDialogs)) {
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(dateDialogs)) {
