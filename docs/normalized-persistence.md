@@ -989,9 +989,31 @@ semantics: a nonfinancial description edit can leave an otherwise identical jour
 Posting reloads current documents and preserves the fresh descriptions rather than replaying old
 presentation snapshots; tests verify balanced unchanged totals and retained edited text after posting.
 
-Broader supplier headers (supplier identity/payment terms), row accounts/dimensions and insertion/
-removal, production bootstrap, booked-document correction and linked-document detachment remain
-separate. Format-3 production GUI startup is disabled.
+Existing supplier-row accounts, projects and result units use
+`NormalizedSupplierRowAccountingService` and `SupplierRowAccountingAdapter/Dialog`. Immutable
+snapshots bind the complete document plus the selected year's accounts and company-scoped dimension
+catalogues. Preview and confirmation recheck both sources and current unbooked/unexported/unlinked
+eligibility. Changed allocation tuples require an active positive selected-year account, valid
+non-concluded company projects and valid company result units; account-required dimensions must be
+explicitly chosen. No account or dimension default is applied. Unchanged historical allocations,
+including NULL or unavailable codes, are preserved without UPDATE; even no-ops revalidate sources.
+
+Only changed `account_number`, `project_number` and `result_unit_number` cells are written under a
+caller-owned savepoint. Row keys/gaps/order, descriptions, products, units, amounts, stock, header
+values, counters and correction/voucher snapshots remain untouched. Missing/duplicate/foreign row
+keys and insertion/removal are refused. Late failures roll back all changed allocations while
+preserving earlier caller work. Tests verify unchanged stock and balanced journals using the new
+allocations, including stale old-journal rejection.
+
+The allocation table offers explicit catalogue choices and historical values, without silently
+selecting required dimensions. Preview shows exact before/after tuples; draft changes reset fresh
+confirmation, and reload/cancel discard active edits. Stable-ID sorted routes, same-selection refresh,
+shared unknown-commit blocking, confirmed replay and accepted original-context saves retain the
+existing supplier lifecycle.
+
+Broader supplier headers (supplier identity/payment terms), row insertion/removal, production
+bootstrap, booked-document correction and linked-document detachment remain separate.
+Format-3 production GUI startup is disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and
 `credit-invoice list --output`) use explicit company-wide headers (last voucher zero),
