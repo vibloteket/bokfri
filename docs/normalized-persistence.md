@@ -1011,9 +1011,30 @@ confirmation, and reload/cancel discard active edits. Stable-ID sorted routes, s
 shared unknown-commit blocking, confirmed replay and accepted original-context saves retain the
 existing supplier lifecycle.
 
-Broader supplier headers (supplier identity/payment terms), row insertion/removal, production
-bootstrap, booked-document correction and linked-document detachment remain separate.
-Format-3 production GUI startup is disabled.
+Supplier payment-term links use `NormalizedSupplierPaymentTermService` and
+`SupplierPaymentTermAdapter/Dialog`. The source wraps the complete raw date-service snapshot for
+document/reference guards, and binds an immutable exact global payment-term catalogue (names and
+descriptions). Both preview and confirmation reject catalogue insertion/removal/rename/description
+changes, even for no-ops. Changed non-NULL names must match an existing catalogue name exactly,
+including case and whitespace, be nonblank, at most 255 characters and contain no ISO controls.
+Explicit NULL clears the link. No catalogue name is parsed into a day count and no supplier default
+is consulted. Unchanged historical NULL/blank/control names are preserved without UPDATE.
+
+Only `payment_term_name` is written under a caller-owned savepoint. Invoice/due dates, including
+historical NULL/reversed values, amounts, supplier register values, rows, stock, accounts/dimensions,
+flags/counters and voucher/correction snapshots stay unchanged. The read-only choice list retains
+the actual stored value rather than silently choosing its first entry. Literal quoted/control-escaped
+labels and exact before/after previews prevent HTML interpretation or display normalization from
+changing stored names. Fresh confirmation, stable-ID sorted routes, reload/cancel, shared unknown
+outcomes and accepted original-context saves retain the existing supplier lifecycle.
+
+Payment terms do not change journal selection or accounting totals. A prior accounting-equivalent
+journal preview can remain valid; posting reloads the document and retains the new term link and
+unchanged due date. Tests verify balanced unchanged totals and stock for both document families.
+
+Broader supplier identity editing, row insertion/removal, production bootstrap, booked-document
+correction and linked-document detachment remain separate. Format-3 production GUI startup is
+disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and
 `credit-invoice list --output`) use explicit company-wide headers (last voucher zero),
