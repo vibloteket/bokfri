@@ -48,9 +48,14 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
     private final JButton creditAmounts = new JButton(text("amountscredit"));
     private final JButton invoiceDates =
             new JButton(SSBundle.getBundle().getString("supplier.dates.actioninvoice"));
+    private final JButton invoicePaymentTerm =
+            new JButton(SSBundle.getBundle().getString("supplier.paymentterm.actioninvoice"));
     private final JButton creditDates =
             new JButton(SSBundle.getBundle().getString("supplier.dates.actioncredit"));
+    private final JButton creditPaymentTerm =
+            new JButton(SSBundle.getBundle().getString("supplier.paymentterm.actioncredit"));
     private final List<SupplierDatesDialog> dateDialogs = new ArrayList<>();
+    private final List<SupplierPaymentTermDialog> paymentTermDialogs = new ArrayList<>();
     private final JButton invoiceTaxRounding =
             new JButton(SSBundle.getBundle().getString("supplier.taxrounding.actioninvoice"));
     private final JButton creditTaxRounding =
@@ -143,9 +148,13 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         actions.add(invoiceRowAccounting);
         actions.add(creditRowAccounting);
         invoiceDates.setName("supplier-invoice-dates");
+        invoicePaymentTerm.setName("supplier-invoice-paymentterm");
         creditDates.setName("supplier-credit-dates");
+        creditPaymentTerm.setName("supplier-credit-paymentterm");
         actions.add(invoiceDates);
+        actions.add(invoicePaymentTerm);
         actions.add(creditDates);
+        actions.add(creditPaymentTerm);
         invoiceTaxRounding.setName("supplier-invoice-tax-rounding");
         creditTaxRounding.setName("supplier-credit-tax-rounding");
         actions.add(invoiceTaxRounding);
@@ -174,7 +183,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         invoiceRowAccounting.addActionListener(event -> rowAccounting(false));
         creditRowAccounting.addActionListener(event -> rowAccounting(true));
         invoiceDates.addActionListener(event -> dates(false));
+        invoicePaymentTerm.addActionListener(event -> paymentTerm(false));
         creditDates.addActionListener(event -> dates(true));
+        creditPaymentTerm.addActionListener(event -> paymentTerm(true));
         invoiceTaxRounding.addActionListener(event -> taxRounding(false));
         creditTaxRounding.addActionListener(event -> taxRounding(true));
         invoiceExchangeRate.addActionListener(event -> exchangeRate(false));
@@ -239,6 +250,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(dateDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(paymentTermDialogs)) {
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(taxRoundingDialogs)) {
@@ -680,6 +694,57 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
         }
     }
 
+    private void paymentTerm(boolean credit) {
+        requireEdt();
+        JTable table = credit ? creditTable : invoiceTable;
+        Rows rows = credit ? credits : invoices;
+        if (closed
+                || loading
+                || !loaded
+                || !session.isActive()
+                || session.isBlocked()
+                || !unbookedUnexportedSelection(table, rows)) {
+            return;
+        }
+        Long id = selection(table, rows);
+        var selected = session;
+        try {
+            var kind =
+                    credit
+                            ? org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierDatesService.Kind.CREDIT
+                            : org.fribok.bookkeeping.service.supplierinvoice
+                                    .NormalizedSupplierDatesService.Kind.INVOICE;
+            var dialog =
+                    new SupplierPaymentTermDialog(
+                            owner,
+                            selected.paymentTerm(kind, id),
+                            saved -> {
+                                if (!closed
+                                        && session == selected
+                                        && selected.isActive()
+                                        && !selected.isBlocked()
+                                        && saved.companyId() == selected.companyId()
+                                        && saved.yearId() == selected.yearId()) {
+                                    refresh();
+                                }
+                            });
+            paymentTermDialogs.add(dialog);
+            dialog.addWindowListener(
+                    new WindowAdapter() {
+                        @Override
+                        public void windowClosed(WindowEvent event) {
+                            paymentTermDialogs.remove(dialog);
+                            controls();
+                        }
+                    });
+            dialog.setVisible(true);
+        } catch (java.sql.SQLException failure) {
+            status.setText(MessageFormat.format(text("failed"), failure.getMessage()));
+            controls();
+        }
+    }
+
     private void taxRounding(boolean credit) {
         requireEdt();
         JTable table = credit ? creditTable : invoiceTable;
@@ -892,7 +957,14 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
                         && !loading
                         && loaded
                         && unbookedUnexportedSelection(invoiceTable, invoices));
+        invoicePaymentTerm.setEnabled(
+                active
+                        && !loading
+                        && loaded
+                        && unbookedUnexportedSelection(invoiceTable, invoices));
         creditDates.setEnabled(
+                active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
+        creditPaymentTerm.setEnabled(
                 active && !loading && loaded && unbookedUnexportedSelection(creditTable, credits));
         invoiceTaxRounding.setEnabled(
                 active
@@ -952,6 +1024,9 @@ public final class SupplierDocumentView extends JPanel implements AutoCloseable 
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(dateDialogs)) {
+            dialog.invalidateSelection();
+        }
+        for (var dialog : List.copyOf(paymentTermDialogs)) {
             dialog.invalidateSelection();
         }
         for (var dialog : List.copyOf(taxRoundingDialogs)) {

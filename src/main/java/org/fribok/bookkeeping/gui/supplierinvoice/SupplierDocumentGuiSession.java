@@ -224,6 +224,15 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
         return new SupplierRowDescriptionAdapter(this, kind, id);
     }
 
+    /** Leases payment-term-only editing; stored dates are never recalculated. */
+    public SupplierPaymentTermAdapter paymentTerm(
+            org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDatesService.Kind kind,
+            long id)
+            throws SQLException {
+        requireAvailable();
+        return new SupplierPaymentTermAdapter(this, kind, id);
+    }
+
     /** Leases row allocation editing with this selected year and company catalogue. */
     public SupplierRowAccountingAdapter rowAccounting(
             org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDocumentMetadataService

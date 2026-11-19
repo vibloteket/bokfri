@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Added
 
+- Guarded normalized supplier invoice/credit payment-term selection and explicit NULL clearing (#75), with exact live-catalogue/source validation and fresh confirmation. Only the term link changes: no due-date recalculation, supplier defaults, amount changes or historical-value repair. Production format-3 GUI startup remains disabled.
+
 - Guarded normalized supplier-row account/project/result-unit editing with selected-year accounts, company-scoped dimensions, explicit requirements and source-bound before/after confirmation; unchanged historical allocations, amounts, products, stock and correction snapshots are preserved (#75). Production format-3 GUI startup remains disabled.
 
 - Add bounded normalized supplier metadata editing (#75) for stored display name and invoice reference only, with explicit NULL controls, exact historical-value preservation, complete-source stale tokens and live unbooked/unexported/unlinked guards. Narrow updates leave financial snapshots untouched; the view refreshes only after confirmed save and shares uncertain-outcome blocking with journals/deletion. Financial editing and production bootstrap remain separate.
