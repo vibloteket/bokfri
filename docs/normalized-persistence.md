@@ -1032,9 +1032,33 @@ Payment terms do not change journal selection or accounting totals. A prior acco
 journal preview can remain valid; posting reloads the document and retains the new term link and
 unchanged due date. Tests verify balanced unchanged totals and stock for both document families.
 
-Broader supplier identity editing, row insertion/removal, production bootstrap, booked-document
-correction and linked-document detachment remain separate. Format-3 production GUI startup is
-disabled.
+Supplier-number reassignment uses `NormalizedSupplierIdentityService` and
+`SupplierIdentityAdapter/Dialog`. This is deliberately not the legacy `setSupplier` operation:
+only the document's `supplier_number` changes. The stored display name/reference, dates, payment
+terms, currency/rate, accounting defaults, amounts, rows, stock, flags/counters and correction/voucher
+snapshots are not replaced or repaired. Supplier register/default/address values are never copied.
+The explicit preview shows the old/new number and unchanged stored name and dates; register names
+in the noneditable choices are only selection aids, not proposed replacement names.
+
+The immutable source reuses the complete raw document token and current unbooked/unexported/unlinked
+guards, and binds the selected company's supplier identities (SQL ID, legacy ID, exact number and
+name). Inserting/deleting/renaming an identity, changing a displayed register name or creating a
+duplicate invalidates both preview and confirmation, including no-ops. Other-company changes and
+unconsulted bank/contact/default changes do not alter the explicit proposal. Real changes require a
+nonblank, control-free, at-most-255-character number matching exactly one supplier in this company.
+NULL clearing, unknown/foreign numbers and case/padding aliases are refused. Unchanged historical
+NULL/blank/control/orphan or ambiguous numbers are retained without UPDATE; there is no implicit
+first-choice assignment. Duplicate new targets are not offered by the UI.
+
+A local savepoint updates only the changed `supplier_number` cell and retains earlier caller work on
+failure. Stable-ID sorted routes, fresh confirmation, cancel/reload, shared uncertain-outcome blocking,
+confirmed replay, replacement fencing and accepted original-context saves retain the existing supplier
+lifecycle. Tests verify company isolation, no copied defaults, unchanged stock and balanced accounting.
+A previous accounting-equivalent journal preview can remain valid; posting reloads and preserves the
+new supplier number without replaying the old identity.
+
+Whole-supplier/default application, row insertion/removal, creation/production bootstrap, booked-document
+correction and linked-document detachment remain separate. Format-3 production GUI startup is disabled.
 
 Customer invoice/credit register PDFs (`invoice list --output` and
 `credit-invoice list --output`) use explicit company-wide headers (last voucher zero),

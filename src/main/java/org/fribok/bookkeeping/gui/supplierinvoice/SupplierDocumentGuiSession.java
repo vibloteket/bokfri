@@ -233,6 +233,15 @@ public final class SupplierDocumentGuiSession implements AutoCloseable {
         return new SupplierPaymentTermAdapter(this, kind, id);
     }
 
+    /** Leases supplier-number-only editing; stored name and defaults are not copied. */
+    public SupplierIdentityAdapter supplierIdentity(
+            org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDatesService.Kind kind,
+            long id)
+            throws SQLException {
+        requireAvailable();
+        return new SupplierIdentityAdapter(this, kind, id);
+    }
+
     /** Leases row allocation editing with this selected year and company catalogue. */
     public SupplierRowAccountingAdapter rowAccounting(
             org.fribok.bookkeeping.service.supplierinvoice.NormalizedSupplierDocumentMetadataService
