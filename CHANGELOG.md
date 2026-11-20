@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Added
 
+- Explicit normalized application owner (#75) with immutable company/year choices, validated replacement/closure, shared customer/supplier document-session ownership and cross-family uncertain-commit blocking. Every lease validates the complete current schema without migration or legacy selection writes; both real views are tested together. This is behind the production startup guard, not default format-3 activation or full application bootstrap.
+
 - Guarded normalized supplier invoice/credit supplier-number reassignment (#75), using exact unique company-scoped register choices, complete-source/identity-catalogue validation and fresh confirmation. Only `supplier_number` changes: stored name/reference, dates, payment terms, financial snapshots and stock remain untouched; no supplier defaults are copied. Production format-3 GUI startup remains disabled.
 
 - Guarded normalized supplier invoice/credit payment-term selection and explicit NULL clearing (#75), with exact live-catalogue/source validation and fresh confirmation. Only the term link changes: no due-date recalculation, supplier defaults, amount changes or historical-value repair. Production format-3 GUI startup remains disabled.
