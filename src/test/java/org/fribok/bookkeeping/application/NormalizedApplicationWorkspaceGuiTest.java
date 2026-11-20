@@ -390,6 +390,50 @@ class NormalizedApplicationWorkspaceGuiTest {
         }
     }
 
+    @Test
+    void emptyCompanyIsNotReadyUntilBothBackgroundDocumentReadsFinish() throws Exception {
+        try (var f = new NormalizedApplicationOwnerTest.Fixture()) {
+            var armed = new java.util.concurrent.atomic.AtomicBoolean();
+            var reads = new java.util.concurrent.atomic.AtomicInteger();
+            var entered = new CountDownLatch(1);
+            var release = new CountDownLatch(1);
+            var application =
+                    new NormalizedApplicationOwner(
+                            () -> {
+                                assertFalse(SwingUtilities.isEventDispatchThread());
+                                // First connection validates selection; the next is a background
+                                // document load.
+                                if (armed.get() && reads.incrementAndGet() == 2) {
+                                    entered.countDown();
+                                    try {
+                                        if (!release.await(10, TimeUnit.SECONDS))
+                                            throw new SQLException("Timed out");
+                                    } catch (InterruptedException error) {
+                                        Thread.currentThread().interrupt();
+                                        throw new SQLException(error);
+                                    }
+                                }
+                                return f.open();
+                            },
+                            NormalizedApplicationOwnerTest.CLOCK);
+            try (var ui = new Host(application)) {
+                ready(ui);
+                apply(ui, 71, 11);
+                loaded(ui, 71, 1);
+                armed.set(true);
+                apply(ui, 72, 12);
+                assertTrue(entered.await(10, TimeUnit.SECONDS));
+                assertFalse(edt(() -> isLoaded(ui, 72, 0)));
+                release.countDown();
+                loaded(ui, 72, 0);
+                assertEquals(3, reads.get());
+                assertEquals(f.opens.get(), f.closes.get());
+            } finally {
+                release.countDown();
+            }
+        }
+    }
+
     static final class Host implements AutoCloseable {
         final JFrame frame;
         final NormalizedDocumentWorkspace workspace;
@@ -443,22 +487,28 @@ class NormalizedApplicationWorkspaceGuiTest {
     }
 
     private static void loaded(Host ui, int company, int rows) throws Exception {
-        waitFor(
-                () ->
-                        edt(
-                                () ->
-                                        ui.workspace
-                                                        .selection()
-                                                        .map(s -> s.company().id() == company)
-                                                        .orElse(false)
-                                                && table(ui, "normalized-invoices") != null
-                                                && table(ui, "normalized-supplier-invoices") != null
-                                                && table(ui, "normalized-invoices").getRowCount()
-                                                        == rows
-                                                && table(ui, "normalized-supplier-invoices")
-                                                                .getRowCount()
-                                                        == rows
-                                                && button(ui, "reload").isEnabled()));
+        waitFor(() -> edt(() -> isLoaded(ui, company, rows)));
+    }
+
+    // Replacing a context clears both tables before its background document reads finish. Empty
+    // tables and an enabled workspace Reload therefore do not prove that either view is ready.
+    private static boolean isLoaded(Host ui, int company, int rows) {
+        return ui.workspace.selection().map(s -> s.company().id() == company).orElse(false)
+                && table(ui, "normalized-invoices") != null
+                && table(ui, "normalized-supplier-invoices") != null
+                && table(ui, "normalized-invoices").getRowCount() == rows
+                && table(ui, "normalized-supplier-invoices").getRowCount() == rows
+                && button(ui, "reload").isEnabled()
+                && ((AbstractButton) find(ui.workspace, "document-refresh")).isEnabled()
+                && ((AbstractButton) find(ui.workspace, "supplier-document-refresh")).isEnabled()
+                && se.swedsoft.bookkeeping.gui.util.SSBundle.getBundle()
+                        .getString("customer.documents.ready")
+                        .equals(((JLabel) find(ui.workspace, "document-status")).getText())
+                && se.swedsoft.bookkeeping.gui.util.SSBundle.getBundle()
+                        .getString("supplier.documents.ready")
+                        .equals(
+                                ((JLabel) find(ui.workspace, "supplier-document-status"))
+                                        .getText());
     }
 
     private static void select(JComboBox<?> box, int id) {
