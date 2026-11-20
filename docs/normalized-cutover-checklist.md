@@ -157,6 +157,14 @@ fail-closed repository boundaries, not a new claim of complete business validati
 
 ### G2 — Introduce a shared normalized application boundary
 
+- [x] Add an explicit [shared application owner](normalized-application-owner.md) for the
+  restricted customer/supplier document sessions: immutable scoped company/year choices,
+  validated replacement and closure, one writer gate, full current-schema validation on every
+  connection and cross-family uncertain-commit blocking. Both real document views are tested
+  against the same owner. No legacy/global selection or startup seeding is used. This is an
+  opt-in ownership boundary, not production host/menu installation, automatic cache/UI
+  notifications or complete command ownership for all domains; the broader items below remain open.
+
 - [x] Explicit normalized credit-request adapter and dialog entry point with no
   legacy JDBC: dedicated per-action sessions, read-only format/history validation,
   shared application transaction gate, off-EDT backend work and commit-confirmed
@@ -260,8 +268,10 @@ fail-closed repository boundaries, not a new claim of complete business validati
   legacy screen/cache paths and remaining credit-frame/editor operations. Format-3 startup
   remains rejected; these restricted integration boundaries do not make the full credit
   frame or other document screens normalized-ready.
-- [ ] Define transaction/connection ownership and selection/cache notifications
-  usable by both GUI and CLI. Do not reuse legacy `startupLocal` on format 3.
+- [ ] Complete transaction/connection ownership and selection/cache notifications
+  usable by both GUI and CLI. The explicit owner above covers company/year catalogue reads and
+  the two restricted document session families, not all commands or host notifications.
+  Do not reuse legacy `startupLocal` on format 3.
 - [ ] Route model defaults, calculators, import/export, numbering and trigger-driven
   operations through explicit context or an audited application facade.
 - [ ] Port GUI actions domain by domain behind the format-3 guard; preserve existing

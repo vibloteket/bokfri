@@ -3,7 +3,10 @@
 Status: design and implementation record for issue #75. Normalized storage is opt-in;
 normal GUI startup and new-database creation still use legacy format 2. See the
 [completion audit and cutover checklist](normalized-cutover-checklist.md) for
-remaining runtime operations, GUI integration and activation gates.
+remaining runtime operations, GUI integration and activation gates. The explicit
+[shared application owner](normalized-application-owner.md) now leases customer and supplier
+sessions from one company/year context and shared uncertainty boundary; production bootstrap
+and default format-3 activation remain separate.
 
 ## Purpose
 
