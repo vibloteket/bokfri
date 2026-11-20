@@ -409,6 +409,19 @@ class SSInvoiceDialogGuiTest {
     }
 
     private void click(Component component) throws Exception {
+        Window target = onEdt(() -> SwingUtilities.getWindowAncestor(component));
+        assertNotNull(target, "Robot target must belong to a window");
+        onEdt(() -> {
+            target.toFront();
+            target.requestFocus();
+            component.requestFocusInWindow();
+            return null;
+        });
+        // isShowing() precedes native activation on Windows. Without this handshake the first
+        // mouse press can merely activate the chooser, leaving its action undispatched.
+        await(() -> target.isFocused() && component.isShowing() && component.isEnabled()
+                && component.getWidth() > 0 && component.getHeight() > 0);
+        robot.waitForIdle();
         Point p = onEdt(() -> {
             Point point = component.getLocationOnScreen();
             point.translate(component.getWidth() / 2, component.getHeight() / 2);
@@ -431,7 +444,29 @@ class SSInvoiceDialogGuiTest {
             }
             robot.delay(80);
         } while (System.nanoTime() < deadline);
-        fail("Invoice dialog did not reach expected state");
+        String windows = onEdt(() -> {
+            StringBuilder state = new StringBuilder("Focus owner: ")
+                    .append(java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner());
+            for (Window window : Window.getWindows()) {
+                if (window.isShowing()) {
+                    state.append("\n").append(window.getClass().getName())
+                            .append(" focused=").append(window.isFocused())
+                            .append(" active=").append(window.isActive())
+                            .append(" bounds=").append(window.getBounds());
+                }
+            }
+            return state.toString();
+        });
+        for (Window window : onEdt(Window::getWindows)) {
+            if (window instanceof JDialog dialog && onEdt(dialog::isShowing)) {
+                try {
+                    screenshot(dialog, "timeout-" + dialog.getClass().getSimpleName());
+                } catch (Exception diagnosticFailure) {
+                    System.err.println("Cannot capture timeout screenshot: " + diagnosticFailure);
+                }
+            }
+        }
+        fail("Invoice dialog did not reach expected state\n" + windows);
     }
 
     private static <T> T onEdt(Callable<T> action) throws Exception {
