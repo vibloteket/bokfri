@@ -157,6 +157,14 @@ fail-closed repository boundaries, not a new claim of complete business validati
 
 ### G2 — Introduce a shared normalized application boundary
 
+- [x] Host the restricted customer/supplier views together in an explicit
+  [normalized document workspace](normalized-document-workspace.md): background catalogue and
+  company/year validation, explicit no-default choices, paired selection replacement, existing
+  owner-scoped menu bindings, last-good context on invalid choices, close/late-callback fencing,
+  and state-only observation that retires both families after an uncertain commit without legacy
+  fallback. Three-platform display CI now selects the owner/workspace test classes. This is a
+  dedicated opt-in host, not production opening, a legacy-frame retrofit or complete GUI parity.
+
 - [x] Add an explicit [shared application owner](normalized-application-owner.md) for the
   restricted customer/supplier document sessions: immutable scoped company/year choices,
   validated replacement and closure, one writer gate, full current-schema validation on every

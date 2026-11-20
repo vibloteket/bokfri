@@ -23,11 +23,14 @@ Normal GUI startup still rejects format 3, and new databases still use format 2.
   accepted write or closing its connection. Accepted writes can finish on their original
   identities, never on the new selection.
 
-All database methods must be called off the EDT. On the EDT, the host can construct the
-existing `CustomerDocumentView` and `SupplierDocumentView` from the same selection. After a
-successful background selection change, it must explicitly replace both view sessions and
-fence its own stale callbacks. The owner does not automatically install menu bindings,
-dispose windows, emit global cache notifications or call legacy startup.
+All database methods must be called off the EDT. The companion
+[explicit document workspace](normalized-document-workspace.md) now hosts catalogue selection,
+both views and their owner-scoped menu lifecycle in a dedicated opt-in window. It replaces both
+sessions after successful background selection and fences late callbacks; it also observes the
+shared uncertainty state and retires both screens. A custom host can still construct the
+existing `CustomerDocumentView` and `SupplierDocumentView` from the same selection, but must
+coordinate these responsibilities explicitly. The owner itself does not automatically install
+menu bindings, dispose windows, emit global cache notifications or call legacy startup.
 
 ## Validation and uncertainty
 
@@ -42,8 +45,8 @@ commit attempt, including an unchecked failure and either durability outcome, bl
 families, catalogue reads and selection changes **before another connection is opened**.
 Neither reselecting nor closing a screen clears this owner-level block. The host must reconcile
 the database externally before deliberately creating a new owner. `isBlocked()` exposes the
-state for host UI policy; existing screens are not automatically notified of cross-screen
-state changes by this initial boundary.
+state for host UI policy. The explicit document workspace polls this state without JDBC and
+retires both screens on uncertainty; custom hosts must provide their own equivalent policy.
 
 Ordinary pre-commit validation/write failures do not poison the owner. A successful commit
 followed by a connection-close failure remains a known success under the existing adapters;
