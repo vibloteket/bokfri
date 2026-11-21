@@ -1,6 +1,6 @@
 # Explicit normalized document workspace
 
-The selected company/year now also exposes guarded [empty accounting-year creation](normalized-year-creation.md): explicit dates/template, preview and confirmation, with no automatic carry-forward or selection change. Creating a first company/year remains outside this opt-in host.
+The selected company/year also exposes guarded [empty accounting-year creation](normalized-year-creation.md): explicit dates/template, preview and confirmation, with no automatic carry-forward or selection change. An existing company with zero years can use [first-year creation](normalized-first-year-creation.md) directly from its company choice, independently of any active document context. Creating a company remains outside this opt-in host.
 
 `org.fribok.bookkeeping.gui.application.NormalizedDocumentWorkspace` hosts the restricted
 customer and supplier views behind the production format-3 guard. This is an opt-in,

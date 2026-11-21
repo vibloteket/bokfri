@@ -231,6 +231,10 @@ class NormalizedApplicationYearCreationTest {
         volatile CountDownLatch release;
 
         Fixture() throws Exception {
+            this(true);
+        }
+
+        Fixture(boolean createYears) throws Exception {
             try (var c = open()) {
                 new SchemaMigrationRunner(Clock.systemUTC())
                         .migrate(c, NormalizedSchemaMigrations.load());
@@ -253,7 +257,7 @@ class NormalizedApplicationYearCreationTest {
                     account.setDescription("Cash");
                     plan.setAccounts(new ArrayList<>(List.of(account)));
                     year.setAccountPlan(plan);
-                    accounting.addAccountingYear(year);
+                    if (createYears) accounting.addAccountingYear(year);
                     new NormalizedAccountPlanCatalogStore(c).addAccountPlan(plan);
                     if (i == 0) planId = plan.getId();
                 }

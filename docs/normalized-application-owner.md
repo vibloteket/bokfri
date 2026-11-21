@@ -35,7 +35,11 @@ menu bindings, dispose windows, emit global cache notifications or call legacy s
 The owner also supports restricted [empty-year creation](normalized-year-creation.md) via
 `accountPlans(selection)`, `previewYear(selection, from, to, planId)` and `createYear(preview)`.
 These commands share the writer gate and uncertain-commit boundary; they do not replace the
-active lease or persist selections.
+active lease or persist selections. For an explicit existing company with zero years,
+`firstYearAccountPlans(companyId)` and `previewFirstYear(companyId, from, to, planId)` provide
+an owner-bound company-only command without a prior document lease. Confirmation still uses
+`createYear(preview)`, rejects a concurrently added year, and leaves document context unchanged.
+See [first-year creation](normalized-first-year-creation.md).
 
 ## Validation and uncertainty
 

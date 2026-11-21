@@ -80,6 +80,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
         this.frame = Objects.requireNonNull(frame);
         this.application = Objects.requireNonNull(application);
         yearCreation = new NormalizedYearCreationPanel(application, this::reload);
+        yearCreation.addPropertyChangeListener("busy", event -> controls());
         setName("normalized-workspace");
         companies.setName("workspace-company");
         years.setName("workspace-year");
@@ -114,6 +115,17 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
                         for (var year : choice.value().years()) years.addItem(new YearChoice(year));
                     }
                     years.setSelectedIndex(0);
+                    var company = choice == null ? null : choice.value();
+                    if (company != null && company.years().isEmpty()) {
+                        yearCreation.replaceFirstYearCompany(company);
+                    } else {
+                        yearCreation.replaceSelection(
+                                company != null
+                                                && selected != null
+                                                && selected.company().id() == company.id()
+                                        ? selected
+                                        : null);
+                    }
                     controls();
                 });
         years.addActionListener(event -> controls());
@@ -277,7 +289,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
 
     private boolean available() {
         checkHealth();
-        return !closed && !blocked && !failed && !busy;
+        return !closed && !blocked && !failed && !busy && !yearCreation.isBusy();
     }
 
     private void checkHealth() {
@@ -304,7 +316,8 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
     }
 
     private void controls() {
-        boolean active = !closed && !blocked && !failed && !busy;
+        boolean active = !closed && !blocked && !failed && !busy && !yearCreation.isBusy();
+        yearCreation.setHostAvailable(active);
         companies.setEnabled(active);
         years.setEnabled(active);
         reload.setEnabled(active);

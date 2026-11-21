@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Added
 
+- Added guarded first-year creation for an explicitly chosen existing company with no accounting years: no-default dates/template, preview and atomic confirmation, stale/concurrent-first-year refusal, and refreshed choices requiring explicit Apply. Active document context and saved selection remain unchanged; production format-3 startup stays guarded. See `docs/normalized-first-year-creation.md` (#75).
+
 - Added explicit empty accounting-year creation to the guarded normalized workspace: no-default dates/template, read-only preview, single-use confirmation with stale-input checks, atomic independent account-plan copy and refreshed choices without changing the active lease. Year commands share document uncertainty blocking; production format-3 startup remains disabled. See `docs/normalized-year-creation.md` (#75).
 
 - Explicit normalized document workspace (#75) with background, no-default company/year selection; paired customer/supplier views and owner-scoped menu lifecycle; stale-choice/late-callback protection and cross-screen uncertain-commit retirement without legacy fallback. Display CI now selects the shared owner/workspace tests on all three platforms. This remains opt-in behind the production format-3 startup guard.

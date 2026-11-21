@@ -159,7 +159,9 @@ fail-closed repository boundaries, not a new claim of complete business validati
 
 The opt-in workspace also supports [explicit empty-year creation](normalized-year-creation.md)
 for an existing selected company/year, with preview/confirmation and shared uncertainty
-blocking. This is one restricted G2 command, not first-year/company creation, carry-forward,
+blocking. An existing company with zero years can also use the guarded
+[first-year command](normalized-first-year-creation.md) without an active document lease.
+These are restricted G2 commands, not company creation, carry-forward,
 production bootstrap or completion of G2.
 
 - [x] Host the restricted customer/supplier views together in an explicit
