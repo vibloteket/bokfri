@@ -161,7 +161,10 @@ The opt-in workspace also supports [explicit empty-year creation](normalized-yea
 for an existing selected company/year, with preview/confirmation and shared uncertainty
 blocking. An existing company with zero years can also use the guarded
 [first-year command](normalized-first-year-creation.md) without an active document lease.
-These are restricted G2 commands, not company creation, carry-forward,
+The separate [empty-company command](normalized-company-creation.md) now adds explicit
+identity/currency/VAT-period/rounding preview and confirmation, followed by separate first-year
+creation and explicit Apply; it seeds no accounting defaults and preserves active context.
+These are restricted G2 commands, not full company-settings parity, carry-forward,
 production bootstrap or completion of G2.
 
 - [x] Host the restricted customer/supplier views together in an explicit

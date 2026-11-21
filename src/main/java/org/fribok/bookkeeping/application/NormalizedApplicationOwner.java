@@ -382,6 +382,225 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
         }
     }
 
+    /** Explicit empty-company input; optional legal identifiers are normalized to null. */
+    public record CompanyDraft(
+            String name,
+            String corporateId,
+            String vatNumber,
+            String currencyCode,
+            int vatPeriod,
+            boolean roundingOff) {}
+
+    /** Stored currency identity and presentation; unused exchange rates are not imported. */
+    public record Currency(String code, String description) {}
+
+    /** Owner-bound, single-use confirmation for an empty company, not a document selection. */
+    public final class CompanyPreview {
+        private final NormalizedApplicationOwner owner = NormalizedApplicationOwner.this;
+        private final CompanyDraft draft;
+        private final Currency currency;
+        private final List<Company> companies;
+        private boolean consumed;
+
+        private CompanyPreview(CompanyDraft draft, Currency currency, List<Company> companies) {
+            this.draft = draft;
+            this.currency = currency;
+            this.companies = companies;
+        }
+
+        public CompanyDraft draft() {
+            return draft;
+        }
+
+        public Currency currency() {
+            return currency;
+        }
+    }
+
+    /** Lists only stored currencies, without seeding defaults or consulting legacy storage. */
+    public List<Currency> companyCurrencies() throws SQLException {
+        requireAvailable();
+        synchronized (gate) {
+            requireAvailable();
+            try (var connection = openValidated()) {
+                connection.setAutoCommit(false);
+                try {
+                    var result = companyCurrencies(connection);
+                    connection.rollback();
+                    requireAvailable();
+                    return result;
+                } catch (SQLException | RuntimeException | Error failure) {
+                    rollback(connection, failure);
+                    throw failure;
+                }
+            }
+        }
+    }
+
+    /** Validates an explicit empty-company draft and captures current identity/currency inputs. */
+    public CompanyPreview previewCompany(CompanyDraft input) throws SQLException {
+        requireAvailable();
+        var draft = validateCompanyDraft(input);
+        synchronized (gate) {
+            requireAvailable();
+            try (var connection = openValidated()) {
+                connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                connection.setAutoCommit(false);
+                try {
+                    var identities = companyIdentities(connection);
+                    requireUniqueCompany(draft, identities);
+                    var currency =
+                            companyCurrencies(connection).stream()
+                                    .filter(value -> value.code().equals(draft.currencyCode()))
+                                    .findFirst()
+                                    .orElseThrow(
+                                            () ->
+                                                    new SQLException(
+                                                            "Selected currency no longer exists"));
+                    connection.rollback();
+                    requireAvailable();
+                    return new CompanyPreview(draft, currency, identities);
+                } catch (SQLException | RuntimeException | Error failure) {
+                    rollback(connection, failure);
+                    throw failure;
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates only an empty company after exact revalidation, preserving all active document
+     * leases.
+     */
+    public Company createCompany(CompanyPreview preview) throws SQLException {
+        Objects.requireNonNull(preview, "preview");
+        synchronized (gate) {
+            requireAvailable();
+            if (preview.owner != this) {
+                throw new SQLException("Company preview belongs to another owner");
+            }
+            if (preview.consumed) throw new SQLException("Company preview was already consumed");
+            preview.consumed = true;
+            var connection = openValidated();
+            boolean committing = false;
+            boolean committed = false;
+            Throwable failure = null;
+            try {
+                connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                connection.setAutoCommit(false);
+                var identities = companyIdentities(connection);
+                var currency =
+                        companyCurrencies(connection).stream()
+                                .filter(value -> value.code().equals(preview.draft.currencyCode()))
+                                .findFirst()
+                                .orElseThrow(
+                                        () ->
+                                                new SQLException(
+                                                        "Selected currency no longer exists"));
+                if (!preview.companies.equals(identities) || !preview.currency.equals(currency)) {
+                    throw new SQLException("Company creation inputs changed; preview again");
+                }
+                var draft = validateCompanyDraft(preview.draft);
+                requireUniqueCompany(draft, identities);
+                int id =
+                        Math.addExact(
+                                identities.stream().mapToInt(Company::id).max().orElse(-1), 1);
+                // Do not hydrate a legacy model: its tax getters silently supply 25/12/6 defaults.
+                try (var insert =
+                        connection.prepareStatement(
+                                "INSERT INTO company"
+                                    + " (legacy_id,name,corporate_id,vat_number,currency_code,vat_period,rounding_off)"
+                                    + " VALUES (?,?,?,?,?,?,?)")) {
+                    insert.setInt(1, id);
+                    insert.setString(2, draft.name());
+                    insert.setString(3, draft.corporateId());
+                    insert.setString(4, draft.vatNumber());
+                    insert.setString(5, currency.code());
+                    insert.setInt(6, draft.vatPeriod());
+                    insert.setBoolean(7, draft.roundingOff());
+                    insert.executeUpdate();
+                }
+                committing = true;
+                connection.commit();
+                committed = true;
+                return new Company(id, draft.name(), List.of());
+            } catch (SQLException | RuntimeException | Error error) {
+                failure = error;
+                if (committing && !committed) blocked = true;
+                rollback(connection, error);
+                throw error;
+            } finally {
+                try {
+                    connection.close();
+                } catch (SQLException close) {
+                    if (failure != null) failure.addSuppressed(close);
+                    else if (committed) {
+                        org.slf4j.LoggerFactory.getLogger(NormalizedApplicationOwner.class)
+                                .warn(
+                                        "Company creation committed but connection close failed; do"
+                                                + " not retry",
+                                        close);
+                    } else throw close;
+                }
+            }
+        }
+    }
+
+    private static CompanyDraft validateCompanyDraft(CompanyDraft input) {
+        Objects.requireNonNull(input, "company draft");
+        String name = companyText(input.name(), 255);
+        String corporate = companyText(input.corporateId(), 64);
+        String vat = companyText(input.vatNumber(), 64);
+        if (name == null) throw new IllegalArgumentException("Company name is required");
+        if (input.currencyCode() == null
+                || input.currencyCode().isBlank()
+                || input.currencyCode().length() > 16) {
+            throw new IllegalArgumentException("Explicit stored company currency is required");
+        }
+        if (input.vatPeriod() != 1 && input.vatPeriod() != 3 && input.vatPeriod() != 12) {
+            throw new IllegalArgumentException("Explicit VAT period must be 1, 3 or 12 months");
+        }
+        return new CompanyDraft(
+                name, corporate, vat, input.currencyCode(), input.vatPeriod(), input.roundingOff());
+    }
+
+    private static String companyText(String input, int limit) {
+        String value = input == null || input.isBlank() ? null : input.trim();
+        if (value != null && value.length() > limit) {
+            throw new IllegalArgumentException("Company field is too long");
+        }
+        return value;
+    }
+
+    private static void requireUniqueCompany(CompanyDraft draft, List<Company> identities) {
+        if (identities.stream().anyMatch(value -> Objects.equals(value.name(), draft.name()))) {
+            throw new IllegalArgumentException("Company name already exists");
+        }
+    }
+
+    private static List<Company> companyIdentities(Connection connection) throws SQLException {
+        List<Company> result = new ArrayList<>();
+        try (var query = connection.createStatement();
+                var rows =
+                        query.executeQuery(
+                                "SELECT legacy_id,name FROM company ORDER BY legacy_id")) {
+            while (rows.next()) {
+                result.add(new Company(rows.getInt(1), rows.getString(2), List.of()));
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private static List<Currency> companyCurrencies(Connection connection) throws SQLException {
+        List<Currency> result = new ArrayList<>();
+        try (var query = connection.createStatement();
+                var rows =
+                        query.executeQuery("SELECT code,description FROM currency ORDER BY code")) {
+            while (rows.next()) result.add(new Currency(rows.getString(1), rows.getString(2)));
+        }
+        return List.copyOf(result);
+    }
+
     private final Connections connections;
     private final Clock clock;
     private final Object gate = new Object();
