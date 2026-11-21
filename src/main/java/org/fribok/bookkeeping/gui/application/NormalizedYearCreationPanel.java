@@ -2,6 +2,7 @@ package org.fribok.bookkeeping.gui.application;
 
 import org.fribok.bookkeeping.application.NormalizedApplicationOwner;
 import org.fribok.bookkeeping.application.NormalizedApplicationOwner.AccountPlan;
+import org.fribok.bookkeeping.application.NormalizedApplicationOwner.Company;
 import org.fribok.bookkeeping.application.NormalizedApplicationOwner.Selection;
 import org.fribok.bookkeeping.application.NormalizedApplicationOwner.YearPreview;
 
@@ -43,8 +44,10 @@ public final class NormalizedYearCreationPanel extends JPanel implements AutoClo
     private final JButton confirm = new JButton(text("confirm"));
     private final JTextArea status = new JTextArea();
     private Selection selection;
+    private Company firstCompany;
     private YearPreview token;
     private boolean busy;
+    private boolean hostAvailable = true;
     private boolean closed;
     private long revision;
 
@@ -101,36 +104,85 @@ public final class NormalizedYearCreationPanel extends JPanel implements AutoClo
         load.addActionListener(event -> loadPlans());
         preview.addActionListener(event -> preview());
         confirm.addActionListener(event -> confirm());
-        status.setText(text("unselected"));
+        status.setText(text("companyunselected"));
         controls();
     }
 
     /** Retires pending callbacks and preview when the workspace lease changes. Requires EDT. */
     public void replaceSelection(Selection replacement) {
         requireEdt();
+        if (closed) return;
         revision++;
         selection = replacement;
-        busy = false;
+        firstCompany = null;
+        setBusy(false);
         token = null;
         plans.removeAllItems();
         plans.addItem(new PlanChoice(null));
         from.setText("");
         to.setText("");
-        status.setText(text(replacement == null ? "unselected" : "instructions"));
+        status.setText(text(replacement == null ? "companyunselected" : "instructions"));
         controls();
+    }
+
+    /**
+     * Targets an explicit yearless company, independently of the active document lease. Requires
+     * EDT.
+     */
+    public void replaceFirstYearCompany(Company company) {
+        requireEdt();
+        if (closed) return;
+        if (company == null || !company.years().isEmpty()) {
+            throw new IllegalArgumentException("First-year creation requires a yearless company");
+        }
+        replaceSelection(null);
+        firstCompany = company;
+        status.setText(firstYearInstructions());
+        controls();
+    }
+
+    private String firstYearInstructions() {
+        return text("firstinstructions") + "\n" + firstCompany.id() + " : " + firstCompany.name();
+    }
+
+    /** Whether a command is pending; requires EDT, without opening storage. */
+    public boolean isBusy() {
+        requireEdt();
+        return busy;
+    }
+
+    /**
+     * Host catalogue/selection operations disable command input without cancelling writes. Requires
+     * EDT.
+     */
+    public void setHostAvailable(boolean available) {
+        requireEdt();
+        hostAvailable = available;
+        controls();
+    }
+
+    private void setBusy(boolean value) {
+        boolean previous = busy;
+        busy = value;
+        firePropertyChange("busy", previous, value);
     }
 
     private void loadPlans() {
         if (!available()) return;
         var lease = selection;
+        var company = firstCompany;
         run(
-                () -> owner.accountPlans(lease),
+                () ->
+                        company == null
+                                ? owner.accountPlans(lease)
+                                : owner.firstYearAccountPlans(company.id()),
                 values -> {
                     plans.removeAllItems();
                     plans.addItem(new PlanChoice(null));
                     for (var value : values) plans.addItem(new PlanChoice(value));
                     plans.setSelectedIndex(0);
-                    status.setText(text("instructions"));
+                    status.setText(
+                            firstCompany == null ? text("instructions") : firstYearInstructions());
                 });
     }
 
@@ -142,8 +194,13 @@ public final class NormalizedYearCreationPanel extends JPanel implements AutoClo
             var first = LocalDate.parse(from.getText().trim());
             var last = LocalDate.parse(to.getText().trim());
             var lease = selection;
+            var company = firstCompany;
             run(
-                    () -> owner.previewYear(lease, first, last, choice.value().id()),
+                    () ->
+                            company == null
+                                    ? owner.previewYear(lease, first, last, choice.value().id())
+                                    : owner.previewFirstYear(
+                                            company.id(), first, last, choice.value().id()),
                     value -> {
                         token = value;
                         status.setText(
@@ -182,7 +239,7 @@ public final class NormalizedYearCreationPanel extends JPanel implements AutoClo
 
     private <T> void run(Callable<T> action, Consumer<T> success) {
         token = null;
-        busy = true;
+        setBusy(true);
         long request = ++revision;
         status.setText(text("working"));
         controls();
@@ -193,10 +250,10 @@ public final class NormalizedYearCreationPanel extends JPanel implements AutoClo
 
             protected void done() {
                 if (closed || request != revision) return;
-                busy = false;
+                setBusy(false);
                 try {
                     var result = get();
-                    if (selection != null && selection.isActive() && !owner.isBlocked()) {
+                    if (available()) {
                         success.accept(result);
                     }
                 } catch (InterruptedException failure) {
@@ -217,7 +274,11 @@ public final class NormalizedYearCreationPanel extends JPanel implements AutoClo
     }
 
     private boolean available() {
-        return !closed && !busy && selection != null && selection.isActive() && !owner.isBlocked();
+        return !closed
+                && !busy
+                && hostAvailable
+                && !owner.isBlocked()
+                && (firstCompany != null || selection != null && selection.isActive());
     }
 
     private void controls() {

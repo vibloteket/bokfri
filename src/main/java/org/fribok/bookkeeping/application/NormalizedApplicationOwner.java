@@ -92,9 +92,14 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
     /** Immutable explicit template choice; duplicate names are distinguished by identity. */
     public record AccountPlan(int id, String name) {}
 
-    /** Opaque, owner/lease-bound confirmation token. No mutable template escapes. */
+    /**
+     * Opaque owner-bound confirmation token with an explicit target and, for additional years, a
+     * document lease.
+     */
     public final class YearPreview {
+        private final NormalizedApplicationOwner owner = NormalizedApplicationOwner.this;
         private final Selection selection;
+        private final Company company;
         private final LocalDate from;
         private final LocalDate to;
         private final AccountPlan plan;
@@ -103,11 +108,13 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
 
         private YearPreview(
                 Selection selection,
+                Company company,
                 LocalDate from,
                 LocalDate to,
                 AccountPlan plan,
                 List<List<Object>> snapshot) {
             this.selection = selection;
+            this.company = company;
             this.from = from;
             this.to = to;
             this.plan = plan;
@@ -115,7 +122,7 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
         }
 
         public Company company() {
-            return selection.company();
+            return company;
         }
 
         public LocalDate from() {
@@ -133,11 +140,23 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
 
     /** Reads templates only for the current, explicit application lease. */
     public List<AccountPlan> accountPlans(Selection selection) throws SQLException {
+        return accountPlans(selection, selection.company.id());
+    }
+
+    /**
+     * Lists templates for explicit first-year creation; refuses a company that already has years.
+     */
+    public List<AccountPlan> firstYearAccountPlans(int companyId) throws SQLException {
+        return accountPlans(null, companyId);
+    }
+
+    private List<AccountPlan> accountPlans(Selection selection, int companyId) throws SQLException {
         synchronized (gate) {
-            requireLease(selection);
+            requireYearCommand(selection);
             try (var connection = openValidated()) {
                 connection.setAutoCommit(false);
                 try {
+                    if (selection == null) yearAccounting(connection, null, companyId);
                     var result =
                             new NormalizedAccountPlanCatalogStore(connection)
                                     .getAccountPlans().stream()
@@ -147,7 +166,7 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
                                                                     plan.getId(), plan.getName()))
                                             .toList();
                     connection.rollback();
-                    requireLease(selection);
+                    requireYearCommand(selection);
                     return result;
                 } catch (SQLException | RuntimeException | Error failure) {
                     rollback(connection, failure);
@@ -160,13 +179,28 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
     /** Validates explicit dates/template and captures the exact SQL inputs without writing. */
     public YearPreview previewYear(Selection selection, LocalDate from, LocalDate to, int planId)
             throws SQLException {
+        return previewYear(selection, selection.company.id(), from, to, planId);
+    }
+
+    /**
+     * Previews a first empty year for an explicit existing company, without changing document
+     * context.
+     */
+    public YearPreview previewFirstYear(int companyId, LocalDate from, LocalDate to, int planId)
+            throws SQLException {
+        return previewYear(null, companyId, from, to, planId);
+    }
+
+    private YearPreview previewYear(
+            Selection selection, int companyId, LocalDate from, LocalDate to, int planId)
+            throws SQLException {
         synchronized (gate) {
-            requireLease(selection);
+            requireYearCommand(selection);
             try (var connection = openValidated()) {
                 connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
                 connection.setAutoCommit(false);
                 try {
-                    var accounting = yearAccounting(connection, selection);
+                    var accounting = yearAccounting(connection, selection, companyId);
                     var plan =
                             new NormalizedAccountPlanCatalogStore(connection)
                                     .getAccountPlans().stream()
@@ -181,12 +215,18 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
                     var result =
                             new YearPreview(
                                     selection,
+                                    selection == null
+                                            ? new Company(
+                                                    companyId,
+                                                    accounting.getCurrentCompany().getName(),
+                                                    List.of())
+                                            : selection.company(),
                                     from,
                                     to,
                                     new AccountPlan(plan.getId(), plan.getName()),
-                                    yearInputs(connection, selection, planId));
+                                    yearInputs(connection, companyId, planId));
                     connection.rollback();
-                    requireLease(selection);
+                    requireYearCommand(selection);
                     return result;
                 } catch (SQLException | RuntimeException | Error failure) {
                     rollback(connection, failure);
@@ -204,7 +244,10 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
     public Year createYear(YearPreview preview) throws SQLException {
         Objects.requireNonNull(preview, "preview");
         synchronized (gate) {
-            requireLease(preview.selection);
+            if (preview.owner != this) {
+                throw new SQLException("Year preview belongs to another owner");
+            }
+            requireYearCommand(preview.selection);
             if (preview.consumed) throw new SQLException("Year preview was already consumed");
             preview.consumed = true;
             var connection = openValidated();
@@ -215,10 +258,11 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
                 connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
                 connection.setAutoCommit(false);
                 if (!preview.snapshot.equals(
-                        yearInputs(connection, preview.selection, preview.plan.id()))) {
+                        yearInputs(connection, preview.company.id(), preview.plan.id()))) {
                     throw new SQLException("Year creation inputs changed; preview again");
                 }
-                var accounting = yearAccounting(connection, preview.selection);
+                var accounting =
+                        yearAccounting(connection, preview.selection, preview.company.id());
                 var plan =
                         new NormalizedAccountPlanCatalogStore(connection)
                                 .getAccountPlans().stream()
@@ -262,15 +306,27 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
         }
     }
 
-    private NormalizedAccountingStore yearAccounting(Connection connection, Selection selection)
-            throws SQLException {
+    private void requireYearCommand(Selection selection) throws SQLException {
+        if (selection == null) requireAvailable();
+        else requireLease(selection);
+    }
+
+    private NormalizedAccountingStore yearAccounting(
+            Connection connection, Selection selection, int companyId) throws SQLException {
         var accounting = new NormalizedAccountingStore(connection, clock);
         var company =
                 accounting.getCompanies().stream()
-                        .filter(value -> value.getId() == selection.company.id())
+                        .filter(value -> value.getId() == companyId)
                         .findFirst()
                         .orElseThrow(() -> new SQLException("Selected company no longer exists"));
         accounting.setCurrentCompany(company);
+        if (selection == null) {
+            if (!accounting.getYears().isEmpty()) {
+                throw new SQLException(
+                        "Company already has accounting years; select a year explicitly");
+            }
+            return accounting;
+        }
         if (!Objects.equals(company.getName(), selection.company.name())) {
             throw new SQLException("Selected company changed; select it again");
         }
@@ -287,8 +343,8 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
         return accounting;
     }
 
-    private static List<List<Object>> yearInputs(
-            Connection connection, Selection selection, int planId) throws SQLException {
+    private static List<List<Object>> yearInputs(Connection connection, int companyId, int planId)
+            throws SQLException {
         List<List<Object>> result = new ArrayList<>();
         String[] queries = {
             "SELECT * FROM company WHERE legacy_id = ?",
@@ -300,7 +356,7 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
         };
         for (int index = 0; index < queries.length; index++) {
             try (var statement = connection.prepareStatement(queries[index])) {
-                statement.setInt(1, index < 2 ? selection.company.id() : planId);
+                statement.setInt(1, index < 2 ? companyId : planId);
                 try (var rows = statement.executeQuery()) {
                     while (rows.next()) {
                         List<Object> row = new ArrayList<>();

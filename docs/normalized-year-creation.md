@@ -7,6 +7,8 @@ not production bootstrap, a default format-3 cutover, or completion of #75.
 ## Workflow
 
 1. Explicitly select and Apply an existing company/year in the dedicated workspace.
+   An existing company with no years can instead use the guarded
+   [first-year workflow](normalized-first-year-creation.md), without an active document lease.
 2. Load the normalized account-plan catalogue. No template is selected automatically;
    duplicate names remain distinguishable by numeric identity.
 3. Enter both inclusive dates in `YYYY-MM-DD` format. Neither date is defaulted.
@@ -21,14 +23,16 @@ not production bootstrap, a default format-3 cutover, or completion of #75.
 
 Editing dates or the template invalidates confirmation. A failed operation requires a new
 preview. Company or selected-year changes outside the owner require explicit reselection;
-changes after preview are rejected rather than silently accepting new inputs. New-year
-creation requires an existing selected year; creating a first company/year is outside this slice.
+changes after preview are rejected rather than silently accepting new inputs. Additional-year
+creation requires an existing selected year; the separate first-year mode requires an explicit
+existing company with zero years. Neither mode creates a company.
 
 ## Ownership and failures
 
 `NormalizedApplicationOwner.accountPlans`, `previewYear` and `createYear` share the same
 writer gate and uncertainty boundary as both document families. Preview tokens expose no
-mutable account plan and belong to exactly one owner/lease. A token is single-use once
+mutable account plan and belong to exactly one owner, with an active lease for additional-year
+creation or an explicit company-only target for first-year creation. A token is single-use once
 accepted, including after an ordinary transaction failure. Confirmation never reads legacy
 JDBC, changes global selections, migrates, seeds or repairs a database.
 
@@ -56,6 +60,6 @@ on background workers; Swing state and callback fencing run on the EDT.
 - Both names match the existing `NormalizedApplication*Test` GUI CI selector. Run with a
   real display or Xvfb and `-Dawt.headless=false`; headless skips are not GUI evidence.
 
-Production format-3 startup remains guarded. Company creation, first-year creation,
+Production format-3 startup remains guarded. Company creation,
 carry-forward, broader command ownership, backup/restore, parity gates and serialization
 retirement remain separate work in the [cutover checklist](normalized-cutover-checklist.md).
