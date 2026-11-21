@@ -61,6 +61,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
     private final JTextArea context = area();
     private final JTextArea status = area();
     private final JTabbedPane tabs = new JTabbedPane();
+    private final NormalizedYearCreationPanel yearCreation;
     private final Timer health;
     private final WindowAdapter window;
     private CustomerDocumentView customers;
@@ -78,6 +79,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
         requireEdt();
         this.frame = Objects.requireNonNull(frame);
         this.application = Objects.requireNonNull(application);
+        yearCreation = new NormalizedYearCreationPanel(application, this::reload);
         setName("normalized-workspace");
         companies.setName("workspace-company");
         years.setName("workspace-year");
@@ -102,6 +104,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
         header.add(status, BorderLayout.SOUTH);
         add(header, BorderLayout.NORTH);
         add(tabs);
+        add(yearCreation, BorderLayout.SOUTH);
         companies.addActionListener(
                 event -> {
                     years.removeAllItems();
@@ -152,6 +155,10 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
 
     /** Reloads choices without changing the current context or silently selecting a first entry. */
     public void reload() {
+        reload(-1);
+    }
+
+    private void reload(int companyId) {
         requireEdt();
         if (!available()) {
             return;
@@ -176,6 +183,11 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
                     companies.addItem(new CompanyChoice(null));
                     for (var company : choices) companies.addItem(new CompanyChoice(company));
                     companies.setSelectedIndex(0);
+                    for (int index = 1; index < companies.getItemCount(); index++) {
+                        if (companies.getItemAt(index).value().id() == companyId) {
+                            companies.setSelectedIndex(index);
+                        }
+                    }
                     status.setText(text("ready"));
                 } catch (InterruptedException error) {
                     Thread.currentThread().interrupt();
@@ -241,6 +253,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
 
     private void install(Selection lease) {
         selected = lease;
+        yearCreation.replaceSelection(lease);
         if (customers == null) {
             customers = new CustomerDocumentView(frame, lease.customers());
             suppliers = new SupplierDocumentView(frame, lease.suppliers());
@@ -281,6 +294,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
     }
 
     private void retire() {
+        yearCreation.close();
         if (customers != null) {
             customers.close();
         }

@@ -1,11 +1,13 @@
 package org.fribok.bookkeeping.application;
 
 import org.fribok.bookkeeping.dataformat.DataFormatManager;
+import org.fribok.bookkeeping.dataformat.NormalizedAccountPlanCatalogStore;
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
 import org.fribok.bookkeeping.dataformat.NormalizedSchemaMigrations;
 import org.fribok.bookkeeping.dataformat.SchemaMigrationRunner;
 import org.fribok.bookkeeping.gui.creditinvoice.CustomerDocumentGuiSession;
 import org.fribok.bookkeeping.gui.supplierinvoice.SupplierDocumentGuiSession;
+import org.fribok.bookkeeping.service.year.AccountingYearService;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
@@ -84,6 +86,243 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
         private void retire() {
             customers.close();
             suppliers.close();
+        }
+    }
+
+    /** Immutable explicit template choice; duplicate names are distinguished by identity. */
+    public record AccountPlan(int id, String name) {}
+
+    /** Opaque, owner/lease-bound confirmation token. No mutable template escapes. */
+    public final class YearPreview {
+        private final Selection selection;
+        private final LocalDate from;
+        private final LocalDate to;
+        private final AccountPlan plan;
+        private final List<List<Object>> snapshot;
+        private boolean consumed;
+
+        private YearPreview(
+                Selection selection,
+                LocalDate from,
+                LocalDate to,
+                AccountPlan plan,
+                List<List<Object>> snapshot) {
+            this.selection = selection;
+            this.from = from;
+            this.to = to;
+            this.plan = plan;
+            this.snapshot = snapshot;
+        }
+
+        public Company company() {
+            return selection.company();
+        }
+
+        public LocalDate from() {
+            return from;
+        }
+
+        public LocalDate to() {
+            return to;
+        }
+
+        public AccountPlan plan() {
+            return plan;
+        }
+    }
+
+    /** Reads templates only for the current, explicit application lease. */
+    public List<AccountPlan> accountPlans(Selection selection) throws SQLException {
+        synchronized (gate) {
+            requireLease(selection);
+            try (var connection = openValidated()) {
+                connection.setAutoCommit(false);
+                try {
+                    var result =
+                            new NormalizedAccountPlanCatalogStore(connection)
+                                    .getAccountPlans().stream()
+                                            .map(
+                                                    plan ->
+                                                            new AccountPlan(
+                                                                    plan.getId(), plan.getName()))
+                                            .toList();
+                    connection.rollback();
+                    requireLease(selection);
+                    return result;
+                } catch (SQLException | RuntimeException | Error failure) {
+                    rollback(connection, failure);
+                    throw failure;
+                }
+            }
+        }
+    }
+
+    /** Validates explicit dates/template and captures the exact SQL inputs without writing. */
+    public YearPreview previewYear(Selection selection, LocalDate from, LocalDate to, int planId)
+            throws SQLException {
+        synchronized (gate) {
+            requireLease(selection);
+            try (var connection = openValidated()) {
+                connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                connection.setAutoCommit(false);
+                try {
+                    var accounting = yearAccounting(connection, selection);
+                    var plan =
+                            new NormalizedAccountPlanCatalogStore(connection)
+                                    .getAccountPlans().stream()
+                                            .filter(value -> value.getId() == planId)
+                                            .findFirst()
+                                            .orElseThrow(
+                                                    () ->
+                                                            new SQLException(
+                                                                    "Account plan no longer"
+                                                                            + " exists"));
+                    AccountingYearService.prepare(from, to, plan, accounting.getYears());
+                    var result =
+                            new YearPreview(
+                                    selection,
+                                    from,
+                                    to,
+                                    new AccountPlan(plan.getId(), plan.getName()),
+                                    yearInputs(connection, selection, planId));
+                    connection.rollback();
+                    requireLease(selection);
+                    return result;
+                } catch (SQLException | RuntimeException | Error failure) {
+                    rollback(connection, failure);
+                    throw failure;
+                }
+            }
+        }
+    }
+
+    /**
+     * Confirms a single-use preview in one transaction, rechecking scope, dates and exact SQL
+     * inputs. Creates an empty independent year, without carry-forward or changing the current
+     * lease.
+     */
+    public Year createYear(YearPreview preview) throws SQLException {
+        Objects.requireNonNull(preview, "preview");
+        synchronized (gate) {
+            requireLease(preview.selection);
+            if (preview.consumed) throw new SQLException("Year preview was already consumed");
+            preview.consumed = true;
+            var connection = openValidated();
+            boolean committing = false;
+            boolean committed = false;
+            Throwable failure = null;
+            try {
+                connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                connection.setAutoCommit(false);
+                if (!preview.snapshot.equals(
+                        yearInputs(connection, preview.selection, preview.plan.id()))) {
+                    throw new SQLException("Year creation inputs changed; preview again");
+                }
+                var accounting = yearAccounting(connection, preview.selection);
+                var plan =
+                        new NormalizedAccountPlanCatalogStore(connection)
+                                .getAccountPlans().stream()
+                                        .filter(value -> value.getId() == preview.plan.id())
+                                        .findFirst()
+                                        .orElseThrow(
+                                                () ->
+                                                        new SQLException(
+                                                                "Account plan no longer exists"));
+                var year =
+                        AccountingYearService.prepare(
+                                preview.from, preview.to, plan, accounting.getYears());
+                year.setId(accounting.nextAccountingYearId());
+                year.setVouchers(new ArrayList<>());
+                accounting.addAccountingYear(year);
+                // Closing retires future work; this accepted transaction retains its original
+                // company.
+                committing = true;
+                connection.commit();
+                committed = true;
+                return new Year(year.getId(), year.getLocalFrom(), year.getLocalTo());
+            } catch (SQLException | RuntimeException | Error error) {
+                failure = error;
+                if (committing && !committed) blocked = true;
+                rollback(connection, error);
+                throw error;
+            } finally {
+                try {
+                    connection.close();
+                } catch (SQLException close) {
+                    if (failure != null) failure.addSuppressed(close);
+                    else if (committed) {
+                        org.slf4j.LoggerFactory.getLogger(NormalizedApplicationOwner.class)
+                                .warn(
+                                        "Year creation committed but connection close failed; do"
+                                                + " not retry",
+                                        close);
+                    } else throw close;
+                }
+            }
+        }
+    }
+
+    private NormalizedAccountingStore yearAccounting(Connection connection, Selection selection)
+            throws SQLException {
+        var accounting = new NormalizedAccountingStore(connection, clock);
+        var company =
+                accounting.getCompanies().stream()
+                        .filter(value -> value.getId() == selection.company.id())
+                        .findFirst()
+                        .orElseThrow(() -> new SQLException("Selected company no longer exists"));
+        accounting.setCurrentCompany(company);
+        if (!Objects.equals(company.getName(), selection.company.name())) {
+            throw new SQLException("Selected company changed; select it again");
+        }
+        if (accounting.getYears().stream()
+                .noneMatch(
+                        value ->
+                                value.getId() == selection.year.id()
+                                        && Objects.equals(
+                                                value.getLocalFrom(), selection.year.from())
+                                        && Objects.equals(
+                                                value.getLocalTo(), selection.year.to()))) {
+            throw new SQLException("Selected accounting year no longer exists");
+        }
+        return accounting;
+    }
+
+    private static List<List<Object>> yearInputs(
+            Connection connection, Selection selection, int planId) throws SQLException {
+        List<List<Object>> result = new ArrayList<>();
+        String[] queries = {
+            "SELECT * FROM company WHERE legacy_id = ?",
+            "SELECT * FROM accounting_year WHERE company_id = "
+                    + "(SELECT id FROM company WHERE legacy_id = ?) ORDER BY legacy_id",
+            "SELECT * FROM account_plan_catalog WHERE legacy_id = ?",
+            "SELECT * FROM account_plan_catalog_account WHERE plan_legacy_id = ? ORDER BY"
+                    + " row_number"
+        };
+        for (int index = 0; index < queries.length; index++) {
+            try (var statement = connection.prepareStatement(queries[index])) {
+                statement.setInt(1, index < 2 ? selection.company.id() : planId);
+                try (var rows = statement.executeQuery()) {
+                    while (rows.next()) {
+                        List<Object> row = new ArrayList<>();
+                        row.add(index);
+                        for (int column = 1;
+                                column <= rows.getMetaData().getColumnCount();
+                                column++) {
+                            row.add(rows.getObject(column));
+                        }
+                        result.add(row);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    private static void rollback(Connection connection, Throwable failure) {
+        try {
+            connection.rollback();
+        } catch (SQLException rollback) {
+            failure.addSuppressed(rollback);
         }
     }
 
@@ -191,7 +430,7 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
 
     private void requireLease(Selection selection) throws SQLException {
         requireAvailable();
-        if (!selection.isActive()) {
+        if (current != selection || !selection.isActive()) {
             throw new SQLException("Application selection was replaced or closed");
         }
     }
