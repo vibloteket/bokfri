@@ -157,6 +157,11 @@ fail-closed repository boundaries, not a new claim of complete business validati
 
 ### G2 — Introduce a shared normalized application boundary
 
+The opt-in workspace also supports [explicit empty-year creation](normalized-year-creation.md)
+for an existing selected company/year, with preview/confirmation and shared uncertainty
+blocking. This is one restricted G2 command, not first-year/company creation, carry-forward,
+production bootstrap or completion of G2.
+
 - [x] Host the restricted customer/supplier views together in an explicit
   [normalized document workspace](normalized-document-workspace.md): background catalogue and
   company/year validation, explicit no-default choices, paired selection replacement, existing

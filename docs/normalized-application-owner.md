@@ -32,6 +32,11 @@ existing `CustomerDocumentView` and `SupplierDocumentView` from the same selecti
 coordinate these responsibilities explicitly. The owner itself does not automatically install
 menu bindings, dispose windows, emit global cache notifications or call legacy startup.
 
+The owner also supports restricted [empty-year creation](normalized-year-creation.md) via
+`accountPlans(selection)`, `previewYear(selection, from, to, planId)` and `createYear(preview)`.
+These commands share the writer gate and uncertain-commit boundary; they do not replace the
+active lease or persist selections.
+
 ## Validation and uncertainty
 
 Every dedicated connection is checked for format 3 and the **complete current packaged
