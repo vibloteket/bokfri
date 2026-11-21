@@ -4,7 +4,9 @@ The opt-in [normalized workspace](normalized-document-workspace.md) supports cre
 first **empty** accounting year for an existing company whose year catalogue is empty.
 This closes the no-prior-year prerequisite of the earlier
 [year-creation command](normalized-year-creation.md). It does not create a company,
-change production bootstrap or complete G2/#75.
+change production bootstrap or complete G2/#75. The separate
+[empty-company command](normalized-company-creation.md) can now create the yearless company
+first, with its own explicit settings/preview/confirmation and atomic transaction.
 
 ## Explicit workflow
 
@@ -69,6 +71,6 @@ Both classes match existing `NormalizedApplication*Test` CI selectors; GUI evide
 Xvfb/a real display and `-Dawt.headless=false`, not headless skips.
 
 Production format-3 startup remains rejected, and new databases still default to format 2.
-Company creation, production opening, broader commands, carry-forward, backup/restore,
+Full company settings, production opening, broader commands, carry-forward, backup/restore,
 parity gates and serialization retirement remain in the
 [cutover checklist](normalized-cutover-checklist.md).

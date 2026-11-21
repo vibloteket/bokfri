@@ -41,6 +41,12 @@ an owner-bound company-only command without a prior document lease. Confirmation
 `createYear(preview)`, rejects a concurrently added year, and leaves document context unchanged.
 See [first-year creation](normalized-first-year-creation.md).
 
+The owner also exposes [guarded empty-company creation](normalized-company-creation.md)
+through `companyCurrencies()`, `previewCompany(CompanyDraft)` and
+`createCompany(CompanyPreview)`. This explicit owner-bound command needs no document lease,
+shares the transaction/uncertainty boundary, and creates no year or accounting defaults.
+Existing document context and saved selections remain unchanged.
+
 ## Validation and uncertainty
 
 Every dedicated connection is checked for format 3 and the **complete current packaged

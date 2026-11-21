@@ -62,6 +62,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
     private final JTextArea status = area();
     private final JTabbedPane tabs = new JTabbedPane();
     private final NormalizedYearCreationPanel yearCreation;
+    private final NormalizedCompanyCreationPanel companyCreation;
     private final Timer health;
     private final WindowAdapter window;
     private CustomerDocumentView customers;
@@ -79,8 +80,10 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
         requireEdt();
         this.frame = Objects.requireNonNull(frame);
         this.application = Objects.requireNonNull(application);
+        companyCreation = new NormalizedCompanyCreationPanel(application, this::reload);
         yearCreation = new NormalizedYearCreationPanel(application, this::reload);
         yearCreation.addPropertyChangeListener("busy", event -> controls());
+        companyCreation.addPropertyChangeListener("busy", event -> controls());
         setName("normalized-workspace");
         companies.setName("workspace-company");
         years.setName("workspace-year");
@@ -105,7 +108,10 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
         header.add(status, BorderLayout.SOUTH);
         add(header, BorderLayout.NORTH);
         add(tabs);
-        add(yearCreation, BorderLayout.SOUTH);
+        JPanel commands = new JPanel(new GridLayout(2, 1, 8, 8));
+        commands.add(companyCreation);
+        commands.add(yearCreation);
+        add(commands, BorderLayout.SOUTH);
         companies.addActionListener(
                 event -> {
                     years.removeAllItems();
@@ -289,7 +295,12 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
 
     private boolean available() {
         checkHealth();
-        return !closed && !blocked && !failed && !busy && !yearCreation.isBusy();
+        return !closed
+                && !blocked
+                && !failed
+                && !busy
+                && !yearCreation.isBusy()
+                && !companyCreation.isBusy();
     }
 
     private void checkHealth() {
@@ -306,6 +317,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
     }
 
     private void retire() {
+        companyCreation.close();
         yearCreation.close();
         if (customers != null) {
             customers.close();
@@ -316,8 +328,15 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
     }
 
     private void controls() {
-        boolean active = !closed && !blocked && !failed && !busy && !yearCreation.isBusy();
+        boolean active =
+                !closed
+                        && !blocked
+                        && !failed
+                        && !busy
+                        && !yearCreation.isBusy()
+                        && !companyCreation.isBusy();
         yearCreation.setHostAvailable(active);
+        companyCreation.setHostAvailable(active);
         companies.setEnabled(active);
         years.setEnabled(active);
         reload.setEnabled(active);

@@ -60,6 +60,8 @@ on background workers; Swing state and callback fencing run on the EDT.
 - Both names match the existing `NormalizedApplication*Test` GUI CI selector. Run with a
   real display or Xvfb and `-Dawt.headless=false`; headless skips are not GUI evidence.
 
-Production format-3 startup remains guarded. Company creation,
-carry-forward, broader command ownership, backup/restore, parity gates and serialization
+The separate [empty-company command](normalized-company-creation.md) can create a yearless
+company first, without accounting defaults or automatic selection. Production format-3 startup
+remains guarded. Full company settings, carry-forward, broader command ownership,
+backup/restore, parity gates and serialization
 retirement remain separate work in the [cutover checklist](normalized-cutover-checklist.md).

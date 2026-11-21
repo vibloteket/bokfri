@@ -291,6 +291,33 @@ class NormalizedApplicationYearCreationTest {
                                                 throw new SQLException(
                                                         "late account insert failure");
                                             }
+                                            if (mode.equals("company-row")
+                                                    && method.getName().equals("prepareStatement")
+                                                    && ((String) args[0])
+                                                            .startsWith("INSERT INTO company (")) {
+                                                var statement =
+                                                        (java.sql.PreparedStatement)
+                                                                method.invoke(c, args);
+                                                return Proxy.newProxyInstance(
+                                                        java.sql.PreparedStatement.class
+                                                                .getClassLoader(),
+                                                        new Class<?>[] {
+                                                            java.sql.PreparedStatement.class
+                                                        },
+                                                        (p, m, a) -> {
+                                                            try {
+                                                                var result = m.invoke(statement, a);
+                                                                if (m.getName()
+                                                                        .equals("executeUpdate"))
+                                                                    throw new SQLException(
+                                                                            "Late company row"
+                                                                                + " failure");
+                                                                return result;
+                                                            } catch (InvocationTargetException e) {
+                                                                throw e.getCause();
+                                                            }
+                                                        });
+                                            }
                                             if (method.getName().equals("commit")) {
                                                 if (entered != null) {
                                                     entered.countDown();
