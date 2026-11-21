@@ -24,6 +24,9 @@ printf '%s\n' testadmin admin@example.com 'test-password-for-ci-only' 'test-pass
     docker run --rm -i -v "$volume:/data" \
         -e FLARUM_BASE_URL=https://forum.bokfri.viblo.se \
         "$image" php install-forum.php
+# Exercise activation/migrations in the disposable forum only. Production
+# activation and notification permissions/preferences remain administrator choices.
+docker run --rm -v "$volume:/data" "$image" php flarum extension:enable fof-subscribed
 # Installer must not overwrite an existing installation.
 if docker run --rm -v "$volume:/data" "$image" php install-forum.php; then
     echo 'ERROR: installer accepted an existing installation' >&2
@@ -88,6 +91,7 @@ docker exec "$name" php -r '
 require "/opt/flarum/vendor/autoload.php";
 if (Composer\InstalledVersions::getPrettyVersion("flarum/core") !== "v2.0.2") exit(4);
 if (Composer\InstalledVersions::getPrettyVersion("flarum-lang/swedish") !== "2.0.4") exit(5);
+if (Composer\InstalledVersions::getPrettyVersion("fof/subscribed") !== "2.0.0") exit(6);
 $c = require "/data/config.php";
 if ($c["database"]["driver"] !== "sqlite" || $c["debug"]) exit(1);
 $d = new PDO("sqlite:/data/forum.sqlite");

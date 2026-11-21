@@ -22,6 +22,7 @@ its download tools are not copied into the final image. Nothing is downloaded or
 
 No MariaDB, Redis, public container ports, or separate queue service is required. The initial installation
 uses synchronous jobs and a small selection of bundled extensions; realtime/chat/GDPR extensions are not enabled.
+FoF Subscribed 2.0.0 (compatible with Flarum 2) is also installed in the image, but is not enabled automatically.
 
 ## Deploy
 
@@ -74,8 +75,13 @@ uses synchronous jobs and a small selection of bundled extensions; realtime/chat
    - Verify a new user's registration email and password-reset flow before announcing registration.
    - Keep email confirmation required before posting; verify this with the test account.
    - Adjust posting/upload permissions and remove/relabel the default tags as desired.
-   - Enable notifications on your account for new discussions using the available subscription options;
-     verify delivery rather than assuming all new posts are emailed to the administrator.
+   - Enable **FoF Subscribed** in the administration Extensions page. For an existing installation,
+     first follow the image-upgrade/migration procedure below.
+   - Grant the administrator group permission to subscribe to new discussions and new posts, then
+     enable the corresponding email notifications in your own account settings. Do not enable or
+     force these notifications for all members unless that is explicitly intended.
+   - Verify delivery using another account to create a discussion and reply; your own posts do not
+     notify you. Administrators do not automatically receive mail about all new posts.
    - Add a pinned Swedish welcome discussion and a reminder not to post sensitive accounting/customer data.
 
    No link is added to the GitHub Pages website automatically; add one once the forum works.
@@ -122,7 +128,7 @@ or nonempty data directory; a rollback after migrations needs the matching pre-u
 
 Do not install Composer extensions inside a running container: they disappear on rebuild.
 To upgrade, change the pinned `FLARUM_VERSION`, `FLARUM_ARCHIVE_SHA256`, and, when needed,
-`SWEDISH_VERSION` defaults in `Dockerfile`. Download the matching **PHP 8.4 / with public directory**
+`SWEDISH_VERSION` and `SUBSCRIBED_VERSION` defaults in `Dockerfile`. Download the matching **PHP 8.4 / with public directory**
 archive from [Flarum's official installation documentation](https://docs.flarum.org/install/#installing-by-unpacking-an-archive)
 and calculate its checksum, for example:
 
