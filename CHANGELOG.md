@@ -13,6 +13,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Added
+- The forum Docker image includes FoF Subscribed 2.0.0 for Flarum 2, with manual activation and administrator-only notification setup documented and disposable-image activation covered by the smoke test.
+
+### Added
 
 - Added explicit empty accounting-year creation to the guarded normalized workspace: no-default dates/template, read-only preview, single-use confirmation with stale-input checks, atomic independent account-plan copy and refreshed choices without changing the active lease. Year commands share document uncertainty blocking; production format-3 startup remains disabled. See `docs/normalized-year-creation.md` (#75).
 

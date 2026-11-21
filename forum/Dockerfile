@@ -10,6 +10,7 @@ FROM runtime AS application
 ARG FLARUM_VERSION=2.0.2
 ARG FLARUM_ARCHIVE_SHA256=5de9af0920f09706eff008cce41a96568c78a9bb4b12c7f75b66d86debdb5fef
 ARG SWEDISH_VERSION=2.0.4
+ARG SUBSCRIBED_VERSION=2.0.0
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2.10.3 /usr/bin/composer /usr/local/bin/composer
@@ -22,8 +23,8 @@ RUN curl --fail --show-error --location --retry 3 \
     && tar -xzf /tmp/flarum.tar.gz --no-same-owner -C /opt/flarum \
     && rm /tmp/flarum.tar.gz \
     && test -f public/index.php && test -f vendor/autoload.php && test -f composer.lock \
-    && composer require "flarum-lang/swedish:${SWEDISH_VERSION}" --no-update --no-interaction --no-scripts \
-    && composer update flarum-lang/swedish --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
+    && composer require "flarum-lang/swedish:${SWEDISH_VERSION}" "fof/subscribed:${SUBSCRIBED_VERSION}" --no-update --no-interaction --no-scripts \
+    && composer update flarum-lang/swedish fof/subscribed --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
 FROM runtime
 WORKDIR /opt/flarum
