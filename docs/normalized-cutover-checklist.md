@@ -165,6 +165,13 @@ records. This shares the owner and cross-family uncertainty boundary, but is not
 catalogue editing, correction/import/template parity or production voucher-frame integration;
 G2 remains incomplete.
 
+The [read-only voucher register](normalized-voucher-register.md) now provides explicit
+100-header pages and SQL-identity-scoped opening in the same lease. Raw nullable values,
+ordered rows, corrections and edit flags remain visible, with current catalogue labels
+separately identified. Reads use the shared gate, background JDBC and host interlocks; no
+writes, inferred totals, corrections or automatic post-selection are introduced. This is
+stored-journal inspection, not complete voucher-frame or accounting-report parity.
+
 The opt-in workspace also supports [explicit empty-year creation](normalized-year-creation.md)
 for an existing selected company/year, with preview/confirmation and shared uncertainty
 blocking. An existing company with zero years can also use the guarded

@@ -13,6 +13,13 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Added
+- Add an opt-in read-only normalized voucher register with explicit 100-voucher pages and
+  SQL-identity-scoped detail opening. Raw rows, nulls, decimals, corrections and edit flags are
+  retained; current catalogue labels are distinguished from historical values. Reads share
+  the application lease/gate and pending/uncertainty interlocks, without writes or legacy
+  model hydration. Production format-3 startup remains guarded (#75).
+
+### Added
 - Guarded normalized manual vouchers now accept explicit company-scoped projects and result
   units, enforce account requirements and project closure dates, and show chosen dimensions
   in the preview. Dimension catalogue changes invalidate confirmation; no dimension defaults
