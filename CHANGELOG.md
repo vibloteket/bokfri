@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Added
 
+- Added guarded plain manual-voucher creation to the opt-in normalized workspace: explicit date/description and active dimension-free accounts, exact cent-balanced rows, current-account/number preview and atomic single-use posting. It shares company/year/document ownership, stale-input and uncertain-commit blocking, clears successful drafts and preserves document context. An explicit-catalogue voucher-validator overload avoids ambient legacy row lookups; production format-3 startup remains guarded. See `docs/normalized-manual-voucher.md` (#75).
+
 - Added guarded empty-company creation to the opt-in normalized workspace: explicit identity, stored currency, VAT period and rounding, read-only preview and atomic single-use confirmation. No years or accounting defaults are copied; refreshed choices lead to separate explicit first-year creation without changing document context. Company/year/document commands share uncertainty blocking and busy interlocks; production format-3 startup stays guarded. See `docs/normalized-company-creation.md` (#75).
 - The forum Docker image includes FoF Subscribed 2.0.0 for Flarum 2, with manual activation and administrator-only notification setup documented and disposable-image activation covered by the smoke test.
 

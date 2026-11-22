@@ -278,6 +278,7 @@ class NormalizedApplicationYearCreationTest {
                         opens.incrementAndGet();
                         var c = open();
                         var mode = failure;
+                        var voucherRows = new AtomicInteger();
                         failure = "";
                         return (Connection)
                                 Proxy.newProxyInstance(
@@ -311,7 +312,41 @@ class NormalizedApplicationYearCreationTest {
                                                                         .equals("executeUpdate"))
                                                                     throw new SQLException(
                                                                             "Late company row"
+                                                                                    + " failure");
+                                                                return result;
+                                                            } catch (InvocationTargetException e) {
+                                                                throw e.getCause();
+                                                            }
+                                                        });
+                                            }
+                                            if (mode.equals("voucher-row")
+                                                    && method.getName().equals("prepareStatement")
+                                                    && ((String) args[0])
+                                                            .startsWith(
+                                                                    "INSERT INTO voucher_row (")) {
+                                                var statement =
+                                                        (java.sql.PreparedStatement)
+                                                                method.invoke(c, args);
+                                                return Proxy.newProxyInstance(
+                                                        java.sql.PreparedStatement.class
+                                                                .getClassLoader(),
+                                                        new Class<?>[] {
+                                                            java.sql.PreparedStatement.class
+                                                        },
+                                                        (p, m, a) -> {
+                                                            try {
+                                                                var result = m.invoke(statement, a);
+                                                                if (m.getName()
+                                                                                .equals(
+                                                                                        "executeUpdate")
+                                                                        && voucherRows
+                                                                                        .incrementAndGet()
+                                                                                == 2) {
+                                                                    throw new SQLException(
+                                                                            "Late second"
+                                                                                + " voucher-row"
                                                                                 + " failure");
+                                                                }
                                                                 return result;
                                                             } catch (InvocationTargetException e) {
                                                                 throw e.getCause();

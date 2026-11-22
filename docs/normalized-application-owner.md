@@ -47,6 +47,12 @@ through `companyCurrencies()`, `previewCompany(CompanyDraft)` and
 shares the transaction/uncertainty boundary, and creates no year or accounting defaults.
 Existing document context and saved selections remain unchanged.
 
+A selection also exposes `vouchers()` for
+[plain manual-voucher creation](normalized-manual-voucher.md), using the same gate and validated,
+commit-observing connection factory. The command handles explicit dimension-free new vouchers
+only; replacement/closure retires its factory alongside both document sessions. It does not
+provide edits/corrections/import parity or replace legacy production voucher screens.
+
 ## Validation and uncertainty
 
 Every dedicated connection is checked for format 3 and the **complete current packaged
