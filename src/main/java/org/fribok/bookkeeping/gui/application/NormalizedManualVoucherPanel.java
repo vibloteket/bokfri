@@ -4,7 +4,9 @@ import org.fribok.bookkeeping.application.NormalizedApplicationOwner.Selection;
 import org.fribok.bookkeeping.application.NormalizedManualVoucherCommands.Account;
 import org.fribok.bookkeeping.application.NormalizedManualVoucherCommands.Draft;
 import org.fribok.bookkeeping.application.NormalizedManualVoucherCommands.Preview;
+import org.fribok.bookkeeping.application.NormalizedManualVoucherCommands.Project;
 import org.fribok.bookkeeping.application.NormalizedManualVoucherCommands.Row;
+import org.fribok.bookkeeping.application.NormalizedManualVoucherCommands.Unit;
 
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 
@@ -32,20 +34,55 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 
-/** Explicit plain-voucher creation for the active document lease; EDT UI, background JDBC. */
+/**
+ * Explicit manual-voucher creation with company dimensions for the active document lease; EDT UI,
+ * background JDBC.
+ */
 public final class NormalizedManualVoucherPanel extends JPanel implements AutoCloseable {
     private record Choice(Account value) {
         public String toString() {
             return value == null
-                    ? text("chooseaccount")
-                    : value.number() + " : " + value.description();
+                    ? text("chooseactiveaccount")
+                    : value.number()
+                            + " : "
+                            + value.description()
+                            + (value.projectRequired() ? " [" + text("projectrequired") + "]" : "")
+                            + (value.unitRequired() ? " [" + text("unitrequired") + "]" : "");
+        }
+    }
+
+    private record ProjectChoice(Project value) {
+        public String toString() {
+            return value == null
+                    ? text("nodimension")
+                    : "["
+                            + value.number()
+                            + "] "
+                            + value.name()
+                            + (value.concluded()
+                                    ? " ("
+                                            + (value.concludedOn() == null
+                                                    ? text("closureunknown")
+                                                    : text("closedfrom")
+                                                            + " "
+                                                            + value.concludedOn())
+                                            + ")"
+                                    : "");
+        }
+    }
+
+    private record UnitChoice(Unit value) {
+        public String toString() {
+            return value == null ? text("nodimension") : "[" + value.number() + "] " + value.name();
         }
     }
 
     private final JTextField date = new JTextField();
     private final JTextField description = new JTextField();
     private final JComboBox<Choice> accounts = new JComboBox<>();
-    private final JButton load = new JButton(text("load"));
+    private final JComboBox<ProjectChoice> projects = new JComboBox<>();
+    private final JComboBox<UnitChoice> units = new JComboBox<>();
+    private final JButton load = new JButton(text("dimensionload"));
     private final JButton add = new JButton(text("add"));
     private final JButton remove = new JButton(text("remove"));
     private final JButton preview = new JButton(text("preview"));
@@ -53,7 +90,14 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
     private final JTextArea status = new JTextArea(5, 70);
     private final DefaultTableModel model =
             new DefaultTableModel(
-                    new String[] {text("account"), text("debit"), text("credit")}, 0) {
+                    new String[] {
+                        text("account"),
+                        text("debit"),
+                        text("credit"),
+                        text("project"),
+                        text("unit")
+                    },
+                    0) {
                 public boolean isCellEditable(int row, int column) {
                     return available();
                 }
@@ -75,6 +119,8 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
         description.setName("voucher-create-description");
         rows.setName("voucher-create-rows");
         accounts.setName("voucher-create-account");
+        projects.setName("voucher-create-project");
+        units.setName("voucher-create-unit");
         load.setName("voucher-create-load");
         add.setName("voucher-create-add");
         remove.setName("voucher-create-remove");
@@ -96,13 +142,17 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
         actions.add(preview);
         actions.add(post);
         JPanel footer = new JPanel(new BorderLayout());
-        footer.add(status);
+        footer.add(new JScrollPane(status));
         footer.add(actions, BorderLayout.SOUTH);
         add(fields, BorderLayout.NORTH);
         add(new JScrollPane(rows));
         add(footer, BorderLayout.SOUTH);
         accounts.addItem(new Choice(null));
         rows.getColumnModel().getColumn(0).setCellEditor(new DefaultCellEditor(accounts));
+        projects.addItem(new ProjectChoice(null));
+        units.addItem(new UnitChoice(null));
+        rows.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(projects));
+        rows.getColumnModel().getColumn(4).setCellEditor(new DefaultCellEditor(units));
         model.addTableModelListener(event -> invalidatePreview());
         rows.addPropertyChangeListener(
                 "tableCellEditor",
@@ -130,7 +180,14 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
         add.addActionListener(
                 event -> {
                     if (available() && model.getRowCount() < 200) {
-                        model.addRow(new Object[] {new Choice(null), "", ""});
+                        model.addRow(
+                                new Object[] {
+                                    new Choice(null),
+                                    "",
+                                    "",
+                                    new ProjectChoice(null),
+                                    new UnitChoice(null)
+                                });
                     }
                 });
         remove.addActionListener(
@@ -157,8 +214,12 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
         token = null;
         accounts.removeAllItems();
         accounts.addItem(new Choice(null));
+        projects.removeAllItems();
+        projects.addItem(new ProjectChoice(null));
+        units.removeAllItems();
+        units.addItem(new UnitChoice(null));
         reset();
-        status.setText(text("instructions"));
+        status.setText(text("dimensioninstructions"));
         controls();
     }
 
@@ -168,7 +229,10 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
         description.setText("");
         model.setRowCount(0);
         for (int index = 0; index < 2; index++) {
-            model.addRow(new Object[] {new Choice(null), "", ""});
+            model.addRow(
+                    new Object[] {
+                        new Choice(null), "", "", new ProjectChoice(null), new UnitChoice(null)
+                    });
         }
     }
 
@@ -205,13 +269,24 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
         if (rows.isEditing() && !rows.getCellEditor().stopCellEditing()) return;
         var commands = selection.vouchers();
         run(
-                commands::accounts,
+                commands::catalogue,
                 values -> {
                     accounts.removeAllItems();
                     accounts.addItem(new Choice(null));
-                    for (var value : values) accounts.addItem(new Choice(value));
-                    // Existing row values remain explicit and are revalidated at preview/post.
-                    status.setText(text(values.isEmpty() ? "noaccounts" : "instructions"));
+                    for (var value : values.accounts()) accounts.addItem(new Choice(value));
+                    projects.removeAllItems();
+                    projects.addItem(new ProjectChoice(null));
+                    for (var value : values.projects()) projects.addItem(new ProjectChoice(value));
+                    units.removeAllItems();
+                    units.addItem(new UnitChoice(null));
+                    for (var value : values.units()) units.addItem(new UnitChoice(value));
+                    // Existing explicit choices remain and are revalidated against current
+                    // catalogues.
+                    status.setText(
+                            text(
+                                    values.accounts().isEmpty()
+                                            ? "nodimensionaccounts"
+                                            : "dimensioninstructions"));
                 });
     }
 
@@ -224,13 +299,15 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
             for (int index = 0; index < model.getRowCount(); index++) {
                 var choice = model.getValueAt(index, 0);
                 if (!(choice instanceof Choice value) || value.value() == null) {
-                    throw new IllegalArgumentException(text("chooseaccount"));
+                    throw new IllegalArgumentException(text("chooseactiveaccount"));
                 }
                 input.add(
                         new Row(
                                 value.value().number(),
                                 amount(model.getValueAt(index, 1)),
-                                amount(model.getValueAt(index, 2))));
+                                amount(model.getValueAt(index, 2)),
+                                projectKey(model.getValueAt(index, 3)),
+                                unitKey(model.getValueAt(index, 4))));
             }
             var draft = new Draft(first, description.getText(), input);
             var commands = selection.vouchers();
@@ -238,7 +315,7 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
                     () -> commands.preview(draft),
                     value -> {
                         token = value;
-                        StringBuilder summary = new StringBuilder(text("summary"));
+                        StringBuilder summary = new StringBuilder(text("dimensionsummary"));
                         summary.append("\n")
                                 .append(value.companyId())
                                 .append(" / ")
@@ -268,6 +345,14 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
                                     .append(row.debit())
                                     .append(" / ")
                                     .append(row.credit());
+                            summary.append("\n")
+                                    .append(text("project"))
+                                    .append(" : ")
+                                    .append(projectLabel(value, row.project()));
+                            summary.append("\n")
+                                    .append(text("unit"))
+                                    .append(" : ")
+                                    .append(unitLabel(value, row.unit()));
                         }
                         summary.append("\n")
                                 .append(text("total"))
@@ -335,6 +420,8 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
         description.setEnabled(enabled);
         rows.setEnabled(enabled);
         accounts.setEnabled(enabled);
+        projects.setEnabled(enabled);
+        units.setEnabled(enabled);
         load.setEnabled(enabled);
         add.setEnabled(enabled && model.getRowCount() < 200);
         remove.setEnabled(enabled && rows.getSelectedRow() >= 0);
@@ -344,6 +431,42 @@ public final class NormalizedManualVoucherPanel extends JPanel implements AutoCl
                         && !description.getText().isBlank()
                         && model.getRowCount() >= 2);
         post.setEnabled(enabled && token != null);
+    }
+
+    private static String projectLabel(Preview preview, String key) {
+        if (key == null) return text("nodimension");
+        var value =
+                preview.projects().stream()
+                        .filter(project -> project.number().equals(key))
+                        .findFirst()
+                        .orElseThrow();
+        return literal(key) + " " + literal(value.name()) + " / " + literal(value.description());
+    }
+
+    private static String unitLabel(Preview preview, String key) {
+        if (key == null) return text("nodimension");
+        var value =
+                preview.units().stream()
+                        .filter(unit -> unit.number().equals(key))
+                        .findFirst()
+                        .orElseThrow();
+        return literal(key) + " " + literal(value.name()) + " / " + literal(value.description());
+    }
+
+    private static String projectKey(Object value) {
+        if (value == null) return null;
+        if (!(value instanceof ProjectChoice choice)) {
+            throw new IllegalArgumentException("Invalid project choice");
+        }
+        return choice.value() == null ? null : choice.value().number();
+    }
+
+    private static String unitKey(Object value) {
+        if (value == null) return null;
+        if (!(value instanceof UnitChoice choice)) {
+            throw new IllegalArgumentException("Invalid result-unit choice");
+        }
+        return choice.value() == null ? null : choice.value().number();
     }
 
     private static BigDecimal amount(Object value) {

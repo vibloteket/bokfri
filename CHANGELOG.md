@@ -13,6 +13,12 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Added
+- Guarded normalized manual vouchers now accept explicit company-scoped projects and result
+  units, enforce account requirements and project closure dates, and show chosen dimensions
+  in the preview. Dimension catalogue changes invalidate confirmation; no dimension defaults
+  or catalogue writes are introduced. Production format-3 startup remains guarded (#75).
+
+### Added
 
 - Added guarded plain manual-voucher creation to the opt-in normalized workspace: explicit date/description and active dimension-free accounts, exact cent-balanced rows, current-account/number preview and atomic single-use posting. It shares company/year/document ownership, stale-input and uncertain-commit blocking, clears successful drafts and preserves document context. An explicit-catalogue voucher-validator overload avoids ambient legacy row lookups; production format-3 startup remains guarded. See `docs/normalized-manual-voucher.md` (#75).
 
