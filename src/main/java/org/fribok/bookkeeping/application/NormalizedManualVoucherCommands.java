@@ -1,6 +1,7 @@
 package org.fribok.bookkeeping.application;
 
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
+import org.fribok.bookkeeping.dataformat.NormalizedRegisterStore;
 import org.fribok.bookkeeping.service.voucher.VoucherValidator;
 
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
@@ -16,13 +17,46 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-/** Lease-owned creation of plain, dimension-free manual vouchers. Never edits existing journals. */
+/**
+ * Lease-owned creation of manual vouchers with explicit company dimensions. Never edits existing
+ * journals.
+ */
 public final class NormalizedManualVoucherCommands implements AutoCloseable {
-    /** Immutable explicit account choice; only known-active, dimension-free accounts are listed. */
-    public record Account(int number, String description) {}
+    /** Immutable active account choice, including its dimension requirements. */
+    public record Account(
+            int number, String description, boolean projectRequired, boolean unitRequired) {
+        public Account(int number, String description) {
+            this(number, description, false, false);
+        }
+    }
 
-    /** One new row; exactly one positive, cent-exact side is required. */
-    public record Row(int account, BigDecimal debit, BigDecimal credit) {}
+    /** Company-scoped project with exact stored closure metadata. */
+    public record Project(
+            String number,
+            String name,
+            String description,
+            boolean concluded,
+            LocalDate concludedOn) {}
+
+    /** Company-scoped result unit. */
+    public record Unit(String number, String name, String description) {}
+
+    /** Immutable choices loaded together in one validated read transaction. */
+    public record Catalogue(List<Account> accounts, List<Project> projects, List<Unit> units) {
+        public Catalogue {
+            accounts = List.copyOf(accounts);
+            projects = List.copyOf(projects);
+            units = List.copyOf(units);
+        }
+    }
+
+    /** One new row; dimensions are exact company-scoped keys or explicit absence. */
+    public record Row(
+            int account, BigDecimal debit, BigDecimal credit, String project, String unit) {
+        public Row(int account, BigDecimal debit, BigDecimal credit) {
+            this(account, debit, credit, null, null);
+        }
+    }
 
     /** Explicit immutable input with no date, description or account defaults. */
     public record Draft(LocalDate date, String description, List<Row> rows) {
@@ -37,7 +71,7 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
         private final Draft draft;
         private final int number;
         private final BigDecimal total;
-        private final List<Account> accounts;
+        private final Catalogue catalogue;
         private final List<List<Object>> snapshot;
         private boolean consumed;
 
@@ -45,12 +79,12 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
                 Draft draft,
                 int number,
                 BigDecimal total,
-                List<Account> accounts,
+                Catalogue catalogue,
                 List<List<Object>> snapshot) {
             this.draft = draft;
             this.number = number;
             this.total = total;
-            this.accounts = List.copyOf(accounts);
+            this.catalogue = catalogue;
             this.snapshot = snapshot;
         }
 
@@ -68,7 +102,15 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
 
         /** Current immutable account presentation captured in the same preview transaction. */
         public List<Account> accounts() {
-            return accounts;
+            return catalogue.accounts();
+        }
+
+        public List<Project> projects() {
+            return catalogue.projects();
+        }
+
+        public List<Unit> units() {
+            return catalogue.units();
         }
 
         public int companyId() {
@@ -108,7 +150,24 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
                 false,
                 connection -> {
                     context(connection);
-                    return accounts(connection);
+                    return activeAccounts(connection).stream()
+                            .filter(
+                                    account ->
+                                            !account.projectRequired() && !account.unitRequired())
+                            .toList();
+                });
+    }
+
+    /**
+     * Loads active accounts and exact company-scoped dimension choices without defaults. Run off
+     * EDT.
+     */
+    public Catalogue catalogue() throws SQLException {
+        return run(
+                false,
+                connection -> {
+                    context(connection);
+                    return catalogue(connection);
                 });
     }
 
@@ -127,7 +186,7 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
                                     .filter(Objects::nonNull)
                                     .reduce(BigDecimal.ZERO, BigDecimal::add);
                     return new Preview(
-                            draft, number, total, accounts(connection), snapshot(connection));
+                            draft, number, total, catalogue(connection), snapshot(connection));
                 });
     }
 
@@ -197,17 +256,20 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
                 || draft.rows().size() < 2
                 || draft.rows().size() > 200) {
             throw new IllegalArgumentException(
-                    "Explicit date/description and 2 to 200 plain voucher rows required");
+                    "Explicit date/description and 2 to 200 voucher rows required");
         }
-        var allowed = accounts(connection);
+        var allowed = activeAccounts(connection);
         var accountModels = store.getAccounts();
+        var registers = new NormalizedRegisterStore(connection);
+        var projects = registers.getProjects(selection.company().id());
+        var units = registers.getResultUnits(selection.company().id());
         List<SSVoucherRow> rows = new ArrayList<>();
         BigDecimal debit = BigDecimal.ZERO;
         BigDecimal credit = BigDecimal.ZERO;
         for (var row : draft.rows()) {
             if (allowed.stream().noneMatch(value -> value.number() == row.account())) {
                 throw new IllegalArgumentException(
-                        "Account is missing, inactive, unknown or requires dimensions");
+                        "Account is missing, inactive or has unknown requirements");
             }
             if ((row.debit() == null) == (row.credit() == null)) {
                 throw new IllegalArgumentException(
@@ -226,13 +288,48 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
                             .filter(value -> value.getNumber() == row.account())
                             .findFirst()
                             .orElseThrow(() -> new SQLException("Selected account changed"));
+            var project =
+                    row.project() == null
+                            ? null
+                            : projects.stream()
+                                    .filter(value -> value.getNumber().equals(row.project()))
+                                    .findFirst()
+                                    .orElseThrow(
+                                            () ->
+                                                    new IllegalArgumentException(
+                                                            "Project does not belong to selected"
+                                                                    + " company"));
+            if (row.project() != null && row.project().isBlank()) {
+                throw new IllegalArgumentException("Project identity must not be blank");
+            }
+            if (project != null
+                    && project.getConcluded()
+                    && (project.getLocalConcludedDate() == null
+                            || project.isConcluded(draft.date()))) {
+                throw new IllegalArgumentException(
+                        "Project is closed on the voucher date or has unknown closure date");
+            }
+            var unit =
+                    row.unit() == null
+                            ? null
+                            : units.stream()
+                                    .filter(value -> value.getNumber().equals(row.unit()))
+                                    .findFirst()
+                                    .orElseThrow(
+                                            () ->
+                                                    new IllegalArgumentException(
+                                                            "Result unit does not belong to"
+                                                                    + " selected company"));
+            if (row.unit() != null && row.unit().isBlank()) {
+                throw new IllegalArgumentException("Result-unit identity must not be blank");
+            }
             var newRow =
                     new SSVoucherRow(
                             account,
                             row.debit() == null ? null : amount.setScale(2),
                             row.credit() == null ? null : amount.setScale(2),
-                            null,
-                            null);
+                            project,
+                            unit);
             rows.add(newRow);
             if (row.debit() != null) debit = debit.add(amount);
             else credit = credit.add(amount);
@@ -246,25 +343,56 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
         var voucher = new SSVoucher(number, draft.date());
         voucher.setDescription(draft.description());
         voucher.getRows().addAll(rows);
-        var validation =
-                VoucherValidator.validate(voucher, year, accountModels, List.of(), List.of());
+        var validation = VoucherValidator.validate(voucher, year, accountModels, projects, units);
         if (!validation.valid()) {
             throw new IllegalArgumentException("Voucher validation failed: " + validation.issues());
         }
         return voucher;
     }
 
-    private List<Account> accounts(Connection connection) throws SQLException {
+    private Catalogue catalogue(Connection connection) throws SQLException {
+        var registers = new NormalizedRegisterStore(connection);
+        var projects =
+                registers.getProjects(selection.company().id()).stream()
+                        .map(
+                                project ->
+                                        new Project(
+                                                project.getNumber(),
+                                                project.getName(),
+                                                project.getDescription(),
+                                                project.getConcluded(),
+                                                project.getLocalConcludedDate()))
+                        .toList();
+        var units =
+                registers.getResultUnits(selection.company().id()).stream()
+                        .map(
+                                unit ->
+                                        new Unit(
+                                                unit.getNumber(),
+                                                unit.getName(),
+                                                unit.getDescription()))
+                        .toList();
+        return new Catalogue(activeAccounts(connection), projects, units);
+    }
+
+    private List<Account> activeAccounts(Connection connection) throws SQLException {
         List<Account> result = new ArrayList<>();
         try (var query =
                 connection.prepareStatement(
-                        "SELECT number,description FROM account WHERE accounting_year_id = (SELECT"
-                            + " id FROM accounting_year WHERE legacy_id=?) AND active IS TRUE AND"
-                            + " project_required IS FALSE AND result_unit_required IS FALSE ORDER"
-                            + " BY number")) {
+                        "SELECT number,description,project_required,result_unit_required FROM"
+                            + " account WHERE accounting_year_id = (SELECT id FROM accounting_year"
+                            + " WHERE legacy_id=?) AND active IS TRUE AND project_required IS NOT"
+                            + " NULL AND result_unit_required IS NOT NULL ORDER BY number")) {
             query.setInt(1, selection.year().id());
             try (var rows = query.executeQuery()) {
-                while (rows.next()) result.add(new Account(rows.getInt(1), rows.getString(2)));
+                while (rows.next()) {
+                    result.add(
+                            new Account(
+                                    rows.getInt(1),
+                                    rows.getString(2),
+                                    rows.getBoolean(3),
+                                    rows.getBoolean(4)));
+                }
             }
         }
         return List.copyOf(result);
@@ -290,12 +418,20 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
             "SELECT * FROM account WHERE accounting_year_id=(SELECT id FROM accounting_year WHERE"
                     + " legacy_id=?) ORDER BY number",
             "SELECT id,number FROM voucher WHERE accounting_year_id=(SELECT id FROM accounting_year"
-                    + " WHERE legacy_id=?) ORDER BY id"
+                    + " WHERE legacy_id=?) ORDER BY id",
+            "SELECT * FROM project WHERE company_id=(SELECT id FROM company WHERE legacy_id=?)"
+                    + " ORDER BY number",
+            "SELECT * FROM result_unit WHERE company_id=(SELECT id FROM company WHERE legacy_id=?)"
+                    + " ORDER BY number"
         };
         List<List<Object>> result = new ArrayList<>();
         for (int index = 0; index < queries.length; index++) {
             try (var query = connection.prepareStatement(queries[index])) {
-                query.setInt(1, index == 0 ? selection.company().id() : selection.year().id());
+                query.setInt(
+                        1,
+                        index == 0 || index >= 4
+                                ? selection.company().id()
+                                : selection.year().id());
                 try (var rows = query.executeQuery()) {
                     while (rows.next()) {
                         List<Object> row = new ArrayList<>();

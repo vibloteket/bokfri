@@ -157,11 +157,13 @@ fail-closed repository boundaries, not a new claim of complete business validati
 
 ### G2 — Introduce a shared normalized application boundary
 
-The opt-in host also exposes [plain manual-voucher creation](normalized-manual-voucher.md)
-for its explicitly selected year: active dimension-free accounts, exact cent-balanced rows,
-preview with current labels/numbering and atomic single-use posting. This shares the owner
-and cross-family uncertainty boundary, but is not dimension/correction/import/template parity
-or production voucher-frame integration; G2 remains incomplete.
+The opt-in host also exposes [manual-voucher creation](normalized-manual-voucher.md)
+for its explicitly selected year: active accounts, explicit company-scoped projects/result units,
+required-dimension and project closure checks, exact cent-balanced rows, preview with current
+labels/numbering and atomic single-use posting. It creates no dimension defaults or catalogue
+records. This shares the owner and cross-family uncertainty boundary, but is not dimension
+catalogue editing, correction/import/template parity or production voucher-frame integration;
+G2 remains incomplete.
 
 The opt-in workspace also supports [explicit empty-year creation](normalized-year-creation.md)
 for an existing selected company/year, with preview/confirmation and shared uncertainty

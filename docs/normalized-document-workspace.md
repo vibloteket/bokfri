@@ -1,10 +1,11 @@
 # Explicit normalized document workspace
 
 After explicit company/year Apply, a third [Manual voucher](normalized-manual-voucher.md) tab
-supports new plain, cent-balanced vouchers using active dimension-free accounts. Its previews,
+supports new cent-balanced vouchers using active accounts and explicit company-scoped projects
+and result units, including required-dimension and project closure checks. Its previews,
 posting, stale checks and lifecycle share the owner and busy/uncertainty boundary; it never
-changes the selected document context. Corrections/dimensions and full voucher-frame parity
-remain outside this restricted host.
+changes the selected document context or supplies dimension defaults. Dimension catalogue
+editing, corrections and full voucher-frame parity remain outside this restricted host.
 
 The selected company/year also exposes guarded [empty accounting-year creation](normalized-year-creation.md): explicit dates/template, preview and confirmation, with no automatic carry-forward or selection change. An existing company with zero years can use [first-year creation](normalized-first-year-creation.md) directly from its company choice, independently of any active document context. A separate [guarded empty-company command](normalized-company-creation.md) now provides explicit identity/currency/VAT/rounding preview and confirmation, followed by the separate first-year flow. It creates no accounting defaults or automatic document selection; full company-settings parity remains separate.
 

@@ -266,7 +266,7 @@ class NormalizedApplicationManualVoucherGuiTest {
             edt(
                     () -> {
                         assertEquals(
-                                3,
+                                5,
                                 ((JComboBox<?>) table(host.frame).getEditorComponent())
                                         .getItemCount());
                         table(host.frame).getCellEditor().cancelCellEditing();
@@ -353,7 +353,12 @@ class NormalizedApplicationManualVoucherGuiTest {
             await(
                     () ->
                             button(frame, "voucher-create-load").isEnabled()
-                                    && status(frame).getText().startsWith("Plain vouchers"));
+                                    && status(frame)
+                                            .getText()
+                                            .equals(
+                                                    SSBundle.getBundle()
+                                                            .getString(
+                                                                    "normalized.vouchercreate.dimensioninstructions")));
             edt(
                     () -> {
                         field(frame, "voucher-create-date").setText("2026-06-15");
@@ -362,7 +367,9 @@ class NormalizedApplicationManualVoucherGuiTest {
                         for (int row = 0; row < 2; row++) {
                             assertTrue(table(frame).editCellAt(row, 0));
                             var choices = (JComboBox<?>) table(frame).getEditorComponent();
-                            assertEquals(3, choices.getItemCount());
+                            assertEquals(5, choices.getItemCount());
+                            assertTrue(choices.getItemAt(3).toString().startsWith("4010 :"));
+                            assertTrue(choices.getItemAt(4).toString().startsWith("6010 :"));
                             choices.setSelectedIndex(row + 1);
                             if (table(frame).isEditing())
                                 table(frame).getCellEditor().stopCellEditing();
