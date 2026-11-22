@@ -18,8 +18,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Lease-owned creation of manual vouchers with explicit company dimensions. Never edits existing
- * journals.
+ * Lease-owned manual vouchers and guarded standalone reversals with explicit company dimensions.
+ * Original rows are never rewritten; reversals link journal headers atomically.
  */
 public final class NormalizedManualVoucherCommands implements AutoCloseable {
     /** Immutable active account choice, including its dimension requirements. */
@@ -122,6 +122,67 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
         }
     }
 
+    /** Immutable original rows, before swapping sides; source row contents are never edited. */
+    public record ReversalSource(
+            long id, int number, LocalDate date, String description, List<Row> rows) {
+        public ReversalSource {
+            rows = List.copyOf(rows);
+        }
+    }
+
+    /**
+     * Opaque command-bound single-use reversal confirmation; cannot be posted as a plain voucher.
+     */
+    public final class ReversalPreview {
+        private final NormalizedManualVoucherCommands owner = NormalizedManualVoucherCommands.this;
+        private final ReversalSource source;
+        private final Preview posting;
+        private final List<List<Object>> sourceSnapshot;
+
+        private ReversalPreview(
+                ReversalSource source, Preview posting, List<List<Object>> snapshot) {
+            this.source = source;
+            this.posting = posting;
+            this.sourceSnapshot = snapshot;
+        }
+
+        public ReversalSource source() {
+            return source;
+        }
+
+        public Draft draft() {
+            return posting.draft();
+        }
+
+        public int number() {
+            return posting.number();
+        }
+
+        public BigDecimal total() {
+            return posting.total();
+        }
+
+        public List<Account> accounts() {
+            return posting.accounts();
+        }
+
+        public List<Project> projects() {
+            return posting.projects();
+        }
+
+        public List<Unit> units() {
+            return posting.units();
+        }
+
+        public int companyId() {
+            return selection.company().id();
+        }
+
+        public int yearId() {
+            return selection.year().id();
+        }
+    }
+
     @FunctionalInterface
     private interface Work<T> {
         T run(Connection connection) throws SQLException;
@@ -174,20 +235,7 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
     /** Validates a balanced new voucher and captures its exact scope/catalogue/numbering inputs. */
     public Preview preview(Draft draft) throws SQLException {
         Objects.requireNonNull(draft, "voucher draft");
-        return run(
-                false,
-                connection -> {
-                    var store = context(connection);
-                    int number = nextNumber(connection);
-                    var voucher = build(connection, store, draft, number);
-                    BigDecimal total =
-                            voucher.getRows().stream()
-                                    .map(SSVoucherRow::getDebet)
-                                    .filter(Objects::nonNull)
-                                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    return new Preview(
-                            draft, number, total, catalogue(connection), snapshot(connection));
-                });
+        return run(false, connection -> preview(connection, draft));
     }
 
     /** Atomically posts a single-use preview; stale inputs require a fresh preview. Run off EDT. */
@@ -213,6 +261,274 @@ public final class NormalizedManualVoucherCommands implements AutoCloseable {
                         return preview.number;
                     });
         }
+    }
+
+    private Preview preview(Connection connection, Draft draft) throws SQLException {
+        var store = context(connection);
+        int number = nextNumber(connection);
+        var voucher = build(connection, store, draft, number);
+        BigDecimal total =
+                voucher.getRows().stream()
+                        .map(SSVoucherRow::getDebet)
+                        .filter(Objects::nonNull)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new Preview(draft, number, total, catalogue(connection), snapshot(connection));
+    }
+
+    /**
+     * Preview an exact reversal of an eligible standalone journal; explicit date/description only.
+     */
+    public ReversalPreview previewReversal(long sourceId, LocalDate date, String description)
+            throws SQLException {
+        return run(
+                false,
+                connection -> {
+                    context(connection);
+                    long year = sqlYear(connection);
+                    var source = reversalSource(connection, year, sourceId);
+                    if (date == null || date.isBefore(source.date())) {
+                        throw new IllegalArgumentException(
+                                "Reversal date must not precede the source date");
+                    }
+                    var draft =
+                            new Draft(
+                                    date,
+                                    description,
+                                    source.rows().stream()
+                                            .map(
+                                                    row ->
+                                                            new Row(
+                                                                    row.account(),
+                                                                    row.credit(),
+                                                                    row.debit(),
+                                                                    row.project(),
+                                                                    row.unit()))
+                                            .toList());
+                    return new ReversalPreview(
+                            source,
+                            preview(connection, draft),
+                            sourceSnapshot(connection, year, sourceId));
+                });
+    }
+
+    /** Atomically insert reversal rows and both correction links. Never rewrites original rows. */
+    public int postReversal(ReversalPreview token) throws SQLException {
+        Objects.requireNonNull(token, "reversal preview");
+        synchronized (gate) {
+            requireAvailable();
+            if (token.owner != this) {
+                throw new SQLException("Reversal preview belongs to another context");
+            }
+            var posting = token.posting;
+            if (posting.consumed) throw new SQLException("Reversal preview was already consumed");
+            posting.consumed = true;
+            return run(
+                    true,
+                    connection -> {
+                        var store = context(connection);
+                        long year = sqlYear(connection);
+                        if (!posting.snapshot.equals(snapshot(connection))
+                                || posting.number != nextNumber(connection)
+                                || !token.sourceSnapshot.equals(
+                                        sourceSnapshot(connection, year, token.source.id()))) {
+                            throw new SQLException("Reversal inputs changed; preview again");
+                        }
+                        reversalSource(
+                                connection,
+                                year,
+                                token.source.id()); // Recheck references/eligibility too.
+                        store.addVoucher(build(connection, store, posting.draft, posting.number));
+                        long created;
+                        try (var query =
+                                connection.prepareStatement(
+                                        "SELECT id FROM voucher WHERE accounting_year_id=? AND"
+                                                + " number=?")) {
+                            query.setLong(1, year);
+                            query.setInt(2, posting.number);
+                            try (var row = query.executeQuery()) {
+                                if (!row.next()) {
+                                    throw new SQLException("Inserted reversal not found");
+                                }
+                                created = row.getLong(1);
+                            }
+                        }
+                        link(connection, year, created, token.source.id(), "corrects_voucher_id");
+                        link(
+                                connection,
+                                year,
+                                token.source.id(),
+                                created,
+                                "corrected_by_voucher_id");
+                        return posting.number;
+                    });
+        }
+    }
+
+    private static void link(Connection connection, long year, long id, long target, String column)
+            throws SQLException {
+        // Column is one of the two internal constants above, never caller input.
+        try (var query =
+                connection.prepareStatement(
+                        "UPDATE voucher SET "
+                                + column
+                                + "=? WHERE id=? AND accounting_year_id=? AND corrects_voucher_id"
+                                + " IS NULL AND corrected_by_voucher_id IS NULL")) {
+            query.setLong(1, target);
+            query.setLong(2, id);
+            query.setLong(3, year);
+            if (query.executeUpdate() != 1) {
+                throw new SQLException("Correction link changed; preview again");
+            }
+        }
+    }
+
+    private long sqlYear(Connection connection) throws SQLException {
+        try (var query =
+                connection.prepareStatement("SELECT id FROM accounting_year WHERE legacy_id=?")) {
+            query.setInt(1, selection.year().id());
+            try (var row = query.executeQuery()) {
+                if (!row.next()) throw new SQLException("Selected year missing");
+                return row.getLong(1);
+            }
+        }
+    }
+
+    private ReversalSource reversalSource(Connection connection, long year, long id)
+            throws SQLException {
+        int number;
+        LocalDate date;
+        String description;
+        try (var query =
+                connection.prepareStatement(
+                        "SELECT"
+                            + " number,voucher_date,description,corrects_voucher_id,corrected_by_voucher_id"
+                            + " FROM voucher WHERE accounting_year_id=? AND id=?")) {
+            query.setLong(1, year);
+            query.setLong(2, id);
+            try (var row = query.executeQuery()) {
+                if (!row.next()) {
+                    throw new SQLException("Source voucher missing from selected year");
+                }
+                number = row.getInt(1);
+                date = row.getObject(2, LocalDate.class);
+                description = row.getString(3);
+                if (date == null || row.getObject(4) != null || row.getObject(5) != null) {
+                    throw new SQLException("Source has unknown date or existing correction links");
+                }
+            }
+        }
+        try (var query =
+                connection.prepareStatement(
+                        "SELECT id FROM voucher WHERE accounting_year_id=? AND"
+                                + " (corrects_voucher_id=? OR corrected_by_voucher_id=?)")) {
+            query.setLong(1, year);
+            query.setLong(2, id);
+            query.setLong(3, id);
+            try (var row = query.executeQuery()) {
+                if (row.next()) {
+                    throw new SQLException("Source is referenced by a correction graph");
+                }
+            }
+        }
+        requireStandalone(connection, number);
+        List<Row> result = new ArrayList<>();
+        try (var query =
+                connection.prepareStatement(
+                        "SELECT a.number, r.debit, r.credit, r.project_number,"
+                                + " r.result_unit_number, r.crossed, r.added, r.edited_at,"
+                                + " r.edited_signature FROM voucher_row r LEFT JOIN account a ON"
+                                + " a.id=r.account_id AND a.accounting_year_id=r.accounting_year_id"
+                                + " WHERE r.accounting_year_id=? AND r.voucher_id=? ORDER BY"
+                                + " r.row_number")) {
+            query.setLong(1, year);
+            query.setLong(2, id);
+            try (var rows = query.executeQuery()) {
+                while (rows.next()) {
+                    Integer account = rows.getObject(1, Integer.class);
+                    if (account == null
+                            || rows.getBoolean(6)
+                            || rows.getBoolean(7)
+                            || rows.getObject(8) != null
+                            || rows.getString(9) != null) {
+                        throw new SQLException(
+                                "Source has unsupported account or historical row edits/flags");
+                    }
+                    result.add(
+                            new Row(
+                                    account,
+                                    rows.getBigDecimal(2),
+                                    rows.getBigDecimal(3),
+                                    rows.getString(4),
+                                    rows.getString(5)));
+                }
+            }
+        }
+        return new ReversalSource(id, number, date, description, result);
+    }
+
+    private void requireStandalone(Connection connection, int number) throws SQLException {
+        // Document snapshots do not reliably identify an accounting year. Conservatively refuse
+        // ANY same-company snapshot number, including another year or an ambiguous old snapshot.
+        String[][] families = {
+            {"customer_invoice", "invoice_id"},
+            {"customer_credit_invoice", "credit_invoice_id"},
+            {"supplier_invoice", "supplier_invoice_id"},
+            {"supplier_credit_invoice", "supplier_credit_invoice_id"},
+            {"inpayment", "inpayment_id"},
+            {"outpayment", "outpayment_id"},
+            {"periodic_invoice", "periodic_invoice_id"}
+        };
+        for (var family : families) {
+            try (var query =
+                    connection.prepareStatement(
+                            "SELECT s.number FROM "
+                                    + family[0]
+                                    + "_voucher s JOIN "
+                                    + family[0]
+                                    + " p ON p.id=s."
+                                    + family[1]
+                                    + " WHERE p.company_id=(SELECT id FROM company WHERE"
+                                    + " legacy_id=?) AND s.number=?")) {
+                query.setInt(1, selection.company().id());
+                query.setInt(2, number);
+                try (var row = query.executeQuery()) {
+                    if (row.next()) {
+                        throw new SQLException(
+                                "Document-linked or ambiguous voucher number; document-specific"
+                                        + " reconciliation required");
+                    }
+                }
+            }
+        }
+    }
+
+    private static List<List<Object>> sourceSnapshot(Connection connection, long year, long id)
+            throws SQLException {
+        String[] queries = {
+            "SELECT * FROM voucher WHERE accounting_year_id=? AND id=?",
+            "SELECT * FROM voucher_row WHERE accounting_year_id=? AND voucher_id=? ORDER BY"
+                    + " row_number"
+        };
+        List<List<Object>> result = new ArrayList<>();
+        for (int index = 0; index < queries.length; index++) {
+            try (var query = connection.prepareStatement(queries[index])) {
+                query.setLong(1, year);
+                query.setLong(2, id);
+                try (var rows = query.executeQuery()) {
+                    while (rows.next()) {
+                        List<Object> row = new ArrayList<>();
+                        row.add(index);
+                        for (int column = 1;
+                                column <= rows.getMetaData().getColumnCount();
+                                column++) {
+                            row.add(rows.getObject(column));
+                        }
+                        result.add(row);
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     private NormalizedAccountingStore context(Connection connection) throws SQLException {

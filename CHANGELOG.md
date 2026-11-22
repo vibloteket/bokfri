@@ -13,6 +13,13 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Added
+- Add guarded exact standalone voucher reversal with explicit source SQL identity, date and
+  description, current-label preview, and atomic reversed rows plus reciprocal correction links.
+  Original rows remain unchanged. Existing correction graphs, document-linked/ambiguous numbers
+  and unsupported historical edits are refused; pending/uncertain commands share the owner gate
+  and host interlocks. Production format-3 startup remains guarded (#75).
+
+### Added
 - Add an opt-in read-only normalized voucher register with explicit 100-voucher pages and
   SQL-identity-scoped detail opening. Raw rows, nulls, decimals, corrections and edit flags are
   retained; current catalogue labels are distinguished from historical values. Reads share

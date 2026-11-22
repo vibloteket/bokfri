@@ -172,6 +172,13 @@ separately identified. Reads use the shared gate, background JDBC and host inter
 writes, inferred totals, corrections or automatic post-selection are introduced. This is
 stored-journal inspection, not complete voucher-frame or accounting-report parity.
 
+The separate [standalone reversal](normalized-voucher-reversal.md) command now adds explicit
+source/date/description preview and atomic new reversed rows plus reciprocal header links.
+Original rows are preserved. Sources with document snapshots, ambiguous same-company numbers,
+existing correction graphs or unsupported historical edits are refused. All seven document
+snapshot families are guarded, including periodic templates/generated snapshots. This is one
+bounded correction operation, not general row editing, document unbooking or full correction parity.
+
 The opt-in workspace also supports [explicit empty-year creation](normalized-year-creation.md)
 for an existing selected company/year, with preview/confirmation and shared uncertainty
 blocking. An existing company with zero years can also use the guarded
