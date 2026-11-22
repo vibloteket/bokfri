@@ -47,6 +47,7 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
         private final Year year;
         private final CustomerDocumentGuiSession customers;
         private final SupplierDocumentGuiSession suppliers;
+        private final NormalizedManualVoucherCommands vouchers;
 
         private Selection(Company company, Year year) {
             this.company = company;
@@ -57,6 +58,8 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
             suppliers =
                     new SupplierDocumentGuiSession(
                             () -> openLease(this), gate, company.id(), year.id(), clock);
+            vouchers =
+                    new NormalizedManualVoucherCommands(() -> openLease(this), gate, clock, this);
         }
 
         public Company company() {
@@ -75,6 +78,11 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
             return suppliers;
         }
 
+        /** Plain manual-voucher commands bound to this immutable company/year lease. */
+        public NormalizedManualVoucherCommands vouchers() {
+            return vouchers;
+        }
+
         public boolean isActive() {
             return !closed && current == this && customers.isActive() && suppliers.isActive();
         }
@@ -86,6 +94,7 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
         private void retire() {
             customers.close();
             suppliers.close();
+            vouchers.close();
         }
     }
 

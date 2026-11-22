@@ -1,6 +1,9 @@
 package org.fribok.bookkeeping.service.voucher;
 
+import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
+import se.swedsoft.bookkeeping.data.SSNewProject;
+import se.swedsoft.bookkeeping.data.SSNewResultUnit;
 import se.swedsoft.bookkeeping.data.SSVoucher;
 import se.swedsoft.bookkeeping.data.SSVoucherRow;
 
@@ -14,6 +17,28 @@ public final class VoucherValidator {
     private VoucherValidator() {}
 
     public static VoucherValidationResult validate(SSVoucher voucher, SSNewAccountingYear year) {
+        return validateInternal(voucher, year, null, null, null);
+    }
+
+    /** Validates with explicit catalogues, avoiding ambient legacy row-resolution getters. */
+    public static VoucherValidationResult validate(
+            SSVoucher voucher,
+            SSNewAccountingYear year,
+            List<SSAccount> accounts,
+            List<SSNewProject> projects,
+            List<SSNewResultUnit> units) {
+        java.util.Objects.requireNonNull(accounts, "accounts");
+        java.util.Objects.requireNonNull(projects, "projects");
+        java.util.Objects.requireNonNull(units, "units");
+        return validateInternal(voucher, year, accounts, projects, units);
+    }
+
+    private static VoucherValidationResult validateInternal(
+            SSVoucher voucher,
+            SSNewAccountingYear year,
+            List<SSAccount> accounts,
+            List<SSNewProject> projects,
+            List<SSNewResultUnit> units) {
         List<VoucherValidationIssue> issues = new ArrayList<>();
         BigDecimal debitTotal = BigDecimal.ZERO;
         BigDecimal creditTotal = BigDecimal.ZERO;
@@ -27,10 +52,14 @@ public final class VoucherValidator {
         }
         if (voucher.getLocalDate() == null) {
             issues.add(issue("DATE_REQUIRED", "Verifikationen saknar datum.", null));
-        } else if (year != null && (voucher.getLocalDate().isBefore(year.getLocalFrom())
-                || voucher.getLocalDate().isAfter(year.getLocalTo()))) {
-            issues.add(issue("DATE_OUTSIDE_YEAR",
-                    "Datumet ligger utanför det valda bokföringsåret.", null));
+        } else if (year != null
+                && (voucher.getLocalDate().isBefore(year.getLocalFrom())
+                        || voucher.getLocalDate().isAfter(year.getLocalTo()))) {
+            issues.add(
+                    issue(
+                            "DATE_OUTSIDE_YEAR",
+                            "Datumet ligger utanför det valda bokföringsåret.",
+                            null));
         }
         if (voucher.getRows() == null || voucher.getRows().isEmpty()) {
             issues.add(issue("ROWS_REQUIRED", "Verifikationen saknar rader.", null));
@@ -46,13 +75,18 @@ public final class VoucherValidator {
             }
             if (row.isCrossed()) {
                 if (row.getEditedSignature() == null || row.getEditedSignature().isBlank()) {
-                    issues.add(issue("CROSSED_ROW_SIGNATURE_REQUIRED",
-                            "Struken rad saknar signatur.", rowNumber));
+                    issues.add(
+                            issue(
+                                    "CROSSED_ROW_SIGNATURE_REQUIRED",
+                                    "Struken rad saknar signatur.",
+                                    rowNumber));
                 }
                 continue;
             }
-            if (row.getAccount() == null) {
-                issues.add(issue("ACCOUNT_NOT_FOUND", "Raden saknar ett giltigt konto.", rowNumber));
+            var account = accounts == null ? row.getAccount() : row.getAccount(accounts);
+            if (account == null) {
+                issues.add(
+                        issue("ACCOUNT_NOT_FOUND", "Raden saknar ett giltigt konto.", rowNumber));
             }
 
             BigDecimal debit = normalized(row.getDebet());
@@ -60,10 +94,17 @@ public final class VoucherValidator {
             boolean hasDebit = debit != null && debit.signum() != 0;
             boolean hasCredit = credit != null && credit.signum() != 0;
             if (hasDebit == hasCredit) {
-                issues.add(issue("ROW_AMOUNT_INVALID",
-                        "Raden måste ha ett positivt belopp i antingen debet eller kredit.", rowNumber));
+                issues.add(
+                        issue(
+                                "ROW_AMOUNT_INVALID",
+                                "Raden måste ha ett positivt belopp i antingen debet eller kredit.",
+                                rowNumber));
             } else if ((hasDebit && debit.signum() < 0) || (hasCredit && credit.signum() < 0)) {
-                issues.add(issue("ROW_AMOUNT_NEGATIVE", "Radens belopp får inte vara negativt.", rowNumber));
+                issues.add(
+                        issue(
+                                "ROW_AMOUNT_NEGATIVE",
+                                "Radens belopp får inte vara negativt.",
+                                rowNumber));
             } else {
                 if (hasDebit) {
                     debitTotal = debitTotal.add(debit);
@@ -73,25 +114,30 @@ public final class VoucherValidator {
                 }
             }
 
-            if (row.getAccount() != null && row.getAccount().isProjectRequired()
-                    && row.getProject() == null) {
+            if (account != null
+                    && account.isProjectRequired()
+                    && (projects == null ? row.getProject() : row.getProject(projects)) == null) {
                 issues.add(issue("PROJECT_REQUIRED", "Raden saknar projekt.", rowNumber));
             }
-            if (row.getAccount() != null && row.getAccount().isResultUnitRequired()
-                    && row.getResultUnit() == null) {
+            if (account != null
+                    && account.isResultUnitRequired()
+                    && (units == null ? row.getResultUnit() : row.getResultUnit(units)) == null) {
                 issues.add(issue("RESULT_UNIT_REQUIRED", "Raden saknar resultatenhet.", rowNumber));
             }
-            if (row.isAdded() && (row.getEditedSignature() == null
-                    || row.getEditedSignature().isBlank())) {
-                issues.add(issue("ADDED_ROW_SIGNATURE_REQUIRED",
-                        "Tillagd rad saknar signatur.", rowNumber));
+            if (row.isAdded()
+                    && (row.getEditedSignature() == null || row.getEditedSignature().isBlank())) {
+                issues.add(
+                        issue(
+                                "ADDED_ROW_SIGNATURE_REQUIRED",
+                                "Tillagd rad saknar signatur.",
+                                rowNumber));
             }
         }
 
         BigDecimal difference = debitTotal.subtract(creditTotal).setScale(2, RoundingMode.HALF_UP);
         if (difference.signum() != 0) {
-            issues.add(issue("VOUCHER_NOT_BALANCED",
-                    "Verifikationens differens är inte noll.", null));
+            issues.add(
+                    issue("VOUCHER_NOT_BALANCED", "Verifikationens differens är inte noll.", null));
         }
         if (debitTotal.setScale(2, RoundingMode.HALF_UP).signum() == 0) {
             issues.add(issue("VOUCHER_TOTAL_ZERO", "Omslutningen är noll.", null));
@@ -107,8 +153,8 @@ public final class VoucherValidator {
         return new VoucherValidationIssue(code, message, row);
     }
 
-    private static VoucherValidationResult result(List<VoucherValidationIssue> issues,
-            BigDecimal debitTotal, BigDecimal creditTotal) {
+    private static VoucherValidationResult result(
+            List<VoucherValidationIssue> issues, BigDecimal debitTotal, BigDecimal creditTotal) {
         return new VoucherValidationResult(issues.isEmpty(), issues, debitTotal, creditTotal);
     }
 }
