@@ -1551,7 +1551,9 @@ public class BokfriCli implements Runnable {
             SSNewCompany company = runtime.selectCompany(context.companyId());
             SSNewAccountingYear year = runtime.hydrateYear(
                     runtime.selectYear(company, context.yearId()));
-            Map<String, Object> result = operation.run(new FinancialReportService(year),
+            FinancialReportService service = runtime.isNormalized()
+                    ? FinancialReportService.withExplicitAccounts(year) : new FinancialReportService(year);
+            Map<String, Object> result = operation.run(service,
                     selectedContext(context, company, year), company, year, runtime);
             root.output(result, textFormatter.format(result));
             return 0;

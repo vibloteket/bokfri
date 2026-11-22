@@ -49,6 +49,7 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
         private final SupplierDocumentGuiSession suppliers;
         private final NormalizedManualVoucherCommands vouchers;
         private final NormalizedVoucherRegister voucherRegister;
+        private final NormalizedFinancialReports reports;
 
         private Selection(Company company, Year year) {
             this.company = company;
@@ -62,6 +63,7 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
             vouchers =
                     new NormalizedManualVoucherCommands(() -> openLease(this), gate, clock, this);
             voucherRegister = new NormalizedVoucherRegister(() -> openLease(this), gate, this);
+            reports = new NormalizedFinancialReports(() -> openLease(this), gate, clock, this);
         }
 
         public Company company() {
@@ -90,6 +92,11 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
             return voucherRegister;
         }
 
+        /** Read-only financial reports bound to this immutable company/year lease. */
+        public NormalizedFinancialReports reports() {
+            return reports;
+        }
+
         public boolean isActive() {
             return !closed && current == this && customers.isActive() && suppliers.isActive();
         }
@@ -103,6 +110,7 @@ public final class NormalizedApplicationOwner implements AutoCloseable {
             suppliers.close();
             vouchers.close();
             voucherRegister.close();
+            reports.close();
         }
     }
 

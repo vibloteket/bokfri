@@ -179,6 +179,14 @@ existing correction graphs or unsupported historical edits are refused. All seve
 snapshot families are guarded, including periodic templates/generated snapshots. This is one
 bounded correction operation, not general row editing, document unbooking or full correction parity.
 
+The [financial-report views](normalized-financial-reports.md) now provide read-only trial balance
+and account ledger with explicit periods/accounts, stored opening balances and original/reversal
+entries. They reuse the shared formulas with explicit year-plan account resolution rather than
+ambient row getters. Normalized CLI financial reports use that boundary too, with legacy/normalized
+JSON/PDF parity checks. SQL is rolled back, pending reads interlock the host, and no report defaults,
+balancing entries or export UI are added. These bounded views do not complete legacy report parity,
+production integration, accounting gates or G2/G3.
+
 The opt-in workspace also supports [explicit empty-year creation](normalized-year-creation.md)
 for an existing selected company/year, with preview/confirmation and shared uncertainty
 blocking. An existing company with zero years can also use the guarded

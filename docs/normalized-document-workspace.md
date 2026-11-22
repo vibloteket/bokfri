@@ -17,6 +17,12 @@ reversals with explicit source SQL identity/date/description, preview and atomic
 correction links. Original rows stay unchanged; linked/ambiguous or already-corrected journals
 are refused. This is not document unbooking or general correction editing.
 
+A sixth [Financial reports](normalized-financial-reports.md) tab adds read-only trial balance
+and account ledger with explicit inclusive dates and account selection. It combines stored
+opening balances with prior/period entries, including both original and reversal journals,
+without ambient row resolution, SQL writes, inferred balancing rows or PDF export. Generate
+again explicitly after changes; pending reads share the same host/gate/uncertainty interlocks.
+
 The selected company/year also exposes guarded [empty accounting-year creation](normalized-year-creation.md): explicit dates/template, preview and confirmation, with no automatic carry-forward or selection change. An existing company with zero years can use [first-year creation](normalized-first-year-creation.md) directly from its company choice, independently of any active document context. A separate [guarded empty-company command](normalized-company-creation.md) now provides explicit identity/currency/VAT/rounding preview and confirmation, followed by the separate first-year flow. It creates no accounting defaults or automatic document selection; full company-settings parity remains separate.
 
 `org.fribok.bookkeeping.gui.application.NormalizedDocumentWorkspace` hosts the restricted

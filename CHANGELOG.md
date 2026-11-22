@@ -13,6 +13,13 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Added
+- Add guarded read-only trial-balance and account-ledger views with explicit periods/accounts,
+  opening/prior-period balances and original/reversal entries. Calculations resolve only the
+  selected year plan without ambient row getters; normalized CLI financial reports reuse the
+  explicit boundary, retaining legacy behavior and JSON/PDF parity. Shared read/lease/gate
+  interlocks apply; no SQL writes, balancing entries, export UI or startup cutover (#75).
+
+### Added
 - Add guarded exact standalone voucher reversal with explicit source SQL identity, date and
   description, current-label preview, and atomic reversed rows plus reciprocal correction links.
   Original rows remain unchanged. Existing correction graphs, document-linked/ambiguous numbers

@@ -66,6 +66,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
     private final NormalizedManualVoucherPanel vouchers;
     private final NormalizedVoucherRegisterPanel voucherRegister;
     private final NormalizedVoucherReversalPanel voucherReversal;
+    private final NormalizedFinancialReportsPanel reports;
     private final Timer health;
     private final WindowAdapter window;
     private CustomerDocumentView customers;
@@ -86,6 +87,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
         vouchers = new NormalizedManualVoucherPanel();
         voucherRegister = new NormalizedVoucherRegisterPanel();
         voucherReversal = new NormalizedVoucherReversalPanel();
+        reports = new NormalizedFinancialReportsPanel();
         companyCreation = new NormalizedCompanyCreationPanel(application, this::reload);
         yearCreation = new NormalizedYearCreationPanel(application, this::reload);
         yearCreation.addPropertyChangeListener("busy", event -> controls());
@@ -93,6 +95,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
         vouchers.addPropertyChangeListener("busy", event -> controls());
         voucherRegister.addPropertyChangeListener("busy", event -> controls());
         voucherReversal.addPropertyChangeListener("busy", event -> controls());
+        reports.addPropertyChangeListener("busy", event -> controls());
         setName("normalized-workspace");
         companies.setName("workspace-company");
         years.setName("workspace-year");
@@ -284,6 +287,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
         vouchers.replaceSelection(lease);
         voucherRegister.replaceSelection(lease);
         voucherReversal.replaceSelection(lease);
+        reports.replaceSelection(lease);
         if (customers == null) {
             customers = new CustomerDocumentView(frame, lease.customers());
             suppliers = new SupplierDocumentView(frame, lease.suppliers());
@@ -296,6 +300,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
             tabs.addTab(
                     SSBundle.getBundle().getString("normalized.voucherreversal.tab"),
                     voucherReversal);
+            tabs.addTab(SSBundle.getBundle().getString("normalized.financialreports.tab"), reports);
         } else {
             customers.replaceSelection(lease.customers());
             suppliers.replaceSelection(lease.suppliers());
@@ -322,7 +327,8 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
                 && !companyCreation.isBusy()
                 && !vouchers.isBusy()
                 && !voucherRegister.isBusy()
-                && !voucherReversal.isBusy();
+                && !voucherReversal.isBusy()
+                && !reports.isBusy();
     }
 
     private void checkHealth() {
@@ -344,6 +350,7 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
         vouchers.close();
         voucherRegister.close();
         voucherReversal.close();
+        reports.close();
         if (customers != null) {
             customers.close();
         }
@@ -362,12 +369,14 @@ public final class NormalizedDocumentWorkspace extends JPanel implements AutoClo
                         && !companyCreation.isBusy()
                         && !vouchers.isBusy()
                         && !voucherRegister.isBusy()
-                        && !voucherReversal.isBusy();
+                        && !voucherReversal.isBusy()
+                        && !reports.isBusy();
         yearCreation.setHostAvailable(active);
         companyCreation.setHostAvailable(active);
         vouchers.setHostAvailable(active);
         voucherRegister.setHostAvailable(active);
         voucherReversal.setHostAvailable(active);
+        reports.setHostAvailable(active);
         companies.setEnabled(active);
         years.setEnabled(active);
         reload.setEnabled(active);
