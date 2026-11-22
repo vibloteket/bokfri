@@ -7,6 +7,11 @@ posting, stale checks and lifecycle share the owner and busy/uncertainty boundar
 changes the selected document context or supplies dimension defaults. Dimension catalogue
 editing, corrections and full voucher-frame parity remain outside this restricted host.
 
+A fourth [Voucher register](normalized-voucher-register.md) tab now reads stored journals in
+explicit 100-header pages, then opens a selected SQL identity. It shows raw rows and separate
+current catalogue labels without writes, inferred totals or automatic selection/refresh after
+posting. Reads share the lease/gate and host busy/uncertainty boundary.
+
 The selected company/year also exposes guarded [empty accounting-year creation](normalized-year-creation.md): explicit dates/template, preview and confirmation, with no automatic carry-forward or selection change. An existing company with zero years can use [first-year creation](normalized-first-year-creation.md) directly from its company choice, independently of any active document context. A separate [guarded empty-company command](normalized-company-creation.md) now provides explicit identity/currency/VAT/rounding preview and confirmation, followed by the separate first-year flow. It creates no accounting defaults or automatic document selection; full company-settings parity remains separate.
 
 `org.fribok.bookkeeping.gui.application.NormalizedDocumentWorkspace` hosts the restricted

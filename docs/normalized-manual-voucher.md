@@ -23,7 +23,9 @@ year. It is one restricted G2 workflow, not legacy voucher-frame parity or produ
    Any account presentation changed since loading is visible here, not silently retained.
 5. Confirm once. The command rechecks exact SQL inputs in a serializable transaction and inserts
    one header and all rows atomically. A successful post clears the draft and leaves the active
-   company/year unchanged. Existing document views remain owned by the same lease.
+   company/year unchanged. Existing document views remain owned by the same lease. To inspect
+   posted rows, explicitly Refresh and Open in the [Voucher register](normalized-voucher-register.md);
+   posting never silently selects a journal or replaces an existing register view.
 
 The number is one above the year's current maximum (at least 1), with checked overflow. The
 company/year rows, complete account rows, selected-company project/result-unit rows (including
