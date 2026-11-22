@@ -66,9 +66,14 @@ reopening, stale scopes, retirement, commit uncertainty, read failures and share
 races. `NormalizedApplicationVoucherRegisterGuiTest` covers explicit selection, immutable tables,
 raw/current-label display, page resets, context replacement, error cleanup/recovery, pending-read
 interlocks, callback fencing and uncertainty retirement. Existing workspace tests assert all
-four tabs. GUI verification requires Xvfb/a real display; headless skips are not display proof.
+five tabs, including a separate reversal command panel. GUI verification requires Xvfb/a real
+display; headless skips are not display proof.
 
-Edits/corrections/deletion, dimension catalogue editing, legacy voucher-frame parity, report
+To reverse an eligible standalone journal, explicitly use its SQL identity in the separate
+[Voucher reversal](normalized-voucher-reversal.md) tab. This register itself remains read-only
+and is not automatically refreshed or selected by reversal posting.
+
+General edits/corrections/deletion, dimension catalogue editing, legacy voucher-frame parity, report
 certification, production integration and complete G1–G4/#75 technical completion remain separate.
 Production format-3 startup stays guarded and new databases remain format 2. See the
 [cutover checklist](normalized-cutover-checklist.md).

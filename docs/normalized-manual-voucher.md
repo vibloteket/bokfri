@@ -87,7 +87,11 @@ for the command lease; the panel does not shut down the database.
   classes match the existing `NormalizedApplication*Test` GUI CI selectors; GUI evidence requires
   Xvfb/a real display and `-Dawt.headless=false`, not headless skips.
 
-Dimension catalogue editing, edits/corrections/deletion, imports/templates/numbering-series parity,
+The separate [guarded reversal](normalized-voucher-reversal.md) command reuses this validation
+for exact standalone debit/credit reversals, atomically linking journal headers without rewriting
+original rows. It refuses linked/ambiguous documents and existing correction graphs.
+
+Dimension catalogue editing, general edits/corrections/deletion, imports/templates/numbering-series parity,
 full legacy voucher-frame integration and end-to-end accounting gates remain separate. Production
 format-3 startup stays rejected; new databases remain format 2. See the
 [cutover checklist](normalized-cutover-checklist.md); G1–G4/#75 remain technically unfinished.
