@@ -26,6 +26,33 @@ public final class NormalizedFinancialReports implements AutoCloseable {
 
     public record Ledger(Scope scope, FinancialReportService.AccountLedger report) {}
 
+    public record Balance(Scope scope, FinancialReportService.BalanceSheet report) {}
+
+    public record Income(Scope scope, FinancialReportService.IncomeStatement report) {}
+
+    /** Read-only balance sheet from stored year opening through an explicit inclusive date. */
+    public Balance balanceSheet(LocalDate date) throws SQLException {
+        Objects.requireNonNull(date, "balance-sheet date");
+        return read(
+                context ->
+                        new Balance(
+                                context.scope(),
+                                FinancialReportService.withExplicitAccounts(context.year())
+                                        .balanceSheet(date)));
+    }
+
+    /** Read-only income statement for an explicit inclusive period, without opening amounts. */
+    public Income incomeStatement(LocalDate from, LocalDate to) throws SQLException {
+        Objects.requireNonNull(from, "income-statement from");
+        Objects.requireNonNull(to, "income-statement to");
+        return read(
+                context ->
+                        new Income(
+                                context.scope(),
+                                FinancialReportService.withExplicitAccounts(context.year())
+                                        .incomeStatement(from, to)));
+    }
+
     private record Context(Scope scope, SSNewAccountingYear year) {}
 
     @FunctionalInterface

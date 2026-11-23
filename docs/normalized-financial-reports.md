@@ -88,3 +88,29 @@ These are bounded read-only accounting views, not complete legacy report GUI par
 UI, dimension-specific reporting, editing, backup/restore, production integration or full G1–G4.
 Production format-3 startup remains guarded; new databases remain format 2. #75 technical
 completion is not claimed. See the [cutover checklist](normalized-cutover-checklist.md).
+
+
+## Guarded balance-sheet and income-statement views (2026-11-23)
+
+The existing financial-report tab also offers two explicit, read-only report kinds:
+
+- **Balance sheet:** enter the inclusive **To** date; **From** is disabled and unused.
+  Rows show signed debit-minus-credit balances from stored year opening and eligible
+  entries through that date. Totals expose assets, liabilities/equity, current-year
+  result and difference. Current result excludes opening amounts; the visible difference
+  is assets minus liabilities/equity minus current result, not an accounting certification.
+  No rounding or adjustment is applied to force a zero difference.
+- **Income statement:** enter explicit inclusive **From/To** dates. Only period result-account
+  movement is included, credit minus debit. Opening amounts and earlier entries are excluded.
+  The period result is shown; there is no inferred comparison period or balancing adjustment.
+
+Zero rows are omitted by the existing shared calculator. Current catalogue labels, inactive
+accounts and eligible historical rows follow the same explicit-account resolution as trial
+balance/ledger. Generate is explicit; changing inputs clears results without automatically
+reading storage. Both kinds use the same owner lease, serializable read/rollback transaction,
+background worker, stale-callback fencing, host interlock and uncertain-commit block.
+
+No new tab, PDF/export UI, write command, legacy-frame integration, schema migration,
+dimension filtering, backup/restore or default cutover is introduced. Format-3 normal
+startup remains guarded and format-2 creation is unchanged. These views do not complete
+G2/G3 or the technical definition of done for issue #75.
