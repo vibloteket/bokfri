@@ -67,13 +67,14 @@ class NormalizedApplicationWorkspaceGuiTest {
                                             .toString()
                                             .startsWith("71 : \"<html>"));
                             assertEquals(
-                                    6,
+                                    7,
                                     ((JTabbedPane) find(ui.workspace, "workspace-documents"))
                                             .getTabCount());
                             assertNotNull(find(ui.workspace, "workspace-manual-voucher"));
                             assertNotNull(find(ui.workspace, "workspace-voucher-register"));
                             assertNotNull(find(ui.workspace, "workspace-voucher-reversal"));
                             assertNotNull(find(ui.workspace, "workspace-financial-reports"));
+                            assertNotNull(find(ui.workspace, "workspace-opening-balances"));
                             return null;
                         });
             }

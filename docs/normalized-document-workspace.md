@@ -109,3 +109,15 @@ Still separate: production application bootstrap/menus for normal opening, compa
 creation and editing, register/voucher and remaining document-family workflows, broader cache
 notifications, complete GUI backup/restore and end-to-end parity, default cutover and legacy
 serialization retirement. G1–G4 and #75's technical definition of done remain unfinished.
+
+
+## Guarded initial opening balances (2026-11-23)
+
+The seventh opt-in workspace tab supports explicit initial balances for an empty selected
+year only: active balance accounts, signed cent-exact amounts, balanced preview and separate
+atomic confirmation. Any existing balance or journal blocks insertion; there is no
+replacement, carry-forward, rounding, year-setting change or inferred balancing account.
+Owner-bound single-use previews, stale-input checks, rollback and shared uncertain-commit
+blocking apply. See [normalized-initial-opening-balances.md](normalized-initial-opening-balances.md)
+for the workflow and boundaries. Format-3 normal startup stays guarded and format-2
+creation remains unchanged. This does not complete G2/G3 or issue #75.
