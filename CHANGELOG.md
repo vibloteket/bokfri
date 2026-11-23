@@ -12,6 +12,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Fixed
+- Forum notification generation on SQLite now uses a commit-pinned FoF Subscribed fork without SQL REGEXP queries, with all five notification jobs and discussion/reply mail delivery covered by regressions.
+
 ### Added
 
 - Extend guarded normalized financial-report views with an explicit-date balance sheet and inclusive-period income statement, using existing read-only calculations. Expose assets, liabilities/equity, current result and unadjusted difference, with no writes, rounding, PDF UI or default format-3 startup activation (#75).

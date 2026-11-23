@@ -20,6 +20,35 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  notification-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, mbstring, dom, xml, curl, zip
+          ini-values: memory_limit=512M
+          tools: composer:2.10.3
+          coverage: none
+      - name: Check out the same notification fix used by the image
+        run: |
+          ref=$(sed -n 's/^ARG SUBSCRIBED_COMMIT=//p' forum/Dockerfile)
+          test "${#ref}" -eq 40
+          git clone https://github.com/vibloteket/subscribed.git /tmp/subscribed
+          git -C /tmp/subscribed checkout --detach "$ref"
+          test "$(git -C /tmp/subscribed rev-parse HEAD)" = "$ref"
+      - name: Test real Flarum notification jobs, API posting and rendered email on SQLite
+        working-directory: /tmp/subscribed
+        env:
+          DB_CONNECTION: sqlite
+        run: |
+          composer update --with=flarum/core:2.0.2 --no-interaction --prefer-dist --no-progress
+          composer test:unit
+          composer test:integration
+          composer analyse:phpstan
+
   sqlite-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20

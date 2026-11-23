@@ -10,7 +10,8 @@ FROM runtime AS application
 ARG FLARUM_VERSION=2.0.2
 ARG FLARUM_ARCHIVE_SHA256=5de9af0920f09706eff008cce41a96568c78a9bb4b12c7f75b66d86debdb5fef
 ARG SWEDISH_VERSION=2.0.4
-ARG SUBSCRIBED_VERSION=2.0.0
+# SQLite-compatible 2.0.0 fork; pin the reviewed source, not a moving branch.
+ARG SUBSCRIBED_COMMIT=d678c4977351c44f4c9f9f05e461c2c5ee717556
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2.10.3 /usr/bin/composer /usr/local/bin/composer
@@ -23,7 +24,8 @@ RUN curl --fail --show-error --location --retry 3 \
     && tar -xzf /tmp/flarum.tar.gz --no-same-owner -C /opt/flarum \
     && rm /tmp/flarum.tar.gz \
     && test -f public/index.php && test -f vendor/autoload.php && test -f composer.lock \
-    && composer require "flarum-lang/swedish:${SWEDISH_VERSION}" "fof/subscribed:${SUBSCRIBED_VERSION}" --no-update --no-interaction --no-scripts \
+    && composer config repositories.subscribed vcs https://github.com/vibloteket/subscribed \
+    && composer require "flarum-lang/swedish:${SWEDISH_VERSION}" "fof/subscribed:dev-fix/sqlite-notification-recipients#${SUBSCRIBED_COMMIT} as 2.0.0" --no-update --no-interaction --no-scripts \
     && composer update flarum-lang/swedish fof/subscribed --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
 FROM runtime
