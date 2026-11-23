@@ -42,7 +42,7 @@ jobs:
       - name: Test real Flarum notification jobs, API posting and rendered email on SQLite
         working-directory: /tmp/subscribed
         env:
-          DB_CONNECTION: sqlite
+          DB_DRIVER: sqlite
         run: |
           composer update --with=flarum/core:2.0.2 --no-interaction --prefer-dist --no-progress
           composer test:unit

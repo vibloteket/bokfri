@@ -11,7 +11,7 @@ ARG FLARUM_VERSION=2.0.2
 ARG FLARUM_ARCHIVE_SHA256=5de9af0920f09706eff008cce41a96568c78a9bb4b12c7f75b66d86debdb5fef
 ARG SWEDISH_VERSION=2.0.4
 # SQLite-compatible 2.0.0 fork; pin the reviewed source, not a moving branch.
-ARG SUBSCRIBED_COMMIT=d678c4977351c44f4c9f9f05e461c2c5ee717556
+ARG SUBSCRIBED_COMMIT=cf7e7a3ec26423067e29dc1680a5e2b49e9b4cea
 # Composer needs Git for the fork repository, only in this build stage.
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git \
     && rm -rf /var/lib/apt/lists/*
