@@ -32,12 +32,22 @@ import javax.swing.table.DefaultTableModel;
 public final class NormalizedFinancialReportsPanel extends JPanel implements AutoCloseable {
     private enum Kind {
         TRIAL,
-        LEDGER
+        LEDGER,
+        BALANCE,
+        INCOME
     }
 
     private record KindChoice(Kind value) {
         public String toString() {
-            return text(value == null ? "choosekind" : value == Kind.TRIAL ? "trial" : "ledger");
+            return text(
+                    value == null
+                            ? "choosekind"
+                            : switch (value) {
+                                case TRIAL -> "trial";
+                                case LEDGER -> "ledger";
+                                case BALANCE -> "balance";
+                                case INCOME -> "income";
+                            });
         }
     }
 
@@ -87,6 +97,8 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         kind.addItem(new KindChoice(null));
         kind.addItem(new KindChoice(Kind.TRIAL));
         kind.addItem(new KindChoice(Kind.LEDGER));
+        kind.addItem(new KindChoice(Kind.BALANCE));
+        kind.addItem(new KindChoice(Kind.INCOME));
         account.addItem(new AccountChoice(null));
         header.setEditable(false);
         status.setEditable(false);
@@ -219,7 +231,8 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         if (!available()) return;
         clear();
         try {
-            LocalDate first = LocalDate.parse(from.getText().trim());
+            LocalDate first =
+                    selectedKind() == Kind.BALANCE ? null : LocalDate.parse(from.getText().trim());
             LocalDate last = LocalDate.parse(to.getText().trim());
             var reports = selection.reports();
             if (selectedKind() == Kind.TRIAL) {
@@ -260,6 +273,68 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                             + " / "
                                             + report.closingTotal());
                             status.setText(text("generated") + " " + report.rows().size());
+                        });
+            } else if (selectedKind() == Kind.BALANCE) {
+                run(
+                        () -> reports.balanceSheet(last),
+                        value -> {
+                            var report = value.report();
+                            model.setColumnIdentifiers(
+                                    new String[] {
+                                        text("account"), text("description"), text("balanceamount")
+                                    });
+                            for (var row : report.rows()) {
+                                model.addRow(
+                                        new Object[] {
+                                            row.account(), raw(row.description()), row.balance()
+                                        });
+                            }
+                            header.setText(
+                                    scope(value.scope(), selection.year().from(), report.date())
+                                            + "\n"
+                                            + text("balancescope")
+                                            + "\n"
+                                            + text("assets")
+                                            + " "
+                                            + report.assets()
+                                            + " / "
+                                            + text("liabilities")
+                                            + " "
+                                            + report.liabilitiesAndEquity()
+                                            + " / "
+                                            + text("currentresult")
+                                            + " "
+                                            + report.currentResult()
+                                            + " / "
+                                            + text("difference")
+                                            + " "
+                                            + report.difference());
+                            status.setText(text("generated"));
+                        });
+            } else if (selectedKind() == Kind.INCOME) {
+                run(
+                        () -> reports.incomeStatement(first, last),
+                        value -> {
+                            var report = value.report();
+                            model.setColumnIdentifiers(
+                                    new String[] {
+                                        text("account"), text("description"), text("incomeamount")
+                                    });
+                            for (var row : report.rows()) {
+                                model.addRow(
+                                        new Object[] {
+                                            row.account(), raw(row.description()), row.amount()
+                                        });
+                            }
+                            header.setText(
+                                    scope(value.scope(), report.from(), report.to())
+                                            + "\n"
+                                            + text("incomescope")
+                                            + "\n"
+                                            + text("result")
+                                            + " "
+                                            + report.result());
+                            status.setText(text("generated"));
                         });
             } else if (selectedKind() == Kind.LEDGER) {
                 var choice = (AccountChoice) account.getSelectedItem();
@@ -375,7 +450,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         boolean enabled = available();
         Kind selected = selectedKind();
         kind.setEnabled(enabled);
-        from.setEnabled(enabled);
+        from.setEnabled(enabled && selectedKind() != Kind.BALANCE);
         to.setEnabled(enabled);
         account.setEnabled(enabled && selected == Kind.LEDGER);
         load.setEnabled(enabled && selected == Kind.LEDGER);
@@ -383,9 +458,9 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         generate.setEnabled(
                 enabled
                         && selected != null
-                        && !from.getText().isBlank()
+                        && (selectedKind() == Kind.BALANCE || !from.getText().isBlank())
                         && !to.getText().isBlank()
-                        && (selected == Kind.TRIAL || (choice != null && choice.value() != null)));
+                        && (selected != Kind.LEDGER || (choice != null && choice.value() != null)));
         rows.setEnabled(enabled);
     }
 
