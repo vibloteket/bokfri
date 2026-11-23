@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Added
 
+- Add guarded financial-report snapshot PDF export with explicit new-file selection, immutable displayed values and atomic no-overwrite publication. No SQL re-read, rounding or accounting writes; format-3 normal startup stays guarded (#75).
+
 - Extend guarded normalized financial-report views with an explicit-date balance sheet and inclusive-period income statement, using existing read-only calculations. Expose assets, liabilities/equity, current result and unadjusted difference, with no writes, rounding, PDF UI or default format-3 startup activation (#75).
 
 - Add guarded initial opening balances for an empty selected normalized year: explicit active balance accounts and signed cent-exact amounts, balanced preview, separate atomic confirmation and no replacement of existing balances or journals. Owner-bound single-use previews, stale-input checks, rollback and shared uncertain-commit blocking apply; normal format-3 startup remains guarded (#75).
