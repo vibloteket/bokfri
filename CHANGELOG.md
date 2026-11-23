@@ -13,6 +13,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Added
+
+- Add guarded initial opening balances for an empty selected normalized year: explicit active balance accounts and signed cent-exact amounts, balanced preview, separate atomic confirmation and no replacement of existing balances or journals. Owner-bound single-use previews, stale-input checks, rollback and shared uncertain-commit blocking apply; normal format-3 startup remains guarded (#75).
 - Add guarded read-only trial-balance and account-ledger views with explicit periods/accounts,
   opening/prior-period balances and original/reversal entries. Calculations resolve only the
   selected year plan without ambient row getters; normalized CLI financial reports reuse the
