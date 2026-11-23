@@ -469,6 +469,15 @@ This boundary does **not** remove all legacy hooks from parent domain constructo
 or no-argument entity getters, enable normalized GUI startup, or change schemas,
 serialization identifiers, stored accounting values or migration/startup policy.
 
+## Guarded financial report views
+
+The opt-in workspace also has [trial-balance and account-ledger views](normalized-financial-reports.md)
+with explicit dates/accounts, opening/prior-period balances and read-only snapshots. Their
+lease-owned reader uses `FinancialReportService.withExplicitAccounts(year)` to avoid ambient
+voucher-row account/validity getters; normalized CLI financial calculations use the same factory.
+The legacy constructor and legacy CLI route remain unchanged. This is bounded GUI reporting,
+not export UI, production startup, full legacy report parity or completion of G1–G4/#75.
+
 ## Financial PDF runtime support
 
 The CLI `balance-sheet --output`, `income-statement --output`,
