@@ -25,6 +25,7 @@ RUN curl --fail --show-error --location --retry 3 \
     && tar -xzf /tmp/flarum.tar.gz --no-same-owner -C /opt/flarum \
     && rm /tmp/flarum.tar.gz \
     && test -f public/index.php && test -f vendor/autoload.php && test -f composer.lock \
+    && composer config github-protocols https \
     && composer config repositories.subscribed vcs https://github.com/vibloteket/subscribed \
     && composer require "flarum-lang/swedish:${SWEDISH_VERSION}" "fof/subscribed:dev-fix/sqlite-notification-recipients#${SUBSCRIBED_COMMIT} as 2.0.0" --no-update --no-interaction --no-scripts \
     && composer update flarum-lang/swedish fof/subscribed --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
