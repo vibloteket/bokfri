@@ -22,7 +22,11 @@ its download tools are not copied into the final image. Nothing is downloaded or
 
 No MariaDB, Redis, public container ports, or separate queue service is required. The initial installation
 uses synchronous jobs and a small selection of bundled extensions; realtime/chat/GDPR extensions are not enabled.
-FoF Subscribed 2.0.0 (compatible with Flarum 2) is also installed in the image, but is not enabled automatically.
+FoF Subscribed is also installed in the image, but is not enabled automatically. It uses a
+[SQLite-compatible fork of 2.0.0](https://github.com/vibloteket/subscribed/pull/1), pinned to the
+reviewed `SUBSCRIBED_COMMIT` in the Dockerfile. Upstream 2.0.0 uses SQL REGEXP queries that fail
+on SQLite when generating notifications; the fork fixes all five recipient-selection queries.
+The Composer version alias preserves compatibility, while the smoke test verifies the actual commit.
 
 ## Deploy
 
@@ -76,7 +80,9 @@ FoF Subscribed 2.0.0 (compatible with Flarum 2) is also installed in the image, 
    - Keep email confirmation required before posting; verify this with the test account.
    - Adjust posting/upload permissions and remove/relabel the default tags as desired.
    - Enable **FoF Subscribed** in the administration Extensions page. For an existing installation,
-     first follow the image-upgrade/migration procedure below.
+     first follow the image-upgrade/migration procedure below. If you disabled it because of the
+     SQLite REGEXP error, rebuild/recreate the container with the fixed image before re-enabling it.
+     The fix changes recipient selection, not the schema; it does not resend missed notifications.
    - Grant the administrator group permission to subscribe to new discussions and new posts, then
      enable the corresponding email notifications in your own account settings. Do not enable or
      force these notifications for all members unless that is explicitly intended.
@@ -128,7 +134,7 @@ or nonempty data directory; a rollback after migrations needs the matching pre-u
 
 Do not install Composer extensions inside a running container: they disappear on rebuild.
 To upgrade, change the pinned `FLARUM_VERSION`, `FLARUM_ARCHIVE_SHA256`, and, when needed,
-`SWEDISH_VERSION` and `SUBSCRIBED_VERSION` defaults in `Dockerfile`. Download the matching **PHP 8.4 / with public directory**
+`SWEDISH_VERSION` and `SUBSCRIBED_COMMIT` defaults in `Dockerfile`. Download the matching **PHP 8.4 / with public directory**
 archive from [Flarum's official installation documentation](https://docs.flarum.org/install/#installing-by-unpacking-an-archive)
 and calculate its checksum, for example:
 

@@ -10,8 +10,10 @@ FROM runtime AS application
 ARG FLARUM_VERSION=2.0.2
 ARG FLARUM_ARCHIVE_SHA256=5de9af0920f09706eff008cce41a96568c78a9bb4b12c7f75b66d86debdb5fef
 ARG SWEDISH_VERSION=2.0.4
-ARG SUBSCRIBED_VERSION=2.0.0
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+# SQLite-compatible 2.0.0 fork; pin the reviewed source, not a moving branch.
+ARG SUBSCRIBED_COMMIT=cf7e7a3ec26423067e29dc1680a5e2b49e9b4cea
+# Composer needs Git for the fork repository, only in this build stage.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2.10.3 /usr/bin/composer /usr/local/bin/composer
 WORKDIR /opt/flarum
@@ -23,7 +25,9 @@ RUN curl --fail --show-error --location --retry 3 \
     && tar -xzf /tmp/flarum.tar.gz --no-same-owner -C /opt/flarum \
     && rm /tmp/flarum.tar.gz \
     && test -f public/index.php && test -f vendor/autoload.php && test -f composer.lock \
-    && composer require "flarum-lang/swedish:${SWEDISH_VERSION}" "fof/subscribed:${SUBSCRIBED_VERSION}" --no-update --no-interaction --no-scripts \
+    && composer config github-protocols https \
+    && composer config repositories.subscribed vcs https://github.com/vibloteket/subscribed \
+    && composer require "flarum-lang/swedish:${SWEDISH_VERSION}" "fof/subscribed:2.x-dev#${SUBSCRIBED_COMMIT} as 2.0.0" --no-update --no-interaction --no-scripts \
     && composer update flarum-lang/swedish fof/subscribed --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
 FROM runtime

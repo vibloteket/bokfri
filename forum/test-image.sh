@@ -91,7 +91,8 @@ docker exec "$name" php -r '
 require "/opt/flarum/vendor/autoload.php";
 if (Composer\InstalledVersions::getPrettyVersion("flarum/core") !== "v2.0.2") exit(4);
 if (Composer\InstalledVersions::getPrettyVersion("flarum-lang/swedish") !== "2.0.4") exit(5);
-if (Composer\InstalledVersions::getPrettyVersion("fof/subscribed") !== "2.0.0") exit(6);
+if (Composer\InstalledVersions::getPrettyVersion("fof/subscribed") !== "2.x-dev") exit(6);
+if (Composer\InstalledVersions::getReference("fof/subscribed") !== "cf7e7a3ec26423067e29dc1680a5e2b49e9b4cea") exit(7);
 $c = require "/data/config.php";
 if ($c["database"]["driver"] !== "sqlite" || $c["debug"]) exit(1);
 $d = new PDO("sqlite:/data/forum.sqlite");

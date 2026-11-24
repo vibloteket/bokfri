@@ -12,6 +12,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Fixed
+- Forum notification generation on SQLite now uses a commit-pinned FoF Subscribed fork without SQL REGEXP queries, with all five notification jobs and discussion/reply mail delivery covered by regressions.
+
 ### Added
 
 - Add guarded financial-report snapshot PDF export with explicit new-file selection, immutable displayed values and atomic no-overwrite publication. No SQL re-read, rounding or accounting writes; format-3 normal startup stays guarded (#75).
