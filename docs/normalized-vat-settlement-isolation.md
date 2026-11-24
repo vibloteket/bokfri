@@ -1,5 +1,10 @@
 # Explicit-input VAT settlement planning: legacy isolation
 
+**Rounding follow-up:** [the policy audit](vat-rounding-policy-audit.md) identifies
+independent account-aggregation and net-truncation discrepancies. The parity
+preserved below is not a validated declaration policy. No settlement activation
+is implied by balanced vouchers or explicit-input isolation.
+
 The hydrated-year VAT service and the explicit-input `SSVATUtil.generateVATVoucher(...)`
 overload now plan only from supplied accounts and vouchers. They resolve raw row account
 numbers against that selected plan, without ambient row account/validity getters or mutating

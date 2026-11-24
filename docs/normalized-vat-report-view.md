@@ -1,5 +1,10 @@
 # Guarded explicit-period VAT report
 
+**Rounding limitation:** [the policy audit](vat-rounding-policy-audit.md) records
+account-splitting and report/settlement discrepancies in the retained calculation.
+This view and its PDF are legacy-calculation snapshots, not validated declaration
+or settlement previews. The audit changes no displayed amounts.
+
 The opt-in normalized Financial reports tab also offers **VAT report**. Explicitly select
 company/year, this report kind and inclusive From/To dates inside the selected year, then
 Generate. There is no inferred month/quarter/year period, account selection or automatic

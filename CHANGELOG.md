@@ -12,6 +12,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+- Audit VAT rounding against whole-krona reporting and the field-49 formula;
+  characterize account-splitting and report/settlement discrepancies with six
+  executable examples. No calculation or posting behavior changes; settlement
+  activation remains blocked pending an explicit policy and workflow safeguards (#75).
 ### Fixed
 
 - Remove hidden legacy row lookups and voucher numbering from explicit-input VAT settlement planning. Plans remain unnumbered until their explicit writer assigns a number; legacy planning and existing amounts/rounding are unchanged. This does not expose settlement posting in the guarded UI (#75).
