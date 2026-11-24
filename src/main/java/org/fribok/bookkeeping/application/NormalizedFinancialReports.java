@@ -30,6 +30,33 @@ public final class NormalizedFinancialReports implements AutoCloseable {
 
     public record Income(Scope scope, FinancialReportService.IncomeStatement report) {}
 
+    public record Vat(Scope scope, org.fribok.bookkeeping.service.vat.VatReport report) {}
+
+    /**
+     * Explicit selected-year VAT boxes only; no settlement writer or filing operation is exposed.
+     */
+    public Vat vatReport(LocalDate from, LocalDate to) throws SQLException {
+        Objects.requireNonNull(from, "VAT period start");
+        Objects.requireNonNull(to, "VAT period end");
+        return read(
+                context -> {
+                    if (to.isBefore(from)
+                            || from.isBefore(context.year().getLocalFrom())
+                            || to.isAfter(context.year().getLocalTo())) {
+                        throw new IllegalArgumentException(
+                                "VAT period must be ordered and inside selected year");
+                    }
+                    var service =
+                            new org.fribok.bookkeeping.service.vat.VatService(
+                                    context.year(),
+                                    voucher -> {
+                                        throw new SQLException(
+                                                "Read-only VAT report has no settlement writer");
+                                    });
+                    return new Vat(context.scope(), service.report(from, to));
+                });
+    }
+
     /** Read-only balance sheet from stored year opening through an explicit inclusive date. */
     public Balance balanceSheet(LocalDate date) throws SQLException {
         Objects.requireNonNull(date, "balance-sheet date");

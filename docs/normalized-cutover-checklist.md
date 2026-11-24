@@ -427,3 +427,14 @@ finish against their original snapshot after retirement; late UI callbacks are f
 See [normalized-report-snapshot-pdf.md](normalized-report-snapshot-pdf.md) for file safety,
 hard-link filesystem requirements, snapshot/legacy-layout boundaries and regression tests.
 This does not activate normal format-3 startup or establish full G2/G3/#75 completion.
+
+
+## Guarded read-only VAT report (2026-11-24)
+
+The existing financial-report tab now supports explicit inclusive-period VAT boxes and
+VAT snapshot PDF export, with current account-code mappings and the existing per-account
+whole-unit truncation rules. The lease-owned read rolls back and never commits; normalized
+VAT aggregation uses explicit row account numbers, not legacy account/validity getters.
+No settlement, filing, currency conversion, new tab, schema/CLI command or default cutover.
+See [normalized-vat-report-view.md](normalized-vat-report-view.md) for exact rules and bounds.
+This does not complete G2/G3 or issue #75 technical requirements; startup guard stays enabled.

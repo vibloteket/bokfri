@@ -48,8 +48,28 @@ public final class VatService {
             throw new IllegalArgumentException("VAT period is invalid");
         }
         List<SSVoucher> vouchers = SSVoucherMath.getVouchers(vouchers(), from, to);
-        Map<SSAccount, BigDecimal> credit = SSVoucherMath.getCreditMinusDebetSum(vouchers);
-        Map<SSAccount, BigDecimal> debit = SSVoucherMath.getDebetMinusCreditSum(vouchers);
+        // A supplied hydrated year is an explicit context: never resolve rows through SSDB.
+        // Keep the legacy SSDB constructor's existing account/validity behavior unchanged.
+        List<SSAccount> selected = accounts();
+        if (db == null) {
+            Set<Integer> numbers = new java.util.HashSet<>();
+            for (SSAccount account : selected) {
+                if (account == null
+                        || account.getNumber() == null
+                        || !numbers.add(account.getNumber())) {
+                    throw new IllegalArgumentException(
+                            "Explicit VAT accounts must have unique known numbers");
+                }
+            }
+        }
+        Map<SSAccount, BigDecimal> credit =
+                db == null
+                        ? SSVoucherMath.getCreditMinusDebetSum(vouchers, selected)
+                        : SSVoucherMath.getCreditMinusDebetSum(vouchers);
+        Map<SSAccount, BigDecimal> debit =
+                db == null
+                        ? SSVoucherMath.getDebetMinusCreditSum(vouchers, selected)
+                        : SSVoucherMath.getDebetMinusCreditSum(vouchers);
         List<VatReportBox> boxes = new ArrayList<>();
         add(boxes, 5, "MP1,MP2,MP3,PTOG", sum(credit, "MP1", "MP2", "MP3", "PTOG"));
         add(boxes, 10, "U1,UVL", sum(credit, "U1", "UVL"));
@@ -76,15 +96,37 @@ public final class VatService {
     public VatSettlementPlan plan(LocalDate from, LocalDate to) {
         VatReport report = report(from, to);
         List<SSAccount> accounts = accounts();
-        SSAccount receivable = SSAccountMath.getAccountWithVATCode(accounts, "R1", fallback(1650))
-                .orElseThrow(() -> new IllegalStateException("VAT receivable account is ambiguous or missing"));
-        SSAccount payable = SSAccountMath.getAccountWithVATCode(accounts, "R2", fallback(2650))
-                .orElseThrow(() -> new IllegalStateException("VAT payable account is ambiguous or missing"));
-        SSAccount rounding = SSAccountMath.getAccountWithVATCode(accounts, "A", fallback(3740))
-                .orElseThrow(() -> new IllegalStateException("VAT rounding account is ambiguous or missing"));
-        SSVoucher voucher = db == null
-                ? SSVATUtil.generateVATVoucher("VAT", from, to, receivable, payable, rounding, accounts, vouchers())
-                : SSVATUtil.generateVATVoucher("VAT", from, to, receivable, payable, rounding);
+        SSAccount receivable =
+                SSAccountMath.getAccountWithVATCode(accounts, "R1", fallback(1650))
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "VAT receivable account is ambiguous or missing"));
+        SSAccount payable =
+                SSAccountMath.getAccountWithVATCode(accounts, "R2", fallback(2650))
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "VAT payable account is ambiguous or missing"));
+        SSAccount rounding =
+                SSAccountMath.getAccountWithVATCode(accounts, "A", fallback(3740))
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "VAT rounding account is ambiguous or missing"));
+        SSVoucher voucher =
+                db == null
+                        ? SSVATUtil.generateVATVoucher(
+                                "VAT",
+                                from,
+                                to,
+                                receivable,
+                                payable,
+                                rounding,
+                                accounts,
+                                vouchers())
+                        : SSVATUtil.generateVATVoucher(
+                                "VAT", from, to, receivable, payable, rounding);
         return new VatSettlementPlan(report, voucher);
     }
 
