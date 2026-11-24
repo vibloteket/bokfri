@@ -35,7 +35,8 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         TRIAL,
         LEDGER,
         BALANCE,
-        INCOME
+        INCOME,
+        VAT
     }
 
     private record KindChoice(Kind value) {
@@ -48,6 +49,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                 case LEDGER -> "ledger";
                                 case BALANCE -> "balance";
                                 case INCOME -> "income";
+                                case VAT -> "vat";
                             });
         }
     }
@@ -136,6 +138,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         kind.addItem(new KindChoice(Kind.LEDGER));
         kind.addItem(new KindChoice(Kind.BALANCE));
         kind.addItem(new KindChoice(Kind.INCOME));
+        kind.addItem(new KindChoice(Kind.VAT));
         account.addItem(new AccountChoice(null));
         header.setEditable(false);
         status.setEditable(false);
@@ -375,6 +378,29 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                             + " "
                                             + report.result());
                             status.setText(text("generated"));
+                        });
+            } else if (selectedKind() == Kind.VAT) {
+                run(
+                        () -> reports.vatReport(first, last),
+                        value -> {
+                            var report = value.report();
+                            model.setColumnIdentifiers(
+                                    new String[] {
+                                        text("vatbox"), text("vatcodes"), text("vatamount")
+                                    });
+                            for (var box : report.boxes()) {
+                                model.addRow(
+                                        new Object[] {box.number(), box.vatCodes(), box.amount()});
+                            }
+                            header.setText(
+                                    scope(value.scope(), report.from(), report.to())
+                                            + "\n"
+                                            + text("vatmeaning")
+                                            + "\n"
+                                            + text("vatnet")
+                                            + " "
+                                            + report.vatToPayOrRefund());
+                            status.setText(text("generated") + " " + report.boxes().size());
                         });
             } else if (selectedKind() == Kind.LEDGER) {
                 var choice = (AccountChoice) account.getSelectedItem();

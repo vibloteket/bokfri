@@ -1,7 +1,7 @@
 # Guarded PDF export of the displayed financial report
 
 The opt-in financial-report tab can export its **last successfully generated display
-snapshot** for trial balance, account ledger, balance sheet or income statement. Normal
+snapshot** for trial balance, account ledger, balance sheet, income statement or VAT report. Normal
 format-3 startup remains guarded; new databases still use format 2.
 
 ## Explicit workflow

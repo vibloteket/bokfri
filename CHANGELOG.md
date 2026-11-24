@@ -14,6 +14,8 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ### Added
 
+- Add guarded explicit-period VAT report and displayed-snapshot PDF export, using current selected-year VAT mappings and existing per-account truncation rules. Hydrated VAT reports now use explicit account resolution instead of legacy row lookups. No settlement, filing or default format-3 startup activation (#75).
+
 - Add guarded financial-report snapshot PDF export with explicit new-file selection, immutable displayed values and atomic no-overwrite publication. No SQL re-read, rounding or accounting writes; format-3 normal startup stays guarded (#75).
 
 - Extend guarded normalized financial-report views with an explicit-date balance sheet and inclusive-period income statement, using existing read-only calculations. Expose assets, liabilities/equity, current result and unadjusted difference, with no writes, rounding, PDF UI or default format-3 startup activation (#75).
