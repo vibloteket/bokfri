@@ -448,3 +448,16 @@ The legacy SSDB overload retains its existing lookup/numbering path; amounts and
 are unchanged. See [normalized-vat-settlement-isolation.md](normalized-vat-settlement-isolation.md).
 This is a backend prerequisite, not settlement UI activation, a new posting command,
 period locking/filing, or G2/G3/#75 completion. The guarded VAT view remains read-only.
+
+
+## VAT rounding policy audit (2026-11-24)
+
+The [rounding audit](vat-rounding-policy-audit.md) identifies two distinct blockers:
+report truncation before account aggregation, and settlement truncation of the raw net
+instead of deriving control from declared tax fields. Six executable examples cover
+positive/negative corrections, cross-field fractions, payable/refund and mixed signs.
+The audit cites whole-krona legislation and Skatteverket's field-49 formula, separates
+the field-total interpretation from complete filing compliance, and changes no production
+behavior. The guarded view/PDF still use legacy calculations and are not validated filing
+or settlement previews. Do not activate settlement on the strength of planner isolation
+or balanced vouchers alone; policy agreement and existing workflow safety gates remain.
