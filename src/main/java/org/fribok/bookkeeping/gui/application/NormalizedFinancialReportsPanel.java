@@ -2,6 +2,7 @@ package org.fribok.bookkeeping.gui.application;
 
 import org.fribok.bookkeeping.application.NormalizedApplicationOwner.Selection;
 import org.fribok.bookkeeping.application.NormalizedFinancialReports;
+import org.fribok.bookkeeping.service.report.FinancialReportSnapshotPdf;
 
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 
@@ -65,6 +66,23 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
     private final JTextField to = new JTextField();
     private final JButton load = new JButton(text("load"));
     private final JButton generate = new JButton(text("generate"));
+    private final JButton export = new JButton(text("exportpdf"));
+
+    @FunctionalInterface
+    public interface DestinationChooser {
+        java.nio.file.Path choose(java.awt.Component parent);
+    }
+
+    @FunctionalInterface
+    public interface SnapshotWriter {
+        java.nio.file.Path write(
+                FinancialReportSnapshotPdf.Snapshot snapshot, java.nio.file.Path path)
+                throws Exception;
+    }
+
+    private final DestinationChooser destinationChooser;
+    private final SnapshotWriter snapshotWriter;
+    private FinancialReportSnapshotPdf.Snapshot displayedSnapshot;
     private final JTextArea header = new JTextArea(7, 80);
     private final JTextArea status = new JTextArea(3, 80);
     private final DefaultTableModel model =
@@ -82,8 +100,26 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
 
     /** Constructs without SQL, dates, account or report-kind selection. Requires EDT. */
     public NormalizedFinancialReportsPanel() {
+        this(
+                parent -> {
+                    var chooser = new javax.swing.JFileChooser();
+                    chooser.setDialogTitle(text("pdfdestination"));
+                    chooser.setFileFilter(
+                            new javax.swing.filechooser.FileNameExtensionFilter("PDF", "pdf"));
+                    return chooser.showSaveDialog(parent) == javax.swing.JFileChooser.APPROVE_OPTION
+                            ? chooser.getSelectedFile().toPath()
+                            : null;
+                },
+                new FinancialReportSnapshotPdf()::export);
+    }
+
+    /** Injectable explicit destination and off-EDT writer; neither is used during construction. */
+    public NormalizedFinancialReportsPanel(
+            DestinationChooser destinationChooser, SnapshotWriter snapshotWriter) {
         super(new BorderLayout(8, 8));
         requireEdt();
+        this.destinationChooser = java.util.Objects.requireNonNull(destinationChooser);
+        this.snapshotWriter = java.util.Objects.requireNonNull(snapshotWriter);
         setName("workspace-financial-reports");
         kind.setName("financial-report-kind");
         account.setName("financial-report-account");
@@ -91,6 +127,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         to.setName("financial-report-to");
         load.setName("financial-report-load");
         generate.setName("financial-report-generate");
+        export.setName("financial-report-export-pdf");
         header.setName("financial-report-header");
         status.setName("financial-report-status");
         rows.setName("financial-report-rows");
@@ -120,6 +157,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         JPanel actions = new JPanel();
         actions.add(load);
         actions.add(generate);
+        actions.add(export);
         JPanel footer = new JPanel(new BorderLayout());
         footer.add(new JScrollPane(status));
         footer.add(actions, BorderLayout.SOUTH);
@@ -146,6 +184,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         to.getDocument().addDocumentListener(edits);
         load.addActionListener(e -> load());
         generate.addActionListener(e -> generate());
+        export.addActionListener(e -> exportSnapshot());
         status.setText(text("unselected"));
         controls();
     }
@@ -195,6 +234,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
     }
 
     private void clear() {
+        displayedSnapshot = null;
         header.setText("");
         model.setRowCount(0);
     }
@@ -430,7 +470,10 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                 setBusy(false);
                 try {
                     var result = get();
-                    if (available()) success.accept(result);
+                    if (available()) {
+                        success.accept(result);
+                        displayedSnapshot = captureDisplayedSnapshot();
+                    }
                 } catch (InterruptedException failure) {
                     Thread.currentThread().interrupt();
                     status.setText(text("failed"));
@@ -446,10 +489,74 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         }.execute();
     }
 
+    private FinancialReportSnapshotPdf.Snapshot captureDisplayedSnapshot() {
+        if (header.getText().isBlank()) return null;
+        var columns = new java.util.ArrayList<String>();
+        var values = new java.util.ArrayList<java.util.List<String>>();
+        for (int col = 0; col < model.getColumnCount(); col++) {
+            columns.add(model.getColumnName(col));
+        }
+        for (int row = 0; row < model.getRowCount(); row++) {
+            var cells = new java.util.ArrayList<String>();
+            for (int col = 0; col < model.getColumnCount(); col++) {
+                cells.add(String.valueOf(model.getValueAt(row, col)));
+            }
+            values.add(cells);
+        }
+        return new FinancialReportSnapshotPdf.Snapshot(
+                kind.getSelectedItem().toString(),
+                header.getText() + "\n" + text("pdfmeaning"),
+                columns,
+                values);
+    }
+
+    private void exportSnapshot() {
+        if (!available() || displayedSnapshot == null) return;
+        var snapshot = displayedSnapshot;
+        java.nio.file.Path destination;
+        try {
+            destination = destinationChooser.choose(this);
+        } catch (RuntimeException error) {
+            status.setText(text("pdffailed") + " " + error.getMessage());
+            return;
+        }
+        // A modal chooser may process replacement/closure events before returning.
+        if (destination == null || !available() || displayedSnapshot != snapshot) return;
+        long request = ++revision;
+        setBusy(true);
+        status.setText(text("pdfworking"));
+        controls();
+        new SwingWorker<java.nio.file.Path, Void>() {
+            protected java.nio.file.Path doInBackground() throws Exception {
+                return snapshotWriter.write(snapshot, destination);
+            }
+
+            protected void done() {
+                if (closed || request != revision) return;
+                setBusy(false);
+                try {
+                    var path = get();
+                    if (available()) status.setText(text("pdfsaved") + " " + path);
+                } catch (InterruptedException error) {
+                    Thread.currentThread().interrupt();
+                    status.setText(text("pdffailed"));
+                } catch (ExecutionException error) {
+                    status.setText(text("pdffailed") + " " + error.getCause().getMessage());
+                }
+                if (selection != null && selection.isBlocked()) {
+                    clear();
+                    status.setText(text("blocked"));
+                }
+                controls();
+            }
+        }.execute();
+    }
+
     private void controls() {
         boolean enabled = available();
         Kind selected = selectedKind();
         kind.setEnabled(enabled);
+        export.setEnabled(enabled && displayedSnapshot != null);
         from.setEnabled(enabled && selectedKind() != Kind.BALANCE);
         to.setEnabled(enabled);
         account.setEnabled(enabled && selected == Kind.LEDGER);

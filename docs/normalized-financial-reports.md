@@ -1,8 +1,10 @@
-# Guarded trial-balance and account-ledger views
+# Guarded financial-report views and snapshot export
 
 The opt-in normalized workspace exposes a sixth **Financial reports** tab after explicit
-company/year Apply. It reads and calculates a trial balance or a selected-account ledger;
-it never edits SQL, commits a transaction, exports a file or enables production format-3 startup.
+company/year Apply. It reads trial balance, account ledger, balance sheet and income statement.
+It never edits SQL, commits an accounting transaction or enables production format-3 startup.
+An explicit new-file action can export the displayed snapshot as PDF without re-reading SQL;
+see [normalized-report-snapshot-pdf.md](normalized-report-snapshot-pdf.md).
 
 ## Explicit workflow
 
@@ -114,3 +116,15 @@ No new tab, PDF/export UI, write command, legacy-frame integration, schema migra
 dimension filtering, backup/restore or default cutover is introduced. Format-3 normal
 startup remains guarded and format-2 creation is unchanged. These views do not complete
 G2/G3 or the technical definition of done for issue #75.
+
+
+## Guarded displayed-report snapshot PDF (2026-11-23)
+
+The financial-report tab can export its successfully generated immutable display snapshot
+as a new PDF, with explicit destination selection and atomic no-overwrite publication.
+No SQL re-read, recalculation, rounding or accounting write occurs during export.
+Input/context changes disable export until Generate succeeds again. Accepted exports may
+finish against their original snapshot after retirement; late UI callbacks are fenced.
+See [normalized-report-snapshot-pdf.md](normalized-report-snapshot-pdf.md) for file safety,
+hard-link filesystem requirements, snapshot/legacy-layout boundaries and regression tests.
+This does not activate normal format-3 startup or establish full G2/G3/#75 completion.
