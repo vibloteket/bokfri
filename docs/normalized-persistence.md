@@ -537,6 +537,13 @@ an out-of-range index falls back to the complete period, as in the GUI printer.
 Explicit VAT control printers render PDFs only: their legacy `getVoucher` method
 fails fast; normalized settlements continue through `VatService`.
 
+The opt-in [explicit declaration policy](explicit-vat-declaration-policy.md) adds
+hydrated-year `VatService.declarationReport`/`declarationPlan` methods. It aggregates
+per field before truncation and derives settlement control from those same declared
+tax fields, clearing exact tax balances with explicit R1/R2/A roles. These methods
+are not wired into existing CLI, GUI, PDFs or compatibility `report`/`plan` calls;
+there is no silent change to existing amounts or new settlement posting command.
+
 Tests compare legacy and normalized VAT PDF text before settlement, exercise valid
 and out-of-range start indices, verify overwrite protection and render after
 settlement. Explicit rows whose singleton-backed helpers throw cover populated

@@ -461,3 +461,16 @@ the field-total interpretation from complete filing compliance, and changes no p
 behavior. The guarded view/PDF still use legacy calculations and are not validated filing
 or settlement previews. Do not activate settlement on the strength of planner isolation
 or balanced vouchers alone; policy agreement and existing workflow safety gates remain.
+
+
+## Opt-in explicit VAT declaration policy (2026-11-24)
+
+Hydrated-year `VatService.declarationReport`/`declarationPlan` now implement an explicitly
+named field-total whole-krona policy and derive control from the same declared tax fields.
+Exact clearing includes every supported VAT tax-field code; settlement roles must be
+explicitly coded R1/R2/A. See [explicit-vat-declaration-policy.md](explicit-vat-declaration-policy.md).
+Existing compatibility `report`/`plan`, guarded VAT view/PDF and CLI do not select this policy.
+This backend prerequisite does not add an owner entry point, new posting command, period
+lock, stale/duplicate-source checks or uncertain-commit handling. Those safety gates and
+explicit future report/preview/PDF policy selection remain required before activation.
+Startup guard stays enabled; no default cutover, G2/G3 or issue #75 technical completion.
