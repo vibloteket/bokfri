@@ -438,3 +438,13 @@ VAT aggregation uses explicit row account numbers, not legacy account/validity g
 No settlement, filing, currency conversion, new tab, schema/CLI command or default cutover.
 See [normalized-vat-report-view.md](normalized-vat-report-view.md) for exact rules and bounds.
 This does not complete G2/G3 or issue #75 technical requirements; startup guard stays enabled.
+
+
+## VAT settlement planning isolation (2026-11-24)
+
+The existing hydrated-year/explicit-input VAT planner now resolves only supplied account
+numbers and creates an unnumbered voucher, leaving numbering to its explicit writer.
+The legacy SSDB overload retains its existing lookup/numbering path; amounts and rounding
+are unchanged. See [normalized-vat-settlement-isolation.md](normalized-vat-settlement-isolation.md).
+This is a backend prerequisite, not settlement UI activation, a new posting command,
+period locking/filing, or G2/G3/#75 completion. The guarded VAT view remains read-only.

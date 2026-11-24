@@ -71,8 +71,17 @@ public class SSVATUtil {
 
     public static SSVoucher generateVATVoucher(String name, LocalDate iDateFrom, LocalDate iDateTo, SSAccount iAccountR1, SSAccount iAccountR2, SSAccount iAccountA) {
 
-        SSVoucher voucher = generateVATVoucher(name, iDateFrom, iDateTo, iAccountR1, iAccountR2,
-                iAccountA, SSDB.getInstance().getAccounts(), SSDB.getInstance().getVouchers());
+        SSVoucher voucher =
+                generateVATVoucherInternal(
+                        name,
+                        iDateFrom,
+                        iDateTo,
+                        iAccountR1,
+                        iAccountR2,
+                        iAccountA,
+                        SSDB.getInstance().getAccounts(),
+                        SSDB.getInstance().getVouchers(),
+                        false);
         voucher.doAutoIncrecement();
         return voucher;
     }
@@ -81,7 +90,28 @@ public class SSVATUtil {
     public static SSVoucher generateVATVoucher(String name, LocalDate iDateFrom, LocalDate iDateTo,
             SSAccount iAccountR1, SSAccount iAccountR2, SSAccount iAccountA,
             List<SSAccount> accounts, List<SSVoucher> vouchers) {
+        return generateVATVoucherInternal(
+                name,
+                iDateFrom,
+                iDateTo,
+                iAccountR1,
+                iAccountR2,
+                iAccountA,
+                accounts,
+                vouchers,
+                true);
+    }
 
+    private static SSVoucher generateVATVoucherInternal(
+            String name,
+            LocalDate iDateFrom,
+            LocalDate iDateTo,
+            SSAccount iAccountR1,
+            SSAccount iAccountR2,
+            SSAccount iAccountA,
+            List<SSAccount> accounts,
+            List<SSVoucher> vouchers,
+            boolean explicit) {
         DateTimeFormatter iFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
 
         String iDescription = String.format(
@@ -94,12 +124,17 @@ public class SSVATUtil {
         List<SSVoucher> iVouchers = SSVoucherMath.getVouchers(
                 vouchers, iDateFrom, iDateTo);
 
-        Map<SSAccount, BigDecimal> iCreditMinusDebetSum = SSVoucherMath.getCreditMinusDebetSum(
-                iVouchers);
-        Map<SSAccount, BigDecimal> debetMinusCreditSum = SSVoucherMath.getDebetMinusCreditSum(
-                iVouchers);
+        Map<SSAccount, BigDecimal> iCreditMinusDebetSum =
+                explicit
+                        ? SSVoucherMath.getCreditMinusDebetSum(iVouchers, accounts)
+                        : SSVoucherMath.getCreditMinusDebetSum(iVouchers);
+        Map<SSAccount, BigDecimal> debetMinusCreditSum =
+                explicit
+                        ? SSVoucherMath.getDebetMinusCreditSum(iVouchers, accounts)
+                        : SSVoucherMath.getDebetMinusCreditSum(iVouchers);
 
-        SSVoucher    iVoucher = new SSVoucher();
+        // Numbering is assigned only by an explicit writer, never the ambient legacy year.
+        SSVoucher iVoucher = explicit ? new SSVoucher(0, iDateTo) : new SSVoucher();
 
         iVoucher.setDescription(iDescription);
         iVoucher.setLocalDate(iDateTo);
