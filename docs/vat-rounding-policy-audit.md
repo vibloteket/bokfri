@@ -3,6 +3,11 @@
 Audit date: 2026-11-24. Baseline: PR #250, merged as
 `1d1e052b07a16e77b33881df8ab53302452f6745`.
 
+Follow-up: the separately named [explicit declaration policy](explicit-vat-declaration-policy.md)
+implements field-total truncation and matching settlement control for opt-in hydrated-year
+backend callers. Existing report/planner, GUI/PDF and CLI compatibility behavior remains
+unchanged. The characterization examples below still describe those existing surfaces.
+
 This is a prerequisite investigation, not an accounting-policy change. No
 production calculation, stored data, GUI, PDF, filing or posting behavior changes.
 Normal format-3 startup remains guarded. The existing guarded VAT view is a

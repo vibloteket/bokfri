@@ -12,6 +12,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+- Add opt-in hydrated-year VAT `declarationReport`/`declarationPlan` APIs: aggregate
+  each field before whole-krona truncation, derive settlement from declared tax
+  fields, and clear every supported VAT tax code at exact amounts. Require explicit
+  R1/R2/A roles. Existing report/planner, UI/PDF and CLI calculations remain unchanged;
+  no settlement action or default startup cutover is enabled (#75).
 - Audit VAT rounding against whole-krona reporting and the field-49 formula;
   characterize account-splitting and report/settlement discrepancies with six
   executable examples. No calculation or posting behavior changes; settlement
