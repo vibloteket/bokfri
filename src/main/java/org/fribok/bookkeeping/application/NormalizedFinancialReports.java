@@ -36,6 +36,22 @@ public final class NormalizedFinancialReports implements AutoCloseable {
      * Explicit selected-year VAT boxes only; no settlement writer or filing operation is exposed.
      */
     public Vat vatReport(LocalDate from, LocalDate to) throws SQLException {
+        return vatReport(from, to, false);
+    }
+
+    /**
+     * Read-only opt-in field-total whole-krona policy; no settlement plan or writer is exposed.
+     *
+     * @param from explicit inclusive selected-year start
+     * @param to explicit inclusive selected-year end
+     * @return one immutable report with its SQL read scope
+     * @throws SQLException if the selection is retired, blocked or the read fails
+     */
+    public Vat vatDeclarationReport(LocalDate from, LocalDate to) throws SQLException {
+        return vatReport(from, to, true);
+    }
+
+    private Vat vatReport(LocalDate from, LocalDate to, boolean declaration) throws SQLException {
         Objects.requireNonNull(from, "VAT period start");
         Objects.requireNonNull(to, "VAT period end");
         return read(
@@ -53,7 +69,11 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                                         throw new SQLException(
                                                 "Read-only VAT report has no settlement writer");
                                     });
-                    return new Vat(context.scope(), service.report(from, to));
+                    return new Vat(
+                            context.scope(),
+                            declaration
+                                    ? service.declarationReport(from, to)
+                                    : service.report(from, to));
                 });
     }
 

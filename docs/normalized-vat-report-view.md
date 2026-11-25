@@ -4,8 +4,10 @@
 account-splitting and report/settlement discrepancies in the retained calculation.
 This view and its PDF are legacy-calculation snapshots, not validated declaration
 or settlement previews. The audit changes no displayed amounts. The separately named
-[explicit declaration policy](explicit-vat-declaration-policy.md) is available to
-backend callers only; this view/PDF does not select it.
+[explicit declaration policy](explicit-vat-declaration-policy.md) is now available as
+a [separate guarded read-only choice](normalized-vat-declaration-report-view.md).
+This compatibility choice retains its existing amounts; its label now explicitly
+states per-account truncation. Each choice's PDF uses its own displayed snapshot.
 
 The opt-in normalized Financial reports tab also offers **VAT report**. Explicitly select
 company/year, this report kind and inclusive From/To dates inside the selected year, then

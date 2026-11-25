@@ -474,3 +474,15 @@ This backend prerequisite does not add an owner entry point, new posting command
 lock, stale/duplicate-source checks or uncertain-commit handling. Those safety gates and
 explicit future report/preview/PDF policy selection remain required before activation.
 Startup guard stays enabled; no default cutover, G2/G3 or issue #75 technical completion.
+
+
+## Guarded explicit VAT field-total report choice (2026-11-25)
+
+The financial-report tab now exposes the declaration report as a separately selected,
+read-only choice with policy-labelled displayed-snapshot PDF export. The existing
+per-account compatibility choice retains its amounts and is explicitly labelled.
+The lease-owned `vatDeclarationReport` validates selected-year periods, shares the
+SERIALIZABLE rollback-only read lifecycle and never invokes a planner or writer.
+Input revisions fence late results after policy edits. See
+[normalized-vat-declaration-report-view.md](normalized-vat-declaration-report-view.md).
+No settlement workflow, filing, default cutover, guard removal or G2/G3/#75 completion.

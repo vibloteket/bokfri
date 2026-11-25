@@ -36,7 +36,8 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         LEDGER,
         BALANCE,
         INCOME,
-        VAT
+        VAT,
+        VAT_DECLARATION
     }
 
     private record KindChoice(Kind value) {
@@ -49,7 +50,8 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                 case LEDGER -> "ledger";
                                 case BALANCE -> "balance";
                                 case INCOME -> "income";
-                                case VAT -> "vat";
+                                case VAT -> "vatcompat";
+                                case VAT_DECLARATION -> "vatdeclaration";
                             });
         }
     }
@@ -99,6 +101,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
     private boolean closed;
     private boolean hostAvailable = true;
     private long revision;
+    private long inputRevision;
 
     /** Constructs without SQL, dates, account or report-kind selection. Requires EDT. */
     public NormalizedFinancialReportsPanel() {
@@ -139,6 +142,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         kind.addItem(new KindChoice(Kind.BALANCE));
         kind.addItem(new KindChoice(Kind.INCOME));
         kind.addItem(new KindChoice(Kind.VAT));
+        kind.addItem(new KindChoice(Kind.VAT_DECLARATION));
         account.addItem(new AccountChoice(null));
         header.setEditable(false);
         status.setEditable(false);
@@ -252,6 +256,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
     }
 
     private void invalidateReport() {
+        inputRevision++;
         clear();
         if (!closed && !busy) status.setText(text("instructions"));
         controls();
@@ -379,9 +384,13 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                             + report.result());
                             status.setText(text("generated"));
                         });
-            } else if (selectedKind() == Kind.VAT) {
+            } else if (selectedKind() == Kind.VAT || selectedKind() == Kind.VAT_DECLARATION) {
+                boolean declaration = selectedKind() == Kind.VAT_DECLARATION;
                 run(
-                        () -> reports.vatReport(first, last),
+                        () ->
+                                declaration
+                                        ? reports.vatDeclarationReport(first, last)
+                                        : reports.vatReport(first, last),
                         value -> {
                             var report = value.report();
                             model.setColumnIdentifiers(
@@ -395,7 +404,10 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                             header.setText(
                                     scope(value.scope(), report.from(), report.to())
                                             + "\n"
-                                            + text("vatmeaning")
+                                            + text(
+                                                    declaration
+                                                            ? "vatdeclarationmeaning"
+                                                            : "vatmeaning")
                                             + "\n"
                                             + text("vatnet")
                                             + " "
@@ -484,6 +496,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         clear();
         setBusy(true);
         long request = ++revision;
+        long inputs = inputRevision;
         status.setText(text("working"));
         controls();
         new SwingWorker<T, Void>() {
@@ -496,9 +509,11 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                 setBusy(false);
                 try {
                     var result = get();
-                    if (available()) {
+                    if (available() && inputs == inputRevision) {
                         success.accept(result);
                         displayedSnapshot = captureDisplayedSnapshot();
+                    } else if (available()) {
+                        status.setText(text("instructions"));
                     }
                 } catch (InterruptedException failure) {
                     Thread.currentThread().interrupt();

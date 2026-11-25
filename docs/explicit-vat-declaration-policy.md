@@ -7,6 +7,10 @@ and `declarationPlan(from, to)` methods. The SSDB-backed constructor rejects the
 methods before any legacy data read. This policy is deliberately **not** selected by
 existing `report(...)`, `plan(...)`, CLI commands, the guarded VAT view or its PDF.
 Those compatibility surfaces retain their previous amounts, mappings and rounding.
+A separately selected [guarded field-total policy view](normalized-vat-declaration-report-view.md)
+now invokes the read-only declaration report through the lease-owned report adapter;
+its displayed-snapshot PDF identifies that policy. The compatibility choice remains
+available and explicitly labelled. No planner or writer is exposed by this view.
 No settlement action is activated; normal format-3 startup remains guarded.
 
 The [rounding audit](vat-rounding-policy-audit.md) records the source basis and its
@@ -82,8 +86,10 @@ snapshot. There is no single-use token, concurrent/stale-source check, period lo
 duplicate-settlement check, transaction ownership or uncertain-commit guarantee.
 The generic existing `commit` method is not upgraded into a safe settlement command.
 Do not wire this policy into a new UI/CLI posting action without those safeguards.
-A future view must explicitly identify/select the new policy and prove report,
-preview and displayed-snapshot PDF agreement; the existing view is unchanged.
+The separately selected read-only view identifies the policy and preserves displayed
+values in its PDF. A future settlement preview/posting workflow still requires its own
+owner-held transaction, source checks and report/preview agreement; it is not delivered
+by the read-only view.
 
 `ExplicitVatDeclarationPolicyTest` checks all six audit examples, every supported
 VAT tax code (including the three formerly omitted clearing groups), tax-base
