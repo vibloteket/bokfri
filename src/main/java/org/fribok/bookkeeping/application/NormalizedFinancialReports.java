@@ -32,6 +32,27 @@ public final class NormalizedFinancialReports implements AutoCloseable {
 
     public record Vat(Scope scope, org.fribok.bookkeeping.service.vat.VatReport report) {}
 
+    /** One frozen proposal row; absent debit/credit stays absent, not an invented amount. */
+    public record VatSettlementRow(
+            int account, String description, BigDecimal debit, BigDecimal credit) {}
+
+    /**
+     * Read-only settlement proposal. Contains no mutable voucher, writer or posting token. Balanced
+     * arithmetic is not a bookability, stale-source or duplicate-period guarantee.
+     */
+    public record VatSettlementPreview(
+            Scope scope,
+            org.fribok.bookkeeping.service.vat.VatReport report,
+            LocalDate date,
+            String description,
+            List<VatSettlementRow> rows,
+            BigDecimal debitTotal,
+            BigDecimal creditTotal) {
+        public VatSettlementPreview {
+            rows = List.copyOf(rows);
+        }
+    }
+
     /**
      * Explicit selected-year VAT boxes only; no settlement writer or filing operation is exposed.
      */
@@ -56,24 +77,77 @@ public final class NormalizedFinancialReports implements AutoCloseable {
         Objects.requireNonNull(to, "VAT period end");
         return read(
                 context -> {
-                    if (to.isBefore(from)
-                            || from.isBefore(context.year().getLocalFrom())
-                            || to.isAfter(context.year().getLocalTo())) {
-                        throw new IllegalArgumentException(
-                                "VAT period must be ordered and inside selected year");
-                    }
-                    var service =
-                            new org.fribok.bookkeeping.service.vat.VatService(
-                                    context.year(),
-                                    voucher -> {
-                                        throw new SQLException(
-                                                "Read-only VAT report has no settlement writer");
-                                    });
+                    var service = vatService(context, from, to);
                     return new Vat(
                             context.scope(),
                             declaration
                                     ? service.declarationReport(from, to)
                                     : service.report(from, to));
+                });
+    }
+
+    /**
+     * Captures a frozen field-total settlement proposal in one rollback-only read. Requires
+     * explicit R1/R2/A roles. No voucher number, posting command or mutable plan escapes.
+     *
+     * @param from explicit inclusive selected-year start
+     * @param to explicit inclusive selected-year end and proposal date
+     * @return immutable rows and the declaration report calculated from the same read scope
+     * @throws SQLException if the selection is blocked/retired or the read fails
+     */
+    public VatSettlementPreview vatSettlementPreview(LocalDate from, LocalDate to)
+            throws SQLException {
+        Objects.requireNonNull(from, "VAT period start");
+        Objects.requireNonNull(to, "VAT period end");
+        return read(
+                context -> {
+                    var plan = vatService(context, from, to).declarationPlan(from, to);
+                    var descriptions = new java.util.HashMap<Integer, String>();
+                    for (var account : context.year().getAccountPlan().getAccounts()) {
+                        descriptions.put(account.getNumber(), account.getDescription());
+                    }
+                    var rows = new java.util.ArrayList<VatSettlementRow>();
+                    BigDecimal debit = BigDecimal.ZERO;
+                    BigDecimal credit = BigDecimal.ZERO;
+                    for (var row : plan.voucher().getRows()) {
+                        rows.add(
+                                new VatSettlementRow(
+                                        row.getAccountNr(),
+                                        descriptions.get(row.getAccountNr()),
+                                        row.getDebet(),
+                                        row.getCredit()));
+                        if (row.getDebet() != null) debit = debit.add(row.getDebet());
+                        if (row.getCredit() != null) credit = credit.add(row.getCredit());
+                    }
+                    if (plan.voucher().getNumber() != 0
+                            || !to.equals(plan.voucher().getLocalDate())
+                            || debit.compareTo(credit) != 0) {
+                        throw new IllegalStateException(
+                                "Invalid read-only VAT settlement proposal");
+                    }
+                    return new VatSettlementPreview(
+                            context.scope(),
+                            plan.report(),
+                            to,
+                            plan.voucher().getDescription(),
+                            rows,
+                            debit,
+                            credit);
+                });
+    }
+
+    private static org.fribok.bookkeeping.service.vat.VatService vatService(
+            Context context, LocalDate from, LocalDate to) {
+        if (to.isBefore(from)
+                || from.isBefore(context.year().getLocalFrom())
+                || to.isAfter(context.year().getLocalTo())) {
+            throw new IllegalArgumentException(
+                    "VAT period must be ordered and inside selected year");
+        }
+        return new org.fribok.bookkeeping.service.vat.VatService(
+                context.year(),
+                voucher -> {
+                    throw new SQLException("Read-only VAT report has no settlement writer");
                 });
     }
 

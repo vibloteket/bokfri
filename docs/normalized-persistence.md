@@ -2036,3 +2036,16 @@ amounts and CLI PDFs remain unchanged. See
 [normalized-vat-declaration-report-view.md](normalized-vat-declaration-report-view.md).
 This does not enable settlement posting, filing, default normalized startup or retire
 serialization; the startup guard remains enabled.
+
+## Guarded read-only VAT settlement proposal
+
+`NormalizedFinancialReports.vatSettlementPreview` runs the explicit field-total
+planner in one rollback-only SERIALIZABLE read and returns copied immutable rows,
+declaration report, scope/date/description and exact debit/credit totals. No mutable
+voucher, writer, posting token or assigned number escapes. The separate financial
+report choice and its displayed-snapshot PDF are labelled NOT POSTED and do not
+approve active accounts, required dimensions, source freshness, duplicate periods
+or locks. Compatibility/report/CLI values remain unchanged. See
+[normalized-vat-settlement-preview.md](normalized-vat-settlement-preview.md).
+No posting owner API, settlement posting UI, filing, migration or startup activation
+is added; the format-3 guard and remaining posting gates stay in place.

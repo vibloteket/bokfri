@@ -57,7 +57,9 @@ class NormalizedApplicationVatDeclarationReportsGuiTest {
             try (var h = new Host(owner.select(71, 11), dir.resolve("vat.pdf"));
                     var guard = new NormalizedApplicationOwnerTest.LegacyGuard()) {
                 assertEquals(0, edt(() -> h.kind().getSelectedIndex()));
-                assertEquals(7, edt(() -> h.kind().getItemCount()));
+                assertEquals(8, edt(() -> h.kind().getItemCount()));
+                assertEquals(
+                        text("vatsettlementpreview"), edt(() -> h.kind().getItemAt(7).toString()));
                 assertEquals(text("vatcompat"), edt(() -> h.kind().getItemAt(5).toString()));
                 assertEquals(text("vatdeclaration"), edt(() -> h.kind().getItemAt(6).toString()));
                 int opens = f.opens.get();

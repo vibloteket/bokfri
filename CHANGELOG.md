@@ -12,6 +12,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+- Add a separately selected guarded read-only VAT settlement preview: immutable
+  exact clearing/control/rounding rows and declared total from one owner-held read,
+  with NOT POSTED warnings and displayed-snapshot PDF export. No mutable plan,
+  posting token, number assignment, settlement posting action or startup cutover (#75).
 - Add a separately selected guarded read-only VAT field-total whole-krona report
   with policy-labelled displayed-snapshot PDF export. Retain and explicitly label
   the per-account compatibility choice; fence pending reads after input/policy edits.
