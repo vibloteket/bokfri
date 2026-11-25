@@ -12,6 +12,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+- Add a separately selected guarded read-only VAT field-total whole-krona report
+  with policy-labelled displayed-snapshot PDF export. Retain and explicitly label
+  the per-account compatibility choice; fence pending reads after input/policy edits.
+  No settlement planning/posting, filing, CLI change or startup cutover (#75).
 - Add opt-in hydrated-year VAT `declarationReport`/`declarationPlan` APIs: aggregate
   each field before whole-krona truncation, derive settlement from declared tax
   fields, and clear every supported VAT tax code at exact amounts. Require explicit

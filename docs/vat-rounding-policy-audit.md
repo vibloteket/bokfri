@@ -6,7 +6,9 @@ Audit date: 2026-11-24. Baseline: PR #250, merged as
 Follow-up: the separately named [explicit declaration policy](explicit-vat-declaration-policy.md)
 implements field-total truncation and matching settlement control for opt-in hydrated-year
 backend callers. Existing report/planner, GUI/PDF and CLI compatibility behavior remains
-unchanged. The characterization examples below still describe those existing surfaces.
+unchanged. A [separately selected read-only field-total view](normalized-vat-declaration-report-view.md)
+now exposes the named report policy without settlement planning/posting. The
+characterization examples below still describe the compatibility surfaces.
 
 This is a prerequisite investigation, not an accounting-policy change. No
 production calculation, stored data, GUI, PDF, filing or posting behavior changes.

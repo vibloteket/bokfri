@@ -2023,3 +2023,16 @@ The legacy SSDB overload retains its existing lookup/numbering path; amounts and
 are unchanged. See [normalized-vat-settlement-isolation.md](normalized-vat-settlement-isolation.md).
 This is a backend prerequisite, not settlement UI activation, a new posting command,
 period locking/filing, or G2/G3/#75 completion. The guarded VAT view remains read-only.
+
+## Guarded read-only VAT field-total policy choice
+
+The opt-in financial-report tab offers a separately selected whole-krona field-total
+policy alongside the explicitly labelled per-account compatibility choice. The new
+lease-owned `vatDeclarationReport` shares SERIALIZABLE explicit hydration, scope checks
+and rollback-only reads; it invokes the named report API, never settlement planning.
+Each choice exports its own immutable displayed snapshot without new SQL or rounding.
+Input revisions reject late results after policy changes. Existing compatibility
+amounts and CLI PDFs remain unchanged. See
+[normalized-vat-declaration-report-view.md](normalized-vat-declaration-report-view.md).
+This does not enable settlement posting, filing, default normalized startup or retire
+serialization; the startup guard remains enabled.
