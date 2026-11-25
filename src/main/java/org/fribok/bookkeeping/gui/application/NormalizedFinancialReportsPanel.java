@@ -424,7 +424,8 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                             + " : "
                                             + value.debitTotal()
                                             + " / "
-                                            + value.creditTotal());
+                                            + value.creditTotal()
+                                            + settlementFindings(value.findings()));
                             status.setText(text("generated") + " " + value.rows().size());
                         });
             } else if (selectedKind() == Kind.VAT || selectedKind() == Kind.VAT_DECLARATION) {
@@ -510,6 +511,33 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
             status.setText(text("failed") + " " + failure.getMessage());
             controls();
         }
+    }
+
+    private static String settlementFindings(
+            java.util.List<org.fribok.bookkeeping.service.vat.VatSettlementDiagnostics.Finding>
+                    findings) {
+        if (findings.isEmpty()) return "\n" + text("vatsettlementnofindings");
+        StringBuilder value = new StringBuilder("\n" + text("vatsettlementfindings"));
+        for (var finding : findings) {
+            value.append("\n")
+                    .append(text("vatsettlementfinding." + finding.kind().name()))
+                    .append(" / ")
+                    .append(text("account"))
+                    .append(" ")
+                    .append(finding.account());
+            if (finding.sourceVoucher() != null) {
+                value.append(" / ")
+                        .append(text("voucher"))
+                        .append(" ")
+                        .append(finding.sourceVoucher())
+                        .append(" / ")
+                        .append(text("vatsettlementfindingrow"))
+                        .append(" ")
+                        .append(finding.sourceRow());
+            }
+            if (finding.dimension() != null) value.append(" / ").append(raw(finding.dimension()));
+        }
+        return value.toString();
     }
 
     private static String scope(

@@ -500,3 +500,17 @@ Posting still needs owner transactions, source revalidation, bookability/dimensi
 validation, duplicate/overlap policy, period restrictions and uncertain-commit
 handling. Balanced previews alone do not satisfy those gates. No settlement posting,
 filing, default cutover, guard removal or G2/G3/#75 technical completion.
+
+
+## Read-only VAT account/dimension observations (2026-11-25)
+
+The frozen settlement preview now includes non-exhaustive observations of inactive
+proposed accounts, missing required dimensions and tax-source dimensions omitted by
+account-level planning, even for net-zero accounts with no proposed clearing row.
+They are captured in the same read and displayed/exported without arithmetic changes.
+An empty list explicitly does NOT approve posting. No readiness flag, posting token,
+UI/API activation or validation of all remaining gates is added. See
+[normalized-vat-settlement-diagnostics.md](normalized-vat-settlement-diagnostics.md).
+Owner posting transactions, complete bookability/dimension/source validation,
+duplicate/overlap and lock policy, numbering and uncertain-commit handling remain
+unfinished. Guard stays enabled; no default cutover or G2/G3/#75 technical completion.

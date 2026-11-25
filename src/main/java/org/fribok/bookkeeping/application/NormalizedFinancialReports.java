@@ -2,6 +2,7 @@ package org.fribok.bookkeeping.application;
 
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
 import org.fribok.bookkeeping.service.report.FinancialReportService;
+import org.fribok.bookkeeping.service.vat.VatSettlementDiagnostics;
 
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
@@ -47,9 +48,11 @@ public final class NormalizedFinancialReports implements AutoCloseable {
             String description,
             List<VatSettlementRow> rows,
             BigDecimal debitTotal,
-            BigDecimal creditTotal) {
+            BigDecimal creditTotal,
+            List<VatSettlementDiagnostics.Finding> findings) {
         public VatSettlementPreview {
             rows = List.copyOf(rows);
+            findings = List.copyOf(findings);
         }
     }
 
@@ -132,7 +135,12 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                             plan.voucher().getDescription(),
                             rows,
                             debit,
-                            credit);
+                            credit,
+                            VatSettlementDiagnostics.inspect(
+                                    plan.report(),
+                                    context.year().getAccountPlan().getAccounts(),
+                                    context.year().getVouchers(),
+                                    plan.voucher()));
                 });
     }
 

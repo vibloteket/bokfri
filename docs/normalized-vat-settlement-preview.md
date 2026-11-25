@@ -57,6 +57,15 @@ vouchers with 0.99 on each of two output accounts, a fresh proposal uses declare
 control **3** from exact 3.96; an earlier displayed proposal remains control **1**.
 This is not a portable posting instruction, transaction receipt or filing document.
 
+## Account/dimension observations
+
+The preview now captures [non-exhaustive account/dimension diagnostics](normalized-vat-settlement-diagnostics.md)
+in the same read, alongside the immutable proposal. Visible/exported findings identify
+inactive proposed accounts, missing required dimensions and raw VAT-source dimensions
+not carried by account-level planning, even when an account nets to zero. An empty
+findings list explicitly does **not** approve posting; all gates below still apply.
+No arithmetic or source values are changed by these observations.
+
 ## Deliberately unfinished posting gates
 
 Arithmetic balance and agreement with the declared fields do **not** establish
