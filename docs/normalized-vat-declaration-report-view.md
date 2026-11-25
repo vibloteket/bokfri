@@ -67,7 +67,11 @@ reports zero, field-total policy reports one. Posting it a second time yields an
 exact field total of 3.96 and a freshly generated result of **3**, not the sum of two
 previously rounded report values. The old displayed/PDF snapshot remains **1**.
 
-No settlement control, plan, posting, period lock, duplicate-period protection,
+Follow-up: a [separate read-only settlement preview](normalized-vat-settlement-preview.md)
+now shows frozen clearing/control/rounding rows with explicit NOT POSTED warnings.
+It does not change these two report choices or expose a posting token/action.
+
+This declaration-report choice adds no settlement control, plan, posting, period lock, duplicate-period protection,
 stale-source posting token, filing or default startup activation is added. Normal
 format-3 startup remains guarded and new databases still default to format 2. This
 read-only slice does not complete G2/G3, serialization retirement or issue #75.

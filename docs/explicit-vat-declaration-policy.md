@@ -1,17 +1,22 @@
 # Explicit whole-krona VAT declaration policy
 
-## Opt-in backend API only
+## Explicit policy and read-only adapters
 
 A hydrated-year `VatService` now offers explicitly named `declarationReport(from, to)`
 and `declarationPlan(from, to)` methods. The SSDB-backed constructor rejects these
 methods before any legacy data read. This policy is deliberately **not** selected by
-existing `report(...)`, `plan(...)`, CLI commands, the guarded VAT view or its PDF.
+existing `report(...)`, `plan(...)`, CLI commands, or the guarded compatibility VAT
+view and its PDF.
 Those compatibility surfaces retain their previous amounts, mappings and rounding.
 A separately selected [guarded field-total policy view](normalized-vat-declaration-report-view.md)
 now invokes the read-only declaration report through the lease-owned report adapter;
 its displayed-snapshot PDF identifies that policy. The compatibility choice remains
 available and explicitly labelled. No planner or writer is exposed by this view.
-No settlement action is activated; normal format-3 startup remains guarded.
+A separate [read-only settlement preview](normalized-vat-settlement-preview.md) now
+calls the named planner inside the owner-held read and returns immutable scalar
+proposal rows, not a mutable plan or posting token. Its exported warnings explicitly
+exclude bookability, dimensions, stale-source and duplicate-period approval.
+No settlement posting action is activated; normal format-3 startup remains guarded.
 
 The [rounding audit](vat-rounding-policy-audit.md) records the source basis and its
 limits. This implementation selects the audit's field-total interpretation; it is

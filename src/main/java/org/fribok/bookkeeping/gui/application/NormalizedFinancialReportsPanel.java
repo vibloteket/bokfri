@@ -37,7 +37,8 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         BALANCE,
         INCOME,
         VAT,
-        VAT_DECLARATION
+        VAT_DECLARATION,
+        VAT_SETTLEMENT_PREVIEW
     }
 
     private record KindChoice(Kind value) {
@@ -52,6 +53,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                 case INCOME -> "income";
                                 case VAT -> "vatcompat";
                                 case VAT_DECLARATION -> "vatdeclaration";
+                                case VAT_SETTLEMENT_PREVIEW -> "vatsettlementpreview";
                             });
         }
     }
@@ -143,6 +145,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         kind.addItem(new KindChoice(Kind.INCOME));
         kind.addItem(new KindChoice(Kind.VAT));
         kind.addItem(new KindChoice(Kind.VAT_DECLARATION));
+        kind.addItem(new KindChoice(Kind.VAT_SETTLEMENT_PREVIEW));
         account.addItem(new AccountChoice(null));
         header.setEditable(false);
         status.setEditable(false);
@@ -383,6 +386,46 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                             + " "
                                             + report.result());
                             status.setText(text("generated"));
+                        });
+            } else if (selectedKind() == Kind.VAT_SETTLEMENT_PREVIEW) {
+                run(
+                        () -> reports.vatSettlementPreview(first, last),
+                        value -> {
+                            model.setColumnIdentifiers(
+                                    new String[] {
+                                        text("account"),
+                                        text("description"),
+                                        text("debit"),
+                                        text("credit")
+                                    });
+                            for (var row : value.rows()) {
+                                model.addRow(
+                                        new Object[] {
+                                            row.account(),
+                                            raw(row.description()),
+                                            row.debit() == null ? "" : row.debit().toPlainString(),
+                                            row.credit() == null ? "" : row.credit().toPlainString()
+                                        });
+                            }
+                            header.setText(
+                                    scope(value.scope(), value.report().from(), value.report().to())
+                                            + "\n"
+                                            + text("vatsettlementmeaning")
+                                            + "\n"
+                                            + text("vatnet")
+                                            + " "
+                                            + value.report().vatToPayOrRefund()
+                                            + "\n"
+                                            + text("vatsettlementdescription")
+                                            + " "
+                                            + raw(value.description())
+                                            + "\n"
+                                            + text("totals")
+                                            + " : "
+                                            + value.debitTotal()
+                                            + " / "
+                                            + value.creditTotal());
+                            status.setText(text("generated") + " " + value.rows().size());
                         });
             } else if (selectedKind() == Kind.VAT || selectedKind() == Kind.VAT_DECLARATION) {
                 boolean declaration = selectedKind() == Kind.VAT_DECLARATION;

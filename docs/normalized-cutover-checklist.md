@@ -486,3 +486,17 @@ SERIALIZABLE rollback-only read lifecycle and never invokes a planner or writer.
 Input revisions fence late results after policy edits. See
 [normalized-vat-declaration-report-view.md](normalized-vat-declaration-report-view.md).
 No settlement workflow, filing, default cutover, guard removal or G2/G3/#75 completion.
+
+
+## Guarded immutable VAT settlement preview (2026-11-25)
+
+A separately selected read-only proposal now shows exact clearing/control/rounding
+rows and the declared total, captured in one lease-owned SERIALIZABLE read. The
+adapter copies immutable scalar DTOs and exposes no mutable voucher, writer, number
+assignment or posting token. Display/PDF warnings say NOT POSTED and explicitly
+exclude bookability/dimension/source-freshness/duplicate-period approval. See
+[normalized-vat-settlement-preview.md](normalized-vat-settlement-preview.md).
+Posting still needs owner transactions, source revalidation, bookability/dimension
+validation, duplicate/overlap policy, period restrictions and uncertain-commit
+handling. Balanced previews alone do not satisfy those gates. No settlement posting,
+filing, default cutover, guard removal or G2/G3/#75 technical completion.
