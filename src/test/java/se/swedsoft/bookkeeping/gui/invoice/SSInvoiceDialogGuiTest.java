@@ -429,7 +429,17 @@ class SSInvoiceDialogGuiTest {
         });
         robot.mouseMove(p.x, p.y);
         robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+        try {
+            // A native press may still be queued when Robot sends its release.
+            // Require acknowledgement of that one press, without doClick(),
+            // repeated clicks, or relaxing the subsequent transition assertions.
+            robot.waitForIdle();
+            if (component instanceof javax.swing.AbstractButton button) {
+                await(() -> button.getModel().isPressed() && button.getModel().isArmed());
+            }
+        } finally {
+            robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+        }
         robot.waitForIdle();
     }
 

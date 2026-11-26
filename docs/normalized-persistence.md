@@ -2049,3 +2049,16 @@ or locks. Compatibility/report/CLI values remain unchanged. See
 [normalized-vat-settlement-preview.md](normalized-vat-settlement-preview.md).
 No posting owner API, settlement posting UI, filing, migration or startup activation
 is added; the format-3 guard and remaining posting gates stay in place.
+
+## Frozen settlement account/dimension diagnostics
+
+`VatSettlementPreview.findings` contains copied immutable scalar observations from
+`VatSettlementDiagnostics`, using only the same read's report/catalogue/raw sources
+and local account-level proposal. It observes inactive proposed accounts, missing
+required project/unit values and non-null raw VAT-source dimension keys, including
+net-zero accounts. No ambient/mutating lookup, SQL, assignment, data repair or
+arithmetic change is introduced. The display/PDF says an empty findings list is NOT
+posting approval; no readiness flag or posting capability is exposed. See
+[normalized-vat-settlement-diagnostics.md](normalized-vat-settlement-diagnostics.md).
+The observations are not complete ownership/closure, source, period or transaction
+validation and do not change CLI behavior, schema or the default startup guard.

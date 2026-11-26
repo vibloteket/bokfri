@@ -12,6 +12,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+- Add immutable account/dimension observations to the read-only VAT settlement
+  preview and displayed-snapshot PDF: inactive proposed accounts, missing required
+  dimensions and source dimensions omitted by account-level planning, including
+  net-zero accounts. Empty findings explicitly do not approve posting. No posting
+  capability, arithmetic change, CLI change or startup cutover (#75).
 - Add a separately selected guarded read-only VAT settlement preview: immutable
   exact clearing/control/rounding rows and declared total from one owner-held read,
   with NOT POSTED warnings and displayed-snapshot PDF export. No mutable plan,
