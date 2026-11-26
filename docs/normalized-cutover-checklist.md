@@ -504,13 +504,23 @@ filing, default cutover, guard removal or G2/G3/#75 technical completion.
 
 ## Read-only VAT account/dimension observations (2026-11-25)
 
-The frozen settlement preview now includes non-exhaustive observations of inactive
-proposed accounts, missing required dimensions and tax-source dimensions omitted by
-account-level planning, even for net-zero accounts with no proposed clearing row.
-They are captured in the same read and displayed/exported without arithmetic changes.
+The frozen settlement preview includes non-exhaustive observations of inactive
+proposed accounts and missing required dimensions. Initially, source observations
+reported dimensions omitted by account-level planning. With the dimension grouping
+below, they report missing or mismatched exact group reversals, even on net-zero
+accounts. Observations remain captured in the same read and displayed/exported
+without mutating proposal arithmetic.
 An empty list explicitly does NOT approve posting. No readiness flag, posting token,
 UI/API activation or validation of all remaining gates is added. See
 [normalized-vat-settlement-diagnostics.md](normalized-vat-settlement-diagnostics.md).
 Owner posting transactions, complete bookability/dimension/source validation,
 duplicate/overlap and lock policy, numbering and uncertain-commit handling remain
 unfinished. Guard stays enabled; no default cutover or G2/G3/#75 technical completion.
+
+### Explicit VAT settlement dimension preservation
+
+The explicit field-total planner preserves exact raw account/project/result-unit groups,
+including zero-net accounts. Preview rows/PDF freeze those keys, and diagnostics compare
+exact group reversals. Control/rounding do not infer dimensions. Compatibility report/plan
+amounts and startup guard are unchanged. No posting authorization or G2/G3 completion.
+See [dimension preservation](normalized-vat-settlement-dimensions.md).

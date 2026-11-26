@@ -108,3 +108,7 @@ or production activation claim.
 
 No migration, GUI/CLI activation, legacy PDF change, normal startup cutover,
 serialization retirement, G2/G3 completion or issue #75 technical completion.
+
+The explicit settlement planner now reverses exact account/project/result-unit groups,
+including distinct groups on zero-net accounts; see [dimension preservation](normalized-vat-settlement-dimensions.md).
+Declared field amounts, signed control, total rounding and compatibility planning are unchanged.

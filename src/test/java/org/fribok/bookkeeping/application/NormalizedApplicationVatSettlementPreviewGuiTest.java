@@ -70,7 +70,9 @@ class NormalizedApplicationVatSettlementPreviewGuiTest {
                 var before = f.snapshot();
                 h.generate(FROM, TO);
                 assertEquals(4, edt(() -> h.table().getRowCount()));
-                assertEquals(4, edt(() -> h.table().getColumnCount()));
+                assertEquals(6, edt(() -> h.table().getColumnCount()));
+                assertEquals("null", edt(() -> h.table().getValueAt(0, 4)));
+                assertEquals("null", edt(() -> h.table().getValueAt(0, 5)));
                 assertEquals(2650, edt(() -> h.table().getValueAt(2, 0)));
                 money("1", edt(() -> h.table().getValueAt(2, 3)));
                 assertEquals("", edt(() -> h.table().getValueAt(2, 2)));
@@ -209,8 +211,8 @@ class NormalizedApplicationVatSettlementPreviewGuiTest {
                     c.createStatement()
                             .executeUpdate(
                                     "UPDATE account SET"
-                                        + " vat_code='U2',active=FALSE,description='<html>new'"
-                                        + " WHERE number=2610");
+                                            + " vat_code='U2',active=FALSE,description='<html>new'"
+                                            + " WHERE number=2610");
                 }
                 assertTrue(edt(() -> h.table().getValueAt(0, 1).toString()).contains("Output VAT"));
                 h.generate(FROM, TO);

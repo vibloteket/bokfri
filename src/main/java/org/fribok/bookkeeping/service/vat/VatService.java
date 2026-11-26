@@ -174,16 +174,9 @@ public final class VatService {
         SSAccount receivable = declarationRole(selected, "R1");
         SSAccount payable = declarationRole(selected, "R2");
         SSAccount rounding = declarationRole(selected, "A");
-        Set<Integer> taxFields = Set.of(10, 11, 12, 30, 31, 32, 48, 60, 61, 62);
-        Set<String> taxCodes = new java.util.HashSet<>();
-        for (VatReportBox box : report.boxes()) {
-            if (taxFields.contains(box.number())) {
-                taxCodes.addAll(List.of(box.vatCodes().split(",")));
-            }
-        }
-        Map<SSAccount, BigDecimal> balances =
-                SSVoucherMath.getCreditMinusDebetSum(
-                        SSVoucherMath.getVouchers(vouchers(), from, to), selected);
+        Map<VatSettlementGroups.Key, BigDecimal> balances =
+                VatSettlementGroups.balances(report, selected, vouchers());
+        Map<Integer, SSAccount> selectedAccounts = VatSettlementGroups.accounts(selected);
         SSVoucher voucher = new SSVoucher(0, to);
         DateTimeFormatter dates = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
         voucher.setDescription(
@@ -192,15 +185,14 @@ public final class VatService {
                         from.format(dates),
                         to.format(dates)));
         BigDecimal exactNet = BigDecimal.ZERO;
-        for (SSAccount account : selected) {
-            BigDecimal balance = balances.get(account);
-            if (!taxCodes.contains(account.getVATCode())
-                    || balance == null
-                    || balance.signum() == 0) {
-                continue;
-            }
+        for (var entry : balances.entrySet()) {
+            BigDecimal balance = entry.getValue();
+            if (balance.signum() == 0) continue;
+            var key = entry.getKey();
             SSVoucherRow row = new SSVoucherRow();
-            row.setAccount(account);
+            row.setAccount(selectedAccounts.get(key.account()));
+            row.setProjectNr(key.project());
+            row.setResultUnitNr(key.unit());
             row.setValue(balance);
             voucher.addVoucherRow(row);
             exactNet = exactNet.add(balance);
