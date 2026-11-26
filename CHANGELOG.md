@@ -35,6 +35,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   executable examples. No calculation or posting behavior changes; settlement
   activation remains blocked pending an explicit policy and workflow safeguards (#75).
 ### Fixed
+- Observe proposed VAT settlement project/result-unit keys against the selected
+  company catalogues and project closure at proposal date. Freeze read-only
+  findings in the NOT POSTED preview/PDF without repair or posting approval (#75).
 - Preserve exact raw project/result-unit groups in explicit VAT settlement clearing,
   including zero-net accounts. Freeze the keys in the read-only preview/PDF and
   diagnose missing or mismatched group reversals without inferring dimensions

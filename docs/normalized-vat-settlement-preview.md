@@ -100,3 +100,10 @@ and workspace contracts remain in the validation matrix.
 
 No settlement posting UI, filing, default cutover, guard removal, serialization
 retirement or G2/G3/issue #75 technical completion is delivered by this preview.
+
+## Proposed-key catalogue observations
+
+The preview also captures [selected-company dimension catalogue observations](normalized-vat-dimension-catalogue-diagnostics.md)
+for actual proposed keys and project closure at proposal date. These observations
+do not approve complete bookability, source history or posting; no key is repaired
+and all amount/guard/posting boundaries above remain unchanged.

@@ -2070,3 +2070,12 @@ including zero-net accounts. Preview rows/PDF freeze those keys, and diagnostics
 exact group reversals. Control/rounding do not infer dimensions. Compatibility report/plan
 amounts and startup guard are unchanged. No posting authorization or G2/G3 completion.
 See [dimension preservation](normalized-vat-settlement-dimensions.md).
+
+### Read-only VAT dimension catalogue observations
+
+The settlement preview additionally captures exact proposed-key membership in the
+selected company catalogues and project closure at proposal date, in the same
+rollback-only read. Blank/unknown keys and closed/unknown-date projects are findings,
+not repairs or posting approval. Other reports do not add catalogue SQL. Planner
+amounts, CLI/defaults/guard and remaining posting gates are unchanged. See
+[dimension catalogue diagnostics](normalized-vat-dimension-catalogue-diagnostics.md).

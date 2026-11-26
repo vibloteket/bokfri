@@ -62,3 +62,10 @@ Ownership, closure, source freshness, duplicate/overlap periods, locks, full
 bookability, owner-controlled confirmation, numbering and atomic/uncertain-commit
 handling remain unfinished posting gates. No posting UI/API, schema, CLI, default
 cutover, startup-guard removal or issue #75 completion is delivered here.
+
+## Proposed-key catalogue observations
+
+The preview also captures [selected-company dimension catalogue observations](normalized-vat-dimension-catalogue-diagnostics.md)
+for actual proposed keys and project closure at proposal date. These observations
+do not approve complete bookability, source history or posting; no key is repaired
+and all amount/guard/posting boundaries above remain unchanged.
