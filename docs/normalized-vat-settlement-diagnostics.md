@@ -2,9 +2,9 @@
 
 The guarded NOT POSTED settlement preview now includes **observed account/dimension
 issues**, captured with the proposal in the same owner-held read. This narrows two
-known posting gaps: the account-level planner does not carry source dimensions,
-and the general VoucherValidator does not itself reject inactive accounts.
-Neither planner arithmetic nor the generic validator is changed by this slice.
+known posting gaps. The explicit planner now carries raw source dimension groups;
+the general VoucherValidator still does not itself reject inactive accounts.
+The generic validator is unchanged. See [dimension grouping](normalized-vat-settlement-dimensions.md).
 
 These are **non-exhaustive observations**, not a new posting gate, readiness flag,
 posting token or approval. The proposal remains read-only and unnumbered. Even an
@@ -16,7 +16,7 @@ unperformed. No Post/Confirm action is added or enabled.
 
 `VatSettlementDiagnostics.inspect` is a pure explicit-input observer. It reads the
 fresh declaration report, selected account catalogue, hydrated source vouchers and
-local unnumbered account-level proposal. It never calls ambient or mutating account,
+local unnumbered dimension-grouped proposal. It never calls ambient or mutating account,
 project, unit or validity resolution, never reads SQL, and never repairs/assigns data.
 The input proposal must be unnumbered and dated at the report's inclusive period end;
 account catalogue numbers must be known and unique. This is not source certification.
@@ -30,8 +30,8 @@ account issues have no invented source references. The result list is immutable.
 | INACTIVE_ACCOUNT | An account actually used by the proposed rows is currently inactive. |
 | REQUIRED_PROJECT_MISSING | A proposed row lacks a required project; null/blank counts as absent. |
 | REQUIRED_UNIT_MISSING | A proposed row lacks a required result unit; null/blank counts as absent. |
-| SOURCE_PROJECT_NOT_CARRIED | An eligible tax-source row carries a non-null raw project key not represented by the account-level planner. |
-| SOURCE_UNIT_NOT_CARRIED | An eligible tax-source row carries a non-null raw result-unit key not represented by that planner. |
+| SOURCE_PROJECT_NOT_CARRIED | An eligible tax-source row carries a non-null raw project key whose exact account/project/unit group reversal is missing or differs. |
+| SOURCE_UNIT_NOT_CARRIED | An eligible tax-source row carries a non-null raw result-unit key whose exact account/project/unit group reversal is missing or differs. |
 
 Proposal-account observations are deduplicated by kind/account in proposal order.
 Source observations retain input voucher/row order and exact raw keys, including
@@ -48,9 +48,11 @@ source eligibility remains unchanged.
 
 **Zero net is not proof that source dimensions disappeared safely.** Opposite amounts
 on one VAT account can net to zero while different project/unit allocations remain.
-Those raw source observations are retained even if the proposal has no rows. This is
-a conservative account-level-planner limitation, not a dimension-group netting or
-ownership/closure validation algorithm. Unknown/malformed source and catalogue
+The explicit planner now retains those distinct groups. Diagnostics compare expected
+exact group reversals with the proposal, not merely account totals. A group that
+cancels exactly needs no row; missing or mismatched nonzero groups still retain
+source references even if the broken proposal is empty. This is not dimension
+ownership/closure validation. Unknown/malformed source and catalogue
 correctness, inactive-account posting policy, corrections and filing completeness
 are not approved by these observations.
 
@@ -70,17 +72,16 @@ rewrite an earlier frozen observation.
 
 PDF export uses the exact displayed snapshot, including findings and NOT POSTED
 warnings, without a new database read or diagnostic run. Existing new-file-only and
-no-overwrite safeguards are unchanged. Net-zero source-dimension findings are still
-exported on an empty proposal; an old PDF does not become a fresh validation result.
+no-overwrite safeguards are unchanged. Net-zero account groups and any findings are still
+exported; an old PDF does not become a fresh validation result.
 Original Latin-1 resource bytes are preserved; only new ASCII keys are appended.
 
 ## Proof and unfinished work
 
-Eight pure tests cover flags/unused roles, optional and blank keys, zero-net distinct
+Pure tests cover flags/unused roles, optional and blank keys, zero-net distinct
 dimensions, exact source eligibility, all tax-code groups, strict getters that reject
 ambient resolution, immutable results and malformed explicit inputs. Four normalized
-SQL tests cover same-read flags/no writes, zero-net stored dimensions with precise
-source references, period/base/foreign isolation and frozen findings after metadata
+SQL tests cover same-read flags/no writes, zero-net stored dimension groups, period/base/foreign isolation and frozen findings after metadata
 repair. Four display tests cover concrete findings, real PDF with no SQL after a
 later posting, the no-findings warning without readiness claims, explicit refresh
 and failure cleanup. Existing preview/report/PDF/workspace contracts remain.

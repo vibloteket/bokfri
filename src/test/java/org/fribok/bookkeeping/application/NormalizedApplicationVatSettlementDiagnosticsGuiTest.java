@@ -77,7 +77,7 @@ class NormalizedApplicationVatSettlementDiagnosticsGuiTest {
     }
 
     @Test
-    void netZeroSourceDimensionFindingsExportInOldFrozenPdfWithoutSqlAfterLaterPostingTest()
+    void netZeroDimensionGroupsExportInOldFrozenPdfWithoutSqlAfterLaterPostingTest()
             throws Exception {
         assumeFalse(GraphicsEnvironment.isHeadless());
         try (var f = new Fixture();
@@ -88,17 +88,13 @@ class NormalizedApplicationVatSettlementDiagnosticsGuiTest {
             try (var h = new Host(lease, output);
                     var guard = new NormalizedApplicationOwnerTest.LegacyGuard()) {
                 h.generate(FROM, TO);
-                assertEquals(0, edt(() -> h.table().getRowCount()));
+                assertEquals(2, edt(() -> h.table().getRowCount()));
+                assertEquals(6, edt(() -> h.table().getColumnCount()));
+                assertEquals(quote("P1"), edt(() -> h.table().getValueAt(0, 4)));
+                assertEquals(quote("P2"), edt(() -> h.table().getValueAt(1, 4)));
+                assertEquals(quote("U1"), edt(() -> h.table().getValueAt(0, 5)));
                 String value = edt(() -> h.area("header").getText());
-                assertTrue(
-                        value.contains(text("vatsettlementfinding.SOURCE_PROJECT_NOT_CARRIED")),
-                        value);
-                assertTrue(
-                        value.contains(text("vatsettlementfinding.SOURCE_UNIT_NOT_CARRIED")),
-                        value);
-                assertTrue(value.contains(quote("P1")), value);
-                assertTrue(value.contains(quote("P2")), value);
-                assertTrue(value.contains(text("vatsettlementfindingrow") + " 2"), value);
+                assertTrue(value.contains(text("vatsettlementnofindings")), value);
                 lease.vouchers().post(lease.vouchers().preview(draft(DAY)));
                 int opens = f.opens.get();
                 h.click("export-pdf");
@@ -112,12 +108,11 @@ class NormalizedApplicationVatSettlementDiagnosticsGuiTest {
                                     "P1",
                                     "P2",
                                     "U1",
-                                    text("vatsettlementfinding.SOURCE_PROJECT_NOT_CARRIED"),
-                                    text("vatsettlementfinding.SOURCE_UNIT_NOT_CARRIED"),
-                                    text("vatsettlementfindingrow") + " 2"))
+                                    text("vatsettlementproject"),
+                                    text("vatsettlementunit")))
                         assertTrue(result.contains(expected), result);
                 }
-                assertEquals(0, edt(() -> h.table().getRowCount()));
+                assertEquals(2, edt(() -> h.table().getRowCount()));
                 money(
                         "1",
                         lease.reports().vatSettlementPreview(FROM, TO).report().vatToPayOrRefund());

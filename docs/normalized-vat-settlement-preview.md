@@ -25,7 +25,8 @@ The returned `VatSettlementPreview` contains:
 - Captured scope, immutable declaration report and explicit proposal date.
 - Frozen localized proposal description.
 - Immutable `VatSettlementRow` records with raw account number, copied current
-  description and exact debit/credit, preserving absent sides as absent.
+  description, exact debit/credit and raw project/result-unit keys, preserving nulls
+  and absent sides as absent.
 - Exact debit and credit totals.
 
 It contains **no mutable SSVoucher, account object, writer, number assignment,
@@ -40,7 +41,8 @@ read-only declaration reports still work without those roles.
 
 The table shows exact clearing rows, control and rounding as produced by the
 [explicit declaration policy](explicit-vat-declaration-policy.md), with literal
-account descriptions and blank absent sides. The header identifies the policy,
+account descriptions, blank absent amount sides and literal quoted raw dimension
+keys (null, blank and whitespace remain distinct). The header identifies the policy,
 declared payable/refundable total, period/scope, proposed description and exact
 balanced totals. Current mappings, inactive-account eligibility and source exclusions
 remain those of the named policy. No GUI recalculation or rounding is added.
@@ -62,17 +64,18 @@ This is not a portable posting instruction, transaction receipt or filing docume
 The preview now captures [non-exhaustive account/dimension diagnostics](normalized-vat-settlement-diagnostics.md)
 in the same read, alongside the immutable proposal. Visible/exported findings identify
 inactive proposed accounts, missing required dimensions and raw VAT-source dimensions
-not carried by account-level planning, even when an account nets to zero. An empty
+whose exact group reversal is missing or differs, even when an account nets to zero. An empty
 findings list explicitly does **not** approve posting; all gates below still apply.
-No arithmetic or source values are changed by these observations.
+These observations do not mutate proposal or source values.
 
 ## Deliberately unfinished posting gates
 
 Arithmetic balance and agreement with the declared fields do **not** establish
 bookability. This preview does not approve account activity, required dimensions,
 source freshness, duplicate or overlapping settlement periods, period locks,
-correction relationships or complete filing rules. The present named planner clears
-at account level; it is not a dimension-allocation workflow. These limitations are
+correction relationships or complete filing rules. The explicit planner preserves raw source groups without resolving or approving
+dimension ownership/closure. Control and rounding remain dimensionless; no dimension
+is inferred or allocated. These limitations are
 stated in the visible/exported warning, not silently treated as successful checks.
 
 Safe posting still needs an owner-controlled confirmation/transaction protocol,

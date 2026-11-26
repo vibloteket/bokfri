@@ -77,8 +77,13 @@ class VatSettlementDiagnosticsTest {
                 .declarationPlan(DAY, DAY);
     }
 
-    static List<VatSettlementDiagnostics.Finding> inspect(List<SSAccount> a, SSVoucher... sources) {
+    static List<VatSettlementDiagnostics.Finding> inspectWithDimensionsRemoved(
+            List<SSAccount> a, SSVoucher... sources) {
         var p = plan(a, sources);
+        for (var row : p.voucher().getRows()) {
+            row.setProjectNr(null);
+            row.setResultUnitNr(null);
+        }
         return VatSettlementDiagnostics.inspect(p.report(), a, List.of(sources), p.voucher());
     }
 
@@ -91,7 +96,9 @@ class VatSettlementDiagnosticsTest {
         a.get(2).setActive(false); // Unused receivable must not be diagnosed as a proposed row.
         a.get(3).setActive(false);
         a.get(4).setResultUnitRequired(true);
-        var findings = inspect(a, voucher(DAY, new StrictRow(2610, null, "1.99", null, null)));
+        var findings =
+                inspectWithDimensionsRemoved(
+                        a, voucher(DAY, new StrictRow(2610, null, "1.99", null, null)));
         assertEquals(
                 List.of(
                         Kind.INACTIVE_ACCOUNT,
@@ -116,7 +123,7 @@ class VatSettlementDiagnosticsTest {
     void optionalAndBlankRawSourceDimensionKeysAreNotSilentlyTreatedAsAbsentTest() {
         var first = new StrictRow(2610, null, "1.25", "<html>raw\nP", null);
         var second = new StrictRow(2610, null, "0.25", "", " \t");
-        var findings = inspect(accounts(), voucher(DAY, first, second));
+        var findings = inspectWithDimensionsRemoved(accounts(), voucher(DAY, first, second));
         assertEquals(3, findings.size());
         assertEquals("<html>raw\nP", findings.get(0).dimension());
         assertEquals("", findings.get(1).dimension());
@@ -137,7 +144,10 @@ class VatSettlementDiagnosticsTest {
                         new StrictRow(2610, null, "10", "P1", "U1"),
                         new StrictRow(2610, null, "-10", "P2", "U2"));
         var p = plan(a, source);
-        assertTrue(p.voucher().getRows().isEmpty());
+        assertEquals(2, p.voucher().getRows().size());
+        p.voucher()
+                .getRows()
+                .clear(); // Deliberately broken proposal must still expose lost groups.
         var findings =
                 VatSettlementDiagnostics.inspect(p.report(), a, List.of(source), p.voucher());
         assertEquals(4, findings.size());
@@ -165,7 +175,7 @@ class VatSettlementDiagnosticsTest {
                         new StrictRow(3010, null, "100", "P", "U"));
         var prior = voucher(DAY.minusDays(1), new StrictRow(2610, null, "100", "P", "U"));
         var undated = voucher(null, new StrictRow(2610, null, "100", "P", "U"));
-        assertTrue(inspect(a, current, prior, undated).isEmpty());
+        assertTrue(inspectWithDimensionsRemoved(a, current, prior, undated).isEmpty());
         assertTrue(crossed.isCrossed());
         assertEquals("P", crossed.getProjectNr());
     }
@@ -182,7 +192,8 @@ class VatSettlementDiagnosticsTest {
             a.add(account(4000 + i, codes[i]));
             rows.add(new StrictRow(4000 + i, null, "1.99", "P" + i, null));
         }
-        var findings = inspect(a, voucher(DAY, rows.toArray(SSVoucherRow[]::new)));
+        var findings =
+                inspectWithDimensionsRemoved(a, voucher(DAY, rows.toArray(SSVoucherRow[]::new)));
         assertEquals(14, findings.size());
         for (int i = 0; i < 14; i++) {
             assertEquals(4000 + i, findings.get(i).account());
@@ -216,11 +227,11 @@ class VatSettlementDiagnosticsTest {
         var a = accounts();
         var row = new StrictRow(2610, null, "1.25", "P1", null);
         var source = voucher(DAY, row);
-        var old = inspect(a, source);
+        var old = inspectWithDimensionsRemoved(a, source);
         assertThrows(UnsupportedOperationException.class, old::clear);
         row.setProjectNr("P2");
         a.get(0).setActive(false);
-        var fresh = inspect(a, source);
+        var fresh = inspectWithDimensionsRemoved(a, source);
         assertEquals("P1", old.get(0).dimension());
         assertEquals(1, old.size());
         assertEquals(2, fresh.size());

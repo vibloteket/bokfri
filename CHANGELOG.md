@@ -35,6 +35,10 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   executable examples. No calculation or posting behavior changes; settlement
   activation remains blocked pending an explicit policy and workflow safeguards (#75).
 ### Fixed
+- Preserve exact raw project/result-unit groups in explicit VAT settlement clearing,
+  including zero-net accounts. Freeze the keys in the read-only preview/PDF and
+  diagnose missing or mismatched group reversals without inferring dimensions
+  for control/rounding or authorizing posting (#75).
 
 - Remove hidden legacy row lookups and voucher numbering from explicit-input VAT settlement planning. Plans remain unnumbered until their explicit writer assigns a number; legacy planning and existing amounts/rounding are unchanged. This does not expose settlement posting in the guarded UI (#75).
 - Forum notification generation on SQLite now uses a commit-pinned FoF Subscribed fork without SQL REGEXP queries, with all five notification jobs and discussion/reply mail delivery covered by regressions.

@@ -2054,11 +2054,19 @@ is added; the format-3 guard and remaining posting gates stay in place.
 
 `VatSettlementPreview.findings` contains copied immutable scalar observations from
 `VatSettlementDiagnostics`, using only the same read's report/catalogue/raw sources
-and local account-level proposal. It observes inactive proposed accounts, missing
-required project/unit values and non-null raw VAT-source dimension keys, including
-net-zero accounts. No ambient/mutating lookup, SQL, assignment, data repair or
+and local dimension-grouped proposal. It observes inactive proposed accounts,
+missing required project/unit values and non-null raw VAT-source dimension keys
+whose exact group reversal is missing or differs, including net-zero accounts. No ambient/mutating lookup, SQL, assignment, data repair or
 arithmetic change is introduced. The display/PDF says an empty findings list is NOT
 posting approval; no readiness flag or posting capability is exposed. See
 [normalized-vat-settlement-diagnostics.md](normalized-vat-settlement-diagnostics.md).
 The observations are not complete ownership/closure, source, period or transaction
 validation and do not change CLI behavior, schema or the default startup guard.
+
+### Explicit VAT settlement dimension preservation
+
+The explicit field-total planner preserves exact raw account/project/result-unit groups,
+including zero-net accounts. Preview rows/PDF freeze those keys, and diagnostics compare
+exact group reversals. Control/rounding do not infer dimensions. Compatibility report/plan
+amounts and startup guard are unchanged. No posting authorization or G2/G3 completion.
+See [dimension preservation](normalized-vat-settlement-dimensions.md).

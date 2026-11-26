@@ -35,7 +35,12 @@ public final class NormalizedFinancialReports implements AutoCloseable {
 
     /** One frozen proposal row; absent debit/credit stays absent, not an invented amount. */
     public record VatSettlementRow(
-            int account, String description, BigDecimal debit, BigDecimal credit) {}
+            int account,
+            String description,
+            BigDecimal debit,
+            BigDecimal credit,
+            String project,
+            String resultUnit) {}
 
     /**
      * Read-only settlement proposal. Contains no mutable voucher, writer or posting token. Balanced
@@ -118,7 +123,9 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                                         row.getAccountNr(),
                                         descriptions.get(row.getAccountNr()),
                                         row.getDebet(),
-                                        row.getCredit()));
+                                        row.getCredit(),
+                                        row.getProjectNr(),
+                                        row.getResultUnitNr()));
                         if (row.getDebet() != null) debit = debit.add(row.getDebet());
                         if (row.getCredit() != null) credit = credit.add(row.getCredit());
                     }

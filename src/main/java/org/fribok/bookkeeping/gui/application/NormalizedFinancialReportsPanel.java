@@ -396,7 +396,9 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                         text("account"),
                                         text("description"),
                                         text("debit"),
-                                        text("credit")
+                                        text("credit"),
+                                        text("vatsettlementproject"),
+                                        text("vatsettlementunit")
                                     });
                             for (var row : value.rows()) {
                                 model.addRow(
@@ -404,7 +406,11 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                             row.account(),
                                             raw(row.description()),
                                             row.debit() == null ? "" : row.debit().toPlainString(),
-                                            row.credit() == null ? "" : row.credit().toPlainString()
+                                            row.credit() == null
+                                                    ? ""
+                                                    : row.credit().toPlainString(),
+                                            raw(row.project()),
+                                            raw(row.resultUnit())
                                         });
                             }
                             header.setText(

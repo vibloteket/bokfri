@@ -27,17 +27,17 @@ class NormalizedApplicationVatSettlementDiagnosticsTest {
                 var s = c.createStatement()) {
             s.executeUpdate(
                     "UPDATE account SET"
-                        + " active=FALSE,project_required=TRUE,result_unit_required=TRUE WHERE"
-                        + " number=2610 AND accounting_year_id=(SELECT id FROM accounting_year"
-                        + " WHERE legacy_id=11)");
+                            + " active=FALSE,project_required=TRUE,result_unit_required=TRUE WHERE"
+                            + " number=2610 AND accounting_year_id=(SELECT id FROM accounting_year"
+                            + " WHERE legacy_id=11)");
             s.executeUpdate(
                     "UPDATE account SET active=FALSE WHERE number IN (1650,2650) AND"
-                        + " accounting_year_id=(SELECT id FROM accounting_year WHERE"
-                        + " legacy_id=11)");
+                            + " accounting_year_id=(SELECT id FROM accounting_year WHERE"
+                            + " legacy_id=11)");
             s.executeUpdate(
                     "UPDATE account SET project_required=TRUE WHERE number=3740 AND"
-                        + " accounting_year_id=(SELECT id FROM accounting_year WHERE"
-                        + " legacy_id=11)");
+                            + " accounting_year_id=(SELECT id FROM accounting_year WHERE"
+                            + " legacy_id=11)");
         }
     }
 
@@ -47,13 +47,13 @@ class NormalizedApplicationVatSettlementDiagnosticsTest {
             for (String number : List.of("P1", "P2"))
                 s.executeUpdate(
                         "INSERT INTO project(company_id,number,name,description,concluded) SELECT"
-                            + " id,'"
+                                + " id,'"
                                 + number
                                 + "','Local project','Local',FALSE FROM company WHERE"
                                 + " legacy_id=71");
             s.executeUpdate(
                     "INSERT INTO result_unit(company_id,number,name,description) SELECT"
-                        + " id,'U1','Local unit','Local' FROM company WHERE legacy_id=71");
+                            + " id,'U1','Local unit','Local' FROM company WHERE legacy_id=71");
         }
     }
 
@@ -124,26 +124,22 @@ class NormalizedApplicationVatSettlementDiagnosticsTest {
     }
 
     @Test
-    void sqlDimensionSourcesRemainVisibleEvenWhenAccountNetAndProposalAreZeroTest()
-            throws Exception {
+    void sqlDimensionGroupsSurviveEvenWhenAccountNetIsZeroTest() throws Exception {
         try (var f = new Fixture();
                 var owner = f.owner()) {
             offsetting(f, owner);
             var before = f.snapshot();
             try (var guard = new NormalizedApplicationOwnerTest.LegacyGuard()) {
                 var preview = owner.select(71, 11).reports().vatSettlementPreview(FROM, TO);
-                assertTrue(preview.rows().isEmpty());
+                assertEquals(2, preview.rows().size());
                 money("0", preview.report().vatToPayOrRefund());
-                assertEquals(4, preview.findings().size());
+                assertTrue(preview.findings().isEmpty());
                 assertEquals(
-                        List.of("P1", "U1", "P2", "U1"),
-                        preview.findings().stream().map(v -> v.dimension()).toList());
-                assertEquals(
-                        List.of(1, 1, 2, 2),
-                        preview.findings().stream().map(v -> v.sourceVoucher()).toList());
-                assertTrue(
-                        preview.findings().stream()
-                                .allMatch(v -> v.sourceRow() == 2 && v.account() == 2610));
+                        List.of("P1", "P2"),
+                        preview.rows().stream().map(v -> v.project()).toList());
+                assertTrue(preview.rows().stream().allMatch(v -> "U1".equals(v.resultUnit())));
+                money("10", preview.rows().get(0).debit());
+                money("10", preview.rows().get(1).credit());
                 assertEquals(before, f.snapshot());
             }
         }
@@ -167,7 +163,7 @@ class NormalizedApplicationVatSettlementDiagnosticsTest {
                 var reports = owner.select(71, 11).reports();
                 assertTrue(reports.vatSettlementPreview(FROM, TO).findings().isEmpty());
                 assertEquals(
-                        2,
+                        0,
                         reports.vatSettlementPreview(
                                         LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 1))
                                 .findings()
