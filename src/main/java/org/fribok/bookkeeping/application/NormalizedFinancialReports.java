@@ -108,55 +108,132 @@ public final class NormalizedFinancialReports implements AutoCloseable {
             throws SQLException {
         Objects.requireNonNull(from, "VAT period start");
         Objects.requireNonNull(to, "VAT period end");
+        return read(context -> settlementPreview(context, from, to), true);
+    }
+
+    /** Source comparison only; neither value approves posting or locks a source. */
+    public enum VatSettlementSourceState {
+        UNCHANGED,
+        CHANGED
+    }
+
+    /**
+     * Owner-bound, read-only review. Not a posting token, durable receipt or number reservation.
+     * Its original preview remains frozen even when a later check reports changed sources.
+     */
+    public static final class VatSettlementReview {
+        private final NormalizedFinancialReports issuer;
+        private final VatSettlementPreview preview;
+        private final NormalizedVatSettlementSourceSnapshot sources;
+
+        private VatSettlementReview(
+                NormalizedFinancialReports issuer,
+                VatSettlementPreview preview,
+                NormalizedVatSettlementSourceSnapshot sources) {
+            this.issuer = issuer;
+            this.preview = preview;
+            this.sources = sources;
+        }
+
+        /** Returns the original immutable proposal, never a refreshed or authorized plan. */
+        public VatSettlementPreview preview() {
+            return preview;
+        }
+    }
+
+    /**
+     * Captures a proposal and conservative source state in ONE rollback-only selected-year read.
+     * Additional source queries are used only for this review, not the existing preview API.
+     *
+     * @param from inclusive selected-year period start
+     * @param to inclusive period end and proposal date
+     * @return owner-bound read-only review, not authorization to post
+     * @throws SQLException if the selection is unavailable or any read fails
+     */
+    public VatSettlementReview vatSettlementReview(LocalDate from, LocalDate to)
+            throws SQLException {
+        Objects.requireNonNull(from, "VAT period start");
+        Objects.requireNonNull(to, "VAT period end");
         return read(
-                context -> {
-                    var plan = vatService(context, from, to).declarationPlan(from, to);
-                    var descriptions = new java.util.HashMap<Integer, String>();
-                    for (var account : context.year().getAccountPlan().getAccounts()) {
-                        descriptions.put(account.getNumber(), account.getDescription());
-                    }
-                    var rows = new java.util.ArrayList<VatSettlementRow>();
-                    BigDecimal debit = BigDecimal.ZERO;
-                    BigDecimal credit = BigDecimal.ZERO;
-                    for (var row : plan.voucher().getRows()) {
-                        rows.add(
-                                new VatSettlementRow(
-                                        row.getAccountNr(),
-                                        descriptions.get(row.getAccountNr()),
-                                        row.getDebet(),
-                                        row.getCredit(),
-                                        row.getProjectNr(),
-                                        row.getResultUnitNr()));
-                        if (row.getDebet() != null) debit = debit.add(row.getDebet());
-                        if (row.getCredit() != null) credit = credit.add(row.getCredit());
-                    }
-                    if (plan.voucher().getNumber() != 0
-                            || !to.equals(plan.voucher().getLocalDate())
-                            || debit.compareTo(credit) != 0) {
-                        throw new IllegalStateException(
-                                "Invalid read-only VAT settlement proposal");
-                    }
-                    var findings =
-                            new java.util.ArrayList<>(
-                                    VatSettlementDiagnostics.inspect(
-                                            plan.report(),
-                                            context.year().getAccountPlan().getAccounts(),
-                                            context.year().getVouchers(),
-                                            plan.voucher()));
-                    findings.addAll(
-                            VatSettlementDimensionDiagnostics.inspect(
-                                    plan.voucher(), context.dimensions()));
-                    return new VatSettlementPreview(
-                            context.scope(),
-                            plan.report(),
-                            to,
-                            plan.voucher().getDescription(),
-                            rows,
-                            debit,
-                            credit,
-                            findings);
-                },
+                context ->
+                        new VatSettlementReview(
+                                this, settlementPreview(context, from, to), context.sources()),
+                true,
                 true);
+    }
+
+    /**
+     * Compares current source inputs without refreshing the old preview or performing any write.
+     * UNCHANGED is NOT posting approval: another change may occur immediately after this read. Full
+     * source correctness, period/duplicate policy and atomic posting are not checked.
+     *
+     * @param review review issued by this exact report instance
+     * @return source equality only; no confirmation capability is created or consumed
+     * @throws SQLException if the selection is retired/blocked or the read fails
+     * @throws IllegalArgumentException if the review belongs to another report instance
+     */
+    public VatSettlementSourceState checkVatSettlementSources(VatSettlementReview review)
+            throws SQLException {
+        Objects.requireNonNull(review, "explicit read-only review");
+        requireAvailable();
+        if (review.issuer != this) {
+            throw new IllegalArgumentException(
+                    "VAT source review belongs to another report context");
+        }
+        return read(
+                context ->
+                        review.sources.equals(context.sources())
+                                ? VatSettlementSourceState.UNCHANGED
+                                : VatSettlementSourceState.CHANGED,
+                false,
+                true);
+    }
+
+    private static VatSettlementPreview settlementPreview(
+            Context context, LocalDate from, LocalDate to) {
+        var plan = vatService(context, from, to).declarationPlan(from, to);
+        var descriptions = new java.util.HashMap<Integer, String>();
+        for (var account : context.year().getAccountPlan().getAccounts()) {
+            descriptions.put(account.getNumber(), account.getDescription());
+        }
+        var rows = new java.util.ArrayList<VatSettlementRow>();
+        BigDecimal debit = BigDecimal.ZERO;
+        BigDecimal credit = BigDecimal.ZERO;
+        for (var row : plan.voucher().getRows()) {
+            rows.add(
+                    new VatSettlementRow(
+                            row.getAccountNr(),
+                            descriptions.get(row.getAccountNr()),
+                            row.getDebet(),
+                            row.getCredit(),
+                            row.getProjectNr(),
+                            row.getResultUnitNr()));
+            if (row.getDebet() != null) debit = debit.add(row.getDebet());
+            if (row.getCredit() != null) credit = credit.add(row.getCredit());
+        }
+        if (plan.voucher().getNumber() != 0
+                || !to.equals(plan.voucher().getLocalDate())
+                || debit.compareTo(credit) != 0) {
+            throw new IllegalStateException("Invalid read-only VAT settlement proposal");
+        }
+        var findings =
+                new java.util.ArrayList<>(
+                        VatSettlementDiagnostics.inspect(
+                                plan.report(),
+                                context.year().getAccountPlan().getAccounts(),
+                                context.year().getVouchers(),
+                                plan.voucher()));
+        findings.addAll(
+                VatSettlementDimensionDiagnostics.inspect(plan.voucher(), context.dimensions()));
+        return new VatSettlementPreview(
+                context.scope(),
+                plan.report(),
+                to,
+                plan.voucher().getDescription(),
+                rows,
+                debit,
+                credit,
+                findings);
     }
 
     private static org.fribok.bookkeeping.service.vat.VatService vatService(
@@ -200,7 +277,8 @@ public final class NormalizedFinancialReports implements AutoCloseable {
     private record Context(
             Scope scope,
             SSNewAccountingYear year,
-            VatSettlementDimensionDiagnostics.Catalogue dimensions) {}
+            VatSettlementDimensionDiagnostics.Catalogue dimensions,
+            NormalizedVatSettlementSourceSnapshot sources) {}
 
     @FunctionalInterface
     private interface Read<T> {
@@ -256,7 +334,8 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                                         .accountLedger(account, from, to)));
     }
 
-    private Context load(Connection connection, boolean dimensions) throws SQLException {
+    private Context load(Connection connection, boolean dimensions, boolean sources)
+            throws SQLException {
         var store = new NormalizedAccountingStore(connection, clock);
         var company =
                 store.getCompanies().stream()
@@ -332,7 +411,11 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                         company.getName(),
                         maximum),
                 year,
-                catalogue);
+                catalogue,
+                sources
+                        ? NormalizedVatSettlementSourceSnapshot.capture(
+                                connection, selection.company().id(), selection.year().id())
+                        : null);
     }
 
     private <T> T read(Read<T> work) throws SQLException {
@@ -340,6 +423,10 @@ public final class NormalizedFinancialReports implements AutoCloseable {
     }
 
     private <T> T read(Read<T> work, boolean dimensions) throws SQLException {
+        return read(work, dimensions, false);
+    }
+
+    private <T> T read(Read<T> work, boolean dimensions, boolean sources) throws SQLException {
         requireAvailable();
         synchronized (gate) {
             requireAvailable();
@@ -347,7 +434,7 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                 connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
                 connection.setAutoCommit(false);
                 try {
-                    T result = work.run(load(connection, dimensions));
+                    T result = work.run(load(connection, dimensions, sources));
                     requireAvailable();
                     connection.rollback();
                     return result;

@@ -107,3 +107,13 @@ The preview also captures [selected-company dimension catalogue observations](no
 for actual proposed keys and project closure at proposal date. These observations
 do not approve complete bookability, source history or posting; no key is repaired
 and all amount/guard/posting boundaries above remain unchanged.
+
+## Backend-only VAT settlement source reviews
+
+A separate owner-bound read-only review captures the existing immutable preview and
+private conservative source state in one rollback-only read. Rechecking compares
+full scoped inputs, not only displayed totals/max voucher; it does not refresh the
+old preview, authorize posting, lock sources or reserve a number. Current equality
+is not transaction history and cannot guarantee a later write. Existing preview/UI/
+PDF amounts/resources/defaults/guard remain unchanged. See
+[source review boundaries](normalized-vat-settlement-source-review.md).
