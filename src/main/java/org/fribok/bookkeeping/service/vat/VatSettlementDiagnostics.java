@@ -12,9 +12,9 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Read-only, non-exhaustive account/dimension observations for an explicit VAT proposal. An
- * empty result is NOT bookability approval or authorization to post. No catalogues or source values
- * are repaired, assigned or resolved through ambient storage.
+ * Read-only, non-exhaustive account/dimension observations for an explicit VAT proposal. An empty
+ * result is NOT bookability approval or authorization to post. No catalogues or source values are
+ * repaired, assigned or resolved through ambient storage.
  */
 public final class VatSettlementDiagnostics {
     private VatSettlementDiagnostics() {}
@@ -24,7 +24,13 @@ public final class VatSettlementDiagnostics {
         REQUIRED_PROJECT_MISSING,
         REQUIRED_UNIT_MISSING,
         SOURCE_PROJECT_NOT_CARRIED,
-        SOURCE_UNIT_NOT_CARRIED
+        SOURCE_UNIT_NOT_CARRIED,
+        PROJECT_KEY_BLANK,
+        UNIT_KEY_BLANK,
+        UNKNOWN_PROJECT,
+        UNKNOWN_UNIT,
+        PROJECT_CLOSED_ON_DATE,
+        PROJECT_CLOSURE_DATE_UNKNOWN
     }
 
     /**
@@ -35,10 +41,10 @@ public final class VatSettlementDiagnostics {
 
     /**
      * Observes current proposal accounts and eligible tax-source dimensions without SQL. Source
-     * dimensions are reported when exact raw-key group reversals are missing or differ, even
-     * when account totals net to zero. Cancelling groups need no row. Does not
-     * validate project/unit ownership, source correctness, periods/duplicates/locks, posting
-     * transactions or commit durability.
+     * dimensions are reported when exact raw-key group reversals are missing or differ, even when
+     * account totals net to zero. Cancelling groups need no row. Does not validate project/unit
+     * ownership, source correctness, periods/duplicates/locks, posting transactions or commit
+     * durability.
      *
      * @param report explicit field-total declaration report and inclusive source period
      * @param accounts explicit selected-year account catalogue

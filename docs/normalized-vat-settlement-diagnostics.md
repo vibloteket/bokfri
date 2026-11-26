@@ -91,3 +91,10 @@ validation and confirmation protocol, duplicate/overlap and lock policy, numberi
 and transaction/uncertain-commit handling. No posting UI/API, filing, CLI change,
 schema migration, default cutover, guard removal, serialization retirement or
 G2/G3/issue #75 technical completion is delivered here.
+
+## Proposed-key catalogue observations
+
+The preview also captures [selected-company dimension catalogue observations](normalized-vat-dimension-catalogue-diagnostics.md)
+for actual proposed keys and project closure at proposal date. These observations
+do not approve complete bookability, source history or posting; no key is repaired
+and all amount/guard/posting boundaries above remain unchanged.

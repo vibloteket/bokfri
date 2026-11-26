@@ -3,6 +3,7 @@ package org.fribok.bookkeeping.application;
 import org.fribok.bookkeeping.dataformat.NormalizedAccountingStore;
 import org.fribok.bookkeeping.service.report.FinancialReportService;
 import org.fribok.bookkeeping.service.vat.VatSettlementDiagnostics;
+import org.fribok.bookkeeping.service.vat.VatSettlementDimensionDiagnostics;
 
 import se.swedsoft.bookkeeping.data.SSAccount;
 import se.swedsoft.bookkeeping.data.SSNewAccountingYear;
@@ -135,6 +136,16 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                         throw new IllegalStateException(
                                 "Invalid read-only VAT settlement proposal");
                     }
+                    var findings =
+                            new java.util.ArrayList<>(
+                                    VatSettlementDiagnostics.inspect(
+                                            plan.report(),
+                                            context.year().getAccountPlan().getAccounts(),
+                                            context.year().getVouchers(),
+                                            plan.voucher()));
+                    findings.addAll(
+                            VatSettlementDimensionDiagnostics.inspect(
+                                    plan.voucher(), context.dimensions()));
                     return new VatSettlementPreview(
                             context.scope(),
                             plan.report(),
@@ -143,12 +154,9 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                             rows,
                             debit,
                             credit,
-                            VatSettlementDiagnostics.inspect(
-                                    plan.report(),
-                                    context.year().getAccountPlan().getAccounts(),
-                                    context.year().getVouchers(),
-                                    plan.voucher()));
-                });
+                            findings);
+                },
+                true);
     }
 
     private static org.fribok.bookkeeping.service.vat.VatService vatService(
@@ -189,7 +197,10 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                                         .incomeStatement(from, to)));
     }
 
-    private record Context(Scope scope, SSNewAccountingYear year) {}
+    private record Context(
+            Scope scope,
+            SSNewAccountingYear year,
+            VatSettlementDimensionDiagnostics.Catalogue dimensions) {}
 
     @FunctionalInterface
     private interface Read<T> {
@@ -245,7 +256,7 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                                         .accountLedger(account, from, to)));
     }
 
-    private Context load(Connection connection) throws SQLException {
+    private Context load(Connection connection, boolean dimensions) throws SQLException {
         var store = new NormalizedAccountingStore(connection, clock);
         var company =
                 store.getCompanies().stream()
@@ -296,16 +307,39 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                         .filter(Objects::nonNull)
                         .max(Integer::compareTo)
                         .orElse(null);
+        VatSettlementDimensionDiagnostics.Catalogue catalogue = null;
+        if (dimensions) {
+            var registers =
+                    new org.fribok.bookkeeping.dataformat.NormalizedRegisterStore(connection);
+            catalogue =
+                    new VatSettlementDimensionDiagnostics.Catalogue(
+                            registers.getProjects(selection.company().id()).stream()
+                                    .map(
+                                            p ->
+                                                    new VatSettlementDimensionDiagnostics.Project(
+                                                            p.getNumber(),
+                                                            p.getConcluded(),
+                                                            p.getLocalConcludedDate()))
+                                    .toList(),
+                            registers.getResultUnits(selection.company().id()).stream()
+                                    .map(u -> u.getNumber())
+                                    .toList());
+        }
         return new Context(
                 new Scope(
                         selection.company().id(),
                         selection.year().id(),
                         company.getName(),
                         maximum),
-                year);
+                year,
+                catalogue);
     }
 
     private <T> T read(Read<T> work) throws SQLException {
+        return read(work, false);
+    }
+
+    private <T> T read(Read<T> work, boolean dimensions) throws SQLException {
         requireAvailable();
         synchronized (gate) {
             requireAvailable();
@@ -313,7 +347,7 @@ public final class NormalizedFinancialReports implements AutoCloseable {
                 connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
                 connection.setAutoCommit(false);
                 try {
-                    T result = work.run(load(connection));
+                    T result = work.run(load(connection, dimensions));
                     requireAvailable();
                     connection.rollback();
                     return result;
