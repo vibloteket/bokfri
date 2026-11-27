@@ -553,3 +553,12 @@ mutable check outcomes and remain frozen/exported without SQL. Edits, replacemen
 closure and read failures clear review/export capability; pending/host/uncertainty
 fences remain. Other report choices, amounts/defaults/guard and remaining posting
 gates are unchanged. See [source recheck](normalized-vat-settlement-source-recheck.md).
+
+## Frozen proposed row/amount observations
+
+The settlement preview also captures [limited exact row/amount findings](normalized-vat-settlement-amount-diagnostics.md)
+in the same read, without new SQL or amount changes. Proposed-row and total positions
+are distinct from source references; fractional cents and storage/manual-entry
+range observations do not round, repair or authorize posting. Source checks remain
+status-only; old warnings/PDF stay frozen/exported without SQL. Empty findings, a
+source match and balance do not approve posting or the remaining gates.

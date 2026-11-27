@@ -3,6 +3,7 @@ package org.fribok.bookkeeping.gui.application;
 import org.fribok.bookkeeping.application.NormalizedApplicationOwner.Selection;
 import org.fribok.bookkeeping.application.NormalizedFinancialReports;
 import org.fribok.bookkeeping.service.report.FinancialReportSnapshotPdf;
+import org.fribok.bookkeeping.service.vat.VatSettlementAmounts;
 
 import se.swedsoft.bookkeeping.gui.util.SSBundle;
 
@@ -441,7 +442,8 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                             + value.debitTotal()
                                             + " / "
                                             + value.creditTotal()
-                                            + settlementFindings(value.findings()));
+                                            + settlementFindings(value.findings())
+                                            + settlementAmounts(value.amountFindings()));
                             status.setText(text("generated") + " " + value.rows().size());
                         });
             } else if (selectedKind() == Kind.VAT || selectedKind() == Kind.VAT_DECLARATION) {
@@ -527,6 +529,39 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
             status.setText(text("failed") + " " + failure.getMessage());
             controls();
         }
+    }
+
+    private static String settlementAmounts(java.util.List<VatSettlementAmounts.Finding> findings) {
+        if (findings.isEmpty()) return "\n" + text("vatamountnofindings");
+        StringBuilder value = new StringBuilder("\n" + text("vatamountfindings"));
+        for (var finding : findings) {
+            value.append("\n")
+                    .append(text("vatamountfinding." + finding.kind().name()))
+                    .append(" / ")
+                    .append(
+                            text(
+                                    finding.proposedRow() == null
+                                            ? "vatamountproposedtotal"
+                                            : "vatamountproposedrow"));
+            if (finding.proposedRow() != null) {
+                value.append(" ").append(finding.proposedRow());
+            }
+            if (finding.account() != null) {
+                value.append(" / ").append(text("account")).append(" ").append(finding.account());
+            }
+            if (finding.side() != null) {
+                value.append(" / ")
+                        .append(
+                                text(
+                                        finding.side() == VatSettlementAmounts.Side.DEBIT
+                                                ? "debit"
+                                                : "credit"));
+            }
+            if (finding.amount() != null) {
+                value.append(" : ").append(finding.amount().toPlainString());
+            }
+        }
+        return value.toString();
     }
 
     private static String settlementFindings(
