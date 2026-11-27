@@ -35,6 +35,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   executable examples. No calculation or posting behavior changes; settlement
   activation remains blocked pending an explicit policy and workflow safeguards (#75).
 ### Fixed
+- Add an explicit read-only source recheck to the guarded VAT settlement preview.
+  Report source equality/difference in status only, preserve the old frozen
+  display/PDF, and invalidate reviews on edits/failures without posting approval (#75).
 - Add backend-only owner-bound read-only VAT settlement source reviews. Compare
   full scoped source state, including edits that leave preview totals unchanged,
   without authorizing posting, reserving numbers or changing the preview UI (#75).

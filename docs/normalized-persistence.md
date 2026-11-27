@@ -2089,3 +2089,13 @@ old preview, authorize posting, lock sources or reserve a number. Current equali
 is not transaction history and cannot guarantee a later write. Existing preview/UI/
 PDF amounts/resources/defaults/guard remain unchanged. See
 [source review boundaries](normalized-vat-settlement-source-review.md).
+
+## Guarded explicit source recheck
+
+Settlement Generate now uses the owner-bound read-only review capture. The separate
+Recheck sources control reports current equality/difference in status only, without
+refreshing the old table/header/PDF or approving posting. PDFs explicitly exclude
+mutable check outcomes and remain frozen/exported without SQL. Edits, replacement,
+closure and read failures clear review/export capability; pending/host/uncertainty
+fences remain. Other report choices, amounts/defaults/guard and remaining posting
+gates are unchanged. See [source recheck](normalized-vat-settlement-source-recheck.md).

@@ -72,6 +72,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
     private final JTextField to = new JTextField();
     private final JButton load = new JButton(text("load"));
     private final JButton generate = new JButton(text("generate"));
+    private final JButton recheckSources = new JButton(text("checksources"));
     private final JButton export = new JButton(text("exportpdf"));
 
     @FunctionalInterface
@@ -89,6 +90,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
     private final DestinationChooser destinationChooser;
     private final SnapshotWriter snapshotWriter;
     private FinancialReportSnapshotPdf.Snapshot displayedSnapshot;
+    private NormalizedFinancialReports.VatSettlementReview sourceReview;
     private final JTextArea header = new JTextArea(7, 80);
     private final JTextArea status = new JTextArea(3, 80);
     private final DefaultTableModel model =
@@ -134,6 +136,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         to.setName("financial-report-to");
         load.setName("financial-report-load");
         generate.setName("financial-report-generate");
+        recheckSources.setName("financial-report-check-sources");
         export.setName("financial-report-export-pdf");
         header.setName("financial-report-header");
         status.setName("financial-report-status");
@@ -167,6 +170,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         JPanel actions = new JPanel();
         actions.add(load);
         actions.add(generate);
+        actions.add(recheckSources);
         actions.add(export);
         JPanel footer = new JPanel(new BorderLayout());
         footer.add(new JScrollPane(status));
@@ -194,6 +198,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         to.getDocument().addDocumentListener(edits);
         load.addActionListener(e -> load());
         generate.addActionListener(e -> generate());
+        recheckSources.addActionListener(e -> checkSources());
         export.addActionListener(e -> exportSnapshot());
         status.setText(text("unselected"));
         controls();
@@ -244,6 +249,7 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
     }
 
     private void clear() {
+        sourceReview = null;
         displayedSnapshot = null;
         header.setText("");
         model.setRowCount(0);
@@ -389,8 +395,10 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                         });
             } else if (selectedKind() == Kind.VAT_SETTLEMENT_PREVIEW) {
                 run(
-                        () -> reports.vatSettlementPreview(first, last),
-                        value -> {
+                        () -> reports.vatSettlementReview(first, last),
+                        review -> {
+                            var value = review.preview();
+                            sourceReview = review;
                             model.setColumnIdentifiers(
                                     new String[] {
                                         text("account"),
@@ -417,6 +425,8 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                                     scope(value.scope(), value.report().from(), value.report().to())
                                             + "\n"
                                             + text("vatsettlementmeaning")
+                                            + "\n"
+                                            + text("vatsourcecaptured")
                                             + "\n"
                                             + text("vatnet")
                                             + " "
@@ -569,8 +579,31 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                 + scope.maximumVoucher();
     }
 
+    private void checkSources() {
+        if (!available() || selectedKind() != Kind.VAT_SETTLEMENT_PREVIEW || sourceReview == null) {
+            return;
+        }
+        var review = sourceReview;
+        var reports = selection.reports();
+        run(
+                () -> reports.checkVatSettlementSources(review),
+                state ->
+                        status.setText(
+                                text(
+                                        state
+                                                        == NormalizedFinancialReports
+                                                                .VatSettlementSourceState.UNCHANGED
+                                                ? "vatsourcesunchanged"
+                                                : "vatsourceschanged")),
+                false);
+    }
+
     private <T> void run(Callable<T> action, Consumer<T> success) {
-        clear();
+        run(action, success, true);
+    }
+
+    private <T> void run(Callable<T> action, Consumer<T> success, boolean replaceResult) {
+        if (replaceResult) clear();
         setBusy(true);
         long request = ++revision;
         long inputs = inputRevision;
@@ -588,14 +621,17 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
                     var result = get();
                     if (available() && inputs == inputRevision) {
                         success.accept(result);
-                        displayedSnapshot = captureDisplayedSnapshot();
-                    } else if (available()) {
+                        if (replaceResult) displayedSnapshot = captureDisplayedSnapshot();
+                    } else {
+                        clear();
                         status.setText(text("instructions"));
                     }
                 } catch (InterruptedException failure) {
                     Thread.currentThread().interrupt();
+                    clear();
                     status.setText(text("failed"));
                 } catch (ExecutionException failure) {
+                    clear();
                     status.setText(text("failed") + " " + failure.getCause().getMessage());
                 }
                 if (selection != null && selection.isBlocked()) {
@@ -675,6 +711,11 @@ public final class NormalizedFinancialReportsPanel extends JPanel implements Aut
         Kind selected = selectedKind();
         kind.setEnabled(enabled);
         export.setEnabled(enabled && displayedSnapshot != null);
+        recheckSources.setEnabled(
+                enabled
+                        && selected == Kind.VAT_SETTLEMENT_PREVIEW
+                        && sourceReview != null
+                        && displayedSnapshot != null);
         from.setEnabled(enabled && selectedKind() != Kind.BALANCE);
         to.setEnabled(enabled);
         account.setEnabled(enabled && selected == Kind.LEDGER);

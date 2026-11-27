@@ -73,6 +73,8 @@ query/rollback/close failures; lazy nine-query source reads; changed selected-ye
 bounds; and late owner-close fences. Existing VAT preview/diagnostics/PDF contracts
 remain unchanged.
 
-No UI/PDF/resource/planner/grouping/amount/default changes are delivered. The existing
-snapshot PDF still exports its old displayed snapshot without SQL, and now has no
-automatic relationship to this backend-only review/check API.
+The backend APIs require no UI, planner/grouping/amount/default changes. A separate
+[guarded UI consumer](normalized-vat-settlement-source-recheck.md) now captures reviews
+on explicit settlement Generate and exposes an explicit source recheck. Its PDF
+exports only the original displayed snapshot without SQL, never mutable check
+outcomes or posting approval.
