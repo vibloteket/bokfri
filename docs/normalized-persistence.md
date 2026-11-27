@@ -2079,3 +2079,13 @@ rollback-only read. Blank/unknown keys and closed/unknown-date projects are find
 not repairs or posting approval. Other reports do not add catalogue SQL. Planner
 amounts, CLI/defaults/guard and remaining posting gates are unchanged. See
 [dimension catalogue diagnostics](normalized-vat-dimension-catalogue-diagnostics.md).
+
+## Backend-only VAT settlement source reviews
+
+A separate owner-bound read-only review captures the existing immutable preview and
+private conservative source state in one rollback-only read. Rechecking compares
+full scoped inputs, not only displayed totals/max voucher; it does not refresh the
+old preview, authorize posting, lock sources or reserve a number. Current equality
+is not transaction history and cannot guarantee a later write. Existing preview/UI/
+PDF amounts/resources/defaults/guard remain unchanged. See
+[source review boundaries](normalized-vat-settlement-source-review.md).
