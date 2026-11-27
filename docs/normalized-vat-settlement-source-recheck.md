@@ -66,3 +66,12 @@ control/rounding, source comparison semantics, CLI, schema and startup guard are
 unchanged. No posting UI/API, confirmation token, number reservation, complete source
 certification, period/duplicate/lock approval, default cutover, guard removal or
 G2/G3/issue #75 completion is delivered.
+
+## Frozen proposed row/amount observations
+
+The settlement preview also captures [limited exact row/amount findings](normalized-vat-settlement-amount-diagnostics.md)
+in the same read, without new SQL or amount changes. Proposed-row and total positions
+are distinct from source references; fractional cents and storage/manual-entry
+range observations do not round, repair or authorize posting. Source checks remain
+status-only; old warnings/PDF stay frozen/exported without SQL. Empty findings, a
+source match and balance do not approve posting or the remaining gates.

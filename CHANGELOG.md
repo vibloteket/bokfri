@@ -35,6 +35,9 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
   executable examples. No calculation or posting behavior changes; settlement
   activation remains blocked pending an explicit policy and workflow safeguards (#75).
 ### Fixed
+- Freeze read-only VAT settlement row/amount observations for side shape,
+  positivity, fractional cents, exact SQL side range and existing manual-entry
+  total range. Preserve exact amounts and old preview/PDF snapshots; no posting approval (#75).
 - Add an explicit read-only source recheck to the guarded VAT settlement preview.
   Report source equality/difference in status only, preserve the old frozen
   display/PDF, and invalidate reviews on edits/failures without posting approval (#75).
