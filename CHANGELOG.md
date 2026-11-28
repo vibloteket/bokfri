@@ -13,6 +13,11 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 ## [Unreleased]
 
 ### Added
+- V22 scoped VAT history evidence tables and an explicit read-only loader (#75). Empty records
+  remain unknown; stored reviewer/reference text and period claims are not an accepted baseline or
+  posting permission. No review writer, automatic backfill or application integration is added.
+  History scope identifiers now match the normalized selection's opaque legacy integers, including
+  zero, independently of SQL BIGINT keys. Posting remains unavailable and startup stays guarded.
 - Pure fail-closed VAT settlement history policy (#75): explicit company/year-scoped reviewed
   coverage must cover every requested date; known overlapping settlements remain independent
   blockers. Empty history is unknown, never inferred from vouchers or balances. This backend-only

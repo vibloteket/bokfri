@@ -24,12 +24,9 @@ public final class VatSettlementHistory {
         }
     }
 
-    /** Explicit normalized company/year identity and the fiscal-year date bounds. */
+    /** Explicit legacy company/year identifiers used by normalized selection, plus fiscal bounds. */
     public record Scope(int company, int year, Period fiscalYear) {
         public Scope {
-            if (company <= 0 || year <= 0) {
-                throw new IllegalArgumentException("Positive company/year identities required");
-            }
             Objects.requireNonNull(fiscalYear, "fiscal year");
         }
     }

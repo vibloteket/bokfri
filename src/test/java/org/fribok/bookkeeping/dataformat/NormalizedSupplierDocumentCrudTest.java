@@ -529,7 +529,8 @@ class NormalizedSupplierDocumentCrudTest {
             f.c.commit();
             var before = snapshot(f.c, null, -1);
             before.remove("BOKFRI_SCHEMA_HISTORY");
-            new SchemaMigrationRunner(CLOCK).migrate(f.c, NormalizedSchemaMigrations.load());
+            // This contract isolates V21's timestamp-only change, not later schema additions.
+            new SchemaMigrationRunner(CLOCK).migrate(f.c, NormalizedSchemaMigrations.load().subList(0, 21));
             var after = snapshot(f.c, null, -1);
             after.remove("BOKFRI_SCHEMA_HISTORY");
             assertEquals(before, after);

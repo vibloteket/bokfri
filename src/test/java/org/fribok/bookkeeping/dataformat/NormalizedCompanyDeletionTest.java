@@ -73,7 +73,7 @@ class NormalizedCompanyDeletionTest {
             var matcher = create.matcher(migration.sql());
             while (matcher.find()) tables.add(matcher.group(1).toUpperCase(java.util.Locale.ROOT));
         }
-        assertThat(tables).hasSize(97);
+        assertThat(tables).hasSize(100);
         return tables;
     }
 

@@ -63,7 +63,8 @@ class NormalizedAccountingCoreSchemaTest {
                     "supplier_invoice", "supplier_invoice_default_account",
                     "supplier_invoice_row", "supplier_invoice_voucher", "supplier_invoice_voucher_row",
                     "tender", "tender_address", "tender_default_account", "tender_row",
-                    "unit_definition", "voucher", "voucher_row", "voucher_template",
+                    "unit_definition", "vat_history_coverage", "vat_history_evidence",
+                    "vat_history_known_settlement", "voucher", "voucher_row", "voucher_template",
                     "voucher_template_row");
             try (var columns = connection.getMetaData().getColumns(null, null, "%", "%")) {
                 while (columns.next()) {
@@ -81,7 +82,7 @@ class NormalizedAccountingCoreSchemaTest {
         try (Connection connection = connection()) {
             assertThat(migrate(connection))
                     .containsExactly(
-                            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
+                            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22);
             assertThat(migrate(connection)).isEmpty();
 
             long company = insertCompany(connection, 7, null);
