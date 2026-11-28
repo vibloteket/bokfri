@@ -12,6 +12,12 @@ diverging from upstream Fribok after version 2.2-SNAPSHOT.
 
 ## [Unreleased]
 
+### Added
+- Pure fail-closed VAT settlement history policy (#75): explicit company/year-scoped reviewed
+  coverage must cover every requested date; known overlapping settlements remain independent
+  blockers. Empty history is unknown, never inferred from vouchers or balances. This backend-only
+  policy has no persistence, certification, UI or posting integration; startup remains guarded.
+
 - Add immutable account/dimension observations to the read-only VAT settlement
   preview and displayed-snapshot PDF: inactive proposed accounts, missing required
   dimensions and source dimensions omitted by account-level planning, including
