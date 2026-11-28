@@ -121,8 +121,6 @@ class VatSettlementHistoryTest {
         assertThrows(IllegalArgumentException.class, () -> days(1, 0));
         assertThrows(NullPointerException.class, () -> new Period(null, START));
         assertThrows(NullPointerException.class, () -> new Period(START, null));
-        assertThrows(IllegalArgumentException.class, () -> new Scope(0, 2, YEAR));
-        assertThrows(IllegalArgumentException.class, () -> new Scope(1, -1, YEAR));
         assertThrows(NullPointerException.class, () -> new Scope(1, 2, null));
         assertThrows(NullPointerException.class, () -> new Snapshot(null, List.of(), List.of()));
         assertThrows(NullPointerException.class, () -> new Snapshot(SCOPE, null, List.of()));
@@ -136,6 +134,18 @@ class VatSettlementHistoryTest {
         assertThrows(NullPointerException.class, () -> VatSettlementHistory.inspect(SCOPE, null, history));
         assertThrows(NullPointerException.class, () -> new Finding(null, YEAR));
         assertThrows(NullPointerException.class, () -> new Finding(Kind.UNREVIEWED_COVERAGE, null));
+    }
+
+    @Test
+    void legacyIdentifiersAreOpaqueIncludingZeroAndNotSqlRowIdentitiesTest() {
+        for (int id : List.of(0, -1, Integer.MIN_VALUE, Integer.MAX_VALUE)) {
+            var scope = new Scope(id, id, YEAR);
+            assertTrue(VatSettlementHistory.inspect(scope, YEAR,
+                    new Snapshot(scope, List.of(YEAR), List.of())).isEmpty());
+            var other = new Scope(id == 0 ? 1 : 0, id, YEAR);
+            assertThrows(IllegalArgumentException.class, () -> VatSettlementHistory.inspect(
+                    other, YEAR, new Snapshot(scope, List.of(), List.of())));
+        }
     }
 
     @Test

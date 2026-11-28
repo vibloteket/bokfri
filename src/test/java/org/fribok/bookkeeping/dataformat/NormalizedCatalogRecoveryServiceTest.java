@@ -306,8 +306,9 @@ class NormalizedCatalogRecoveryServiceTest {
         Path backup = temporary.resolve("trusted-legacy.zip");
         Files.copy(migration.activation().rollbackArchive(), backup);
         try (Connection connection = open(data); var statement = connection.createStatement()) {
-            // Simulate actual V18, not V20 with just its V19 history row removed.
-            for (String table : java.util.List.of("periodic_invoice_added_state", "periodic_invoice_voucher_row",
+            // Simulate actual V18, removing every later additive table as well as its history.
+            for (String table : java.util.List.of("vat_history_coverage", "vat_history_known_settlement",
+                    "vat_history_evidence", "periodic_invoice_added_state", "periodic_invoice_voucher_row",
                     "periodic_invoice_voucher", "periodic_invoice_default_account", "periodic_invoice_address",
                     "periodic_invoice_snapshot")) statement.executeUpdate("DROP TABLE " + table);
             statement.executeUpdate("DELETE FROM bokfri_schema_history WHERE version>=20");

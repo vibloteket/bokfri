@@ -26,7 +26,8 @@ public final class NormalizedSchemaMigrations {
             "/db/normalized/V18__create_own_reports.sql",
             "/db/normalized/V19__create_account_plan_catalog.sql",
             "/db/normalized/V20__preserve_periodic_invoice_snapshots.sql",
-            "/db/normalized/V21__preserve_supplier_voucher_nanoseconds.sql");
+            "/db/normalized/V21__preserve_supplier_voucher_nanoseconds.sql",
+            "/db/normalized/V22__create_vat_history_evidence.sql");
 
     private NormalizedSchemaMigrations() {}
 
